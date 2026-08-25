@@ -1,0 +1,13 @@
+# ==============================================================================
+# REFERENCE EXAMPLE ONLY (PROJECT/MD/execution_engine.yaml)
+# ==============================================================================
+# This file demonstrates the resulting project configuration after selecting
+# the Execution Engine during project initialization.
+#
+# NOTE: It is NOT a framework-level default. In new projects, this file is
+# generated during onboarding based on developer selection.
+# Governed by: FRAMEWORK/03_ai_protocol/runtime/execution_engine.md
+# ==============================================================================
+
+execution_engine:
+  name: "superpowers"

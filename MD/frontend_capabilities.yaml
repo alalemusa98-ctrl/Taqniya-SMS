@@ -1,0 +1,46 @@
+# ==============================================================================
+# REFERENCE EXAMPLE ONLY (PROJECT/MD/frontend_capabilities.yaml)
+# ==============================================================================
+# This file demonstrates the resulting project policy after selecting the
+# "Taqniya Recommended Defaults" option for React SPA during project initialization.
+#
+# NOTE: It is NOT a framework-level default. In new projects, this file does not
+# exist initially; it is generated ONLY after the developer makes their selection.
+# Governed by: FRAMEWORK/06_stack_profiles/frontend/common/capability_policy.md
+# ==============================================================================
+
+frontend:
+  capabilities:
+    # --- Navigation & Loading ---
+    client_side_routing: required
+    prefetching_on_intent: required
+    route_loading_states: required
+    code_splitting: required
+    lazy_loading: required
+    component_lazy_loading: required
+
+    # --- Data Fetching & Network ---
+    async_data_fetching: required
+    client_caching_swr: required
+    request_deduplication: required
+    request_cancellation: required
+    debouncing_throttling: required
+    pagination_incremental: required
+
+    # --- State & Rendering ---
+    component_architecture: required
+    reactive_state: required
+    optimistic_ui: enabled
+    virtualized_lists: optional
+    background_web_workers: optional
+    persistent_client_state: optional
+
+    # --- Forms, Assets & Hygiene ---
+    form_state_optimization: required
+    asset_optimization: required
+    image_lazy_loading: required
+    tree_shaking: required
+    production_build_opts: required
+    error_loading_boundaries: required
+    accessibility_standards: required
+    bundle_size_analysis: optional
