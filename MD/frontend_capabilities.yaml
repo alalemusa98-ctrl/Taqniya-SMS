@@ -1,17 +1,13 @@
 # ==============================================================================
-# REFERENCE EXAMPLE ONLY (PROJECT/MD/frontend_capabilities.yaml)
+# TAQNIYA FRONTEND CAPABILITIES POLICY (frontend_capabilities.yaml)
 # ==============================================================================
-# This file demonstrates the resulting project policy after selecting the
-# "Taqniya Recommended Defaults" option for React SPA during project initialization.
-#
-# NOTE: It is NOT a framework-level default. In new projects, this file does not
-# exist initially; it is generated ONLY after the developer makes their selection.
-# Governed by: FRAMEWORK/06_stack_profiles/frontend/common/capability_policy.md
+# سياسة وقدرات الواجهة الأمامية المعتمدة لمشروع: إدارة المدارس (Vue.js 3 SPA)
+# وفق المعايير المعمارية لإطار عمل تقنية (Taqniya Framework)
 # ==============================================================================
 
 frontend:
   capabilities:
-    # --- Navigation & Loading ---
+    # --- Navigation & Loading (التنقل وحالات التحميل) ---
     client_side_routing: required
     prefetching_on_intent: required
     route_loading_states: required
@@ -19,7 +15,7 @@ frontend:
     lazy_loading: required
     component_lazy_loading: required
 
-    # --- Data Fetching & Network ---
+    # --- Data Fetching & Network (جلب البيانات والشبكة) ---
     async_data_fetching: required
     client_caching_swr: required
     request_deduplication: required
@@ -27,7 +23,7 @@ frontend:
     debouncing_throttling: required
     pagination_incremental: required
 
-    # --- State & Rendering ---
+    # --- State & Rendering (إدارة الحالة والتصيير) ---
     component_architecture: required
     reactive_state: required
     optimistic_ui: enabled
@@ -35,7 +31,7 @@ frontend:
     background_web_workers: optional
     persistent_client_state: optional
 
-    # --- Forms, Assets & Hygiene ---
+    # --- Forms, Assets & Hygiene (النماذج والأصول ومعايير الأداء) ---
     form_state_optimization: required
     asset_optimization: required
     image_lazy_loading: required

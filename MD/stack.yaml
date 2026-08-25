@@ -1,18 +1,18 @@
 # ==============================================================================
 # TAQNIYA STACK CONFIGURATION (stack.yaml)
 # ==============================================================================
-# هذا الملف يمثل الإعلان الرسمي لتقنيات وأدوات المشروع عبر 13 بُعداً معمارياً مستقلاً.
-# يقرأ الذكاء الاصطناعي هذا الملف لتحديد الـ Technology Profiles بدقة دون افتراضات.
+# الإعلان الرسمي لتقنيات وأدوات مشروع: نظام إدارة المدارس (Taqniya-SMS)
+# عبر 13 بُعداً معمارياً مستقلاً وفق معايير Taqniya Framework
 # ==============================================================================
 
 project:
-  name: "My Application"
-  description: "Reference implementation for Taqniya AI Development Framework"
+  name: "Taqniya School Management System (Taqniya-SMS)"
+  description: "نظام متكامل وشامل لإدارة العمليات المدرسية والأكاديمية والمالية والإدارية"
   type: "web"
-  repository: "https://github.com/ofifice-alalem/taqniya-framework-project-md"
+  repository: "https://github.com/ofifice-alalem/Taqniya-SMS"
 
 architecture:
-  pattern: "Layered"
+  pattern: "Layered" # Clean Layered (Controllers -> Services -> Repositories)
   communication:
     mode: "api_first" # direct | api_first | hybrid
     direct:
@@ -25,33 +25,34 @@ architecture:
     consumers:
       - "web"
       - "mobile"
-      - "partner_api"
+      - "parent_portal"
+      - "teacher_portal"
 
 frontend:
-  name: "React"
-  version: "18.3"
-  language: "TypeScript"
+  name: "Vue.js"
+  version: "3.4.x"
+  language: "JavaScript / TypeScript"
   package_manager: "npm"
 
 styling:
   name: "Tailwind CSS"
-  version: "3.4"
+  version: "3.4.x"
 
 state:
-  name: "Zustand"
-  version: "4.5"
+  name: "Pinia"
+  version: "2.1.x"
 
 backend:
-  name: "Laravel"
-  version: "11.x"
-  language: "PHP"
-  package_manager: "Composer"
+  name: "Express.js"
+  version: "4.19.x"
+  language: "Node.js (JavaScript / TypeScript)"
+  package_manager: "npm"
 
 database:
-  name: "PostgreSQL"
-  version: "16.x"
-  orm_or_query_builder: "Eloquent"
-  migration_tool: "Framework Native"
+  name: "MySQL"
+  version: "8.0.x"
+  orm_or_query_builder: "Prisma / mysql2"
+  migration_tool: "Prisma Migrate / Knex"
   primary_key_strategy: "BigInt Auto-increment"
 
 cache:
@@ -60,32 +61,32 @@ cache:
 
 api:
   name: "REST"
-  style: "RESTful"
+  style: "RESTful JSON"
   documentation: "OpenAPI 3.1 / Swagger"
 
 authentication:
-  name: "Sanctum"
-  strategy: "API Tokens"
-  rbac: "Custom Policies"
+  name: "JWT"
+  strategy: "Stateless Bearer Tokens (Access + Refresh Tokens)"
+  rbac: "Role-Based Access Control (Admin, Teacher, Student, Parent, Accountant)"
 
 testing:
-  name: "Pest"
-  unit_runner: "Pest"
-  integration_runner: "Pest"
+  name: "Vitest / Supertest"
+  unit_runner: "Vitest"
+  integration_runner: "Supertest"
   e2e_runner: "Playwright"
-  mocking: "Mockery"
+  mocking: "Vitest Built-in"
 
 build:
   name: "Vite"
   bundler: "Vite"
-  transpiler: "TypeScript (tsc)"
+  transpiler: "ESBuild / TypeScript"
 
 deployment:
   name: "Docker"
-  platform: "Docker / VPS"
+  platform: "Docker Compose / Cloud VPS"
   container_runtime: "Docker"
   ci_cd: "GitHub Actions"
 
 infrastructure:
   name: "Self-Hosted"
-  provider: "Self-Hosted"
+  provider: "Docker Containerized"
