@@ -111,10 +111,10 @@
 
 ---
 
-## 8. جدول ربط الفصول بالشعب والسعة (`class_sections`)
+## 8. جدول ربط الفصول بالشعب (`class_sections`)
 
 > **الوصف:**  
-> جدول الربط متعدد لمتعدد يربط كل فصل دراسي بالشعب المفتوحة له ويحدد الطاقة الاستيعابية لكل شعبة في هذا الفصل.
+> جدول الربط متعدد لمتعدد يربط كل فصل دراسي بالشعب المفتوحة له (مثل: خامس/أ، خامس/ب).
 
 ### 📋 هيكل الأعمدة (Columns Matrix):
 
@@ -123,7 +123,6 @@
 | `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي لسجل ربط الفصل بالشعبة. |
 | `class_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل الدراسي (يرتبط بـ `classes.id`). |
 | `section_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الشعبة (يرتبط بـ `sections.id`). |
-| `max_capacity` | `SMALLINT UNSIGNED` | `NOT NULL`, `DEFAULT 35` | الطاقة الاستيعابية المخصصة لهذه الشعبة في هذا الفصل. |
 | `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
 | `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
 | `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
