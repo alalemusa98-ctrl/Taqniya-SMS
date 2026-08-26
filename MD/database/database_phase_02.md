@@ -31,7 +31,42 @@
 
 ---
 
-## 5. جدول المراحل الدراسية (`academic_stages`)
+## 5. جدول الفصول/الفترات الدراسية (`academic_terms`)
+
+> **الوصف:**  
+> جدول الفصول/السمسترات التابعة للعام الدراسي (الفصل الأول، الفصل الثاني، والفصل الثالث للشهادات) لتنظيم إغلاق الفترات وعزل العمليات التراكمية.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الفريد للفصل الدراسي/السمستر. |
+| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي (يرتبط بـ `academic_years.id`). |
+| `name` | `VARCHAR(50)` | `NOT NULL` | مسمى الفترة (مثال: `الفصل الأول`, `الفصل الثاني`, `الفصل الثالث`). |
+| `term_number` | `TINYINT UNSIGNED` | `NOT NULL` | ترتيب الفصل خلال العام الدراسي (`1`, `2`, `3`). |
+| `start_date` | `DATE` | `NOT NULL` | تاريخ بداية الفصل الدراسي. |
+| `end_date` | `DATE` | `NOT NULL` | تاريخ نهاية الفصل الدراسي. |
+| `is_active` | `TINYINT(1)` | `NOT NULL`, `DEFAULT 0` | هل هو الفصل النشط حالياً للعمليات؟ (`1 = نشط`, `0 = غير نشط`). |
+| `is_closed` | `TINYINT(1)` | `NOT NULL`, `DEFAULT 0` | هل تم إغلاق الفصل نهائياً واعتماد درجاته؟ (`1 = مغلق للأرشفة`, `0 = مفتوح`). |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `academic_year_id` يرتبط بجدول `academic_years(id)` مع:
+  * `ON DELETE RESTRICT` (يمنع حذف العام الدراسي إذا كان يحتوي على فصول دراسية).
+  * `ON UPDATE CASCADE`.
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_terms_year_number (academic_year_id, term_number)`
+* `INDEX idx_terms_academic_year (academic_year_id)`
+* `INDEX idx_terms_is_active (is_active)`
+* `INDEX idx_terms_is_closed (is_closed)`
+
+---
+
+## 6. جدول المراحل الدراسية (`academic_stages`)
 
 > **الوصف:**  
 > جدول المراحل التعليمية الكبرى في الهيكل المدرسي (مثل: المرحلة الابتدائية، الإعدادية/المتوسطة، الثانوية).
@@ -57,7 +92,7 @@
 
 ---
 
-## 6. جدول الفصول الدراسية (`classes`)
+## 7. جدول الفصول الدراسية (`classes`)
 
 > **الوصف:**  
 > جدول الفصول/الصفوف المدرسية (مستقل تماماً عن الشعب) وربطها بالمرحلة التعليمية لتحديد التدرج السنوي.
@@ -87,7 +122,7 @@
 
 ---
 
-## 7. جدول الشعب الدراسية (`sections`)
+## 8. جدول الشعب الدراسية (`sections`)
 
 > **الوصف:**  
 > جدول الشعب المدرسية (مستقل تماماً عن الفصول) لتعريف أسماء الشعب المعتمدة في المدرسة دون تكرار.
@@ -111,7 +146,7 @@
 
 ---
 
-## 8. جدول ربط الفصول بالشعب (`class_sections`)
+## 9. جدول ربط الفصول بالشعب (`class_sections`)
 
 > **الوصف:**  
 > جدول الربط متعدد لمتعدد يربط كل فصل دراسي بالشعب المفتوحة له (مثل: خامس/أ، خامس/ب).
@@ -139,7 +174,7 @@
 
 ---
 
-## 9. جدول كتالوج المواد العام (`subjects`)
+## 10. جدول كتالوج المواد العام (`subjects`)
 
 > **الوصف:**  
 > السجل العام النظيف لكافة المواد والمناهج الدراسية في المدرسة لمرة واحدة فقط كمرجع مستقل.
@@ -165,20 +200,21 @@
 
 ---
 
-## 10. جدول مقررات الفصول والدرجات (`class_subjects`)
+## 11. جدول مقررات الفصول والدرجات بالفصل الدراسي (`class_subjects`)
 
 > **الوصف:**  
-> جدول الربط متعدد لمتعدد يربط كل فصل دراسي بالمواد المقررة له مع تحديد درجة النجاح والدرجة العظمى المخصصة لكل مادة في هذا الفصل.
+> جدول الربط الثلاثي يربط كل فصل دراسي بالمادة المقررة في فصل/سمستر محدد، مع تحديد درجة النجاح والدرجة العظمى المخصصة لكل سمستر بدقة متناهية.
 
 ### 📋 هيكل الأعمدة (Columns Matrix):
 
 | اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
 | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي لمقرر المادة بالفصل. |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي لمقرر المادة بالفصل الدراسي. |
 | `class_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل الدراسي (يرتبط بـ `classes.id`). |
 | `subject_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف المادة العامة (يرتبط بـ `subjects.id`). |
-| `passing_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 50.00` | درجة النجاح الصغرى المقررة للمادة في هذا الفصل. |
-| `max_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 100.00` | الدرجة الكلية العظمى للمادة في هذا الفصل. |
+| `academic_term_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل الدراسي/السمستر (يرتبط بـ `academic_terms.id`). |
+| `passing_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 50.00` | درجة النجاح الصغرى المقررة للمادة في هذا السمستر. |
+| `max_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 100.00` | الدرجة الكلية العظمى للمادة في هذا السمستر. |
 | `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
 | `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
 | `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
@@ -186,9 +222,12 @@
 ### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
 * `class_id` يرتبط بجدول `classes(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
 * `subject_id` يرتبط بجدول `subjects(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `academic_term_id` يرتبط بجدول `academic_terms(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
 
 ### ⚡ الفهارس والقيود (Indexes & Constraints):
 * `PRIMARY KEY (id)`
-* `UNIQUE INDEX uq_class_subjects (class_id, subject_id)`
+* `UNIQUE INDEX uq_class_subject_term (class_id, subject_id, academic_term_id)`  
+  *(يضمن تكوين المادة بدرجاتها لمرة واحدة فقط لكل سمستر في الصف الواحد).*
 * `INDEX idx_class_subjects_class (class_id)`
 * `INDEX idx_class_subjects_subject (subject_id)`
+* `INDEX idx_class_subjects_term (academic_term_id)`
