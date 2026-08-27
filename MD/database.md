@@ -14,7 +14,24 @@
 
 ---
 
-# 📦 المرحلة 01: جداول الهوية والمصادقة والتدقيق (Authentication, Identity & Audit)
+## 📊 الفهرس الإجمالي لتوزيع الجداول على المراحل (24 جدولاً)
+
+| رقم المرحلة | اسم المرحلة ومجالها الوظيفي | عدد الجداول | أسماء الجداول في المرحلة |
+| :---: | :--- | :---: | :--- |
+| **01** | الهوية والمصادقة والتدقيق (Auth & Audit) | **3** جداول | `users`, `personal_access_tokens`, `audit_logs` |
+| **02** | الهيكل الأكاديمي والمناهج (Curriculum) | **8** جداول | `academic_years`, `academic_terms`, `academic_stages`, `classes`, `sections`, `class_sections`, `subjects`, `class_subjects` |
+| **03** | الكادر التعليمي والإسناد (Teachers) | **جدولان (2)** | `teachers`, `teaching_assignments` |
+| **04** | الطلاب وأولياء الأمور والتسكين (Students) | **4** جداول | `students`, `guardians`, `guardian_students`, `student_enrollments` |
+| **05** | أوقات الحصص والجداول الأسبوعية (Timetables) | **جدولان (2)** | `period_slots`, `timetable_slots` |
+| **06** | الواجبات المدرسية (Homework) | **جدول واحد (1)** | `assignments` |
+| **07** | التطبيقات والاختبارات الدورية (Quizzes) | **جدول واحد (1)** | `quizzes` |
+| **08** | جدول الامتحانات الرسمية (Official Exams) | **جدول واحد (1)** | `official_exams` |
+| **09** | الترحيل والأرشفة النهائية للصحائف (Promotion) | **جدولان (2)** | `student_transcripts`, `promotion_batches` |
+| 🏆 | **الإجمالي الكلي للنظام** | **24 جدولاً** | **موزعة ومحكومة بالكامل بنمط SSoT** |
+
+---
+
+# 📦 المرحلة 01: الهوية والمصادقة والتدقيق (Authentication, Identity & Audit) — [3 جداول]
 
 ---
 
@@ -114,11 +131,11 @@
 
 ---
 
-# 📦 المرحلة 02: الهيكل الأكاديمي والمناهج (Academic Hierarchy & Curriculum)
+# 📦 المرحلة 02: الهيكل الأكاديمي والمناهج (Academic Hierarchy & Curriculum) — [8 جداول]
 
 ---
 
-## 4. جدول الأعوام الدراسية (`academic_years`)
+## 1. جدول الأعوام الدراسية (`academic_years`)
 
 > **الوصف:**  
 > جدول إدارة السنوات الدراسية في المدرسة، وتحديد تواريخ البدء والانتهاء، والتحكم في العام الدراسي النشط.
@@ -147,7 +164,40 @@
 
 ---
 
-## 5. جدول المراحل الدراسية (`academic_stages`)
+## 2. جدول الفصول/الفترات الدراسية (`academic_terms`)
+
+> **الوصف:**  
+> جدول الفصول/السمسترات التابعة للعام الدراسي (الفصل الأول، الفصل الثاني، والفصل الثالث للشهادات) لتنظيم إغلاق الفترات وعزل العمليات التراكمية.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الفريد للفصل الدراسي/السمستر. |
+| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي (يرتبط بـ `academic_years.id`). |
+| `name` | `VARCHAR(50)` | `NOT NULL` | مسمى الفترة (مثال: `الفصل الأول`, `الفصل الثاني`, `الفصل الثالث`). |
+| `term_number` | `TINYINT UNSIGNED` | `NOT NULL` | ترتيب الفصل خلال العام الدراسي (`1`, `2`, `3`). |
+| `start_date` | `DATE` | `NOT NULL` | تاريخ بداية الفصل الدراسي. |
+| `end_date` | `DATE` | `NOT NULL` | تاريخ نهاية الفصل الدراسي. |
+| `is_active` | `TINYINT(1)` | `NOT NULL`, `DEFAULT 0` | هل هو الفصل النشط حالياً للعمليات؟ (`1 = نشط`, `0 = غير نشط`). |
+| `is_closed` | `TINYINT(1)` | `NOT NULL`, `DEFAULT 0` | هل تم إغلاق الفصل نهائياً واعتماد درجاته؟ (`1 = مغلق للأرشفة`, `0 = مفتوح`). |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_terms_year_number (academic_year_id, term_number)`
+* `INDEX idx_terms_academic_year (academic_year_id)`
+* `INDEX idx_terms_is_active (is_active)`
+* `INDEX idx_terms_is_closed (is_closed)`
+
+---
+
+## 3. جدول المراحل الدراسية (`academic_stages`)
 
 > **الوصف:**  
 > جدول المراحل التعليمية الكبرى في الهيكل المدرسي (مثل: المرحلة الابتدائية، الإعدادية/المتوسطة، الثانوية).
@@ -173,7 +223,7 @@
 
 ---
 
-## 6. جدول الفصول الدراسية (`classes`)
+## 4. جدول الفصول الدراسية (`classes`)
 
 > **الوصف:**  
 > جدول الفصول/الصفوف المدرسية (مستقل تماماً عن الشعب) وربطها بالمرحلة التعليمية لتحديد التدرج السنوي.
@@ -191,9 +241,7 @@
 | `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
 
 ### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
-* `stage_id` يرتبط بجدول `academic_stages(id)` مع سلوك:
-  * `ON DELETE RESTRICT` (يمنع حذف المرحلة إذا كانت تحتوي على فصول دراسية).
-  * `ON UPDATE CASCADE`.
+* `stage_id` يرتبط بجدول `academic_stages(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
 
 ### ⚡ الفهارس والقيود (Indexes & Constraints):
 * `PRIMARY KEY (id)`
@@ -203,7 +251,7 @@
 
 ---
 
-## 7. جدول الشعب الدراسية (`sections`)
+## 5. جدول الشعب الدراسية (`sections`)
 
 > **الوصف:**  
 > جدول الشعب المدرسية (مستقل تماماً عن الفصول) لتعريف أسماء الشعب المعتمدة في المدرسة دون تكرار.
@@ -227,7 +275,7 @@
 
 ---
 
-## 8. جدول ربط الفصول بالشعب (`class_sections`)
+## 6. جدول ربط الفصول بالشعب (`class_sections`)
 
 > **الوصف:**  
 > جدول الربط متعدد لمتعدد يربط كل فصل دراسي بالشعب المفتوحة له (مثل: خامس/أ، خامس/ب).
@@ -255,7 +303,7 @@
 
 ---
 
-## 9. جدول كتالوج المواد العام (`subjects`)
+## 7. جدول كتالوج المواد العام (`subjects`)
 
 > **الوصف:**  
 > السجل العام النظيف لكافة المواد والمناهج الدراسية في المدرسة لمرة واحدة فقط كمرجع مستقل.
@@ -281,20 +329,21 @@
 
 ---
 
-## 10. جدول مقررات الفصول والدرجات (`class_subjects`)
+## 8. جدول مقررات الفصول والدرجات بالفصل الدراسي (`class_subjects`)
 
 > **الوصف:**  
-> جدول الربط متعدد لمتعدد يربط كل فصل دراسي بالمواد المقررة له مع تحديد درجة النجاح والدرجة العظمى المخصصة لكل مادة في هذا الفصل.
+> جدول الربط الثلاثي يربط كل فصل دراسي بالمادة المقررة في فصل/سمستر محدد، مع تحديد درجة النجاح والدرجة العظمى المخصصة لكل سمستر بدقة متناهية.
 
 ### 📋 هيكل الأعمدة (Columns Matrix):
 
 | اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
 | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي لمقرر المادة بالفصل. |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي لمقرر المادة بالفصل الدراسي. |
 | `class_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل الدراسي (يرتبط بـ `classes.id`). |
 | `subject_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف المادة العامة (يرتبط بـ `subjects.id`). |
-| `passing_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 50.00` | درجة النجاح الصغرى المقررة للمادة في هذا الفصل. |
-| `max_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 100.00` | الدرجة الكلية العظمى للمادة في هذا الفصل. |
+| `academic_term_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل الدراسي/السمستر (يرتبط بـ `academic_terms.id`). |
+| `passing_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 50.00` | درجة النجاح الصغرى المقررة للمادة في هذا السمستر. |
+| `max_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 100.00` | الدرجة الكلية العظمى للمادة في هذا السمستر. |
 | `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
 | `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
 | `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
@@ -302,9 +351,488 @@
 ### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
 * `class_id` يرتبط بجدول `classes(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
 * `subject_id` يرتبط بجدول `subjects(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `academic_term_id` يرتبط بجدول `academic_terms(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
 
 ### ⚡ الفهارس والقيود (Indexes & Constraints):
 * `PRIMARY KEY (id)`
-* `UNIQUE INDEX uq_class_subjects (class_id, subject_id)`
+* `UNIQUE INDEX uq_class_subject_term (class_id, subject_id, academic_term_id)`
 * `INDEX idx_class_subjects_class (class_id)`
 * `INDEX idx_class_subjects_subject (subject_id)`
+* `INDEX idx_class_subjects_term (academic_term_id)`
+
+---
+
+# 📦 المرحلة 03: الكادر التعليمي وإسناد التدريس (Teachers & Teaching Assignments) — [جدولان (2)]
+
+---
+
+## 1. جدول المعلمين (`teachers`)
+
+> **الوصف:**  
+> جدول ملفات المعلمين وبياناتهم الشخصية والمهنية وتخصصاتهم العلمية وربطهم بحسابات الدخول الموحدة.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الداخلي للمعلم. |
+| `user_id` | `BIGINT UNSIGNED` | `NOT NULL`, `UNIQUE` | معرف حساب الدخول الموحد (يرتبط بـ `users.id` صاحب كود `TCH-XXXX`). |
+| `full_name` | `VARCHAR(150)` | `NOT NULL` | الاسم الرباعي واللقب للمعلم. |
+| `phone` | `VARCHAR(20)` | `NULL DEFAULT NULL` | رقم هاتف المعلم للتواصل. |
+| `specialization` | `VARCHAR(100)` | `NULL DEFAULT NULL` | التخصص العلمي (مثال: رياضيات، لغة إنجليزية، علوم). |
+| `hire_date` | `DATE` | `NULL DEFAULT NULL` | تاريخ التعيين والمباشرة بالمدرسة. |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `user_id` يرتبط بجدول `users(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_teachers_user_id (user_id)`
+* `INDEX idx_teachers_full_name (full_name)`
+
+---
+
+## 2. جدول إسناد التدريس الأكاديمي (`teaching_assignments`)
+
+> **الوصف:**  
+> حلقة الوصل المحورية التي تحدد المعلم المسؤول عن تدريس مادة دراسية محددة لشعبة وفصل محدد خلال عام دراسي محدد.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي لسجل الإسناد الأكاديمي. |
+| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي النشط (يرتبط بـ `academic_years.id`). |
+| `class_section_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل والشعبة المحددة (يرتبط بـ `class_sections.id`). |
+| `subject_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف المادة الدراسية المسندة (يرتبط بـ `subjects.id`). |
+| `teacher_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف المعلم المكلف بالتدريس (يرتبط بـ `teachers.id`). |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `class_section_id` يرتبط بجدول `class_sections(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `subject_id` يرتبط بجدول `subjects(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `teacher_id` يرتبط بجدول `teachers(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_teaching_assignment (academic_year_id, class_section_id, subject_id)`  
+  *(قيد الحوكمة المحوري: يضمن تعيين معلم مسؤول أساسي واحد فقط لكل مادة في الشعبة الواحدة خلال العام الدراسي لمنع تضارب رصد الدرجات والواجبات، مع إمكانية تكرار المعلم الواحد لتدريس مواد وفصول وشعب متعددة).*
+* `INDEX idx_teaching_teacher (teacher_id)`
+* `INDEX idx_teaching_class_section (class_section_id)`
+* `INDEX idx_teaching_subject (subject_id)`
+
+---
+
+# 📦 المرحلة 04: شؤون الطلاب وتسكين الفصول وأولياء الأمور (Students, Guardians & Enrollments) — [4 جداول]
+
+---
+
+## 1. جدول الطلاب (`students`)
+
+> **الوصف:**  
+> جدول ملفات الطلاب وبياناتهم الشخصية الأساسية (الاسم، تاريخ الميلاد، الجنس، رقم الهاتف) وربطهم بحسابات الدخول الموحدة.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الداخلي الفريد للطالب. |
+| `user_id` | `BIGINT UNSIGNED` | `NOT NULL`, `UNIQUE` | معرف حساب الدخول الموحد (يرتبط بـ `users.id` صاحب كود `STU-XXXX`). |
+| `full_name` | `VARCHAR(150)` | `NOT NULL` | الاسم الرباعي واللقب للطالب. |
+| `phone` | `VARCHAR(20)` | `NULL DEFAULT NULL` | رقم هاتف الطالب للتواصل (اختياري). |
+| `birth_date` | `DATE` | `NULL DEFAULT NULL` | تاريخ ميلاد الطالب. |
+| `gender` | `ENUM('male', 'female')` | `NOT NULL` | جنس الطالب (`male = ذكر`, `female = أنثى`). |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `user_id` يرتبط بجدول `users(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_students_user_id (user_id)`
+* `INDEX idx_students_full_name (full_name)`
+
+---
+
+## 2. جدول أولياء الأمور (`guardians`)
+
+> **الوصف:**  
+> جدول ملفات أولياء الأمور وبيانات الاتصال وصلة القرابة وربطهم بحسابات الدخول الموحدة للدخول في سياق الأبناء.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الداخلي لولي الأمر. |
+| `user_id` | `BIGINT UNSIGNED` | `NOT NULL`, `UNIQUE` | معرف حساب الدخول الموحد (يرتبط بـ `users.id` صاحب كود `PAR-XXXX`). |
+| `full_name` | `VARCHAR(150)` | `NOT NULL` | الاسم الكامل لولي الأمر. |
+| `phone` | `VARCHAR(20)` | `NOT NULL` | رقم هاتف التواصل مع ولي الأمر. |
+| `relationship` | `ENUM('father', 'mother', 'brother', 'uncle', 'other')` | `NOT NULL`, `DEFAULT 'father'` | صلة القرابة بالطالب. |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `user_id` يرتبط بجدول `users(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_guardians_user_id (user_id)`
+* `UNIQUE INDEX uq_guardians_phone (phone)`
+* `INDEX idx_guardians_full_name (full_name)`
+
+---
+
+## 3. جدول وصاية أولياء الأمور على الطلاب (`guardian_students`)
+
+> **الوصف:**  
+> جدول ربط علاقة متعدد لمتعدد (M:N) بين أولياء الأمور والأبناء، يتيح لولي الأمر متابعة أكثر من طالب، ويتيح للطالب الارتباط بأكثر من وصي.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي لسجل الوصاية. |
+| `guardian_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف ولي الأمر (يرتبط بـ `guardians.id`). |
+| `student_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الطالب الابن (يرتبط بـ `students.id`). |
+| `is_primary` | `TINYINT(1)` | `NOT NULL`, `DEFAULT 1` | هل هو الوصي الرئيسي المعتمد للطالب (`1 = نعم`, `0 = إضافي`). |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `guardian_id` يرتبط بجدول `guardians(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `student_id` يرتبط بجدول `students(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_guardian_student (guardian_id, student_id)`
+* `INDEX idx_guardian_students_guardian (guardian_id)`
+* `INDEX idx_guardian_students_student (student_id)`
+
+---
+
+## 4. جدول تسكين الطلاب الأكاديمي (`student_enrollments`)
+
+> **الوصف:**  
+> جدول تسكين الطلاب في الفصول والشعب للعام الدراسي النشط، وتتبع أرقام الجلوس والمستوى الأكاديمي وحالات نهاية العام (قيد، نجاح، دور ثانٍ، رسوب، تخرج).
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي لسجل التسكين. |
+| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي (يرتبط بـ `academic_years.id`). |
+| `student_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الطالب (يرتبط بـ `students.id`). |
+| `class_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الصف الدراسي (يرتبط بـ `classes.id` لضمان النزاهة العلائقية). |
+| `grade_level` | `SMALLINT UNSIGNED` | `NOT NULL` | المستوى الأكاديمي الرقمي (`1` إلى `12`) لتسريع التقارير وحسابات الترحيل. |
+| `class_section_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل والشعبة المسكن بها (يرتبط بـ `class_sections.id`). |
+| `seating_number` | `VARCHAR(50)` | `NULL DEFAULT NULL` | رقم جلوس الطالب في الامتحانات للعام الدراسي. |
+| `status` | `ENUM('enrolled', 'passed', 'second_round', 'failed', 'graduated')` | `NOT NULL`, `DEFAULT 'enrolled'` | حالة الطالب الأكاديمية ونهاية العام. |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `student_id` يرتبط بجدول `students(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `class_id` يرتبط بجدول `classes(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `class_section_id` يرتبط بجدول `class_sections(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_student_year_enrollment (academic_year_id, student_id)`  
+  *(قيد الحوكمة المحوري: يضمن تسكين الطالب في فصل وشعبة واحدة فقط خلال العام الدراسي الواحد لمنع التكرار).*
+* `INDEX idx_enrollments_class_id (class_id)`
+* `INDEX idx_enrollments_grade_level (academic_year_id, grade_level)`
+* `INDEX idx_enrollments_class_section (class_section_id)`
+* `INDEX idx_enrollments_status (status)`
+* `INDEX idx_enrollments_seating (seating_number)`
+
+---
+
+# 📦 المرحلة 05: أوقات الحصص والجداول الأسبوعية (Timetables & Daily Period Slots) — [جدولان (2)]
+
+---
+
+## 1. جدول أوقات الحصص اليومية (`period_slots`)
+
+> **الوصف:**  
+> جدول تحديد مواعيد الحصص المدرسية اليومية والفسحة/الاستراحة المنظمة لليوم المدرسي والمحددة مركزياً من الإدارة.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي للحصة اليومية. |
+| `name` | `VARCHAR(50)` | `NOT NULL` | مسمى الحصة (مثال: `الحصة الأولى`, `الحصة الثانية`, `الفسحة / الاستراحة`). |
+| `slot_number` | `TINYINT UNSIGNED` | `NOT NULL`, `UNIQUE` | الرقم التسلسلي للحصة خلال اليوم (`1, 2, 3...`). |
+| `start_time` | `TIME` | `NOT NULL` | وقت بداية الحصة (مثال: `08:00:00`). |
+| `end_time` | `TIME` | `NOT NULL` | وقت نهاية الحصة (مثال: `08:45:00`). |
+| `is_break` | `TINYINT(1)` | `NOT NULL`, `DEFAULT 0` | هل هي فترة راحة/فسحة لا تتطلب تدريساً (`1 = استراحة`, `0 = حصة دراسية`). |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* *لا يحتوي على مفاتيح خارجية.*
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_period_slots_number (slot_number)`
+* `INDEX idx_period_slots_times (start_time, end_time)`
+
+---
+
+## 2. جدول الحصص بالجدول الأسبوعي (`timetable_slots`)
+
+> **الوصف:**  
+> جدول توزيع الحصص الدراسية على أيام الأسبوع (السبت إلى الخميس) لكل شعبة للعام الدراسي، وربطها بالمادة والمعلم المكلف مع منع التعارضات.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي لسجل الحصة في الجدول الأسبوعي. |
+| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي النشط (يرتبط بـ `academic_years.id`). |
+| `class_section_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل والشعبة المحددة (يرتبط بـ `class_sections.id`). |
+| `day_of_week` | `ENUM('saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday')` | `NOT NULL` | يوم الحصة في الأسبوع. |
+| `period_slot_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف توقيت الحصة اليومية (يرتبط بـ `period_slots.id`). |
+| `teaching_assignment_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف إسناد التدريس (يرتبط بـ `teaching_assignments.id` لتحديد المادة والمعلم). |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `class_section_id` يرتبط بجدول `class_sections(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `period_slot_id` يرتبط بجدول `period_slots(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `teaching_assignment_id` يرتبط بجدول `teaching_assignments(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس وقيود منع التعارض (Indexes & Anti-Conflict Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_timetable_section_slot (academic_year_id, class_section_id, day_of_week, period_slot_id)`  
+  *(قيد الحوكمة ومنع التعارض للشعبة: يمنع وجود حصتين لنفس الشعبة في نفس اليوم والتوقيت خلال العام الدراسي).*
+* `INDEX idx_timetable_teacher_conflict (academic_year_id, day_of_week, period_slot_id, teaching_assignment_id)`  
+  *(فهرس استعلام فحص تضارب المعلم: يمنع إسناد المعلم لتدريس شعبتين في نفس التوقيت واليوم).*
+* `INDEX idx_timetable_class_section (class_section_id)`
+
+---
+
+# 📦 المرحلة 06: الواجبات المدرسية (Homework & Assignments) — [جدول واحد (1)]
+
+---
+
+## 1. جدول الواجبات المدرسية (`assignments`)
+
+> **الوصف:**  
+> جدول إدارة الواجبات المدرسية والتكاليف المنزلية التي ينشئها المعلم (أو الإدارة بصفة وكيل) ومتابعة مواعيد استحقاقها من قِبل الطلاب وأولياء الأمور لكل عام دراسي وسمستر وشعبة.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الفريد للواجب. |
+| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي النشط (يرتبط بـ `academic_years.id`). |
+| `academic_term_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل الدراسي/السمستر (يرتبط بـ `academic_terms.id`). |
+| `class_section_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل والشعبة الموجه لها الواجب (يرتبط بـ `class_sections.id`). |
+| `teaching_assignment_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف إسناد التدريس (يرتبط بـ `teaching_assignments.id` لتحديد المادة والمعلم بدقة). |
+| `created_by_user_id` | `BIGINT UNSIGNED` | `NOT NULL` | المستخدم الفعلي الذي أنشأ السجل (يرتبط بـ `users.id` لتوثيق المنشئ سواء كان المعلم أو الإدارة). |
+| `title` | `VARCHAR(200)` | `NOT NULL` | عنوان وموضوع الواجب (مثال: `حل تمارين ص 45 - الجبر`). |
+| `description` | `TEXT` | `NULL DEFAULT NULL` | التفاصيل والتعليمات الإضافية للواجب. |
+| `attachments` | `JSON` | `NULL DEFAULT NULL` | مصفوفة ملفات وصور مرفقة بالواجب بصيغة JSON (تدعم عدة صور وملفات PDF). |
+| `assigned_date` | `DATE` | `NOT NULL` | تاريخ نشر الواجب للطلاب. |
+| `due_date` | `DATE` | `NOT NULL` | تاريخ الاستحقاق وموعد التسليم النهائي. |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `academic_term_id` يرتبط بجدول `academic_terms(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `class_section_id` يرتبط بجدول `class_sections(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `teaching_assignment_id` يرتبط بجدول `teaching_assignments(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `created_by_user_id` يرتبط بجدول `users(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `INDEX idx_assignments_section_term (class_section_id, academic_term_id)`  
+  *(فهرس استعلام فائق السرعة لعرض جدول واجبات الطالب وولي الأمر في السمستر الحالي).*
+* `INDEX idx_assignments_teaching (teaching_assignment_id)`
+* `INDEX idx_assignments_academic_year (academic_year_id)`
+* `INDEX idx_assignments_due_date (due_date)`
+
+---
+
+# 📦 المرحلة 07: التطبيقات والاختبارات الدورية (Class Quizzes & Tests) — [جدول واحد (1)]
+
+---
+
+## 1. جدول التطبيقات والاختبارات الدورية (`quizzes`)
+
+> **الوصف:**  
+> جدول جدولة وإعلان مواعيد وتفاصيل الاختبارات الدورية والتطبيقات الشهرية التي ينشئها المعلم (أو الإدارة بصفة وكيل) لتمكين الطلاب وأولياء الأمور من الاطلاع عليها والاستعداد لها لكل عام دراسي وسمستر وشعبة.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الفريد للتطبيق. |
+| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي النشط (يرتبط بـ `academic_years.id`). |
+| `academic_term_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل الدراسي/السمستر (يرتبط بـ `academic_terms.id`). |
+| `class_section_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل والشعبة الموجه لها التطبيق (يرتبط بـ `class_sections.id`). |
+| `teaching_assignment_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف إسناد التدريس (يرتبط بـ `teaching_assignments.id` لتحديد المادة والمعلم بدقة). |
+| `created_by_user_id` | `BIGINT UNSIGNED` | `NOT NULL` | المستخدم الفعلي الذي أنشأ السجل (يرتبط بـ `users.id` لتوثيق المنشئ سواء كان المعلم أو الإدارة). |
+| `title` | `VARCHAR(200)` | `NOT NULL` | عنوان التطبيق (مثال: `تطبيق شهري 1 - الجبر`). |
+| `description` | `TEXT` | `NULL DEFAULT NULL` | مواضيع الاختبار المقررة والتعليمات الإرشادية للطلاب. |
+| `attachments` | `JSON` | `NULL DEFAULT NULL` | مصفوفة ملفات وصور مرفقة بالتطبيق بصيغة JSON (نماذج أسئلة، ملخصات، مراجعات). |
+| `quiz_date` | `DATE` | `NOT NULL` | تاريخ وموعد إجراء التطبيق في الفصل. |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `academic_term_id` يرتبط بجدول `academic_terms(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `class_section_id` يرتبط بجدول `class_sections(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `teaching_assignment_id` يرتبط بجدول `teaching_assignments(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `created_by_user_id` يرتبط بجدول `users(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `INDEX idx_quizzes_section_term (class_section_id, academic_term_id)`  
+  *(فهرس استعلام فائق السرعة لعرض جدول مواعيد تطبيقات الطالب في السمستر الحالي).*
+* `INDEX idx_quizzes_teaching (teaching_assignment_id)`
+* `INDEX idx_quizzes_academic_year (academic_year_id)`
+* `INDEX idx_quizzes_date (quiz_date)`
+
+---
+
+# 📦 المرحلة 08: جدول الامتحانات الرسمية (Official Exams Schedule) — [جدول واحد (1)]
+
+---
+
+## 1. جدول الامتحانات الرسمية (`official_exams`)
+
+> **الوصف:**  
+> جدول جدولة ونشر مواعيد الامتحانات الرسمية (النصفية، النهائية، وامتحانات الدور الثاني) الصادرة مركزياً من إدارة المدرسة لكل صف دراسي ومادة في السمستر، ليطّلع عليها الطلاب والمعلمون وأولياء الأمور.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الفريد لسجل الامتحان. |
+| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي النشط (يرتبط بـ `academic_years.id`). |
+| `academic_term_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل الدراسي/السمستر (يرتبط بـ `academic_terms.id`). |
+| `class_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الصف الدراسي الموجه له الامتحان (يرتبط بـ `classes.id`). |
+| `subject_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف المادة الدراسية (يرتبط بـ `subjects.id`). |
+| `exam_type` | `ENUM('midterm', 'final', 'second_round')` | `NOT NULL`, `DEFAULT 'final'` | نوع الامتحان الرسمي (`midterm = نصفي`, `final = نهائي`, `second_round = دور ثانٍ`). |
+| `exam_date` | `DATE` | `NOT NULL` | تاريخ يوم الامتحان. |
+| `notes` | `VARCHAR(255)` | `NULL DEFAULT NULL` | تعليمات وإرشادات إضافية للطلاب بخصوص الامتحان. |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `academic_term_id` يرتبط بجدول `academic_terms(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `class_id` يرتبط بجدول `classes(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `subject_id` يرتبط بجدول `subjects(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس وقيود التفرد (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_official_exam_schedule (academic_year_id, academic_term_id, class_id, subject_id, exam_type)`  
+  *(يمنع تكرار جدولة امتحان لنفس المادة والصف في نفس السمستر والنوع).*
+* `INDEX idx_official_exams_lookup (academic_year_id, academic_term_id, class_id)`  
+  *(فهرس استعلام سريع لجلب جدول امتحانات صف معين في سمستر معين).*
+* `INDEX idx_official_exams_date (exam_date)`
+
+---
+
+# 📦 المرحلة 09: محرك الترحيل والأرشفة النهائية للصحائف (Promotion & Transcripts Archiving) — [جدولان (2)]
+
+---
+
+## 1. جدول الصحائف المدرسية النهائية المؤرشفة (`student_transcripts`)
+
+> **الوصف:**  
+> جدول أرشفة وتجميد الصحيفة المدرسية السنوية النهائية للطالب، متضمناً تفاصيل الفصول والدرجات وأعمال السنة والامتحانات كلقطة بيانات نهائية ثابتة (Immutable Snapshot) لا تتأثر ببدء العام الجديد أو مسح الحركات التشغيلية السابقة.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الفريد لسجل الصحيفة. |
+| `student_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الطالب الدائم (يرتبط بـ `students.id` كالمفتاح الخارجي الوحيد). |
+| `academic_year_name` | `VARCHAR(50)` | `NOT NULL` | مسمى العام الدراسي كنص صلب (مثال: `2024/2025`). |
+| `class_name` | `VARCHAR(50)` | `NOT NULL` | اسم الصف الدراسي كنص صلب (مثال: `الصف الخامس`). |
+| `section_name` | `VARCHAR(50)` | `NOT NULL` | اسم الشعبة كنص صلب (مثال: `شعبة أ`). |
+| `grade_level` | `SMALLINT UNSIGNED` | `NOT NULL` | المستوى الأكاديمي الرقمي وقت التخرج من السنة (`1` إلى `12`). |
+| `total_score` | `DECIMAL(7,2)` | `NOT NULL` | المجموع الكلي للدرجات التي تحصل عليها الطالب. |
+| `percentage` | `DECIMAL(5,2)` | `NOT NULL` | النسبة المئوية العامة للطالب (مثال: `94.50%`). |
+| `final_status` | `ENUM('passed', 'second_round', 'failed', 'graduated')` | `NOT NULL` | النتيجة والقرار النهائي للطالب بنهاية العام. |
+| `rank` | `SMALLINT UNSIGNED` | `NULL DEFAULT NULL` | الترتيب على مستوى الصف أو الشعبة (مثال: `الأول`, `الثاني`). |
+| `transcript_data` | `JSON` | `NOT NULL` | اللقطة الكاملة للصحيفة التفصيلية: درجات كل مادة في كل فصل دراسي (أعمال سنة + امتحان نهائي)، والمجموع النهائي لكل مادة. |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت تجميد وإصدار الصحيفة. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `student_id` يرتبط بجدول `students(id)` مع سلوك:
+  * `ON DELETE RESTRICT` (يمنع حذف ملف الطالب طالما يملك صحائف دراسية تاريخية محفوظة).
+  * `ON UPDATE CASCADE`.
+* *لا يحتوي على أي مفاتيح خارجية تشغيلية أخرى لضمان الاستقلالية المطلقة للأرشيف.*
+
+### ⚡ الفهارس وقيود التفرد (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_student_transcript_year (student_id, academic_year_name)`  
+  *(يضمن حفظ صحيفة نهائية واحدة معتمدة لكل طالب في العام الدراسي الواحد).*
+* `INDEX idx_transcripts_year_class (academic_year_name, class_name)`
+* `INDEX idx_transcripts_status (final_status)`
+
+---
+
+## 2. جدول سجل وإحصائيات دفعات الترحيل السنوي (`promotion_batches`)
+
+> **الوصف:**  
+> جدول توثيق وتتبع كل دفعة ترحيل سنوي جماعي تنفذها الإدارة، مع حفظ الإحصائيات الشاملة ونسب النجاح والرسوب وأعداد الطلاب لكل صف دراسي.
+
+### 📋 هيكل الأعمدة (Columns Matrix):
+
+| اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي لسجل دفعة الترحيل. |
+| `from_academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي المُنتهى المرحل منه (يرتبط بـ `academic_years.id`). |
+| `to_academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي الجديد المرحل إليه (يرتبط بـ `academic_years.id`). |
+| `executed_by_user_id` | `BIGINT UNSIGNED` | `NOT NULL` | المدير الذي قام باعتماد وتنفيذ عملية الترحيل (يرتبط بـ `users.id`). |
+| `total_students` | `INT UNSIGNED` | `NOT NULL` | إجمالي عدد طلاب المدرسة المشمولين بالترحيل. |
+| `total_promoted` | `INT UNSIGNED` | `NOT NULL` | إجمالي عدد الطلاب الناجحين المنقولين للمستوى الأعلى. |
+| `total_second_round` | `INT UNSIGNED` | `NOT NULL` | إجمالي عدد طلاب الدور الثاني/الملاحق. |
+| `total_retained` | `INT UNSIGNED` | `NOT NULL` | إجمالي عدد الراسبين الباقين للإعادة في نفس الصف. |
+| `total_graduated` | `INT UNSIGNED` | `NOT NULL` | إجمالي عدد الخريجين من المرحلة النهائية. |
+| `overall_passing_rate` | `DECIMAL(5,2)` | `NOT NULL` | النسبة المئوية العامة لنجاح المدرسة في ذلك العام (مثال: `88.50%`). |
+| `class_statistics` | `JSON` | `NOT NULL` | إحصائيات تفصيلية لكل صف دراسي بصيغة JSON (اسم الصف، عدد الطلاب، عدد الناجحين، عدد الراسبين، ونسبة النجاح الخاصة بكل صف). |
+| `execution_notes` | `VARCHAR(255)` | `NULL DEFAULT NULL` | ملاحظات الإدارة على دفعة الترحيل. |
+| `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت تنفيذ عملية الترحيل. |
+| `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `from_academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `to_academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `executed_by_user_id` يرتبط بجدول `users(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+### ⚡ الفهارس وقيود التفرد (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_promotion_batch_years (from_academic_year_id, to_academic_year_id)`  
+  *(يضمن تسجيل دفعة ترحيل واحدة معتمدة بين كل عامين دراسيين).*
+* `INDEX idx_promotion_executed_by (executed_by_user_id)`
+* `INDEX idx_promotion_created_at (created_at)`
