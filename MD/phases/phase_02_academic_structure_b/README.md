@@ -9,7 +9,7 @@
 - **اسم المرحلة البرمجي:** `phase_02_academic_structure_b`
 - **عنوان المرحلة:** إدارة الصفوف والدعم وبنك المواد (Classes, Sections & Subjects).
 - **نمط الاتصال المعماري:** `API-First` (`mode: api_first`).
-- **مصدر حقيقة البيانات (DB SSoT):** [`MD/database/database_phase_02.md`](../../database/database_phase_02.md) (الجداول 7، 8، و 10).
+- **مصدر حقيقة البيانات (DB SSoT):** [`MD/database.md`](../../database.md) (الجداول 4، 6، و 8).
 - **إجمالي مسارات الـ API:** **12 مساراً برمجياً**.
 
 ---
@@ -32,7 +32,7 @@
 | الملف | المسؤولية والدور المعماري |
 | :--- | :--- |
 | **`README.md`** | **الملخص ودليل المرحلة الفرعية 02-B** (البطاقة، النطاق، خارطة الملفات، ومعايير القبول). |
-| **`data.md`** | **مواصفات البيانات للجداول الـ 3** (`classes`, `sections`, `subjects`) طبق `database_phase_02.md`. |
+| **`data.md`** | **مواصفات البيانات للجداول الـ 3** (`classes`, `sections`, `subjects`) طبق [`MD/database.md`](../../database.md). |
 | **`routes.md`** | **عقد الشبكة والاستجابات الـ 12 (Network SSoT)** متضمناً Request Body و Response Payload الكامل لكافة الرموز. |
 | **`backend.md`** | **منطق الخادم والـ Services والتحقق وقواعد البزنس** للخطوات 4 و 5 و 6. |
 | **`frontend.md`** | **شاشات الواجهة وإجراءات المستخدم وحالات المعالجة الأربع** للخطوات 4 و 5 و 6. |
@@ -41,5 +41,5 @@
 
 ## 🏁 4. معايير القبول والاكتمال (Definition of Done)
 
-- [ ] مطابقة أسماء الأعمدة والفهارس في `data.md` بنسبة 100% مع [`MD/database/database_phase_02.md`](../../database/database_phase_02.md) (`stage_id`, `grade_level`).
+- [ ] مطابقة أسماء الأعمدة والفهارس في `data.md` بنسبة 100% مع [`MD/database.md`](../../database.md) (`stage_id`, `grade_level`).
 - [ ] استيفاء حقول الـ Request والـ Response JSON الصريحة لجميع الـ 12 مساراً بكافة حالات الـ Status Codes في `routes.md`.
