@@ -16,11 +16,11 @@
 
 ---
 
-## 🗓️ الخطوة 7: إدارة تواريخ وتخطيط فترات الصفوف (`class_academic_terms`) — [4 مسارات]
+## 🗓️ الخطوة 1: إدارة تواريخ وتخطيط فترات الصفوف (`class_academic_terms`) — [4 مسارات]
 
 ---
 
-### 7.1 `GET /api/v1/academic/years/:academic_year_id/classes/:class_id/terms` — عرض فترات وتواريخ صف بالعام
+### 1.1 `GET /api/v1/academic/years/:academic_year_id/classes/:class_id/terms` — عرض فترات وتواريخ صف بالعام
 - **الوصف الوظيفي للرابط:** استرجاع فترات وتواريخ وتقويم صف دراسي محدد في عام دراسي بالمنظومة.
 - **Response Payloads:**
   - **`200 OK`:**
@@ -46,7 +46,7 @@
 
 ---
 
-### 7.2 `POST /api/v1/academic/class-academic-terms` — تخصيص وتخبيط فترة وتواريخ لصف
+### 1.2 `POST /api/v1/academic/class-academic-terms` — تخصيص وتخطيط فترة وتواريخ لصف
 - **الوصف الوظيفي للرابط:** تخصيص فترة وتواريخ رسمية لصف بالعام الدراسي طبق تقويم الوزارة (مثل: 3 فترات لصف 9 و 12، وفترتان لصف 5 و 6).
 - **Request Body:**
   ```json
@@ -81,14 +81,14 @@
 
 ---
 
-### 7.3 `POST /api/v1/academic/class-academic-terms/:id/activate` — تفعيل الفترة النشطة للصف
+### 1.3 `POST /api/v1/academic/class-academic-terms/:id/activate` — تفعيل الفترة النشطة للصف
 - **الوصف الوظيفي للرابط:** تفعيل الفترة الحالية النشطة لهذا الصف بالذات وإلغاء تفعيل الفترات الأخرى لنفس الصف بالعام بحركة ذرية atomic.
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تم تفعيل الفترة النشطة للصف الدراسي بنجاح."}`
 
 ---
 
-### 7.4 `POST /api/v1/academic/class-academic-terms/:id/close` — إغلاق/فتح درجات الفترة للصف
+### 1.4 `POST /api/v1/academic/class-academic-terms/:id/close` — إغلاق/فتح درجات الفترة للصف
 - **الوصف الوظيفي للرابط:** تغيير حالة إغلاق درجات الفترة للصف (`is_closed = 1`).
 - **Request Body:** `{"is_closed": 1}`
 - **Response Payloads:**
@@ -96,18 +96,18 @@
 
 ---
 
-## 🧩 الخطوة 8: إدارة ربط وتسكين الشُعب بالصفوف (`class_sections`) — [3 مسارات]
+## 🧩 الخطوة 2: إدارة ربط وتسكين الشُعب بالصفوف (`class_sections`) — [3 مسارات]
 
 ---
 
-### 8.1 `GET /api/v1/academic/classes/:class_id/sections` — عرض شعب صف مفتوحة
+### 2.1 `GET /api/v1/academic/classes/:class_id/sections` — عرض شعب صف مفتوحة
 - **الوصف الوظيفي للرابط:** استرجاع قائمة كافة الشعب المفتوحة والمخصصة لصف دراسي محدد.
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تم جلب الشعب المفتوحة للصف بنجاح.", "data": [{ "id": 1, "class_id": 5, "section_id": 1, "section_name": "شعبة أ" }]}`
 
 ---
 
-### 8.2 `POST /api/v1/academic/class-sections` — تسكين/ربط شعبة بصف
+### 2.2 `POST /api/v1/academic/class-sections` — تسكين/ربط شعبة بصف
 - **Request Body:** `{"class_id": 5, "section_id": 1}`
 - **Response Payloads:**
   - **`201 Created`:** `{"success": true, "message": "تم فتح وتسكين الشعبة للصف بنجاح."}`
@@ -115,18 +115,18 @@
 
 ---
 
-### 8.3 `DELETE /api/v1/academic/class-sections/:id` — فك ربط شعبة من صف
+### 2.3 `DELETE /api/v1/academic/class-sections/:id` — فك ربط شعبة من صف
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تم فك ربط الشعبة من الصف بنجاح."}`
   - **`403 Forbidden`:** `{"success": false, "message": "لا يمكن فك ربط الشعبة لوجود طلاب مسجلين بها (RESTRICT)."}`
 
 ---
 
-## 📝 الخطوة 9: إدارة مناهج الصفوف والدرجات لكل فترة (`class_subjects`) — [4 مسارات]
+## 📝 الخطوة 3: إدارة مناهج الصفوف والدرجات لكل فترة (`class_subjects`) — [4 مسارات]
 
 ---
 
-### 9.1 `GET /api/v1/academic/classes/:class_id/subjects` — عرض منهج الصف بالفترة
+### 3.1 `GET /api/v1/academic/classes/:class_id/subjects` — عرض منهج الصف بالفترة
 - **Query Parameters:** `class_academic_term_id` (required, bigint)
 - **Response Payloads:**
   - **`200 OK`:**
@@ -150,7 +150,7 @@
 
 ---
 
-### 9.2 `POST /api/v1/academic/classes/:class_id/subjects` — إسناد مادة لصف وتحديد درجات الفترة
+### 3.2 `POST /api/v1/academic/classes/:class_id/subjects` — إسناد مادة لصف وتحديد درجات الفترة
 - **Request Body:** `{"subject_id": 1, "class_academic_term_id": 10, "passing_score": 50.00, "max_score": 100.00}`
 - **Response Payloads:**
   - **`201 Created`:** `{"success": true, "message": "تم إسناد المادة وتحديد درجات الفصل الدراسي بنجاح."}`
@@ -158,14 +158,14 @@
 
 ---
 
-### 9.3 `PUT /api/v1/academic/classes/:class_id/subjects/:id` — تعديل درجات مادة بالفترة
+### 3.3 `PUT /api/v1/academic/classes/:class_id/subjects/:id` — تعديل درجات مادة بالفترة
 - **Request Body:** `{"passing_score": 60.00, "max_score": 100.00}`
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تم تحديث درجات المادة للفترة بنجاح."}`
 
 ---
 
-### 9.4 `DELETE /api/v1/academic/classes/:class_id/subjects/:subject_id` — إزالة مادة من منهج فترة
+### 3.4 `DELETE /api/v1/academic/classes/:class_id/subjects/:subject_id` — إزالة مادة من منهج فترة
 - **Query Parameters:** `class_academic_term_id` (required, bigint)
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تمت إزالة المادة من منهج الفصل الدراسي بنجاح."}`
