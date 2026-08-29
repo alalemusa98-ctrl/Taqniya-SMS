@@ -1,6 +1,6 @@
 # 🖥️ مواصفات Frontend — المرحلة 02-A (User Interface & UX)
 
-> **الهدف:** توثيق الشاشات والنوافل المنبثقة والإجراءات الحصرية للجداول الثلاثة (`academic_years`, `academic_terms`, `academic_stages`) المطابقة بنسبة 100% لـ [`MD/routes.md`](./routes.md) و [`MD/database.md`](../../database.md).  
+> **الهدف:** توثيق تفاصيل وتصميم الواجهات واللوحات الجانبية المنبثقة (Slide-over Drawer) لكافة عمليات الإضافة والتعديل، ونوافذ التأكيد الحصرية للحذف، وسلوك كافة المسارات البرمجية في المرحلة الفرعية 02-A المطابقة بنسبة 100% لـ [`MD/routes.md`](./routes.md) و [`MD/database.md`](../../database.md).  
 > 
 > ⚠️ **تكامل حوكمي صريح وملزم — مرجع الاستجابات (Network SSoT):**  
 > ملف [`routes.md`](./routes.md) هو **المصدر الرئيسي والحصري والوحيد لكافة استجابات الـ API (Network SSoT)**. تم تسجيل كامل شكل الاستجابة (JSON Response Body) ورسائل الخطأ والنجاح صراحةً في [`routes.md`](./routes.md) لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`) لكل رابط.  
@@ -8,43 +8,124 @@
 
 ---
 
-## 1. شاشة وإجراءات إدارة السنوات الدراسية (الخطوة 1) — [5 مسارات]
+## 📅 1. شاشة وإجراءات إدارة السنوات الدراسية (`academic_years`) — (الخطوة 1)
 
-### 1.1 المكونات والإجراءات:
-- **جدول عرض السنوات:** يظهر `name`, `start_date`, `end_date`, والشارة `is_active`.
-- **مصفوفة الإجراءات والروابط:**
-  | الإجراء (UI Action) | نقطة الاتصال في `routes.md` | معالجة سلوك الواجهة رسم استجابات الـ JSON |
-  | :--- | :--- | :--- |
-  | **عرض السنوات** | `GET /api/v1/academic/years` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#11-get-apiv1academicyears--عرض-قائمة-السنوات-الدراسية) |
-  | **إضافة سنة جديدة** | `POST /api/v1/academic/years` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#12-post-apiv1academicyears--إضافة-سنة-دراسية-جديدة) |
-  | **تعديل سنة** | `PUT /api/v1/academic/years/:id` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#13-put-apiv1academicyearsid--تعديل-سنة-دراسية) |
-  | **حذف سنة** | `DELETE /api/v1/academic/years/:id` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#14-delete-apiv1academicyearsid--حذف-سنة-دراسية-غير-مرتبطة) |
-  | **تفعيل السنة** | `POST /api/v1/academic/years/:id/activate` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#15-post-apiv1academicyearsidactivate--تفعيل-السنة-النشطة-حالياً) |
+### 1.1 مصفوفة الإجراءات والروابط السريعة (UI Actions & Route Summary):
+| الإجراء بالواجهة (UI Action) | نقطة الاتصال في `routes.md` | المكون التفاعلي بالواجهة (UI Component) | مرجع الهيكل في `routes.md` |
+| :--- | :--- | :--- | :--- |
+| **عرض السنوات** | `GET /api/v1/academic/years` | جدول بيانات السنوات (`Years Data Table`) | [في `routes.md`](./routes.md#11-get-apiv1academicyears--عرض-قائمة-السنوات-الدراسية) |
+| **إضافة سنة جديدة** | `POST /api/v1/academic/years` | اللوحة الجانبية المنبثقة (`Slide-over Drawer`) | [في `routes.md`](./routes.md#12-post-apiv1academicyears--إضافة-سنة-دراسية-جديدة) |
+| **تعديل سنة** | `PUT /api/v1/academic/years/:id` | نفس اللوحة الجانبية (`Slide-over Drawer`) | [في `routes.md`](./routes.md#13-put-apiv1academicyearsid--تعديل-سنة-دراسية) |
+| **حذف سنة** | `DELETE /api/v1/academic/years/:id` | نافذة التأكيد المركزية (`Confirmation Modal`) | [في `routes.md`](./routes.md#14-delete-apiv1academicyearsid--حذف-سنة-دراسية-غير-مرتبطة) |
+| **تفعيل السنة** | `POST /api/v1/academic/years/:id/activate` | نافذة تأكيد التفعيل الذري ⚡ | [في `routes.md`](./routes.md#15-post-apiv1academicyearsidactivate--تفعيل-السنة-النشطة-حالياً) |
 
 ---
 
-## 2. شاشة وإجراءات كتالوج الفترات المرجعي (الخطوة 2) — [4 مسارات]
+### 1.2 التفاصيل والتصميم والتفاعل مع المسارات (Detailed UI & Route Action Flow):
 
-### 2.1 المكونات والإجراءات:
-- **جدول الكتالوج العام:** يظهر `name`, `term_number`.
-- **مصفوفة الإجراءات والروابط:**
-  | الإجراء (UI Action) | نقطة الاتصال في `routes.md` | معالجة سلوك الواجهة رسم استجابات الـ JSON |
-  | :--- | :--- | :--- |
-  | **عرض كتالوج الفترات** | `GET /api/v1/academic/terms` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#21-get-apiv1academicterms--عرض-كتالوج-الفترات-العام) |
-  | **إضافة فترة للكتالوج** | `POST /api/v1/academic/terms` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#22-post-apiv1academicterms--إضافة-فترة-لكتالوج-الفترات-العام) |
-  | **تعديل فترة بالكتالوج** | `PUT /api/v1/academic/terms/:id` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#23-put-apiv1academictermsid--تعديل-مسمى-أو-ترتيب-فترة-بالكتالوج) |
-  | **حذف فترة غير مستخدمة** | `DELETE /api/v1/academic/terms/:id` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#24-delete-apiv1academictermsid--حذف-فترة-غير-مستخدمة-من-الكتالوج) |
+#### 🔹 [المسار 1.1] `GET /api/v1/academic/years` — عرض قائمة السنوات الدراسية:
+* **شكل المكون بالواجهة (Listing Component):**
+  - **جدول بيانات السنوات (Years Data Table):** يستعرض الأعمدة التالية:
+    1. `#` (المعرف الرقمي `id`).
+    2. `العام الدراسي` (`name` مثال: `2025/2026`).
+    3. `تاريخ البداية` (`start_date`).
+    4. `تاريخ النهاية` (`end_date`).
+    5. `حالة العام` (شارة ملونة خضراء `نشط حالياً` أو رمادية `غير نشط`).
+    6. `الإجراءات` (زر `تفعيل العام` ⚡، أيقونة التعديل ✏️، وأيقونة الحذف 🗑️).
+  - **شريط الأدوات العلوي:** زر رئيسي باللون الأزرق `+ إضافة سنة دراسية جديدة`.
+* **حالات المعالجة المرئية (UI States):**
+  - **Loading State:** عروض رمادية خافتة (Skeleton Table Row Loaders).
+  - **Empty State:** رسالة توضيحية "لا توجد سنوات دراسية مضافة بالمنظومة بعد".
+
+#### 🔹 [المسار 1.2] `POST /api/v1/academic/years` — إضافة سنة دراسية جديدة:
+* **شكل المكون وتدفق التفاعل (Create Flow & Interaction):**
+  - **عنصر التفاعل:** عند الضغط على زر `+ إضافة سنة دراسية جديدة` يتم فتح **لوحة جانبية منبثقة (Slide-over Drawer)** بعرض `450px` فارغة وجاهزة للإدخال.
+  - **حقول النموذج (Form Controls):**
+    1. `مسمى السنة الدراسية` (حقل نصي `name` مثال: `2026/2027`).
+    2. `تاريخ بداية العام` (حقل اختيار تاريخ `Date Picker` لـ `start_date`).
+    3. `تاريخ نهاية العام` (حقل اختيار تاريخ `Date Picker` لـ `end_date`).
+  - **أزرار التحكم:** زر `حفظ السنة` وزر `إلغاء`.
+* **سلوك المعالجة (Response Handlers):**
+  - **نجاح الإضافة (`201 Created`):** إغلاق الدرور تلقائياً، إظهار Toast أخضر "تم إنشاء السنة الدراسية بنجاح"، وتحديث جدول البيانات.
+  - **تكرار الاسم (`409 Conflict`):** إظهار تنبيه أحمر: "اسم السنة الدراسية موجود مسبقاً".
+  - **خطأ التواريخ (`422 Unprocessable`):** عرض رسالة تحت حقل التاريخ: "تاريخ النهاية يجب أن يكون بعد تاريخ البداية".
+
+#### 🔹 [المسار 1.3] `PUT /api/v1/academic/years/:id` — تعديل سنة دراسية:
+* **شكل المكون وتدفق التفاعل (Edit Flow & Interaction):**
+  - **عنصر التفاعل:** عند الضغط على أيقونة التعديل ✏️ أمام السنة، يتم فتح **نفس اللوحة الجانبية المنبثقة (Slide-over Drawer)** مجهزة ومحملة ببيانات السنة الحالية للتعديل.
+  - **نجاح التعديل (`200 OK`):** إغلاق الدرور وإظهار Toast أخضر "تم تحديث السنة الدراسية بنجاح".
+
+#### 🔹 [المسار 1.4] `DELETE /api/v1/academic/years/:id` — حذف سنة غير مرتبطة:
+* **شكل المكون وتدفق التفاعل (Delete Flow & Confirmation):**
+  - فتح **نافذة تأكيد الحذف المركزية (Confirmation Modal Alert)**.
+  - **حظر الحذف المرجعي (`403 Forbidden`):** إظهار Toast تحذيري: "لا يمكن حذف السنة الدراسية لارتباطها بفترات أو طلاب (RESTRICT)".
+
+#### 🔹 [المسار 1.5] `POST /api/v1/academic/years/:id/activate` — تفعيل السنة النشطة حالياً:
+* عند الضغط على ⚡، فتح نافذة تأكيد سريعة. عند النجاح (`200 OK`): إظهار Toast أخضر "تم تفعيل السنة الدراسية كعام نشط بنجاح" وتحديث الشارات.
 
 ---
 
-## 3. شاشة وإجراءات إدارة المراحل التعليمية (الخطوة 3) — [4 مسارات]
+## 🗓️ 2. شاشة وإجراءات كتالوج الفترات المرجعي (`academic_terms`) — (الخطوة 2)
 
-### 3.1 المكونات والإجراءات:
-- **جدول المراحل:** يظهر `name`, `order_index`.
-- **مصفوفة الإجراءات والروابط:**
-  | الإجراء (UI Action) | نقطة الاتصال في `routes.md` | معالجة سلوك الواجهة رسم استجابات الـ JSON |
-  | :--- | :--- | :--- |
-  | **عرض المراحل** | `GET /api/v1/academic/stages` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#31-get-apiv1academicstages--عرض-قائمة-المراحل-التعليمية) |
-  | **إضافة مرحلة** | `POST /api/v1/academic/stages` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#32-post-apiv1academicstages--إضافة-مرحلة-تعليمية) |
-  | **تعديل مرحلة** | `PUT /api/v1/academic/stages/:id` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#33-put-apiv1academicstagesid--تعديل-مرحلة-تعليمية) |
-  | **حذف مرحلة** | `DELETE /api/v1/academic/stages/:id` | [هيكل الاستجابة الكامل في `routes.md`](./routes.md#34-delete-apiv1academicstagesid--حذف-مرحلة-فارغة) |
+### 2.1 مصفوفة الإجراءات والروابط السريعة (UI Actions & Route Summary):
+| الإجراء بالواجهة (UI Action) | نقطة الاتصال في `routes.md` | المكون التفاعلي بالواجهة (UI Component) | مرجع الهيكل في `routes.md` |
+| :--- | :--- | :--- | :--- |
+| **عرض كتالوج الفترات** | `GET /api/v1/academic/terms` | جدول الكتالوج العام (`Catalog Table`) | [في `routes.md`](./routes.md#21-get-apiv1academicterms--عرض-كتالوج-الفترات-العام) |
+| **إضافة فترة للكتالوج** | `POST /api/v1/academic/terms` | اللوحة الجانبية المنبثقة (`Slide-over Drawer`) | [في `routes.md`](./routes.md#22-post-apiv1academicterms--إضافة-فترة-لكتالوج-الفترات-العام) |
+| **تعديل فترة بالكتالوج** | `PUT /api/v1/academic/terms/:id` | نفس اللوحة الجانبية (`Slide-over Drawer`) | [في `routes.md`](./routes.md#23-put-apiv1academictermsid--تعديل-مسمى-أو-ترتيب-فترة-بالكتالوج) |
+| **حذف فترة غير مستخدمة** | `DELETE /api/v1/academic/terms/:id` | نافذة التأكيد المركزية (`Confirmation Modal`) | [في `routes.md`](./routes.md#24-delete-apiv1academictermsid--حذف-فترة-غير-مستخدمة-من-الكتالوج) |
+
+---
+
+### 2.2 التفاصيل والتصميم والتفاعل مع المسارات (Detailed UI & Route Action Flow):
+
+#### 🔹 [المسار 2.1] `GET /api/v1/academic/terms` — عرض كتالوج الفترات العام:
+* **شكل المكون بالواجهة (Listing Component):**
+  - **جدول الكتالوج (Catalog Table):** يستعرض `id`, `اسم الفترة المعياري` (`name`), و `ترتيب الفصل` (`term_number`).
+  - **زر العلوي:** `+ إضافة فترة جديدة للكتالوج`.
+
+#### 🔹 [المسار 2.2] `POST /api/v1/academic/terms` — إضافة فترة للكتالوج العام:
+* **شكل المكون وتدفق التفاعل (Create Flow):**
+  - عند الضغط على زر الإضافة يتم فتح **لوحة جانبية منبثقة (Slide-over Drawer)** بعرض `450px` تتيح إدخال اسم الفترة ورقم الترتيب.
+  - **نجاح الإضافة (`201 Created`):** إغلاق الدرور وإظهار Toast أخضر "تمت إضافة الفترة للكتالوج المرجعي بنجاح".
+
+#### 🔹 [المسار 2.3] `PUT /api/v1/academic/terms/:id` — تعديل فترة بالكتالوج:
+* عند الضغط على ✏️ يتم فتح **نفس اللوحة الجانبية المنبثقة (Slide-over Drawer)** محملة ببيانات الفترة الحالية للتعديل.
+* **نجاح التعديل (`200 OK`):** إغلاق الدرور وإظهار Toast أخضر "تم تحديث بيانات الفترة بالكتالوج بنجاح".
+
+#### 🔹 [المسار 2.4] `DELETE /api/v1/academic/terms/:id` — حذف فترة غير مستخدمة:
+* فتح **نافذة تأكيد الحذف المركزية (Confirmation Modal Alert)**.
+* **حظر الحذف (`403 Forbidden`):** Toast تحذيري "لا يمكن حذف الفترة المرجعية لارتباطها بتخصيصات صفوف (RESTRICT)".
+
+---
+
+## 🏛️ 3. شاشة وإجراءات إدارة المراحل التعليمية (`academic_stages`) — (الخطوة 3)
+
+### 3.1 مصفوفة الإجراءات والروابط السريعة (UI Actions & Route Summary):
+| الإجراء بالواجهة (UI Action) | نقطة الاتصال في `routes.md` | المكون التفاعلي بالواجهة (UI Component) | مرجع الهيكل في `routes.md` |
+| :--- | :--- | :--- | :--- |
+| **عرض المراحل** | `GET /api/v1/academic/stages` | جدول شجرة المراحل (`Stages Table`) | [في `routes.md`](./routes.md#31-get-apiv1academicstages--عرض-قائمة-المراحل-التعليمية) |
+| **إضافة مرحلة** | `POST /api/v1/academic/stages` | اللوحة الجانبية المنبثقة (`Slide-over Drawer`) | [في `routes.md`](./routes.md#32-post-apiv1academicstages--إضافة-مرحلة-تعليمية) |
+| **تعديل مرحلة** | `PUT /api/v1/academic/stages/:id` | نفس اللوحة الجانبية (`Slide-over Drawer`) | [في `routes.md`](./routes.md#33-put-apiv1academicstagesid--تعديل-مرحلة-تعليمية) |
+| **حذف مرحلة** | `DELETE /api/v1/academic/stages/:id` | نافذة التأكيد المركزية (`Confirmation Modal`) | [في `routes.md`](./routes.md#34-delete-apiv1academicstagesid--حذف-مرحلة-فارغة) |
+
+---
+
+### 3.2 التفاصيل والتصميم والتفاعل مع المسارات (Detailed UI & Route Action Flow):
+
+#### 🔹 [المسار 3.1] `GET /api/v1/academic/stages` — عرض المراحل التعليمية:
+* **شكل المكون بالواجهة (Listing Component):**
+  - **جدول شجرة المراحل (Stages Table):** يستعرض `id`, `اسم المرحلة` (`name`), و `ترتيب العرض` (`order_index`).
+  - **زر العلوي:** `+ إضافة مرحلة تعليمية جديدة`.
+
+#### 🔹 [المسار 3.2] `POST /api/v1/academic/stages` — إضافة مرحلة تعليمية:
+* **شكل المكون وتدفق التفاعل:** عند الضغط على الإضافة يتم فتح **لوحة جانبية منبثقة (Slide-over Drawer)** بعرض `450px`.
+* **نجاح الإضافة (`201 Created`):** إغلاق الدرور وإظهار Toast أخضر "تمت إضافة المرحلة التعليمية بنجاح".
+
+#### 🔹 [المسار 3.3] `PUT /api/v1/academic/stages/:id` — تعديل مرحلة تعليمية:
+* عند الضغط على ✏️ يتم فتح **نفس اللوحة الجانبية المنبثقة (Slide-over Drawer)** محملة ببيانات المرحلة للتعديل.
+* **نجاح التعديل (`200 OK`):** إغلاق الدرور وإظهار Toast أخضر.
+
+#### 🔹 [المسار 3.4] `DELETE /api/v1/academic/stages/:id` — حذف مرحلة فارغة:
+* فتح **نافذة تأكيد الحذف المركزية (Confirmation Modal Alert)**.
+* **حظر الحذف (`403 Forbidden`):** Toast تحذيري "لا يمكن حذف المرحلة لارتباطها بصفوف دراسية (RESTRICT)".
