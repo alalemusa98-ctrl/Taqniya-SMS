@@ -1,10 +1,10 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 02-A (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 13 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المعياري الموجز لـ [`MD/database.md`](../../database.md)، مع عرض عنصرين على الأقل لكل قائمة نتائج لتوضيح نمط المصفوفة (`Multi-Item List Payload`).  
+> **الهدف:** توثيق المسارات الـ 13 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المعياري الموجز لـ [`MD/database.md`](../../database.md)، مع دعم البحث والتصفية والفرز والتقسيم الصفحي (`CRUDS Standard: Create, Read, Update, Delete, Search`).  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم على المطور أو الذكاء الاصطناعي قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
-> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** ملف [`routes.md`](./routes.md) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`).  
+> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** ملف [`routes.md`](./routes.md) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**معاملات البحث والفلترة (`Query Parameters & Filters`)**، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`).  
 > 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
 
 ---
@@ -42,9 +42,19 @@
 
 ---
 
-### 1.1 `GET /api/v1/academic/years` — عرض قائمة السنوات الدراسية
-- **الوصف الوظيفي للرابط:** استرجاع قائمة كافة السنوات الدراسية المسجلة بالمنظومة.
-- **Query Parameters:** `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
+### 1.1 `GET /api/v1/academic/years` — عرض قائمة وبحث السنوات الدراسية
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** استرجاع قائمة كافة السنوات الدراسية المسجلة بالمنظومة مع دعم البحث النصي، الفلترة حسب حالة التفعيل، الترتيب، والتقسيم الصفحي (CRUDS - Search & Filter Engine).
+
+- **Query Parameters (معاملات الفلترة والبحث والترتيب):**
+  - `search` (optional, string): البحث النصي باسم السنة الدراسية (مثال: `2026`).
+  - `is_active` (optional, integer: `0` أو `1`): فلترة حسب حالة العام النشط (`1 = العام النشط حالياً`, `0 = غير النشط`).
+  - `sort_by` (optional, string, enum: `id`, `name`, `start_date`, `end_date`, default `id`): حقل الفرز والترتيب.
+  - `sort_order` (optional, string, enum: `asc`, `desc`, default `desc`): اتجاه الفرز.
+  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
+  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
+- **Example Request URL:** `/api/v1/academic/years?search=2026&is_active=1&sort_by=start_date&sort_order=asc&page=1&per_page=15`
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -67,7 +77,10 @@
 ---
 
 ### 1.2 `POST /api/v1/academic/years` — إضافة سنة دراسية جديدة
-- **الوصف الوظيفي للرابط:** إنشاء سجل سنة دراسية جديدة.
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** إنشاء سجل سنة دراسية جديدة في المنظومة.
+
 - **Request Body:**
   ```json
   {
@@ -91,7 +104,10 @@
 ---
 
 ### 1.3 `PUT /api/v1/academic/years/:id` — تعديل سنة دراسية
-- **الوصف الوظيفي للرابط:** تحديث بيانات سنة دراسية قائمة.
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** تحديث بيانات سنة دراسية قائمة.
+
 - **Request Body:**
   ```json
   {
@@ -116,7 +132,10 @@
 ---
 
 ### 1.4 `DELETE /api/v1/academic/years/:id` — حذف سنة دراسية غير مرتبطة
-- **الوصف الوظيفي للرابط:** حذف سنة دراسية بشرط عدم وجود بيانات أكاديمية مرصودة عليها.
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** حذف سنة دراسية بشرط عدم وجود بيانات أكاديمية مرصودة عليها.
+
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تم حذف السنة الدراسية بنجاح."}`
   - **`403 Forbidden`:** `{"success": false, "message": "لا يمكن حذف السنة الدراسية لارتباطها بفترات أو طلاب (RESTRICT)."}`
@@ -125,7 +144,10 @@
 ---
 
 ### 1.5 `POST /api/v1/academic/years/:id/activate` — تفعيل السنة النشطة حالياً
-- **الوصف الوظيفي للرابط:** تحويل السنة المختارة إلى السنة النشطة بالمنظومة وإلغاء تفعيل البقية بحركة ذرية atomic.
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** تحويل السنة المختارة إلى السنة النشطة بالمنظومة وإلغاء تفعيل البقية بحركة ذرية atomic.
+
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -143,9 +165,19 @@
 
 ---
 
-### 2.1 `GET /api/v1/academic/terms` — عرض كتالوج الفترات العام
-- **الوصف الوظيفي للرابط:** استرجاع كتالوج الفترات المعياري المعتمد بالمنظومة.
-- **Query Parameters:** `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
+### 2.1 `GET /api/v1/academic/terms` — عرض قائمة وبحث كتالوج الفترات العام
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** استرجاع كتالوج الفترات المرجعي المعياري بالمنظومة مع دعم البحث النصي، الفلترة برقم الفترة، الترتيب، والتقسيم الصفحي (CRUDS - Search & Filter Engine).
+
+- **Query Parameters (معاملات الفلترة والبحث والترتيب):**
+  - `search` (optional, string): البحث النصي بمسمى الفترة (مثال: `الأول` أو `الصيفي`).
+  - `term_number` (optional, integer): فلترة برقم ترتيب الفترة الأكاديمي (مثال: `1`, `2`, `3`).
+  - `sort_by` (optional, string, enum: `id`, `name`, `term_number`, default `term_number`): حقل الفرز والترتيب.
+  - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
+  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
+  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
+- **Example Request URL:** `/api/v1/academic/terms?search=الأول&term_number=1&sort_by=term_number&sort_order=asc`
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -169,7 +201,10 @@
 ---
 
 ### 2.2 `POST /api/v1/academic/terms` — إضافة فترة لكتالوج الفترات العام
-- **الوصف الوظيفي للرابط:** إضافة فترة مرجعية معيارية جديدة للكتالوج.
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** إضافة فترة مرجعية معيارية جديدة للكتالوج المرجعي العام.
+
 - **Request Body:**
   ```json
   {
@@ -192,7 +227,10 @@
 ---
 
 ### 2.3 `PUT /api/v1/academic/terms/:id` — تعديل مسمى أو ترتيب فترة بالكتالوج
-- **الوصف الوظيفي للرابط:** تحديث بيانات فترة مرجعية بالكتالوج.
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** تحديث بيانات فترة مرجعية بالكتالوج المرجعي العام.
+
 - **Request Body:**
   ```json
   {
@@ -216,7 +254,10 @@
 ---
 
 ### 2.4 `DELETE /api/v1/academic/terms/:id` — حذف فترة غير مستخدمة من الكتالوج
-- **الوصف الوظيفي للرابط:** حذف فترة مرجعية بشرط عدم ربطها بتخصيصات صفوف.
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** حذف فترة مرجعية بشرط عدم ربطها بتخصيصات صفوف.
+
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تم حذف الفترة من الكتالوج بنجاح."}`
   - **`403 Forbidden`:** `{"success": false, "message": "لا يمكن حذف الفترة المرجعية لارتباطها بتخصيصات صفوف (RESTRICT)."}`
@@ -228,9 +269,18 @@
 
 ---
 
-### 3.1 `GET /api/v1/academic/stages` — عرض قائمة المراحل التعليمية
-- **الوصف الوظيفي للرابط:** استرجاع قائمة المراحل التعليمية بالمنظومة.
-- **Query Parameters:** `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
+### 3.1 `GET /api/v1/academic/stages` — عرض قائمة وبحث المراحل التعليمية
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** استرجاع قائمة المراحل التعليمية المسجلة بالمنظومة مع دعم البحث النصي، الترتيب حسب الأولوية الأكاديمية، والتقسيم الصفحي (CRUDS - Search & Filter Engine).
+
+- **Query Parameters (معاملات الفلترة والبحث والترتيب):**
+  - `search` (optional, string): البحث النصي باسم المرحلة التعليمية (مثال: `الابتدائية` أو `الثانوية`).
+  - `sort_by` (optional, string, enum: `id`, `name`, `order_index`, default `order_index`): حقل الفرز والترتيب.
+  - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
+  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
+  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
+- **Example Request URL:** `/api/v1/academic/stages?search=الابتدائية&sort_by=order_index&sort_order=asc`
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -254,7 +304,10 @@
 ---
 
 ### 3.2 `POST /api/v1/academic/stages` — إضافة مرحلة تعليمية
-- **الوصف الوظيفي للرابط:** إضافة مرحلة تعليمية جديدة بالهيكل الأكاديمي.
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** إضافة مرحلة تعليمية جديدة بالهيكل الأكاديمي.
+
 - **Request Body:**
   ```json
   {
@@ -277,7 +330,10 @@
 ---
 
 ### 3.3 `PUT /api/v1/academic/stages/:id` — تعديل مرحلة تعليمية
-- **الوصف الوظيفي للرابط:** تحديث بيانات مرحلة تعليمية قائمة.
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** تحديث بيانات مرحلة تعليمية قائمة.
+
 - **Request Body:**
   ```json
   {
@@ -301,7 +357,10 @@
 ---
 
 ### 3.4 `DELETE /api/v1/academic/stages/:id` — حذف مرحلة فارغة
-- **الوصف الوظيفي للرابط:** حذف مرحلة تعليمية بشرط عدم ارتباطها بصفوف دراسية.
+
+> [!NOTE]
+> **الوصف الوظيفي للرابط:** حذف مرحلة تعليمية بشرط عدم ارتباطها بصفوف دراسية.
+
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تم حذف المرحلة التعليمية بنجاح."}`
   - **`403 Forbidden`:** `{"success": false, "message": "لا يمكن حذف المرحلة لارتباطها بصفوف دراسية (RESTRICT)."}`
