@@ -13,11 +13,12 @@
 ### 1.1 مصفوفة الإجراءات والروابط السريعة (UI Actions & Route Summary):
 | الإجراء بالواجهة (UI Action) | نقطة الاتصال في `routes.md` | المكون التفاعلي بالواجهة (UI Component) | مرجع الهيكل في `routes.md` |
 | :--- | :--- | :--- | :--- |
-| **عرض جدول الإسناد** | `GET /api/v1/teaching-assignments` | جدول توزيع الإسناد (`Assignments Matrix`) | [في `routes.md`](./routes.md#11-get-apiv1teaching-assignments--عرض-وتصفية-جدول-إسناد-التدريس-بالعام-الدراسي) |
-| **عرض نصاب معلم** | `GET /api/v1/teachers/:teacher_id/assignments` | كارت النصاب الأكاديمي للمعلم | [في `routes.md`](./routes.md#12-get-apiv1teachersteacher_idassignments--عرض-النصاب-التدريسي-والمواد-لمعلم-محدد) |
-| **إسناد وتعيين معلم** | `POST /api/v1/teaching-assignments` | اللوحة الجانبية المنبثقة (`Slide-over Drawer`) | [في `routes.md`](./routes.md#13-post-apiv1teaching-assignments--تعيين-وإسناد-تدريس-مادة-لشعبة-ومعلم) |
-| **تعديل المعلم المكلف** | `PUT /api/v1/teaching-assignments/:id` | نفس اللوحة الجانبية (`Slide-over Drawer`) | [في `routes.md`](./routes.md#14-put-apiv1teaching-assignmentsid--تعديل-وتكليف-معلم-آخر-بالمادة-والشعبة) |
-| **فك وإزالة الإسناد** | `DELETE /api/v1/teaching-assignments/:id` | نافذة التأكيد المركزية (`Confirmation Modal`) | [في `routes.md`](./routes.md#15-delete-apiv1teaching-assignmentsid--فك-وإزالة-إسناد-التدريس) |
+| **عرض جدول الإسناد** | `GET /api/v1/teaching-assignments` | جدول توزيع الإسناد (`Assignments Matrix`) | [في `routes.md`](./routes.md#11-get-apiv1teaching-assignments--عرض-وتصفية-وبحث-جدول-إسناد-التدريس-بالعام-الدراسي) |
+| **عرض نصاب معلم** | `GET /api/v1/teachers/:teacher_id/assignments` | كارت النصاب الأكاديمي للمعلم | [في `routes.md`](./routes.md#12-get-apiv1teachersteacher_idassignments--عرض-وبحث-النصاب-التدريسي-والمواد-لمعلم-محدد) |
+| **عرض معلمي صف بشعبه** | `GET /api/v1/classes/:class_id/assignments` | تجميع المعلمين والمواد بكروت الشعب (`Class Sections Matrix`) | [في `routes.md`](./routes.md#13-get-apiv1classesclass_idassignments--عرض-وبحث-معلمي-ومناهج-الصف-الدراسي-والمعاينة-حسب-الشعبة) |
+| **إسناد وتعيين معلم** | `POST /api/v1/teaching-assignments` | اللوحة الجانبية المنبثقة (`Slide-over Drawer`) | [في `routes.md`](./routes.md#14-post-apiv1teaching-assignments--تعيين-وإسناد-تدريس-مادة-لشعبة-ومعلم) |
+| **تعديل المعلم/الشعبة/المادة** | `PUT /api/v1/teaching-assignments/:id` | نفس اللوحة الجانبية (`Slide-over Drawer`) | [في `routes.md`](./routes.md#15-put-apiv1teaching-assignmentsid--تعديل-وتكليف-إسناد-التدريس-تعديل-المعلم-الشعبة-أو-المادة) |
+| **فك وإزالة الإسناد** | `DELETE /api/v1/teaching-assignments/:id` | نافذة التأكيد المركزية (`Confirmation Modal`) | [في `routes.md`](./routes.md#16-delete-apiv1teaching-assignmentsid--فك-وإزالة-إسناد-التدريس) |
 
 ---
 
@@ -30,7 +31,7 @@
     2. `الصف والشعبة` (`class_name` - `section_name`).
     3. `المادة التعليمية` (`subject_name` وكودها `subject_code`).
     4. `المعلم المكلف` (شارة اسم المعلم `teacher_name`).
-    5. `الإجراءات` (أيقونة التعديل ✏️ لتبديل المعلم، وأيقونة فك الإسناد 🗑️).
+    5. `الإجراءات` (أيقونة التعديل ✏️ لتبديل المعلم أو الشعبة، وأيقونة فك الإسناد 🗑️).
   - **شريط الفلترة والبحث العلوي (Filter Header):**
     - قائمة منسدلة لاختيار الصف والشعبة.
     - قائمة منسدلة لفلترة النصاب حسب المعلم.
@@ -43,7 +44,12 @@
 #### 🔹 [المسار 1.2] `GET /api/v1/teachers/:teacher_id/assignments` — عرض نصاب معلم:
 * عرض كارت تفصيلي يستعرض كافة المواد والشعب المكلف بها المعلم المختار في العام الدراسي.
 
-#### 🔹 [المسار 1.3] `POST /api/v1/teaching-assignments` — تعيين وإسناد تدريس مادة:
+#### 🔹 [المسار 1.3] `GET /api/v1/classes/:class_id/assignments` — عرض معلمي صف بشعبه:
+* **شكل المكون وتدفق التفاعل (Class Sections Teacher Preview):**
+  - عند اختيار صف دراسي (مثل `الصف الخامس`) يظهر تبويب/مكون استعراض معلمي الصف مقسمين بحسب الشعب (`شعبة أ`, `شعبة ب`).
+  - تتيح الواجهة التبديل السريع بين الشعب (Tabs or Section Filter Dropdown) لمعاينة قائمة المواد والمعلمين المسؤولين عنها بالكامل.
+
+#### 🔹 [المسار 1.4] `POST /api/v1/teaching-assignments` — تعيين وإسناد تدريس مادة:
 * **شكل المكون وتدفق التفاعل (Create Flow & Interaction):**
   - **عنصر التفاعل بالواجهة:** عند الضغط على زر `+ إسناد مادة لشعبة ومعلم` يتم فتح **لوحة جانبية منبثقة (Slide-over Drawer)** بعرض `500px` مع غطاء خلفي معتم (Backdrop Dim).
   - **حقول النموذج بالدرور (Form Controls):**
@@ -57,12 +63,14 @@
   - **خطأ التكرار (`409 Conflict`):** راية تنبيه حمراء: "هذه المادة مسندة مسبقاً لمعلم آخر بنفس الشعبة والعام".
   - **أخطاء التحقق (`422 Unprocessable`):** عرض رسائل الخطأ باللون الأحمر تحت الحقول.
 
-#### 🔹 [المسار 1.4] `PUT /api/v1/teaching-assignments/:id` — تعديل وتكليف معلم آخر:
+#### 🔹 [المسار 1.5] `PUT /api/v1/teaching-assignments/:id` — تعديل وتكليف إسناد التدريس (تعديل المعلم، الشعبة، أو المادة):
 * **شكل المكون وتدفق التفاعل (Edit Flow & Interaction):**
-  - عند الضغط على أيقونة التعديل ✏️ أمام الإسناد، يتم فتح **نفس اللوحة الجانبية المنبثقة (Slide-over Drawer)** محملة ببيانات الشعبة والمادة الحالية مع إتاحة خيار اختيار وتكليف معلم جديد.
-  - **نجاح التعديل (`200 OK`):** إغلاق الدرور وإظهار Toast أخضر "تم تحديث المعلم المكلف بالتدريس بنجاح".
+  - عند الضغط على أيقونة التعديل ✏️ أمام الإسناد، يتم فتح **نفس اللوحة الجانبية المنبثقة (Slide-over Drawer)** محملة ببيانات الإسناد الحالية وتسمح للمستخدم بتعديل المعلم المكلف أو اختيار شعبة أخرى جديدة أو مادة أخرى.
+  - **سلوك المعالجة والتنبيهات (Response Handlers):**
+    - **نجاح التعديل (`200 OK`):** إغلاق الدرور وإظهار Toast أخضر "تم تحديث وتعديل إسناد التدريس بنجاح".
+    - **عدم الشغور (`409 Conflict`):** راية تنبيه حمراء بالدرور: "الشعبة والمادة المراد النقل إليها مخصصة ومسندة مسبقاً لمعلم آخر بنفس العام ولا توجد خانة شاغرة".
 
-#### 🔹 [المسار 1.5] `DELETE /api/v1/teaching-assignments/:id` — فك وإزالة إسناد التدريس:
+#### 🔹 [المسار 1.6] `DELETE /api/v1/teaching-assignments/:id` — فك وإزالة إسناد التدريس:
 * **شكل المكون وتدفق التفاعل (Delete Flow & Confirmation):**
   - عند الضغط على أيقونة الفك 🗑️ يتم فتح **نافذة تأكيد مركزية (Confirmation Modal Alert)**.
   - **حظر الحذف المرجعي (`403 Forbidden`):** إغلاق النافذة وإظهار تنبيه تحذيري: "لا يمكن فك إسناد التدريس لرصد واجبات أو درجات امتحانات على السجل (RESTRICT)".
