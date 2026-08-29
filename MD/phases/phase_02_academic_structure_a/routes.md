@@ -1,6 +1,6 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 02-A (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 13 كاملة مع استجابات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md).  
+> **الهدف:** توثيق المسارات الـ 13 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المعياري الموجز لـ [`MD/database.md`](../../database.md)، مع عرض عنصرين على الأقل لكل قائمة نتائج لتوضيح نمط المصفوفة (`Multi-Item List Payload`).  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم على المطور أو الذكاء الاصطناعي قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
@@ -22,6 +22,7 @@
 
 ### 1.1 `GET /api/v1/academic/years` — عرض قائمة السنوات الدراسية
 - **الوصف الوظيفي للرابط:** استرجاع قائمة كافة السنوات الدراسية المسجلة بالمنظومة.
+- **Query Parameters:** `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -29,8 +30,15 @@
       "success": true,
       "message": "تم جلب قائمة السنوات الدراسية بنجاح.",
       "data": [
-        { "id": 1, "name": "2025/2026", "start_date": "2025-09-01", "end_date": "2026-06-30", "is_active": 1 }
-      ]
+        { "id": 1, "name": "2025/2026", "start_date": "2025-09-01", "end_date": "2026-06-30", "is_active": 1 },
+        { "id": 2, "name": "2026/2027", "start_date": "2026-09-01", "end_date": "2027-06-30", "is_active": 0 }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 15,
+        "total": 2,
+        "last_page": 1
+      }
     }
     ```
 
@@ -89,7 +97,8 @@
 ---
 
 ### 2.1 `GET /api/v1/academic/terms` — عرض كتالوج الفترات العام
-- **الوصف الوظيفي للرابط:** استرجاع كتالوج الفترات المعياري المعتمد بالمنظومة (الفصل 1، 2، 3).
+- **الوصف الوظيفي للرابط:** استرجاع كتالوج الفترات المعياري المعتمد بالمنظومة.
+- **Query Parameters:** `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -100,7 +109,13 @@
         { "id": 1, "name": "الفصل الأول", "term_number": 1 },
         { "id": 2, "name": "الفصل الثاني", "term_number": 2 },
         { "id": 3, "name": "الفصل الثالث", "term_number": 3 }
-      ]
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 15,
+        "total": 3,
+        "last_page": 1
+      }
     }
     ```
 
@@ -134,6 +149,8 @@
 ---
 
 ### 3.1 `GET /api/v1/academic/stages` — عرض قائمة المراحل التعليمية
+- **الوصف الوظيفي للرابط:** استرجاع قائمة المراحل التعليمية بالمنظومة.
+- **Query Parameters:** `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -144,7 +161,13 @@
         { "id": 1, "name": "المرحلة الابتدائية", "order_index": 1 },
         { "id": 2, "name": "المرحلة الإعدادية", "order_index": 2 },
         { "id": 3, "name": "المرحلة الثانوية", "order_index": 3 }
-      ]
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 15,
+        "total": 3,
+        "last_page": 1
+      }
     }
     ```
 

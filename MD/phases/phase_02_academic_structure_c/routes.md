@@ -1,6 +1,6 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 02-C (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 11 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md).  
+> **الهدف:** توثيق المسارات الـ 11 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، وتزويد كافة مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) كأمثلة صريحة لتوضيح شكل المصفوفة مع الترقيم المالي القياسي (`Pagination Meta`).  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم على المطور أو الذكاء الاصطناعي قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
@@ -21,7 +21,8 @@
 ---
 
 ### 1.1 `GET /api/v1/academic/years/:academic_year_id/classes/:class_id/terms` — عرض فترات وتواريخ صف بالعام
-- **الوصف الوظيفي للرابط:** استرجاع فترات وتواريخ وتقويم صف دراسي محدد في عام دراسي بالمنظومة.
+- **الوصف الوظيفي للرابط:** استرجاع فترات وتواريخ وتقويم صف دراسي محدد بالعام الدراسي مدمجةً بالمعلومات الأكاديمية الصريحة بصيغة موجزة متعددة العناصر.
+- **Query Parameters:** `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -29,18 +30,16 @@
       "success": true,
       "message": "تم جلب فترات الصف الدراسي بالعام بنجاح.",
       "data": [
-        {
-          "id": 10,
-          "academic_year_id": 1,
-          "class_id": 9,
-          "academic_term_id": 1,
-          "term_name": "الفصل الأول",
-          "start_date": "2025-09-01",
-          "end_date": "2025-12-31",
-          "is_active": 1,
-          "is_closed": 0
-        }
-      ]
+        { "id": 10, "academic_year_id": 1, "academic_year_name": "2025/2026", "class_id": 9, "class_name": "الصف التاسع", "academic_term_id": 1, "term_name": "الفصل الأول", "start_date": "2025-09-01", "end_date": "2025-12-31", "is_active": 1, "is_closed": 0 },
+        { "id": 11, "academic_year_id": 1, "academic_year_name": "2025/2026", "class_id": 9, "class_name": "الصف التاسع", "academic_term_id": 2, "term_name": "الفصل الثاني", "start_date": "2026-01-05", "end_date": "2026-04-15", "is_active": 0, "is_closed": 0 },
+        { "id": 12, "academic_year_id": 1, "academic_year_name": "2025/2026", "class_id": 9, "class_name": "الصف التاسع", "academic_term_id": 3, "term_name": "الفصل الثالث", "start_date": "2026-04-20", "end_date": "2026-07-15", "is_active": 0, "is_closed": 0 }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 15,
+        "total": 3,
+        "last_page": 1
+      }
     }
     ```
 
@@ -101,9 +100,26 @@
 ---
 
 ### 2.1 `GET /api/v1/academic/classes/:class_id/sections` — عرض شعب صف مفتوحة
-- **الوصف الوظيفي للرابط:** استرجاع قائمة كافة الشعب المفتوحة والمخصصة لصف دراسي محدد.
+- **الوصف الوظيفي للرابط:** استرجاع قائمة كافة الشعب المفتوحة والمخصصة لصف دراسي محدد بصيغة موجزة متعددة العناصر.
+- **Query Parameters:** `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
 - **Response Payloads:**
-  - **`200 OK`:** `{"success": true, "message": "تم جلب الشعب المفتوحة للصف بنجاح.", "data": [{ "id": 1, "class_id": 5, "section_id": 1, "section_name": "شعبة أ" }]}`
+  - **`200 OK`:**
+    ```json
+    {
+      "success": true,
+      "message": "تم جلب الشعب المفتوحة للصف بنجاح.",
+      "data": [
+        { "id": 1, "class_id": 5, "class_name": "الصف الخامس", "section_id": 1, "section_name": "شعبة أ" },
+        { "id": 2, "class_id": 5, "class_name": "الصف الخامس", "section_id": 2, "section_name": "شعبة ب" }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 15,
+        "total": 2,
+        "last_page": 1
+      }
+    }
+    ```
 
 ---
 
@@ -127,7 +143,8 @@
 ---
 
 ### 3.1 `GET /api/v1/academic/classes/:class_id/subjects` — عرض منهج الصف بالفترة
-- **Query Parameters:** `class_academic_term_id` (required, bigint)
+- **الوصف الوظيفي للرابط:** استرجاع تفاصيل منهج الصف الدراسي والمواد المقررة بالفترة ببيانات موجزة ذات معنى صريح تضم أكثر من مادة كمثال عملي للمصفوفة.
+- **Query Parameters:** `class_academic_term_id` (required, bigint), `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -135,16 +152,15 @@
       "success": true,
       "message": "تم جلب منهج الصف بالفترة الدراسية بنجاح.",
       "data": [
-        {
-          "id": 12,
-          "class_id": 5,
-          "subject_id": 1,
-          "subject_name": "الرياضيات",
-          "class_academic_term_id": 10,
-          "passing_score": "50.00",
-          "max_score": "100.00"
-        }
-      ]
+        { "id": 12, "class_id": 5, "class_name": "الصف الخامس", "subject_id": 1, "subject_name": "الرياضيات", "subject_code": "MATH", "class_academic_term_id": 10, "term_name": "الفصل الأول", "academic_year_name": "2025/2026", "passing_score": "50.00", "max_score": "100.00" },
+        { "id": 13, "class_id": 5, "class_name": "الصف الخامس", "subject_id": 2, "subject_name": "العلوم", "subject_code": "SCI", "class_academic_term_id": 10, "term_name": "الفصل الأول", "academic_year_name": "2025/2026", "passing_score": "50.00", "max_score": "100.00" }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 15,
+        "total": 2,
+        "last_page": 1
+      }
     }
     ```
 

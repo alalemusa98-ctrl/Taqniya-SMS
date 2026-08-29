@@ -1,6 +1,6 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 02-B (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 12 كاملة مع إضافة شرح بسيط جداً لوظيفة كل رابط قبل شرح الاستجابات، والالتزام التام بهياكل الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md) (`stage_id`, `grade_level`).  
+> **الهدف:** توثيق المسارات الـ 12 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، وتزويد كافة مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) كأمثلة صريحة لتوضيح شكل المصفوفة مع الترقيم المالي القياسي (`Pagination Meta`).  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم على المطور أو الذكاء الاصطناعي قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
@@ -21,8 +21,8 @@
 ---
 
 ### 1.1 `GET /api/v1/academic/classes` — عرض صفوف مرحلة معينة
-- **الوصف الوظيفي للرابط:** استرجاع قائمة كافة الصفوف الدراسية المضافة بالمنظومة أو تصفيتها بحسب المرحلة التعليمية (`stage_id`).
-- **Query Parameters:** `stage_id` (optional, bigint), `per_page` (optional, default 15)
+- **الوصف الوظيفي للرابط:** استرجاع قائمة كافة الصفوف الدراسية المضافة بالمنظومة أو تصفيتها بحسب المرحلة التعليمية (`stage_id`) مع أسماء المراحل التابعة لها.
+- **Query Parameters:** `stage_id` (optional, bigint), `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -30,9 +30,15 @@
       "success": true,
       "message": "تم جلب قائمة الصفوف الدراسية بنجاح.",
       "data": [
-        { "id": 5, "stage_id": 1, "name": "الصف الخامس", "grade_level": 5, "created_at": "2025-08-01T10:00:00Z" }
+        { "id": 5, "stage_id": 1, "stage_name": "المرحلة الابتدائية", "name": "الصف الخامس", "grade_level": 5 },
+        { "id": 6, "stage_id": 1, "stage_name": "المرحلة الابتدائية", "name": "الصف السادس", "grade_level": 6 }
       ],
-      "meta": { "total": 1, "page": 1, "per_page": 15 }
+      "meta": {
+        "current_page": 1,
+        "per_page": 15,
+        "total": 2,
+        "last_page": 1
+      }
     }
     ```
   - **`401 Unauthorized`:** `{"success": false, "message": "Unauthenticated access."}`
@@ -103,7 +109,8 @@
 ---
 
 ### 2.1 `GET /api/v1/academic/sections` — عرض بنك الشعب العامة
-- **الوصف الوظيفي للرابط:** استرجاع كتالوج أسماء الشعب المعيارية العامة لمرة واحدة (Master Sections).
+- **الوصف الوظيفي للرابط:** استرجاع كتالوج أسماء الشعب المعيارية العامة لمرة واحدة (Master Sections) بصيغة موجزة متعددة العناصر.
+- **Query Parameters:** `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -112,8 +119,15 @@
       "message": "تم جلب بنك الشعب العامة بنجاح.",
       "data": [
         { "id": 1, "name": "شعبة أ" },
-        { "id": 2, "name": "شعبة ب" }
-      ]
+        { "id": 2, "name": "شعبة ب" },
+        { "id": 3, "name": "شعبة ج" }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 15,
+        "total": 3,
+        "last_page": 1
+      }
     }
     ```
 
@@ -157,7 +171,8 @@
 ---
 
 ### 3.1 `GET /api/v1/academic/subjects` — عرض بنك المواد العامة
-- **الوصف الوظيفي للرابط:** استرجاع الكتالوج العام لكافة المواد والمناهج المعتمدة في بنك مواد المدرسة (Master Catalog).
+- **الوصف الوظيفي للرابط:** استرجاع الكتالوج العام لكافة المواد والمناهج المعتمدة في بنك مواد المدرسة (Master Catalog) بصيغة موجزة متعددة العناصر.
+- **Query Parameters:** `page` (optional, integer, default 1), `per_page` (optional, integer, default 15)
 - **Response Payloads:**
   - **`200 OK`:**
     ```json
@@ -166,8 +181,15 @@
       "message": "تم جلب بنك المواد العامة بنجاح.",
       "data": [
         { "id": 1, "name": "الرياضيات", "code": "MATH" },
-        { "id": 2, "name": "العلوم", "code": "SCI" }
-      ]
+        { "id": 2, "name": "العلوم", "code": "SCI" },
+        { "id": 3, "name": "اللغة العربية", "code": "ARAB" }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 15,
+        "total": 3,
+        "last_page": 1
+      }
     }
     ```
 
