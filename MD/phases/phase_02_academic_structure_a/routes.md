@@ -14,6 +14,28 @@
 - **Base URI:** `/api/v1/academic`
 - **Headers:** `Authorization: Bearer <TOKEN>`, `Accept: application/json`, `Content-Type: application/json`
 
+### 📋 نمط الاستجابات العامة والأخطاء الشائعة (Standard Error Responses)
+
+```json
+// 401 Unauthorized
+{
+  "success": false,
+  "message": "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
+}
+
+// 403 Forbidden
+{
+  "success": false,
+  "message": "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
+}
+
+// 500 Server Error
+{
+  "success": false,
+  "message": "حدث خطأ غير متوقع في الخادم. يرجى المحاولة لاحقاً."
+}
+```
+
 ---
 
 ## 📅 الخطوة 1: إدارة السنوات الدراسية (`academic_years`) — [5 مسارات]
@@ -70,10 +92,26 @@
 
 ### 1.3 `PUT /api/v1/academic/years/:id` — تعديل سنة دراسية
 - **الوصف الوظيفي للرابط:** تحديث بيانات سنة دراسية قائمة.
-- **Request Body:** `{"name": "2026/2027", "start_date": "2026-09-01", "end_date": "2027-06-30"}`
+- **Request Body:**
+  ```json
+  {
+    "name": "2026/2027",
+    "start_date": "2026-09-01",
+    "end_date": "2027-06-30"
+  }
+  ```
 - **Response Payloads:**
-  - **`200 OK`:** `{"success": true, "message": "تم تحديث السنة الدراسية بنجاح."}`
+  - **`200 OK`:**
+    ```json
+    {
+      "success": true,
+      "message": "تم تحديث السنة الدراسية بنجاح.",
+      "data": { "id": 2, "name": "2026/2027", "start_date": "2026-09-01", "end_date": "2027-06-30", "is_active": 0 }
+    }
+    ```
   - **`404 Not Found`:** `{"success": false, "message": "السنة الدراسية غير موجودة."}`
+  - **`409 Conflict`:** `{"success": false, "message": "اسم السنة الدراسية مستخدم مسبقاً لعام آخر."}`
+  - **`422 Unprocessable`:** `{"success": false, "message": "بيانات التحديث غير صالحة، تاريخ النهاية يجب أن يكون بعد تاريخ البداية."}`
 
 ---
 
@@ -82,13 +120,22 @@
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تم حذف السنة الدراسية بنجاح."}`
   - **`403 Forbidden`:** `{"success": false, "message": "لا يمكن حذف السنة الدراسية لارتباطها بفترات أو طلاب (RESTRICT)."}`
+  - **`404 Not Found`:** `{"success": false, "message": "السنة الدراسية المراد حذفها غير موجودة."}`
 
 ---
 
 ### 1.5 `POST /api/v1/academic/years/:id/activate` — تفعيل السنة النشطة حالياً
 - **الوصف الوظيفي للرابط:** تحويل السنة المختارة إلى السنة النشطة بالمنظومة وإلغاء تفعيل البقية بحركة ذرية atomic.
 - **Response Payloads:**
-  - **`200 OK`:** `{"success": true, "message": "تم تفعيل السنة الدراسية كعام نشط للمنظومة بنجاح."}`
+  - **`200 OK`:**
+    ```json
+    {
+      "success": true,
+      "message": "تم تفعيل السنة الدراسية كعام نشط للمنظومة بنجاح.",
+      "data": { "id": 2, "name": "2026/2027", "is_active": 1 }
+    }
+    ```
+  - **`404 Not Found`:** `{"success": false, "message": "السنة الدراسية المراد تفعيلها غير موجودة."}`
 
 ---
 
@@ -123,24 +170,57 @@
 
 ### 2.2 `POST /api/v1/academic/terms` — إضافة فترة لكتالوج الفترات العام
 - **الوصف الوظيفي للرابط:** إضافة فترة مرجعية معيارية جديدة للكتالوج.
-- **Request Body:** `{"name": "الفصل الصيفي", "term_number": 4}`
+- **Request Body:**
+  ```json
+  {
+    "name": "الفصل الصيفي",
+    "term_number": 4
+  }
+  ```
 - **Response Payloads:**
-  - **`201 Created`:** `{"success": true, "message": "تمت إضافة الفترة للكتالوج المرجعي بنجاح."}`
+  - **`201 Created`:**
+    ```json
+    {
+      "success": true,
+      "message": "تمت إضافة الفترة للكتالوج المرجعي بنجاح.",
+      "data": { "id": 4, "name": "الفصل الصيفي", "term_number": 4 }
+    }
+    ```
   - **`409 Conflict`:** `{"success": false, "message": "اسم الفترة أو رقم الترتيب موجود مسبقاً بالكتالوج."}`
+  - **`422 Unprocessable`:** `{"success": false, "message": "رقم ترتيب الفصل يجب أن يكون رقماً موجباً."}`
 
 ---
 
 ### 2.3 `PUT /api/v1/academic/terms/:id` — تعديل مسمى أو ترتيب فترة بالكتالوج
-- **Request Body:** `{"name": "الفصل الدراسي الأول", "term_number": 1}`
+- **الوصف الوظيفي للرابط:** تحديث بيانات فترة مرجعية بالكتالوج.
+- **Request Body:**
+  ```json
+  {
+    "name": "الفصل الدراسي الأول",
+    "term_number": 1
+  }
+  ```
 - **Response Payloads:**
-  - **`200 OK`:** `{"success": true, "message": "تم تحديث بيانات الفترة بالكتالوج بنجاح."}`
+  - **`200 OK`:**
+    ```json
+    {
+      "success": true,
+      "message": "تم تحديث بيانات الفترة بالكتالوج بنجاح.",
+      "data": { "id": 1, "name": "الفصل الدراسي الأول", "term_number": 1 }
+    }
+    ```
+  - **`404 Not Found`:** `{"success": false, "message": "الفترة الدراسية غير موجودة بالكتالوج."}`
+  - **`409 Conflict`:** `{"success": false, "message": "اسم الفترة أو رقم الترتيب مستخدم مسبقاً بفترة أخرى."}`
+  - **`422 Unprocessable`:** `{"success": false, "message": "بيانات التحديث المدخلة غير صالحة."}`
 
 ---
 
 ### 2.4 `DELETE /api/v1/academic/terms/:id` — حذف فترة غير مستخدمة من الكتالوج
+- **الوصف الوظيفي للرابط:** حذف فترة مرجعية بشرط عدم ربطها بتخصيصات صفوف.
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تم حذف الفترة من الكتالوج بنجاح."}`
   - **`403 Forbidden`:** `{"success": false, "message": "لا يمكن حذف الفترة المرجعية لارتباطها بتخصيصات صفوف (RESTRICT)."}`
+  - **`404 Not Found`:** `{"success": false, "message": "الفترة المراد حذفها غير موجودة بالكتالوج."}`
 
 ---
 
@@ -174,21 +254,55 @@
 ---
 
 ### 3.2 `POST /api/v1/academic/stages` — إضافة مرحلة تعليمية
-- **Request Body:** `{"name": "المرحلة الابتدائية", "order_index": 1}`
+- **الوصف الوظيفي للرابط:** إضافة مرحلة تعليمية جديدة بالهيكل الأكاديمي.
+- **Request Body:**
+  ```json
+  {
+    "name": "المرحلة الابتدائية",
+    "order_index": 1
+  }
+  ```
 - **Response Payloads:**
-  - **`201 Created`:** `{"success": true, "message": "تمت إضافة المرحلة التعليمية بنجاح."}`
+  - **`201 Created`:**
+    ```json
+    {
+      "success": true,
+      "message": "تمت إضافة المرحلة التعليمية بنجاح.",
+      "data": { "id": 1, "name": "المرحلة الابتدائية", "order_index": 1 }
+    }
+    ```
   - **`409 Conflict`:** `{"success": false, "message": "اسم المرحلة التعليمية موجود مسبقاً (uq_stages_name)."}`
+  - **`422 Unprocessable`:** `{"success": false, "message": "اسم المرحلة وترتيبها حقول إجبارية."}`
 
 ---
 
 ### 3.3 `PUT /api/v1/academic/stages/:id` — تعديل مرحلة تعليمية
-- **Request Body:** `{"name": "المرحلة الابتدائية المحدثة", "order_index": 1}`
+- **الوصف الوظيفي للرابط:** تحديث بيانات مرحلة تعليمية قائمة.
+- **Request Body:**
+  ```json
+  {
+    "name": "المرحلة الابتدائية المحدثة",
+    "order_index": 1
+  }
+  ```
 - **Response Payloads:**
-  - **`200 OK`:** `{"success": true, "message": "تم تحديث بيانات المرحلة التعليمية بنجاح."}`
+  - **`200 OK`:**
+    ```json
+    {
+      "success": true,
+      "message": "تم تحديث بيانات المرحلة التعليمية بنجاح.",
+      "data": { "id": 1, "name": "المرحلة الابتدائية المحدثة", "order_index": 1 }
+    }
+    ```
+  - **`404 Not Found`:** `{"success": false, "message": "المرحلة التعليمية غير موجودة."}`
+  - **`409 Conflict`:** `{"success": false, "message": "اسم المرحلة التعليمية مستخدم مسبقاً."}`
+  - **`422 Unprocessable`:** `{"success": false, "message": "بيانات التحديث المدخلة غير صالحة."}`
 
 ---
 
 ### 3.4 `DELETE /api/v1/academic/stages/:id` — حذف مرحلة فارغة
+- **الوصف الوظيفي للرابط:** حذف مرحلة تعليمية بشرط عدم ارتباطها بصفوف دراسية.
 - **Response Payloads:**
   - **`200 OK`:** `{"success": true, "message": "تم حذف المرحلة التعليمية بنجاح."}`
   - **`403 Forbidden`:** `{"success": false, "message": "لا يمكن حذف المرحلة لارتباطها بصفوف دراسية (RESTRICT)."}`
+  - **`404 Not Found`:** `{"success": false, "message": "المرحلة التعليمية المراد حذفها غير موجودة."}`
