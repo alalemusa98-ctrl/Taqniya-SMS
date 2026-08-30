@@ -1,48 +1,156 @@
-# ⚙️ مواصفات Backend — المرحلة 05-B (Domain Logic & Architecture)
+# ⚙️ مواصفات Backend — المرحلة 05-B: جدول الحصص الأسبوعي وحظر التعارضات (Timetables & Conflict Resolution)
 
-> **الهدف:** توثيق الخدمات والتحقق وقواعد البزنس الحصرية لجدول الحصص الأسبوعي (`timetable_slots`) المطابقة بنسبة 100% لـ [`MD/database.md`](../../database.md).  
+> **الهدف:** توثيق منطق المعالجة وقواعد التحقق ومنع التضارب الزماني للشعب والمعلمين لجدول `timetable_slots` المطابقة بنسبة 100% لـ [`MD/database.md`](../../database.md) و [`MD/business_rules.md`](../../business_rules.md)، مع دمج وتوحيد منطق الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح والرشاقة.  
 > 
 > ⚠️ **تكامل حوكمي صريح وملزم — مرجع الاستجابات (Network SSoT):**  
-> ملف [`routes.md`](./routes.md) هو **المصدر الرئيسي والحصري والوحيد لكافة استجابات الـ API (Network SSoT)**. تم تسجيل كامل شكل الاستجابة (JSON Response Body) ورسائل الخطأ والنجاح صراحةً في [`routes.md`](./routes.md) لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`) لكل رابط.  
-> 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل بإنشاء ورسم كود الـ Controllers واستجابات الخادم بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
+> ملف [`routes.md`](./routes.md) هو **المصدر الرئيسي والحصري والوحيد لكافة استجابات ومدخلات الـ API (Network SSoT)**. تم تسجيل كامل شكل الاستجابة (JSON Response Body) ورسائل الخطأ والنجاح صراحةً في [`routes.md`](./routes.md) لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`, `500 Internal Server Error`) لكل رابط.  
+> 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور أو نموذج الذكاء الاصطناعي بالكامل بإنشاء ورسم كود الخادم واستجابات الـ API بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
 
 ---
 
-## 🗓️ الخطوة 1: إدارة جدول الحصص الأسبوعي وحظر التعارضات الزمانية (`timetable_slots`) — [7 مسارات]
+## 1. نطاق المرحلة والحدود المعمارية (Scope & Boundaries)
 
-> **الوصف المختصر:** توزيع حصص الشعب والماد والمعلمين على أيام الأسبوع وحظر تضارب جدول الشعبة وتضارب جدول المعلم.
+### 🟢 ما تشمله المرحلة (In-Scope):
+- **إدارة سجل وجدول الحصص الأسبوعي (`timetable_slots`) — [6 مسارات]:**
+  - استعراض وتصفية جدول الحصص العام بالترقيم والفلترة (`GET /api/v1/timetable-slots`).
+  - استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة (`GET /api/v1/sections/:section_id/timetable`).
+  - استعراض جدول الحصص الأسبوعي لمعلم محدد (`GET /api/v1/teachers/:teacher_id/timetable`).
+  - استعراض مصفوفة جدول الحصص المجمع لكافة شعب الصف الدراسي (`GET /api/v1/classes/:class_id/timetable`).
+  - تسكين وتعديل حصة بالجدول الأسبوعي مع الفحص الذري لحظر التعارضات (`POST & PUT /api/v1/timetable-slots`).
+  - حذف وإلغاء حصة من الجدول الأسبوعي (`DELETE /api/v1/timetable-slots/:id`).
+- **الحوكمة ومنع التعارضات:**
+  - فحص حظر التضارب الزمني للشعبة (`uq_timetable_section_slot`).
+  - فحص حظر التضارب الزمني للمعلم (منع تدريس شعبتين بنفس اليوم والحصة) وإرجاع `409 Conflict`.
+  - تسجيل كافة عمليات التسكين والتعديل والحذف في سجلات التدقيق `audit_logs`.
 
-### 1.1 جدول العمليات والروابط للخلفية (`timetable_slots`):
-| الوصف الوظيفي للإجراء (Action Description) | العملية الخلفية (Service Method) | HTTP Method & Endpoint | حالة النجاح | مرجع الهيكل الكامل في `routes.md` |
-| :--- | :--- | :--- | :-: | :--- |
-| **عرض مصفوفة الجدول الأسبوعي** | `TimetableService::listTimetableSlots` | `GET /api/v1/timetable-slots` | `200 OK` | [في `routes.md`](./routes.md#11-get-apiv1timetable-slots--عرض-وتصفية-سجلات-الجدول-الأسبوعي) |
-| **عرض جدول شعبة محددة** | `TimetableService::getSectionTimetable` | `GET /api/v1/sections/:section_id/timetable` | `200 OK` | [في `routes.md`](./routes.md#12-get-apiv1sectionssection_idtimetable--عرض-مصفوفة-الجدول-الأسبوعي-لشعبة-محدد) |
-| **عرض جدول معلم محدد** | `TimetableService::getTeacherTimetable` | `GET /api/v1/teachers/:teacher_id/timetable` | `200 OK` | [في `routes.md`](./routes.md#13-get-apiv1teachersteacher_idtimetable--عرض-جدول-الحصص-الأسبوعي-لمعلم-محدد) |
-| **تسكين حصة بالجدول الأسبوعي** | `TimetableService::createTimetableSlot` | `POST /api/v1/timetable-slots` | `201 Created` | [في `routes.md`](./routes.md#14-post-apiv1timetable-slots--إضافة-وتسكين-حصة-بالجدول-الأسبوعي) |
-| **تعديل موعد أو مادة الحصة** | `TimetableService::updateTimetableSlot` | `PUT /api/v1/timetable-slots/:id` | `200 OK` | [في `routes.md`](./routes.md#15-put-apiv1timetable-slotsid--تعديل-موعد-أو-مادةمعلم-الحصة-بالجدول-الأسبوعي) |
-| **الجدولة الجماعية لشعبة** | `TimetableService::bulkScheduleSection` | `POST /api/v1/timetable-slots/bulk-schedule` | `200 OK` | [في `routes.md`](./routes.md#16-post-apiv1timetable-slotsbulk-schedule--التوزيع-والجدولة-الجماعية-لحصص-الشعبة) |
-| **إلغاء وتفريغ حصة** | `TimetableService::deleteTimetableSlot` | `DELETE /api/v1/timetable-slots/:id` | `200 OK` | [في `routes.md`](./routes.md#17-delete-apiv1timetable-slotsid--إلغاء-وتفريغ-حصة-من-الجدول-الأسبوعي) |
-
----
-
-### 1.2 قواعد التحقق (`TimetableSlotRequest`):
-- `academic_year_id`: مطلوب وموجود بجدول `academic_years`.
-- `class_section_id`: مطلوب وموجود بجدول `class_sections`.
-- `day_of_week`: مطلوب، enum (`saturday`, `sunday`, `monday`, `tuesday`, `wednesday`, `thursday`).
-- `period_slot_id`: مطلوب وموجود بجدول `period_slots`.
-- `teaching_assignment_id`: مطلوب وموجود بجدول `teaching_assignments`.
+### 🔴 خارج نطاق المرحلة (Out-of-Scope):
+- تعريف فترات وأوقات الحصص اليومية والفسحة $\rightarrow$ تابعة للمرحلة `05-A` (`period_slots`).
+- إسناد المعلمين للمواد والشعب $\rightarrow$ تابعة للمرحلة `03-B` (`teaching_assignments`).
+- رصد الواجبات والامتحانات والدرجات $\rightarrow$ محالة إلى المراحل `06` و `07` و `08`.
 
 ---
 
-## ⚖️ 2. قواعد منطق الأعمال الأكاديمية والمحددات العامة (Domain & System Business Rules)
+## 2. حوكمة الأدوار وقواعد الوصول وعزل البيانات (RBAC & Scoping Rules)
 
-تلتزم الخدمات (Services) والمتحكمات (Controllers) بالقواعد المقتبسة من [`MD/business_rules.md`](../../business_rules.md):
+### 👥 مصفوفة الفاعلين والصلاحيات:
+- **مدير النظام (Admin - `role_type = 'admin'`):**
+  - يمتلك الصلاحية الكاملة على كافة مسارات الجدول الأسبوعي (استعراض، تسكين، تعديل، حذف).
+- **المعلم (Teacher - `role_type = 'teacher'`):**
+  - يمتلك صلاحية استعراض جدول حصصه الخاص (`GET /api/v1/teachers/:teacher_id/timetable` حيث `teacher_id = auth.teacher.id`) واستعراض جداول الشعب التي يدرسها.
+  - يُحظر عليه تسكين أو تعديل أو حذف أي حصة في الجدول (`403 Forbidden`).
+- **الطالب (Student) وولي الأمر (Parent):**
+  - يمتلك الطالب وولي أمره صلاحية القراءة فقط لجدول الشعبة المسكن بها الطالب (`GET /api/v1/sections/:section_id/timetable`).
+  - يُحظر عليهم تعديل أو حذف أي حصة (`403 Forbidden`).
+- **المستخدم غير المصادق عليه (Unauthenticated):**
+  - أي طلب يفتقر إلى توكن `Bearer JWT` صالح ونشط يُرفض برمز `401 Unauthorized`.
 
-### 2.1 حوكمة قيد تفرد حصة الشعبة الزمني (Section Anti-Overlap Invariant):
-- تمنع خدمة `TimetableService` إسناد حصتين لنفس الشعبة في نفس اليوم والتوقيت بالعام النشط (`uq_timetable_section_slot`). عند كشف التعارض ترجع `409 Conflict`.
+---
 
-### 2.2 حوكمة تضارب جدول المعلم (Teacher Schedule Anti-Conflict Invariant):
-- تفحص خدمة `TimetableService` المعلم المكلف عبر `teaching_assignments.teacher_id` وتتفحص تعارض جدول المعلم مع الشعب الأخرى بالعام النشط (`idx_timetable_teacher_conflict`). إذا كان المعلم يحاضر بشعبة أخرى في نفس اليوم والتوقيت ترجع الخدمة `409 Conflict`.
+## 3. دورة حياة الكيانات وقواعد ثبات النظام (Lifecycles & System Invariants)
 
-### 2.3 المعاملات الذرية للجدولة الجماعية (`DB::transaction` Batch Processing):
-- تنفذ الجدولة الجماعية للشعبة (`bulk-schedule`) داخل معاملة داتا بيز ذرية (`DB::transaction`) لضمان تسكين كافة حصص الأسبوع بنجاح وإلغاء العملية بالكامل عند كشف أي تضارب.
+```mermaid
+stateDiagram-v2
+    [*] --> Scheduled: تسكين الحصة بالجدول (فحص uq_timetable_section_slot وتضارب المعلم)
+    Scheduled --> UpdatedSlot: تعديل التوقيت أو المعلم (PUT)
+    UpdatedSlot --> Scheduled
+    Scheduled --> SoftDeleted: إلغاء الحصة وحذفها منطقياً (deleted_at = NOW)
+    SoftDeleted --> [*]
+```
+
+### 🔒 قواعد ثبات النظام الصارمة (System Invariants):
+1. **قيد تفرد حصة الشعبة الزمني (Section Time Slot Invariant):**
+   - يمنع وجود حصتين لنفس الشعبة في نفس اليوم والتوقيت خلال العام الدراسي (`uq_timetable_section_slot: academic_year_id, class_section_id, day_of_week, period_slot_id`).
+   - عند محاولة التسكين المزدوج، يرفض الطلب برمز `409 Conflict`.
+2. **قيد حظر تضارب جدول المعلم (Teacher Anti-Collision Invariant):**
+   - يتحقق الخادم قبل التسكين من أن المعلم المرتبط بسجل `teaching_assignment_id` غير مسكن في حصة أخرى مع شعبة مختلفة في نفس اليوم والتوقيت بالعام الدراسي.
+   - عند اكتشاف تضارب للمعلم، يرفض الطلب برمز `409 Conflict`.
+3. **دورة حياة الحذف المنطقي (Soft Delete Lifecycle):**
+   - عند حذف حصة من الجدول، يتم ضبط `deleted_at = CURRENT_TIMESTAMP` وإخلاء الفترة الزمنية.
+4. **سجلات التدقيق (Audit Logging):**
+   - تسجل كافة حركات التسكين والتعديل والحذف في جدول `audit_logs`.
+
+---
+
+## 4. العمليات المنطقية والمسارات التفصيلية للمجال (Domain Operations & Routes)
+
+---
+
+### 🗓️ الخطوة 1: إدارة جدول الحصص الأسبوعي وحظر التعارضات الزمانية (`timetable_slots`)
+
+#### 📋 جدول العمليات المدمجة:
+| # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
+| :-: | :--- | :--- | :--- | :---: | :--- |
+| **1.1** | استعراض وتصفية سجلات الجدول الأسبوعي | `GET /api/v1/timetable-slots` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.2** | استعراض مصفوفة جدول الحصص لشعبة محددة | `GET /api/v1/sections/:section_id/timetable` | `admin` / `teacher` / `student` / `parent` | `200 OK` | [في routes.md](./routes.md) |
+| **1.3** | استعراض جدول الحصص الأسبوعي لمعلم محدد | `GET /api/v1/teachers/:teacher_id/timetable` | `admin` / `teacher (own)` | `200 OK` | [في routes.md](./routes.md) |
+| **1.4** | استعراض مصفوفة جدول الحصص لكافة شعب الصف | `GET /api/v1/classes/:class_id/timetable` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.5** | تسكين وتعديل حصة بالجدول الأسبوعي | `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` | `admin` | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
+| **1.6** | حذف وإلغاء حصة من الجدول الأسبوعي | `DELETE /api/v1/timetable-slots/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+
+---
+
+#### 🔹 [Operation 1.1] `GET /api/v1/timetable-slots` — استعراض وتصفية سجلات الجدول الأسبوعي
+- **الغرض والوظيفة:** استرجاع قائمة سجلات جدول الحصص الأسبوعية مع دعم الفلترة بالشعبة، المعلم، المادة، اليوم، الحصة والترتيب والترقيم.
+- **عقد الاستجابات والمعاملات (Network SSoT):**
+  - معاملات الاستعلام وهياكل الـ JSON الصريحة لـ (`200 OK`) موثقة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 1.2] `GET /api/v1/sections/:section_id/timetable` — استعراض مصفوفة جدول الحصص لشعبة محددة
+- **الغرض والوظيفة:** جلب مصفوفة الجدول الأسبوعي الكاملة لشعبة معينة مقسمة بأيام الأسبوع.
+- **عقد الاستجابات والمعاملات (Network SSoT):**
+  - استجابات (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 1.3] `GET /api/v1/teachers/:teacher_id/timetable` — استعراض جدول الحصص الأسبوعي لمعلم محدد
+- **الغرض والوظيفة:** جلب جدول الحصص الأسبوعي لمعلم محدد.
+- **عقد الاستجابات والمعاملات (Network SSoT):**
+  - استجابات (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 1.4] `GET /api/v1/classes/:class_id/timetable` — استعراض مصفوفة جدول الحصص لكافة شعب الصف
+- **الغرض والوظيفة:** جلب مصفوفة جدول الحصص المجمع لكافة شُعب الصف الدراسي ليوم محدد لعرض جدول الناظر الشامل لجميع الشُعب والحصص في شاشة واحدة.
+- **عقد الاستجابات والمعاملات (Network SSoT):**
+  - استجابات (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 1.5] `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` — تسكين وتعديل حصة بالجدول الأسبوعي (Combined Domain Logic)
+- **الغرض والوظيفة:**
+  - **في الإنشاء (`POST`):** تسكين حصة جديدة بالجدول الأسبوعي للشعبة.
+  - **في التعديل (`PUT`):** تحديث وتعديل توقيت أو شعبة أو مادة/معلم الحصة الأسبوعية.
+- **قواعد التحقق المشتركة وحظر التضارب:**
+  - `academic_year_id`: مطلوب، معرف عام دراسي صالح.
+  - `class_section_id`: مطلوب، معرف شعبة صالحة.
+  - `day_of_week`: مطلوب، أحد أيام الأسبوع المعيارية (`saturday` إلى `thursday`).
+  - `period_slot_id`: مطلوب، معرف فترة زمنية يومية صالحة.
+  - `teaching_assignment_id`: مطلوب، معرف إسناد تدريس صالح بالعام.
+  - **فحص قيد الشعبة:** منع وجود حصة أخرى لنفس الشعبة في نفس اليوم والحصة (`uq_timetable_section_slot`).
+  - **فحص تضارب المعلم:** التحقق من عدم تدريس المعلم لشعبة أخرى في نفس اليوم والحصة بالعام النشط.
+- **عقد الاستجابات والمدخلات (Network SSoT):**
+  - هيكل الطلب واستجابات (`201 Created`, `200 OK`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 1.6] `DELETE /api/v1/timetable-slots/:id` — حذف وإلغاء حصة من الجدول الأسبوعي
+- **الغرض والوظيفة:** تنفيذ الحذف المنطقي لسجل الحصة بالجدول وتفريغ الفترة الزمنية.
+- **عقد الاستجابات والمدخلات (Network SSoT):**
+  - ردود الحذف (`200 OK`, `404 Not Found`) مسجلة صراحةً في [`routes.md`](./routes.md).
+
+---
+
+## 5. الأداء، التزامن، والنزاهة المرجعية (Performance & Data Integrity)
+
+1. **الاستعلامات والفهارس:**
+   - استخدام الفهارس المعتمدة في `MD/database.md`: `uq_timetable_section_slot`، `idx_timetable_teacher_conflict`، `idx_timetable_class_section`، `idx_timetable_deleted_at`.
+2. **الترقيم ومنع الإغراق (Pagination & DoS Protection):**
+   - حصر عدد السجلات في مسار الـ GET بـ `per_page` لمنع تحميل الذاكرة.
+3. **تجنب التسريب التقني والأمني في الاستجابات:**
+   - توحيد رسائل الأخطاء عبر الرموز المعيارية (`401`, `403`, `404`, `409`, `422`, `500`).
+
+---
+
+## 6. معايير القبول الهندسية للباك إند (Backend Acceptance Criteria)
+
+تعتبر متطلبات الخادم لهذه المرحلة مستوفاة بالكامل عند تحقق المعايير التالية:
+
+- [ ] قصر صلاحية إدارة الجدول الأسبوعي (تسكين، تعديل، حذف) حصراً على المستخدمين بدور `admin`.
+- [ ] إرجاع `401 Unauthorized` لأي طلب بدون توكن مصادقة صالح.
+- [ ] إرجاع `403 Forbidden` عند محاولة المعلم أو الطالب تعديل الجدول الأسبوعي.
+- [ ] التحقق الصارم من قيد تفرد حصة الشعبة الزمني `uq_timetable_section_slot` وإرجاع `409 Conflict` عند التكرار.
+- [ ] التحقق الصارم من قيد حظر تضارب جدول المعلم وإرجاع `409 Conflict` عند محاولة تسكين المعلم لشعبتين في نفس الحصة.
+- [ ] دعم استرجاع مصفوفة الجدول المجمع للصف الدراسي وكافة شعبه في مسار واحد.
+- [ ] تنفيذ الحذف المنطقي بضبط `deleted_at` وتوثيق العمليات في `audit_logs`.
+- [ ] مطابقة كافة المدخلات والمخرجات بنسبة 100% لعقد الشبكة في [`routes.md`](./routes.md).
