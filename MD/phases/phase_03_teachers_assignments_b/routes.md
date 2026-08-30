@@ -1,10 +1,10 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 03-B (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 6 كاملة لإدارة وتوزيع جدول إسناد التدريس الأكاديمي والنصاب التدريسي للمعلمين مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، وتزويد مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) مع الترقيم المالي القياسي (`Pagination Meta`) ودعم البحث والتصفية (`CRUDS Standard: Create, Read, Update, Delete, Search`).  
+> **الهدف:** توثيق المسارات الـ 6 كاملة لإدارة وتوزيع جدول إسناد التدريس الأكاديمي والنصاب التدريسي للمعلمين مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، مع دمج وتوحيد مواصفات الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح ومنع التكرار، وتزويد مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) مع الترقيم القياسي (`Pagination Meta`).  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
-> 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم على المطور أو الذكاء الاصطناعي قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
-> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** يعتبر هذا الملف (`routes.md`) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**معاملات البحث والفلترة (`Query Parameters & Filters`)**، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`).  
+> 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
+> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** يعتبر هذا الملف ([`routes.md`](./routes.md)) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**معاملات البحث والفلترة (`Query Parameters & Filters`)**، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`, `500 Server Error`).  
 > 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
 
 ---
@@ -12,24 +12,46 @@
 ## 1. الإعدادات والترويسات العامة (API Base Configuration)
 
 - **Base URI:** `/api/v1/teaching-assignments`
-- **Headers:** `Authorization: Bearer <TOKEN>`, `Accept: application/json`, `Content-Type: application/json`
+- **Protocol:** `HTTPS`
+- **Data Format:** `JSON` (`application/json`)
+- **Required Headers:**
+  ```http
+  Authorization: Bearer <TOKEN>
+  Accept: application/json
+  Content-Type: application/json
+  Accept-Language: ar
+  ```
 
-### 📋 نمط الاستجابات العامة والأخطاء الشائعة (Standard Error Responses)
+### 📋 مصفوفة المسارات الـ 6 الموحدة (Master Route Matrix):
+
+| # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
+| :-: | :--- | :--- | :--- | :--- | :--- |
+| **1** | `teaching_assignments` | `GET` | `/api/v1/teaching-assignments` | `admin` | استعراض وبحث جدول إسناد التدريس العام بالترقيم والفلترة |
+| **2** | `teaching_assignments` | `GET` | `/api/v1/teaching-assignments/:id` | `admin` / `teacher` | استعراض تفاصيل سجل إسناد تدريس محدد |
+| **3** | `teaching_assignments` | `GET` | `/api/v1/teachers/:teacher_id/assignments` | `admin` / `teacher (own)` | استعراض النصاب التدريسي والمواد لشعبة ومعلم محدد |
+| **4** | `teaching_assignments` | `GET` | `/api/v1/classes/:class_id/assignments` | `admin` | استعراض كشف معلمي ومناهج الصف الدراسي بالشعب |
+| **5** | `teaching_assignments` | `POST` | `/api/v1/teaching-assignments` | `admin` | إسناد وتعيين معلم لمادة بشعبة في عام دراسي |
+| **6** | `teaching_assignments` | `PUT` | `/api/v1/teaching-assignments/:id` | `admin` | تعديل وتحديث إسناد التدريس (تغيير المعلم/الشعبة/المادة) |
+| **7** | `teaching_assignments` | `DELETE` | `/api/v1/teaching-assignments/:id` | `admin` | فك وإلغاء إسناد تدريس مادة (مع فحص RESTRICT) |
+
+### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
+
+> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 6** بالمرحلة:
 
 ```json
-// 401 Unauthorized
+// 401 Unauthorized (غياب أو تلف التوكن)
 {
   "success": false,
   "message": "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
 }
 
-// 403 Forbidden
+// 403 Forbidden (نقص الصلاحيات ومخالفة مصفوفة RBAC)
 {
   "success": false,
   "message": "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
 }
 
-// 500 Server Error
+// 500 Internal Server Error (خطأ غير متوقع في الخادم)
 {
   "success": false,
   "message": "حدث خطأ غير متوقع في الخادم. يرجى المحاولة لاحقاً."
@@ -38,130 +60,262 @@
 
 ---
 
-## 📚 الخطوة 1: إدارة سجل وجدول إسناد التدريس الأكاديمي (`teaching_assignments`) — [6 مسارات]
-
-> [!NOTE]
-> **الشرح والملاحظات الحوكمية لإسناد التدريس:**
-> 1. **المعلم المسؤول الوحيد لكل مادة بالشعبة:** تضمن المنظومة وجود معلم مسؤول واحد فقط عن تدريس المادة الواحدة للشعبة المحددة بالعام الدراسي عبر قيد التفرد المركب (`uq_teaching_assignment: academic_year_id, class_section_id, subject_id`).
-> 2. **صلاحيات التكليف والتعديل:** تعديل وإسناد الجداول مقتصر حصراً على مدير النظام (`role_type = 'admin'`).
-> 3. **شرط الشغور عند التعديل:** عند تغيير الشعبة أو المادة في طلب التحديث `PUT` يتأكد الخادم من أن المستهدف شاغر ولا يوجد به معلم آخر مسبقاً.
-> 4. **حماية فك الربط:** يمنع إلغاء أو فك إسناد مادة لمعلم إذا مررت لها واجبات يومية أو درجات امتحانات رسمية بجدول `student_grades` (`ON DELETE RESTRICT`).
+## 📚 الخطوة 1: إدارة سجل وجدول إسناد التدريس الأكاديمي (`teaching_assignments`) — [مواصفات المسارات]
 
 ---
 
-### 1.1 `GET /api/v1/teaching-assignments` — عرض وتصفية وبحث جدول إسناد التدريس بالعام الدراسي
+### 1.1 `GET /api/v1/teaching-assignments` — استعراض وبحث جدول إسناد التدريس بالعام الدراسي
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** استرجاع قائمة كافة إسنادات التدريس المعتمدة بالعام الدراسي مدمجة بأسماء الصفوف والشعب والمواد والمعلمين مع دعم البحث النصي والتصفية بالعام والشعبة والمادة والمعلم، الترتيب والتقسيم الصفحي (CRUDS - Search & Filter Engine).
+> **الوصف الوظيفي:** استرجاع قائمة كافة إسنادات التدريس المعتمدة بالعام الدراسي مدمجة بأسماء الصفوف والشعب والمواد والمعلمين مع دعم التصفية والبحث والترقيم.
 
-- **Query Parameters (معاملات الفلترة والبحث والترتيب):**
-  - `search` (optional, string): البحث النصي باسم المعلم، الصف، الشعبة، أو اسم المادة (مثال: `أحمد` أو `خامس` أو `رياضيات`).
+- **Query Parameters:**
+  - `search` (optional, string): البحث النصي باسم المعلم، الصف، الشعبة، أو المادة (مثال: `أحمد` أو `خامس` أو `رياضيات`).
   - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي.
+  - `class_id` (optional, bigint): تصفية حسب الصف الدراسي.
   - `class_section_id` (optional, bigint): تصفية حسب الشعبة الدراسية المحددة.
   - `teacher_id` (optional, bigint): تصفية حسب معلم محدد.
   - `subject_id` (optional, bigint): تصفية حسب المادة التعليمية.
-  - `sort_by` (optional, string, enum: `id`, `academic_year_id`, `class_section_id`, `subject_id`, `teacher_id`, default `id`): حقل الفرز والترتيب.
+  - `sort_by` (optional, string, enum: `id`, `academic_year_id`, `class_section_id`, `subject_id`, `teacher_id`, default `id`): حقل الفرز.
   - `sort_order` (optional, string, enum: `asc`, `desc`, default `desc`): اتجاه الفرز.
   - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
   - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
 - **Example Request URL:** `/api/v1/teaching-assignments?search=رياضيات&academic_year_id=1&sort_by=id&sort_order=desc`
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK` (نجاح جلب القائمة):
+```json
+{
+  "success": true,
+  "message": "تم جلب جدول إسناد التدريس بنجاح.",
+  "data": [
     {
-      "success": true,
-      "message": "تم جلب جدول إسناد التدريس بنجاح.",
-      "data": [
-        { "id": 101, "academic_year_id": 1, "academic_year_name": "2025/2026", "class_section_id": 5, "class_name": "الصف الخامس", "section_name": "شعبة أ", "subject_id": 1, "subject_name": "الرياضيات", "subject_code": "MATH", "teacher_id": 1, "teacher_name": "أحمد محمود سالم" },
-        { "id": 102, "academic_year_id": 1, "academic_year_name": "2025/2026", "class_section_id": 5, "class_name": "الصف الخامس", "section_name": "شعبة أ", "subject_id": 2, "subject_name": "العلوم", "subject_code": "SCI", "teacher_id": 2, "teacher_name": "خالد عبد السلام الفيتوري" }
-      ],
-      "meta": {
-        "current_page": 1,
-        "per_page": 15,
-        "total": 2,
-        "last_page": 1
-      }
+      "id": 101,
+      "academic_year_id": 1,
+      "academic_year_name": "2025/2026",
+      "class_id": 5,
+      "class_name": "الصف الخامس",
+      "class_section_id": 5,
+      "section_name": "شعبة أ",
+      "subject_id": 1,
+      "subject_name": "الرياضيات",
+      "subject_code": "MATH",
+      "teacher_id": 1,
+      "teacher_code": "TCH-2001",
+      "teacher_name": "أحمد محمود سالم"
+    },
+    {
+      "id": 102,
+      "academic_year_id": 1,
+      "academic_year_name": "2025/2026",
+      "class_id": 5,
+      "class_name": "الصف الخامس",
+      "class_section_id": 5,
+      "section_name": "شعبة أ",
+      "subject_id": 2,
+      "subject_name": "العلوم",
+      "subject_code": "SCI",
+      "teacher_id": 2,
+      "teacher_code": "TCH-2002",
+      "teacher_name": "خالد عبد السلام الفيتوري"
     }
-    ```
+  ],
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 2,
+    "last_page": 1
+  }
+}
+```
+
+##### ⚪ `200 OK` (القائمة فارغة):
+```json
+{
+  "success": true,
+  "message": "لا توجد إسنادات تدريس مسجلة تطابق محددات البحث.",
+  "data": [],
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 0,
+    "last_page": 1
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
-### 1.2 `GET /api/v1/teachers/:teacher_id/assignments` — عرض وبحث النصاب التدريسي والمواد لمعلم محدد
+### 1.2 `GET /api/v1/teaching-assignments/:id` — استعراض تفاصيل سجل إسناد تدريس محدد
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** استرجاع قائمة كافة الصفوف والشعب والمواد المكلف بها معلم محدد بالعام الدراسي النشط مع دعم البحث والفلترة.
+> **الوصف الوظيفي:** استرجاع بيانات سجل إسناد تدريس محدد بالمعرف.
 
-- **Query Parameters (معاملات الفلترة والبحث والترتيب):**
-  - `search` (optional, string): البحث النصي باسم الصف، الشعبة، أو المادة المكلف بها (مثال: `السادس` أو `MATH`).
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم جلب تفاصيل إسناد التدريس بنجاح.",
+  "data": {
+    "id": 101,
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "class_id": 5,
+    "class_name": "الصف الخامس",
+    "class_section_id": 5,
+    "section_name": "شعبة أ",
+    "subject_id": 1,
+    "subject_name": "الرياضيات",
+    "subject_code": "MATH",
+    "teacher_id": 1,
+    "teacher_code": "TCH-2001",
+    "teacher_name": "أحمد محمود سالم",
+    "created_at": "2026-08-29T12:00:00Z"
+  }
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "سجل إسناد التدريس غير موجود."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
+
+---
+
+### 1.3 `GET /api/v1/teachers/:teacher_id/assignments` — استعراض النصاب التدريسي والمواد لمعلم محدد
+
+> **الوصف الوظيفي:** استرجاع قائمة كافة الصفوف والشعب والمواد المكلف بها معلم محدد بالعام الدراسي.
+
+- **Query Parameters:**
   - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي.
-  - `sort_by` (optional, string, enum: `id`, `subject_id`, default `id`): حقل الفرز والترتيب.
-  - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
-  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
-  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
+  - `search` (optional, string): البحث باسم الصف أو الشعبة أو المادة.
+  - `page` (optional, integer, default `1`): رقم الصفحة.
+  - `per_page` (optional, integer, default `15`): عدد العناصر بالصفحة.
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم جلب النصاب الأكاديمي للمعلم بنجاح.",
+  "data": [
     {
-      "success": true,
-      "message": "تم جلب النصاب الأكاديمي للمعلم بنجاح.",
-      "data": [
-        { "id": 101, "academic_year_name": "2025/2026", "class_name": "الصف الخامس", "section_name": "شعبة أ", "subject_name": "الرياضيات", "subject_code": "MATH" },
-        { "id": 105, "academic_year_name": "2025/2026", "class_name": "الصف السادس", "section_name": "شعبة ب", "subject_name": "الرياضيات", "subject_code": "MATH" }
-      ],
-      "meta": {
-        "current_page": 1,
-        "per_page": 15,
-        "total": 2,
-        "last_page": 1
-      }
+      "id": 101,
+      "academic_year_id": 1,
+      "academic_year_name": "2025/2026",
+      "class_id": 5,
+      "class_name": "الصف الخامس",
+      "class_section_id": 5,
+      "section_name": "شعبة أ",
+      "subject_id": 1,
+      "subject_name": "الرياضيات",
+      "subject_code": "MATH"
+    },
+    {
+      "id": 105,
+      "academic_year_id": 1,
+      "academic_year_name": "2025/2026",
+      "class_id": 6,
+      "class_name": "الصف السادس",
+      "class_section_id": 8,
+      "section_name": "شعبة ب",
+      "subject_id": 1,
+      "subject_name": "الرياضيات",
+      "subject_code": "MATH"
     }
-    ```
-  - **`404 Not Found`:** `{"success": false, "message": "ملف المعلم غير موجود."}`
+  ],
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 2,
+    "last_page": 1
+  }
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "ملف المعلم غير موجود."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
-### 1.3 `GET /api/v1/classes/:class_id/assignments` — عرض وبحث معلمي ومناهج الصف الدراسي والمعاينة حسب الشعبة
+### 1.4 `GET /api/v1/classes/:class_id/assignments` — استعراض كشف معلمي ومناهج الصف بالشعب
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** استرجاع قائمة معلمي المواد والمناهج المخصصة لصف دراسي محدد بالعام الدراسي مع إمكانية التصفية والمعاينة بحسب الشعبة (`section_id`).
+> **الوصف الوظيفي:** استرجاع قائمة معلمي المواد والمناهج المخصصة لصف دراسي محدد بالعام الدراسي مع إمكانية التصفية بحسب الشعبة (`section_id`).
 
-- **Query Parameters (معاملات الفلترة والبحث والترتيب):**
-  - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي (الافتراضي العام النشط).
-  - `section_id` (optional, bigint): تصفية وتضييق المعاينة بحسب شعبة محددة داخل الصف (مثل: `شعبة أ` أو `شعبة ب`).
-  - `search` (optional, string): البحث النصي باسم المادة أو اسم المعلم أو كود المادة (مثال: `الرياضيات` أو `أحمد`).
-  - `sort_by` (optional, string, enum: `id`, `section_id`, `subject_id`, `teacher_id`, default `id`): حقل الفرز والترتيب.
-  - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
-  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
-  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
-- **Example Request URL:** `/api/v1/classes/5/assignments?section_id=1&search=رياضيات&sort_by=id&sort_order=asc`
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
+- **Query Parameters:**
+  - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي.
+  - `section_id` (optional, bigint): تصفية بحسب شعبة محددة داخل الصف.
+  - `search` (optional, string): البحث باسم المادة أو المعلم.
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم جلب جدول معلمي ومناهج الصف بنجاح.",
+  "data": [
     {
-      "success": true,
-      "message": "تم جلب جدول معلمي ومناهج الصف بنجاح.",
-      "data": [
-        { "id": 101, "academic_year_id": 1, "academic_year_name": "2025/2026", "class_id": 5, "class_name": "الصف الخامس", "class_section_id": 5, "section_id": 1, "section_name": "شعبة أ", "subject_id": 1, "subject_name": "الرياضيات", "subject_code": "MATH", "teacher_id": 1, "teacher_code": "TCH-2001", "teacher_name": "أحمد محمود سالم" },
-        { "id": 102, "academic_year_id": 1, "academic_year_name": "2025/2026", "class_id": 5, "class_name": "الصف الخامس", "class_section_id": 5, "section_id": 1, "section_name": "شعبة أ", "subject_id": 2, "subject_name": "العلوم", "subject_code": "SCI", "teacher_id": 2, "teacher_code": "TCH-2002", "teacher_name": "خالد عبد السلام الفيتوري" }
-      ],
-      "meta": {
-        "current_page": 1,
-        "per_page": 15,
-        "total": 2,
-        "last_page": 1
-      }
+      "id": 101,
+      "academic_year_id": 1,
+      "academic_year_name": "2025/2026",
+      "class_id": 5,
+      "class_name": "الصف الخامس",
+      "class_section_id": 5,
+      "section_id": 1,
+      "section_name": "شعبة أ",
+      "subject_id": 1,
+      "subject_name": "الرياضيات",
+      "subject_code": "MATH",
+      "teacher_id": 1,
+      "teacher_code": "TCH-2001",
+      "teacher_name": "أحمد محمود سالم"
     }
-    ```
-  - **`404 Not Found`:** `{"success": false, "message": "الصف الدراسي غير موجود."}`
+  ],
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 1,
+    "last_page": 1
+  }
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "الصف الدراسي غير موجود."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
-### 1.4 `POST /api/v1/teaching-assignments` — تعيين وإسناد تدريس مادة لشعبة ومعلم
+### 1.5 `POST /api/v1/teaching-assignments` & `PUT /api/v1/teaching-assignments/:id` — إسناد وتعديل تكليف التدريس (Combined Specification)
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** تعيين معلم مسؤول عن تدريس مادة دراسية لشعبة محددة في عام دراسي محدد.
+> **الوصف الوظيفي:**
+> * **في الإنشاء (`POST`):** تعيين معلم مسؤول عن تدريس مادة دراسية لشعبة محددة في عام دراسي محدد.
+> * **في التعديل (`PUT`):** تحديث وتعديل تكليف الإسناد (تغيير المعلم المكلف أو تغيير الشعبة أو المادة) مع التحقق من عدم التعارض.
 
-- **Request Body:**
+- **Request Body (موحد للإنشاء والتعديل):**
   ```json
   {
     "academic_year_id": 1,
@@ -170,83 +324,116 @@
     "teacher_id": 1
   }
   ```
-- **Response Payloads:**
-  - **`201 Created`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم إسناد التدريس وتعيين المعلم للشعبة بنجاح.",
-      "data": {
-        "id": 101,
-        "academic_year_id": 1,
-        "academic_year_name": "2025/2026",
-        "class_section_id": 5,
-        "class_name": "الصف الخامس",
-        "section_name": "شعبة أ",
-        "subject_id": 1,
-        "subject_name": "الرياضيات",
-        "teacher_id": 1,
-        "teacher_name": "أحمد محمود سالم",
-        "created_at": "2026-08-29T12:00:00Z"
-      }
-    }
-    ```
-  - **`409 Conflict`:** `{"success": false, "message": "هذه المادة مسندة مسبقاً لمعلم آخر بنفس الشعبة والعام (uq_teaching_assignment)."}`
-  - **`422 Unprocessable`:**
-    ```json
-    {
-      "success": false,
-      "message": "فشل التحقق من مدخلات إسناد التدريس.",
-      "errors": { "teacher_id": ["المعلم المختار غير موجود."] }
-    }
-    ```
 
----
+#### استجابات الإنشاء والتعديل (Responses):
 
-### 1.5 `PUT /api/v1/teaching-assignments/:id` — تعديل وتكليف إسناد التدريس (تعديل المعلم، الشعبة، أو المادة)
-
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** تعديل وتحديث سجل إسناد التدريس القائم بتمكين تعديل المعلم المكلف (`teacher_id`) أو نقل التكليف لشعبة جديدة (`class_section_id`) أو تعديل المادة (`subject_id`) بشرط شغور الشعبة والمادة وعدم وجود إسناد مسبق لمعلم آخر بها بنفس العام الدراسي (`uq_teaching_assignment`).
-
-- **Request Body:**
-  ```json
-  {
+##### ✅ `201 Created` (خاص بالإنشاء POST):
+```json
+{
+  "success": true,
+  "message": "تم إسناد التدريس وتعيين المعلم للشعبة بنجاح.",
+  "data": {
+    "id": 101,
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "class_id": 5,
+    "class_name": "الصف الخامس",
     "class_section_id": 5,
+    "section_name": "شعبة أ",
     "subject_id": 1,
-    "teacher_id": 3
+    "subject_name": "الرياضيات",
+    "subject_code": "MATH",
+    "teacher_id": 1,
+    "teacher_code": "TCH-2001",
+    "teacher_name": "أحمد محمود سالم",
+    "created_at": "2026-08-29T12:00:00Z"
   }
-  ```
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم تحديث وتعديل إسناد التدريس بنجاح.",
-      "data": {
-        "id": 101,
-        "academic_year_id": 1,
-        "class_section_id": 5,
-        "class_name": "الصف الخامس",
-        "section_name": "شعبة أ",
-        "subject_id": 1,
-        "subject_name": "الرياضيات",
-        "teacher_id": 3,
-        "teacher_name": "علي مصطفى الورفلي"
-      }
-    }
-    ```
-  - **`404 Not Found`:** `{"success": false, "message": "سجل إسناد التدريس غير موجود."}`
-  - **`409 Conflict`:** `{"success": false, "message": "الشعبة والمادة المراد النقل إليها مخصصة ومسندة مسبقاً لمعلم آخر بنفس العام (uq_teaching_assignment)."}`
-  - **`422 Unprocessable`:** `{"success": false, "message": "بيانات التحديث المدخلة غير صالحة."}`
+}
+```
+
+##### ✅ `200 OK` (خاص بالتعديل PUT):
+```json
+{
+  "success": true,
+  "message": "تم تحديث وتعديل إسناد التدريس بنجاح.",
+  "data": {
+    "id": 101,
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "class_id": 5,
+    "class_name": "الصف الخامس",
+    "class_section_id": 5,
+    "section_name": "شعبة أ",
+    "subject_id": 1,
+    "subject_name": "الرياضيات",
+    "subject_code": "MATH",
+    "teacher_id": 3,
+    "teacher_code": "TCH-2003",
+    "teacher_name": "علي مصطفى الورفلي"
+  }
+}
+```
+
+##### 🔍 `404 Not Found` (خاص بالتعديل PUT):
+```json
+{
+  "success": false,
+  "message": "سجل إسناد التدريس غير موجود."
+}
+```
+
+##### ⚡ `409 Conflict` (تكرار إسناد المادة للشعبة في نفس العام):
+```json
+{
+  "success": false,
+  "message": "هذه المادة مسندة مسبقاً لمعلم آخر بنفس الشعبة والعام الدراسي (uq_teaching_assignment)."
+}
+```
+
+##### ⚠️ `422 Unprocessable Entity`:
+```json
+{
+  "success": false,
+  "message": "بيانات إسناد التدريس غير صالحة.",
+  "errors": {
+    "teacher_id": ["المعلم المختار غير موجود أو حسابه غير نشط."],
+    "class_section_id": ["الشعبة الدراسية المختارة غير موجودة."]
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
-### 1.6 `DELETE /api/v1/teaching-assignments/:id` — فك وإزالة إسناد التدريس
+### 1.6 `DELETE /api/v1/teaching-assignments/:id` — فك وإلغاء إسناد التدريس
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** فك وإزالة إسناد التدريس بشرط عدم وجود درجات تطبيقات أو واجبات مسجلة باسم هذا الإسناد.
+> **الوصف الوظيفي:** فك وإلغاء إسناد التدريس وحذفه منطقياً بشرط عدم وجود حصص بالجدول أو واجبات أو درجات امتحانات مسجلة على هذا التكليف.
 
-- **Response Payloads:**
-  - **`200 OK`:** `{"success": true, "message": "تم فك إسناد التدريس بنجاح."}`
-  - **`403 Forbidden`:** `{"success": false, "message": "لا يمكن فك إسناد التدريس لرصد واجبات أو درجات امتحانات على السجل (RESTRICT)."}`
-  - **`404 Not Found`:** `{"success": false, "message": "سجل إسناد التدريس غير موجود."}`
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم فك إسناد التدريس بنجاح."
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "سجل إسناد التدريس غير موجود."
+}
+```
+
+##### ⚡ `409 Conflict` (منع الحذف لوجود حصص أو واجبات أو درجات RESTRICT):
+```json
+{
+  "success": false,
+  "message": "لا يمكن فك إسناد التدريس لوجود حصص دراسية أو درجات أو واجبات مسجلة على هذا التكليف (RESTRICT)."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*

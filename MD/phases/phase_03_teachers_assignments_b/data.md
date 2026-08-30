@@ -1,10 +1,10 @@
 # 📊 مواصفات البيانات والكيانات — المرحلة 03-B (Data Specification)
 
-> **الهدف:** توثيق المخطط الهيكلي لجدول إسناد التدريس الثلاثي (`teaching_assignments`) المطابق بنسبة 100% للمصدر الرئيسي والحصري للحقيقة: [`MD/database.md`](../../database.md).  
+> **الهدف:** توثيق المخطط الهيكلي لجدول إسناد التدريس الأكاديمي (`teaching_assignments`) المطابق بنسبة 100% للمصدر الرئيسي والحصري للحقيقة: [`MD/database.md`](../../database.md).  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
-> 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم على المطور أو الذكاء الاصطناعي قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
-> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** ملف [`routes.md`](./routes.md) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`).  
+> 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
+> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** ملف [`routes.md`](./routes.md) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**معاملات البحث والفلترة (`Query Parameters & Filters`)**، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`, `500 Server Error`).  
 > 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
 
 ---
@@ -19,21 +19,33 @@
 
 | اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود والخصائص (Constraints) | الوصف والدلالة الوظيفية |
 | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY AUTO_INCREMENT` | المعرف الرقمي الفريد لسجل الإسناد الأكاديمي. |
-| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL, INDEXED` | معرف العام الدراسي النشط (يرتبط بـ `academic_years.id`). |
-| `class_section_id` | `BIGINT UNSIGNED` | `NOT NULL, INDEXED` | معرف الفصل والشعبة المحددة (يرتبط بـ `class_sections.id`). |
-| `subject_id` | `BIGINT UNSIGNED` | `NOT NULL, INDEXED` | معرف المادة الدراسية المسندة (يرتبط بـ `subjects.id`). |
-| `teacher_id` | `BIGINT UNSIGNED` | `NOT NULL, INDEXED` | معرف المعلم المكلف بالتدريس (يرتبط بـ `teachers.id`). |
+| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY AUTO_INCREMENT` | المعرف الرقمي لسجل الإسناد الأكاديمي. |
+| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي النشط (يرتبط بـ `academic_years.id`). |
+| `class_section_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفصل والشعبة المحددة (يرتبط بـ `class_sections.id`). |
+| `subject_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف المادة الدراسية المسندة (يرتبط بـ `subjects.id`). |
+| `teacher_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف المعلم المكلف بالتدريس (يرتبط بـ `teachers.id`). |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
 | `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
-| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي (Soft Delete). |
 
-- **العلاقات والقيود المرجعية:**
-  - `academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
-  - `class_section_id` يرتبط بجدول `class_sections(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
-  - `subject_id` يرتبط بجدول `subjects(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
-  - `teacher_id` يرتبط بجدول `teachers(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
-  - `UNIQUE INDEX uq_teaching_assignment (academic_year_id, class_section_id, subject_id)`.
+---
+
+### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
+* `academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `class_section_id` يرتبط بجدول `class_sections(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `subject_id` يرتبط بجدول `subjects(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `teacher_id` يرتبط بجدول `teachers(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+
+---
+
+### ⚡ الفهارس والقيود (Indexes & Constraints):
+* `PRIMARY KEY (id)`
+* `UNIQUE INDEX uq_teaching_assignment (academic_year_id, class_section_id, subject_id)`  
+  *(قيد الحوكمة المحوري: يضمن تعيين معلم مسؤول أساسي واحد فقط لكل مادة في الشعبة الواحدة خلال العام الدراسي لمنع تضارب رصد الدرجات والواجبات، مع إمكانية تكرار المعلم الواحد لتدريس مواد وفصول وشعب متعددة).*
+* `INDEX idx_teaching_teacher (teacher_id)` (لتسريع جلب النصاب التدريسي لمعلم محدد).
+* `INDEX idx_teaching_class_section (class_section_id)` (لتسريع جلب قائمة معلمي شعبة معينة).
+* `INDEX idx_teaching_subject (subject_id)` (لتسريع البحث حسب المادة).
+* `INDEX idx_teaching_deleted_at (deleted_at)` (لاستبعاد السجلات المحذوفة منطقياً).
 
 ---
 
@@ -41,10 +53,14 @@
 
 ```mermaid
 erDiagram
-    academic_years ||--o{ teaching_assignments : "year scope"
-    class_sections ||--o{ teaching_assignments : "assigned section"
-    subjects ||--o{ teaching_assignments : "assigned subject"
-    teachers ||--o{ teaching_assignments : "assigned teacher"
+    academic_years ||--o{ teaching_assignments : "scoped to year"
+    class_sections ||--o{ teaching_assignments : "assigned for class section"
+    subjects ||--o{ teaching_assignments : "covers subject"
+    teachers ||--o{ teaching_assignments : "teaches assignment"
+
+    teaching_assignments ||--o{ timetable_slots : "scheduled in timetable (Phase 05)"
+    teaching_assignments ||--o{ assignments : "assigns homework (Phase 06)"
+    teaching_assignments ||--o{ quizzes : "conducts quizzes (Phase 07)"
 
     teaching_assignments {
         bigint id PK
@@ -52,5 +68,6 @@ erDiagram
         bigint class_section_id FK
         bigint subject_id FK
         bigint teacher_id FK
+        timestamp deleted_at
     }
 ```
