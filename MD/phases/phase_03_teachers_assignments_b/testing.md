@@ -24,7 +24,7 @@
 | `TC-ASN-02` | **Integration** | البحث النصي باسم المعلم أو المادة أو الشعبة | `GET /api/v1/teaching-assignments?search=رياضيات` | `200 OK` ومطابقة السجلات المطلوبة. |
 | `TC-ASN-03` | **Integration** | استرجاع تفاصيل سجل إسناد محدد | `GET /api/v1/teaching-assignments/101` | `200 OK` وتفاصيل المادة والشعبة والمعلم. |
 | `TC-ASN-04` | **Integration** | استرجاع النصاب التدريسي لمعلم محدد | `GET /api/v1/teachers/1/assignments` | `200 OK` وقائمة المواد والشعب المكلف بها. |
-| `TC-ASN-05` | **Integration** | استرجاع كشف توزيع معلمي ومناهج صف دراسي محدد | `GET /api/v1/classes/5/assignments?section_id=1` | `200 OK` ومصفوفة المواد ومعلميها بالشعبة. |
+| `TC-ASN-05` | **Integration** | استرجاع كشف توزيع معلمي ومناهج صف دراسي محدد | `GET /api/v1/classes/5/assignments` | `200 OK` ومصفوفة شُعب الصف وموادها ومعلميها. |
 | `TC-ASN-06` | **Unit / Validation** | **إسناد تدريس مادة لمعلم بنجاح:** إنشاء تكليف جديد بشعبة شاغرة | `year: 1, section: 5, subject: 1, teacher: 1` | `201 Created` وحفظ السجل بجدول `teaching_assignments`. |
 | `TC-ASN-07` | **Conflict / Invariant** | **قيد المعلم المسؤول الوحيد (uq_teaching_assignment):** منع إسناد مادة مسندة مسبقاً بنفس الشعبة والعام | محاولة إسناد نفس المادة لنفس الشعبة والعام لمعلم آخر | `409 Conflict` (`uq_teaching_assignment`). |
 | `TC-ASN-08` | **Validation** | رفض إسناد لمعلم غير نشط أو معرف شعبة غير موجود | `teacher_id: 99999` | `422 Unprocessable Entity`. |
