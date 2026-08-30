@@ -1,13 +1,13 @@
 # 🧪 مصفوفة الاختبارات والتحقق — المرحلة 03-B (Testing Specification)
 
-> **الهدف:** توثيق مصفوفة الاختبارات الشاملة (Unit, Integration, Security, Business Invariants) للمرحلة الفرعية 03-B لضمان جودة الأكواد ومطابقتها التامة لـ [`routes.md`](./routes.md)، [`backend.md`](./backend.md)، و [`MD/database.md`](../../database.md).
+> **الهدف:** توثيق مصفوفة الاختبارات الشاملة (Unit, Integration, Security, Relational Integrity) للمرحلة الفرعية 03-B لضمان جودة الأكواد ومطابقتها التامة لـ [`routes.md`](./routes.md)، [`backend.md`](./backend.md)، و [`MD/database.md`](../../database.md).
 
 ---
 
 ## 1. استراتيجية الاختبارات العامة (Testing Strategy)
 
-- **نمط الاختبار:** اختبارات تكاملية للـ API واختبارات منطق الأعمال للخدمات والمعاملات والقيود المرجعية.
-- **التغطية المطلوبة:** 100% لكافة مسارات الـ API الـ 6، وقواعد التحقق، وحالات الحدود (Boundary Cases)، والنزاهة المرجعية.
+- **نمط الاختبار:** اختبارات تكاملية للـ API واختبارات قيود قاعدة البيانات (Database Constraints & Relational Integrity).
+- **التغطية المطلوبة:** 100% لكافة مسارات الـ API الـ 5، وقواعد التحقق، وحالات التعارض والمنع (409 Conflict).
 - **البيئة المعتمدة:** بيئة اختبار معزولة (Test Database) يتم تصفيرها وإعادة ضبطها تلقائياً قبل كل جولة اختبار.
 
 ---
@@ -16,15 +16,15 @@
 
 ---
 
-### 2.1 اختبارات جدول إسناد التدريس الأكاديمي (`teaching_assignments`) — [الخطوة 1]
+### 2.1 اختبارات إسناد التدريس الأكاديمي (`teaching_assignments`) — [الخطوة 1]
 
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
 | `TC-ASN-01` | **Integration** | استرجاع جدول إسناد التدريس المجمع بالصفوف والشعب | `GET /api/v1/teaching-assignments?academic_year_id=1` | `200 OK` بهيكل هرمي يضم الصفوف والشعب والمواد ومعلميها. |
-| `TC-ASN-02` | **Integration** | البحث النصي باسم المعلم أو المادة أو الشعبة | `GET /api/v1/teaching-assignments?search=رياضيات` | `200 OK` ومطابقة السجلات المطلوبة. |
-| `TC-ASN-03` | **Integration** | استرجاع تفاصيل سجل إسناد محدد | `GET /api/v1/teaching-assignments/101` | `200 OK` وتفاصيل المادة والشعبة والمعلم. |
-| `TC-ASN-04` | **Integration** | استرجاع النصاب التدريسي لمعلم محدد | `GET /api/v1/teachers/1/assignments` | `200 OK` وقائمة المواد والشعب المكلف بها. |
-| `TC-ASN-05` | **Integration** | استرجاع كشف توزيع معلمي ومناهج صف دراسي محدد | `GET /api/v1/classes/5/assignments` | `200 OK` ومصفوفة شُعب الصف وموادها ومعلميها. |
+| `TC-ASN-02` | **Integration** | تصفية إسنادات التدريس لصف دراسي محدد | `GET /api/v1/teaching-assignments?class_id=5` | `200 OK` بهيكل الصف الخامس وشعبه فقط. |
+| `TC-ASN-03` | **Integration** | البحث النصي باسم المعلم أو المادة أو الشعبة | `GET /api/v1/teaching-assignments?search=رياضيات` | `200 OK` ومطابقة السجلات المطلوبة. |
+| `TC-ASN-04` | **Integration** | استرجاع تفاصيل سجل إسناد محدد بالمعرف | `GET /api/v1/teaching-assignments/101` | `200 OK` وتفاصيل المادة والشعبة والمعلم. |
+| `TC-ASN-05` | **Integration** | استرجاع النصاب التدريسي لمعلم محدد | `GET /api/v1/teachers/1/assignments` | `200 OK` وقائمة المواد والشعب المكلف بها. |
 | `TC-ASN-06` | **Unit / Validation** | **إسناد تدريس مادة لمعلم بنجاح:** إنشاء تكليف جديد بشعبة شاغرة | `year: 1, section: 5, subject: 1, teacher: 1` | `201 Created` وحفظ السجل بجدول `teaching_assignments`. |
 | `TC-ASN-07` | **Conflict / Invariant** | **قيد المعلم المسؤول الوحيد (uq_teaching_assignment):** منع إسناد مادة مسندة مسبقاً بنفس الشعبة والعام | محاولة إسناد نفس المادة لنفس الشعبة والعام لمعلم آخر | `409 Conflict` (`uq_teaching_assignment`). |
 | `TC-ASN-08` | **Validation** | رفض إسناد لمعلم غير نشط أو معرف شعبة غير موجود | `teacher_id: 99999` | `422 Unprocessable Entity`. |
@@ -41,8 +41,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `TC-AUTH-01` | **Auth** | محاولة الوصول لأي مسار بدون توكن مصادقة | زائر (Unauthenticated) | `401 Unauthorized`. |
 | `TC-AUTH-02` | **Auth** | محاولة الوصول بتوكن تالف أو منتهي الصلاحية | توكن غير صالح | `401 Unauthorized`. |
-| `TC-RBAC-01` | **RBAC** | محاولة المعلم إنشاء أو تعديل أو فك إسناد تدريس | `role_type = 'teacher'` | `403 Forbidden`. |
-| `TC-RBAC-02` | **RBAC** | محاولة المعلم استعراض النصاب التدريسي لمعلم آخر | `role_type = 'teacher'` (معلم آخر) | `403 Forbidden`. |
-| `TC-RBAC-03` | **RBAC** | سماح للمعلم باستعراض نصابه التدريسي الخاص به فقط | `role_type = 'teacher' (own workload)` | `200 OK`. |
-| `TC-RBAC-04` | **RBAC** | محاولة إجراء أي عمليات بواسطة طالب أو ولي أمر | `role_type = 'student' / 'parent'` | `403 Forbidden`. |
+| `TC-RBAC-01` | **RBAC** | محاولة المعلم إضافة أو تعديل أو فك إسناد تدريس | `role_type = 'teacher'` | `403 Forbidden`. |
+| `TC-RBAC-02` | **RBAC** | محاولة المعلم الاطلاع على نصاب معلم آخر | `role_type = 'teacher' (other teacher)` | `403 Forbidden`. |
+| `TC-RBAC-03` | **RBAC** | سماح للمعلم باستعراض نصابه التدريسي الخاص فقط | `role_type = 'teacher' (own workload)` | `200 OK`. |
 | `TC-AUDIT-01` | **Audit** | التحقق من تتبع وتسجيل كافة عمليات الإسناد والتعديل والفك في `audit_logs` | مدير النظام (`admin`) | تسجيل السجل الحركي متضمناً `old_values` و `new_values`. |

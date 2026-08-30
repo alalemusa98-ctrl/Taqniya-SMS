@@ -1,6 +1,6 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 03-B (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 6 كاملة لإدارة وتوزيع جدول إسناد التدريس الأكاديمي والنصاب التدريسي للمعلمين مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، مع دمج وتوحيد مواصفات الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح ومنع التكرار، وتزويد مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) مع الترقيم القياسي (`Pagination Meta`).  
+> **الهدف:** توثيق المسارات الـ 5 كاملة لإدارة كشوفات وإسنادات تدريس المواد للمعلمين على الشُعب المدرسية مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، مع دمج وتوحيد مواصفات الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح والرشاقة ومنع التكرار، وتزويد مسار جلب القوائم باستجابة هرمية مجمعة بالصفوف والشعب (`classes -> sections -> assignments`) تلغي التكرار وتدعم البحث والتصفية المتكاملة.  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
@@ -11,7 +11,7 @@
 
 ## 1. الإعدادات والترويسات العامة (API Base Configuration)
 
-- **Base URI:** `/api/v1/teaching-assignments`
+- **Base URI:** `/api/v1`
 - **Protocol:** `HTTPS`
 - **Data Format:** `JSON` (`application/json`)
 - **Required Headers:**
@@ -22,21 +22,20 @@
   Accept-Language: ar
   ```
 
-### 📋 مصفوفة المسارات الـ 6 الموحدة (Master Route Matrix):
+### 📋 مصفوفة المسارات الـ 5 الموحدة (Master Route Matrix):
 
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
-| **1** | `teaching_assignments` | `GET` | `/api/v1/teaching-assignments` | `admin` | استعراض وبحث جدول إسناد التدريس العام بالترقيم والفلترة |
-| **2** | `teaching_assignments` | `GET` | `/api/v1/teaching-assignments/:id` | `admin` / `teacher` | استعراض تفاصيل سجل إسناد تدريس محدد |
-| **3** | `teaching_assignments` | `GET` | `/api/v1/teachers/:teacher_id/assignments` | `admin` / `teacher (own)` | استعراض النصاب التدريسي والمواد لشعبة ومعلم محدد |
-| **4** | `teaching_assignments` | `GET` | `/api/v1/classes/:class_id/assignments` | `admin` | استعراض كشف معلمي ومناهج الصف الدراسي بالشعب |
-| **5** | `teaching_assignments` | `POST` | `/api/v1/teaching-assignments` | `admin` | إسناد وتعيين معلم لمادة بشعبة في عام دراسي |
-| **6** | `teaching_assignments` | `PUT` | `/api/v1/teaching-assignments/:id` | `admin` | تعديل وتحديث إسناد التدريس (تغيير المعلم/الشعبة/المادة) |
-| **7** | `teaching_assignments` | `DELETE` | `/api/v1/teaching-assignments/:id` | `admin` | فك وإلغاء إسناد تدريس مادة (مع فحص RESTRICT) |
+| **1** | `teaching_assignments` | `GET` | `/api/v1/teaching-assignments` | `admin` | استعراض وبحث توزيع الكادر التعليمي على المواد والشعب بالصفوف |
+| **2** | `teaching_assignments` | `GET` | `/api/v1/teaching-assignments/:id` | `admin` / `teacher` | استعراض تفاصيل سجل إسناد تدريس محدد بالمعرف |
+| **3** | `teaching_assignments` | `GET` | `/api/v1/teachers/:teacher_id/assignments` | `admin` / `teacher (own)` | استعراض النصاب التدريسي والمواد لمعلم محدد بالعام الدراسي |
+| **4** | `teaching_assignments` | `POST` | `/api/v1/teaching-assignments` | `admin` | إسناد وتكليف معلم بتدريس مادة لشعبة (مع منع تكرار المادة) |
+| **5** | `teaching_assignments` | `PUT` | `/api/v1/teaching-assignments/:id` | `admin` | تعديل إسناد التدريس أو تغيير المعلم/المادة للشعبة |
+| **6** | `teaching_assignments` | `DELETE` | `/api/v1/teaching-assignments/:id` | `admin` | فك وإلغاء إسناد تدريس مادة مع فحص الحماية المرجعية (RESTRICT) |
 
 ### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
 
-> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 6** بالمرحلة:
+> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 5** بالمرحلة:
 
 ```json
 // 401 Unauthorized (غياب أو تلف التوكن)
@@ -66,20 +65,16 @@
 
 ### 1.1 `GET /api/v1/teaching-assignments` — استعراض وبحث توزيع الكادر التعليمي على المواد والشعب
 
-> **الوصف الوظيفي:** استرجاع خريطة توزيع الكادر التعليمي على المواد والشعب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (`classes -> sections -> assignments`) بدون تكرار للبيانات.
+> **الوصف الوظيفي:** استرجاع خريطة توزيع الكادر التعليمي على المواد والشعب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (`classes -> sections -> assignments`) بدون تكرار للبيانات مع دعم التصفية بالصف أو الشعبة أو المعلم أو المادة.
 
 - **Query Parameters:**
   - `search` (optional, string): البحث النصي باسم المعلم، الصف، الشعبة، أو المادة (مثال: `أحمد` أو `خامس` أو `رياضيات`).
-  - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي.
-  - `class_id` (optional, bigint): تصفية حسب الصف الدراسي.
-  - `class_section_id` (optional, bigint): تصفية حسب الشعبة الدراسية المحددة.
+  - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي (افتراضياً العام النشط).
+  - `class_id` (optional, bigint): تصفية لجلب شعب ومواد صف دراسي محدد (مثلاً: `class_id=5`).
+  - `class_section_id` (optional, bigint): تصفية لجلب مواد شعبة دراسية محددة فقط.
   - `teacher_id` (optional, bigint): تصفية حسب معلم محدد.
   - `subject_id` (optional, bigint): تصفية حسب المادة التعليمية.
-  - `sort_by` (optional, string, enum: `id`, `academic_year_id`, `class_section_id`, `subject_id`, `teacher_id`, default `id`): حقل الفرز.
-  - `sort_order` (optional, string, enum: `asc`, `desc`, default `desc`): اتجاه الفرز.
-  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
-  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
-- **Example Request URL:** `/api/v1/teaching-assignments?search=رياضيات&academic_year_id=1&sort_by=id&sort_order=desc`
+- **Example Request URL:** `/api/v1/teaching-assignments?academic_year_id=1&class_id=5`
 
 #### استجابات هذا الرابط (Responses):
 
@@ -200,7 +195,7 @@
 
 ### 1.2 `GET /api/v1/teaching-assignments/:id` — استعراض تفاصيل سجل إسناد تدريس محدد
 
-> **الوصف الوظيفي:** استرجاع بيانات سجل إسناد تدريس محدد بالمعرف.
+> **الوصف الوظيفي:** استرجاع بيانات سجل إسناد تدريس واحد محدد بالمعرف.
 
 #### استجابات هذا الرابط (Responses):
 
@@ -304,98 +299,11 @@
 
 ---
 
-### 1.4 `GET /api/v1/classes/:class_id/assignments` — استعراض كشف معلمي ومناهج الصف بالشعب
-
-> **الوصف الوظيفي:** استرجاع قائمة معلمي المواد والمناهج المخصصة لصف دراسي محدد بالعام الدراسي مع إمكانية التصفية بحسب الشعبة (`section_id`).
-
-- **Query Parameters:**
-  - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي.
-  - `section_id` (optional, bigint): تصفية بحسب شعبة محددة داخل الصف.
-  - `search` (optional, string): البحث باسم المادة أو المعلم.
-
-#### استجابات هذا الرابط (Responses):
-
-##### ✅ `200 OK`:
-```json
-{
-  "success": true,
-  "message": "تم جلب جدول معلمي ومناهج الصف بنجاح.",
-  "data": {
-    "class_id": 5,
-    "class_name": "الصف الخامس",
-    "academic_year_id": 1,
-    "academic_year_name": "2025/2026",
-    "sections": [
-      {
-        "class_section_id": 5,
-        "section_name": "شعبة أ",
-        "assignments": [
-          {
-            "id": 101,
-            "subject_id": 1,
-            "subject_name": "الرياضيات",
-            "subject_code": "MATH",
-            "teacher_id": 1,
-            "teacher_code": "TCH-2001",
-            "teacher_name": "أحمد محمود سالم"
-          },
-          {
-            "id": 102,
-            "subject_id": 2,
-            "subject_name": "العلوم",
-            "subject_code": "SCI",
-            "teacher_id": 2,
-            "teacher_code": "TCH-2002",
-            "teacher_name": "خالد عبد السلام الفيتوري"
-          }
-        ]
-      },
-      {
-        "class_section_id": 6,
-        "section_name": "شعبة ب",
-        "assignments": [
-          {
-            "id": 104,
-            "subject_id": 1,
-            "subject_name": "الرياضيات",
-            "subject_code": "MATH",
-            "teacher_id": 4,
-            "teacher_code": "TCH-2004",
-            "teacher_name": "محمود إبراهيم علي"
-          },
-          {
-            "id": 105,
-            "subject_id": 2,
-            "subject_name": "العلوم",
-            "subject_code": "SCI",
-            "teacher_id": 2,
-            "teacher_code": "TCH-2002",
-            "teacher_name": "خالد عبد السلام الفيتوري"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-##### 🔍 `404 Not Found`:
-```json
-{
-  "success": false,
-  "message": "الصف الدراسي غير موجود."
-}
-```
-
-> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
-
----
-
-### 1.5 `POST /api/v1/teaching-assignments` & `PUT /api/v1/teaching-assignments/:id` — إسناد وتعديل تكليف التدريس (Combined Specification)
+### 1.4 `POST /api/v1/teaching-assignments` & `PUT /api/v1/teaching-assignments/:id` — إسناد وتعديل تكليف التدريس (Combined Specification)
 
 > **الوصف الوظيفي:**
-> * **في الإنشاء (`POST`):** تعيين معلم مسؤول عن تدريس مادة دراسية لشعبة محددة في عام دراسي محدد.
-> * **في التعديل (`PUT`):** تحديث وتعديل تكليف الإسناد (تغيير المعلم المكلف أو تغيير الشعبة أو المادة) مع التحقق من عدم التعارض.
+> * **في الإنشاء (`POST`):** تكليف معلم مسؤول عن تدريس مادة معينة لشعبة في عام دراسي محدد.
+> * **في التعديل (`PUT`):** تحديث وتعديل سجل الإسناد (تغيير المعلم المكلف أو الشعبة أو المادة) مع التحقق من عدم التعارض.
 
 - **Request Body (موحد للإنشاء والتعديل):**
   ```json
@@ -413,21 +321,13 @@
 ```json
 {
   "success": true,
-  "message": "تم إسناد التدريس وتعيين المعلم للشعبة بنجاح.",
+  "message": "تم إسناد تدريس المادة للمعلم بنجاح.",
   "data": {
     "id": 101,
     "academic_year_id": 1,
-    "academic_year_name": "2025/2026",
-    "class_id": 5,
-    "class_name": "الصف الخامس",
     "class_section_id": 5,
-    "section_name": "شعبة أ",
     "subject_id": 1,
-    "subject_name": "الرياضيات",
-    "subject_code": "MATH",
     "teacher_id": 1,
-    "teacher_code": "TCH-2001",
-    "teacher_name": "أحمد محمود سالم",
     "created_at": "2026-08-29T12:00:00Z"
   }
 }
@@ -441,17 +341,9 @@
   "data": {
     "id": 101,
     "academic_year_id": 1,
-    "academic_year_name": "2025/2026",
-    "class_id": 5,
-    "class_name": "الصف الخامس",
     "class_section_id": 5,
-    "section_name": "شعبة أ",
     "subject_id": 1,
-    "subject_name": "الرياضيات",
-    "subject_code": "MATH",
-    "teacher_id": 3,
-    "teacher_code": "TCH-2003",
-    "teacher_name": "علي مصطفى الورفلي"
+    "teacher_id": 3
   }
 }
 ```
@@ -464,11 +356,11 @@
 }
 ```
 
-##### ⚡ `409 Conflict` (تكرار إسناد المادة للشعبة في نفس العام):
+##### ⚡ `409 Conflict` (قيد المعلم المسؤول الوحيد):
 ```json
 {
   "success": false,
-  "message": "هذه المادة مسندة مسبقاً لمعلم آخر بنفس الشعبة والعام الدراسي (uq_teaching_assignment)."
+  "message": "تعارض في الإسناد: هذه المادة مسندة بالفعل لمعلم آخر في هذه الشعبة خلال العام الدراسي الحالي (uq_teaching_assignment)."
 }
 ```
 
@@ -478,8 +370,8 @@
   "success": false,
   "message": "بيانات إسناد التدريس غير صالحة.",
   "errors": {
-    "teacher_id": ["المعلم المختار غير موجود أو حسابه غير نشط."],
-    "class_section_id": ["الشعبة الدراسية المختارة غير موجودة."]
+    "teacher_id": ["المعلم المختار غير نشط أو غير موجود."],
+    "class_section_id": ["الشعبة المحددة غير صالحة."]
   }
 }
 ```
@@ -488,9 +380,9 @@
 
 ---
 
-### 1.6 `DELETE /api/v1/teaching-assignments/:id` — فك وإلغاء إسناد التدريس
+### 1.5 `DELETE /api/v1/teaching-assignments/:id` — فك وإلغاء إسناد تدريس مادة
 
-> **الوصف الوظيفي:** فك وإلغاء إسناد التدريس وحذفه منطقياً بشرط عدم وجود حصص بالجدول أو واجبات أو درجات امتحانات مسجلة على هذا التكليف.
+> **الوصف الوظيفي:** فك ارتباط المعلم بالمادة والشعبة، مع التحقق الإجباري الصارم من عدم وجود ارتباطات بحصص أو درجات أو واجبات (`RESTRICT`).
 
 #### استجابات هذا الرابط (Responses):
 
@@ -498,7 +390,7 @@
 ```json
 {
   "success": true,
-  "message": "تم فك إسناد التدريس بنجاح."
+  "message": "تم فك وإلغاء إسناد التدريس بنجاح."
 }
 ```
 
@@ -510,11 +402,11 @@
 }
 ```
 
-##### ⚡ `409 Conflict` (منع الحذف لوجود حصص أو واجبات أو درجات RESTRICT):
+##### ⚡ `409 Conflict` (حماية النزاهة المرجعية RESTRICT):
 ```json
 {
   "success": false,
-  "message": "لا يمكن فك إسناد التدريس لوجود حصص دراسية أو درجات أو واجبات مسجلة على هذا التكليف (RESTRICT)."
+  "message": "لا يمكن فك إسناد التدريس لوجود حصص دراسية أو درجات أو واجبات مرتبطة به في المنظومة (Foreign Key Restrict)."
 }
 ```
 

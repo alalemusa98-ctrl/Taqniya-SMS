@@ -8,22 +8,21 @@
 
 ### 1️⃣ الركيزة الأولى: مطابقة مخطط قاعدة البيانات (Data Schema SSoT)
 - [x] مطابقة أسماء الجداول والأعمدة بنسبة 100% مع [`MD/database.md`](../../database.md) (الجدول 2 في المرحلة 03 — `teaching_assignments`).
-- [x] توثيق نوع البيانات والقيود (`BIGINT UNSIGNED`, `NOT NULL`, المفاتيح الخارجية).
+- [x] توثيق نوع البيانات والقيود (`BIGINT UNSIGNED`, المفاتيح الخارجية).
 - [x] توثيق الحذف المنطقي (`deleted_at TIMESTAMP NULL DEFAULT NULL`).
-- [x] توثيق المفاتيح الخارجية والفهارس: `uq_teaching_assignment`، `idx_teaching_teacher`، `idx_teaching_class_section`، `idx_teaching_subject`، `idx_teaching_deleted_at`.
+- [x] توثيق المفاتيح الخارجية والفهارس: `uq_teaching_assignment`، `idx_teaching_assignments_year`، `idx_teaching_assignments_section`، `idx_teaching_assignments_teacher`، `idx_teaching_assignments_subject`، `idx_teaching_assignments_deleted_at`.
 - [x] إدراج مخطط الكيانات والعلاقات (ERD) المحدث بصيغة Mermaid.
 
 ### 2️⃣ الركيزة الثانية: عقد الشبكة الموحد والمسارات (Network SSoT & Routes Matrix)
-- [x] توثيق كافة المسارات الـ 6 كاملة في جدول موحد (`Master Route Matrix`) في [`routes.md`](./routes.md).
+- [x] توثيق كافة المسارات الـ 5 كاملة في جدول موحد (`Master Route Matrix`) في [`routes.md`](./routes.md).
 - [x] توثيق نمط الأخطاء العامة المشتركة (`401 Unauthorized`, `403 Forbidden`, `500 Internal Server Error`) في القسم 1.1 من `routes.md`.
 - [x] دمج وتوحيد جسم الطلب الصريح (`Request Body`) لمساري الـ `POST` و `PUT`.
 - [x] توثيق استجابات الـ JSON الصريحة لجميع الرموز (`200 OK`, `201 Created`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`).
-- [x] توثيق الاستجابات الموجزة ذات العناصر المتعددة (`Multi-Item List`) والترقيم القياسي (`meta`) لمسار `GET /api/v1/teaching-assignments`.
+- [x] اعتماد الهيكل الهرمي بدون تكرار (`classes -> sections -> assignments`) مع دعم الفلترة بالصف والشعبة والمعلم.
 
 ### 3️⃣ الركيزة الثالثة: منطق الأعمال وقواعد الحوكمة (Domain Logic & Invariants)
-- [x] توثيق قيد المعلم المسؤول الوحيد لكل مادة بالشعبة بالعام الدراسي (`uq_teaching_assignment`).
-- [x] توثيق التحقق من أهلية ونشاط المعلم وصحة معرفات الشعبة والمادة.
-- [x] توثيق الحماية المرجعية الصارمة لمنع فك إسناد تدريس مرتبط بحصص أو درجات (RESTRICT) وإرجاع `409 Conflict`.
+- [x] توثيق قيد المعلم المسؤول الوحيد لكل مادة بالشعبة (`uq_teaching_assignment`).
+- [x] توثيق الحماية المرجعية الصارمة لمنع فك الإسناد المرتبط بحصص أو درجات (`RESTRICT`) وإرجاع `409 Conflict`.
 - [x] توثيق دورة حياة الحذف المنطقي وسجلات التدقيق `audit_logs`.
 
 ### 4️⃣ الركيزة الرابعة: الحيادية التقنية وخلو التوثيق من التسريب (Zero ORM Leakage)
@@ -32,13 +31,13 @@
 
 ### 5️⃣ الركيزة الخامسة: معايير تصميم الواجهة وتجربة المستخدم (Spatial UI & RTL)
 - [x] دعم الاتجاه من اليمين لليسار (`dir="rtl"`) واللغة العربية بالكامل.
-- [x] توثيق الحالات التفاعلية الأربع (Loading, Empty, Error, Success) لشاشات إسناد التدريس.
-- [x] توثيق تصميم اللوحات الجانبية المنبثقة (`Slide-over Drawers`) المدمجة للإنشاء والتعديل ونوافذ التأكيد المركزية (`Confirmation Modals`).
+- [x] توثيق الحالات التفاعلية الأربع (Loading, Empty, Error, Success) للبطاقات والجداول.
+- [x] توثيق تصميم بطاقات الصفوف وتبويبات الشعب (`Class Cards & Section Tabs`) واللوحات الجانبية (`Slide-over Drawers`).
 - [x] اعتماد ملف [`routes.md`](./routes.md) كمصدر وحيد لاستخراج نصوص الرسائل والتنبيهات.
 
 ### 6️⃣ الركيزة السادسة: مصفوفة الاختبارات الشاملة (Testing Matrix)
 - [x] توثيق مصفوفة الاختبارات التنافسية والتكاملية والوظيفية في [`testing.md`](./testing.md).
-- [x] تغطية اختبارات التفرد والتعارض (`uq_teaching_assignment` -> `409 Conflict`)، أخطاء التحقق (`422`)، والحذف المرجعي.
+- [x] تغطية اختبارات تفرد الإسناد (`uq_teaching_assignment`) والحماية المرجعية (`409 Conflict`)، أخطاء التحقق (`422`).
 - [x] تغطية اختبارات الأمان وحوكمة الصلاحيات (RBAC) وسجلات التدقيق (Audit Logs).
 
 ### 7️⃣ الركيزة السابعة: النزاهة المرجعية والربط السليم (SSoT Links & No Fragile Anchors)
