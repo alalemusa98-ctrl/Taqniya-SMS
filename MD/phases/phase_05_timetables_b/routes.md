@@ -183,7 +183,92 @@
 
 ---
 
-### 1.4 `POST /api/v1/timetable-slots` — إضافة وتسكين حصة بالجدول الأسبوعي
+### 1.4 `GET /api/v1/classes/:class_id/timetable` — عرض مصفوفة جدول الحصص المجمع لكافة شعب الصف الدراسي
+
+> [!NOTE]
+> **الوصف الوظيفي والملاحظات:** استرجاع مصفوفة جدول الحصص اليومي أو الأسبوعي المجمع لكافة شُعب الصف الدراسي لعرض جدول الناظر الشامل لجميع الشُعب والحصص في شاشة واحدة.
+
+- **Query Parameters:**
+  - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي (افتراضياً العام النشط).
+  - `day_of_week` (optional, string, enum: `saturday`, `sunday`, `monday`, `tuesday`, `wednesday`, `thursday`): تصفية حسب اليوم (مثلاً: `sunday`).
+- **Response Payloads:**
+  - **`200 OK`:**
+    ```json
+    {
+      "success": true,
+      "message": "تم جلب مصفوفة جدول حصص الصف بنجاح.",
+      "data": {
+        "class_id": 5,
+        "class_name": "الصف الخامس",
+        "day_of_week": "sunday",
+        "day_of_week_ar": "الأحد",
+        "sections": [
+          {
+            "class_section_id": 5,
+            "section_name": "شعبة أ",
+            "slots": [
+              {
+                "period_slot_id": 1,
+                "period_name": "الحصة الأولى",
+                "start_time": "08:00:00",
+                "end_time": "08:45:00",
+                "subject_name": "الرياضيات",
+                "teacher_id": 1,
+                "teacher_name": "أحمد محمود سالم"
+              },
+              {
+                "period_slot_id": 2,
+                "period_name": "الحصة الثانية",
+                "start_time": "08:45:00",
+                "end_time": "09:30:00",
+                "subject_name": "الرياضيات",
+                "teacher_id": 1,
+                "teacher_name": "أحمد محمود سالم"
+              },
+              {
+                "period_slot_id": 3,
+                "period_name": "الحصة الثالثة",
+                "start_time": "09:45:00",
+                "end_time": "10:30:00",
+                "subject_name": "العلوم",
+                "teacher_id": 2,
+                "teacher_name": "خالد عبد السلام"
+              }
+            ]
+          },
+          {
+            "class_section_id": 6,
+            "section_name": "شعبة ب",
+            "slots": [
+              {
+                "period_slot_id": 1,
+                "period_name": "الحصة الأولى",
+                "start_time": "08:00:00",
+                "end_time": "08:45:00",
+                "subject_name": "العلوم",
+                "teacher_id": 2,
+                "teacher_name": "خالد عبد السلام"
+              },
+              {
+                "period_slot_id": 2,
+                "period_name": "الحصة الثانية",
+                "start_time": "08:45:00",
+                "end_time": "09:30:00",
+                "subject_name": "اللغة العربية",
+                "teacher_id": 3,
+                "teacher_name": "علي مصطفى الورفلي"
+              }
+            ]
+          }
+        ]
+      }
+    }
+    ```
+  - **`404 Not Found`:** `{"success": false, "message": "الصف الدراسي غير موجود."}`
+
+---
+
+### 1.5 `POST /api/v1/timetable-slots` — إضافة وتسكين حصة بالجدول الأسبوعي
 
 > [!NOTE]
 > **الوصف الوظيفي والملاحظات:** إدراج حصة جديدة بالجدول الأسبوعي مع الفحص الذري ومنع تضارب شعبة الفصل (`uq_timetable_section_slot`) وتضارب جدول المعلم.
