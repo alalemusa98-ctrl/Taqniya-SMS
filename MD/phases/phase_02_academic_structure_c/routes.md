@@ -1,35 +1,61 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 02-C (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 11 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، مع دعم البحث والتصفية والفرز والتقسيم الصفحي (`CRUDS Standard: Create, Read, Update, Delete, Search`).  
+> **الهدف:** توثيق المسارات الـ 11 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المعياري الموجز لـ [`MD/database.md`](../../database.md)، مع عرض عنصرين على الأقل لكل قائمة نتائج لتوضيح نمط المصفوفة (`Multi-Item List Payload`).  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
-> 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم على المطور أو الذكاء الاصطناعي قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
-> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** يعتبر هذا الملف (`routes.md`) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**معاملات البحث والفلترة (`Query Parameters & Filters`)**، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`).  
-> 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
+> 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه.  
+> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** ملف [`routes.md`](./routes.md) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**معاملات البحث والفلترة (`Query Parameters & Filters`)**، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`, `500 Internal Server Error`).  
+> 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في هذا الملف حصراً بدون أي اجتهاد شخصي.
 
 ---
 
 ## 1. الإعدادات والترويسات العامة (API Base Configuration)
 
 - **Base URI:** `/api/v1/academic`
-- **Headers:** `Authorization: Bearer <TOKEN>`, `Accept: application/json`, `Content-Type: application/json`
+- **Protocol:** `HTTPS`
+- **Data Format:** `JSON` (`application/json`)
+- **Required Headers:**
+  ```http
+  Authorization: Bearer <TOKEN>
+  Accept: application/json
+  Content-Type: application/json
+  Accept-Language: ar
+  ```
 
-### 📋 نمط الاستجابات العامة والأخطاء الشائعة (Standard Error Responses)
+### 📋 مصفوفة المسارات الـ 11 الإجمالية (Master Route Matrix):
+
+| # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
+| :-: | :--- | :--- | :--- | :--- | :--- |
+| **1** | `class_academic_terms` | `GET` | `/api/v1/academic/years/:academic_year_id/classes/:class_id/terms` | `admin` | استعراض وبحث فترات وتواريخ صف بالعام |
+| **2** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms` | `admin` | تخصيص وتخطيط فترة وتواريخ لصف |
+| **3** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/activate` | `admin` | تفعيل الفترة النشطة للصف (Atomic) |
+| **4** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/close` | `admin` | إغلاق/فتح درجات الفترة للصف للأرشفة |
+| **5** | `class_sections` | `GET` | `/api/v1/academic/classes/:class_id/sections` | `admin` | عرض وبحث شعب صف دراسي مفتوحة |
+| **6** | `class_sections` | `POST` | `/api/v1/academic/class-sections` | `admin` | تسكين وربط شعبة بصف دراسي |
+| **7** | `class_sections` | `DELETE` | `/api/v1/academic/class-sections/:id` | `admin` | فك ربط شعبة من صف |
+| **8** | `class_subjects` | `GET` | `/api/v1/academic/classes/:class_id/subjects` | `admin` | استعراض منهج ومقررات الصف بالفترة |
+| **9** | `class_subjects` | `POST` | `/api/v1/academic/classes/:class_id/subjects` | `admin` | إسناد مادة لصف وتحديد درجات الفترة |
+| **10** | `class_subjects` | `PUT` | `/api/v1/academic/classes/:class_id/subjects/:id` | `admin` | تعديل درجات مادة مسندة بالفترة |
+| **11** | `class_subjects` | `DELETE` | `/api/v1/academic/classes/:class_id/subjects/:id` | `admin` | إزالة مادة من منهج فترة الصف |
+
+### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
+
+> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 11** بالمنظومة:
 
 ```json
-// 401 Unauthorized
+// 401 Unauthorized (غياب أو تلف التوكن)
 {
   "success": false,
   "message": "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
 }
 
-// 403 Forbidden
+// 403 Forbidden (نقص الصلاحيات ومخالفة مصفوفة RBAC)
 {
   "success": false,
   "message": "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
 }
 
-// 500 Server Error
+// 500 Internal Server Error (خطأ غير متوقع في الخادم)
 {
   "success": false,
   "message": "حدث خطأ غير متوقع في الخادم. يرجى المحاولة لاحقاً."
@@ -40,54 +66,88 @@
 
 ## 🗓️ الخطوة 1: إدارة تواريخ وتخطيط فترات الصفوف (`class_academic_terms`) — [4 مسارات]
 
-> [!NOTE]
-> **الشرح والملاحظات الحوكمية لخطوة فترات الصفوف:**
-> 1. **التواريخ المستقلة للصفوف:** يُحدد تقويم الوزارة وتواريخ الفترات (`start_date`, `end_date`) لكل صف دراسي بشكل مستقل لتلبية تفاوت تقويم الصفوف الانتقالية وصفوف الشهادات (الصف 9 والصف 12).
-> 2. **الفترة النشطة الوحيدة:** يضم كل صف بالعام فترة نشطة واحدة فقط (`is_active = 1`) لتوجيه العمليات اليومية وإدخال الدرجات.
-> 3. **إغلاق الفترات للأرشفة:** عند انتهاء الفترة وإغلاق درجاتها (`is_closed = 1`) تُحفظ الدرجات نهائياً وتصبح للأرشفة والعرض فقط دون تداخل مع الفترات التالية.
-
 ---
 
-### 1.1 `GET /api/v1/academic/years/:academic_year_id/classes/:class_id/terms` — عرض قائمة وبحث فترات وتواريخ صف بالعام
+### 1.1 `GET /api/v1/academic/years/:academic_year_id/classes/:class_id/terms` — عرض فترات وتواريخ صف بالعام
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** استرجاع فترات وتواريخ وتقويم صف دراسي محدد بالعام الدراسي مع دعم البحث باسم الفترة، التصفية بالحالة النشطة والمغلقة، الترتيب والتقسيم الصفحي (CRUDS - Search & Filter Engine).
+> **الوصف الوظيفي:** استرجاع فترات وتواريخ وتقويم صف دراسي محدد بالعام الدراسي مع دعم البحث والتصفية بالحالة النشطة والمغلقة والترقيم.
 
-- **Query Parameters (معاملات الفلترة والبحث والترتيب):**
+- **Query Parameters:**
   - `search` (optional, string): البحث النصي بمسمى الفترة (مثال: `الفصل الأول`).
   - `is_active` (optional, integer: `0` أو `1`): فلترة حسب الفترة النشطة حالياً.
   - `is_closed` (optional, integer: `0` أو `1`): فلترة حسب الفترة المغلقة.
-  - `sort_by` (optional, string, enum: `id`, `start_date`, `end_date`, `academic_term_id`, default `start_date`): حقل الفرز والترتيب.
+  - `sort_by` (optional, string, enum: `id`, `start_date`, `end_date`, default `start_date`): حقل الفرز.
   - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
   - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
   - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
 - **Example Request URL:** `/api/v1/academic/years/1/classes/9/terms?search=الفصل&is_active=1&sort_by=start_date&sort_order=asc`
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK` (نجاح جلب القائمة):
+```json
+{
+  "success": true,
+  "message": "تم جلب فترات الصف الدراسي بالعام بنجاح.",
+  "data": [
     {
-      "success": true,
-      "message": "تم جلب فترات الصف الدراسي بالعام بنجاح.",
-      "data": [
-        { "id": 10, "academic_year_id": 1, "academic_year_name": "2025/2026", "class_id": 9, "class_name": "الصف التاسع", "academic_term_id": 1, "term_name": "الفصل الأول", "start_date": "2025-09-01", "end_date": "2025-12-31", "is_active": 1, "is_closed": 0 },
-        { "id": 11, "academic_year_id": 1, "academic_year_name": "2025/2026", "class_id": 9, "class_name": "الصف التاسع", "academic_term_id": 2, "term_name": "الفصل الثاني", "start_date": "2026-01-05", "end_date": "2026-04-15", "is_active": 0, "is_closed": 0 },
-        { "id": 12, "academic_year_id": 1, "academic_year_name": "2025/2026", "class_id": 9, "class_name": "الصف التاسع", "academic_term_id": 3, "term_name": "الفصل الثالث", "start_date": "2026-04-20", "end_date": "2026-07-15", "is_active": 0, "is_closed": 0 }
-      ],
-      "meta": {
-        "current_page": 1,
-        "per_page": 15,
-        "total": 3,
-        "last_page": 1
-      }
+      "id": 10,
+      "academic_year_id": 1,
+      "academic_year_name": "2025/2026",
+      "class_id": 9,
+      "class_name": "الصف التاسع",
+      "academic_term_id": 1,
+      "term_name": "الفصل الأول",
+      "start_date": "2025-09-01",
+      "end_date": "2025-12-31",
+      "is_active": 1,
+      "is_closed": 0
+    },
+    {
+      "id": 11,
+      "academic_year_id": 1,
+      "academic_year_name": "2025/2026",
+      "class_id": 9,
+      "class_name": "الصف التاسع",
+      "academic_term_id": 2,
+      "term_name": "الفصل الثاني",
+      "start_date": "2026-01-05",
+      "end_date": "2026-04-15",
+      "is_active": 0,
+      "is_closed": 0
     }
-    ```
+  ],
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 2,
+    "last_page": 1
+  }
+}
+```
+
+##### ⚪ `200 OK` (القائمة فارغة):
+```json
+{
+  "success": true,
+  "message": "لا توجد فترات مخصصة لهذا الصف بالعام.",
+  "data": [],
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 0,
+    "last_page": 1
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
 ### 1.2 `POST /api/v1/academic/class-academic-terms` — تخصيص وتخطيط فترة وتواريخ لصف
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** تخصيص فترة وتواريخ رسمية لصف بالعام الدراسي طبق تقويم الوزارة (مثال: 3 فترات لصف 9 و 12، وفترتان لصف 5 و 6).
+> **الوصف الوظيفي:** تخصيص فترة وتواريخ رسمية لصف بالعام الدراسي طبق تقويم الوزارة.
 
 - **Request Body:**
   ```json
@@ -99,121 +159,170 @@
     "end_date": "2025-12-31"
   }
   ```
-- **Response Payloads:**
-  - **`201 Created`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم تخصيص الفترة وتواريخ التقويم للصف بنجاح.",
-      "data": {
-        "id": 10,
-        "academic_year_id": 1,
-        "academic_year_name": "2025/2026",
-        "class_id": 9,
-        "class_name": "الصف التاسع",
-        "academic_term_id": 1,
-        "term_name": "الفصل الأول",
-        "start_date": "2025-09-01",
-        "end_date": "2025-12-31",
-        "is_active": 0,
-        "is_closed": 0
-      }
-    }
-    ```
-  - **`409 Conflict`:** `{"success": false, "message": "هذه الفترة مخصصة مسبقاً لهذا الصف بالعام الدراسي (uq_class_term_year)."}`
-  - **`422 Unprocessable`:** `{"success": false, "message": "تاريخ بداية ونهاية الفترة يجب أن يكون ضمن النطاق الزمني للعام الدراسي."}`
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `201 Created`:
+```json
+{
+  "success": true,
+  "message": "تم تخصيص الفترة وتواريخ التقويم للصف بنجاح.",
+  "data": {
+    "id": 10,
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "class_id": 9,
+    "class_name": "الصف التاسع",
+    "academic_term_id": 1,
+    "term_name": "الفصل الأول",
+    "start_date": "2025-09-01",
+    "end_date": "2025-12-31",
+    "is_active": 0,
+    "is_closed": 0
+  }
+}
+```
+
+##### ⚡ `409 Conflict` (تكرار تخصيص الفترة لنفس الصف بالعام):
+```json
+{
+  "success": false,
+  "message": "هذه الفترة مخصصة مسبقاً لهذا الصف بالعام الدراسي (uq_class_term_year)."
+}
+```
+
+##### ⚠️ `422 Unprocessable Entity`:
+```json
+{
+  "success": false,
+  "message": "بيانات التخصيص غير صالحة.",
+  "errors": {
+    "end_date": ["تاريخ نهاية الفترة يجب أن يكون بعد تاريخ البداية وضمن العام الدراسي."]
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
-### 1.3 `POST /api/v1/academic/class-academic-terms/:id/activate` — تفعيل الفترة النشطة للصف
+### 1.3 `POST /api/v1/academic/class-academic-terms/:id/activate` — تفعيل الفترة النشطة للصف (Atomic)
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** تفعيل الفترة الحالية النشطة لهذا الصف بالذات وإلغاء تفعيل الفترات الأخرى لنفس الصف بالعام بحركة ذرية atomic.
+> **الوصف الوظيفي:** تحويل الفترة المستهدفة إلى الفترة النشطة الحصرية للصف بهذا العام (`is_active = 1`) وإلغاء تفعيل بقية فترات نفس الصف ذرياً.
 
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم تفعيل الفترة النشطة للصف الدراسي بنجاح.",
-      "data": { "id": 10, "class_id": 9, "is_active": 1 }
-    }
-    ```
-  - **`404 Not Found`:** `{"success": false, "message": "تخصيص فترة الصف غير موجود."}`
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم تفعيل الفترة النشطة للصف بنجاح.",
+  "data": {
+    "id": 10,
+    "class_id": 9,
+    "academic_term_id": 1,
+    "is_active": 1
+  }
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "تخصيص فترة الصف غير موجود."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
 ### 1.4 `POST /api/v1/academic/class-academic-terms/:id/close` — إغلاق/فتح درجات الفترة للصف
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** تغيير حالة إغلاق درجات الفترة للصف (`is_closed = 1`).
+> **الوصف الوظيفي:** تبديل حالة إغلاق درجات الفترة للصف (`is_closed: 1 / 0`) للأرشفة ومنع التعديل.
 
-- **Request Body:**
-  ```json
-  {
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم تغيير حالة إغلاق درجات الفترة للصف بنجاح.",
+  "data": {
+    "id": 10,
     "is_closed": 1
   }
-  ```
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
-    {
-      "success": true,
-      "message": "تمت تغيير حالة إغلاق درجات الفترة للصف بنجاح.",
-      "data": { "id": 10, "is_closed": 1 }
-    }
-    ```
-  - **`404 Not Found`:** `{"success": false, "message": "تخصيص فترة الصف غير موجود."}`
-  - **`422 Unprocessable`:** `{"success": false, "message": "حقل is_closed يجب أن يكون 0 أو 1."}`
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "تخصيص فترة الصف غير موجود."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
 ## 🧩 الخطوة 2: إدارة ربط وتسكين الشُعب بالصفوف (`class_sections`) — [3 مسارات]
 
-> [!NOTE]
-> **الشرح والملاحظات الحوكمية لخطوة تسكين الشعب:**
-> 1. **فتح الشعب بصفوف العام:** يتم تسكين الشعب المعتمدة من بنك الشعب العامة (مثل شعبة أ، شعبة ب) لكل صف دراسي مفتوح بالعام.
-> 2. **حظر الحذف المرتبط:** يمنع فك ربط الشعبة من صف إذا وجد طلاب مسجلون بتلك الشعبة في جدول تسكين الطلاب (`student_enrollments`).
+---
+
+### 2.1 `GET /api/v1/academic/classes/:class_id/sections` — عرض شعب صف مفتوحة
+
+> **الوصف الوظيفي:** استرجاع قائمة الشعب المفتوحة والمسندة لصف دراسي معين.
+
+- **Query Parameters:**
+  - `search` (optional, string): البحث باسم الشعبة (مثال: `أ`).
+  - `page` (optional, integer, default `1`): رقم الصفحة.
+  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة.
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم جلب شعب الصف الدراسي بنجاح.",
+  "data": [
+    { "id": 1, "class_id": 5, "class_name": "الصف الخامس", "section_id": 1, "section_name": "شعبة أ" },
+    { "id": 2, "class_id": 5, "class_name": "الصف الخامس", "section_id": 2, "section_name": "شعبة ب" }
+  ],
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 2,
+    "last_page": 1
+  }
+}
+```
+
+##### ⚪ `200 OK` (قائمة فارغة):
+```json
+{
+  "success": true,
+  "message": "لا توجد شعب مفتوحة لهذا الصف.",
+  "data": [],
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 0,
+    "last_page": 1
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
-### 2.1 `GET /api/v1/academic/classes/:class_id/sections` — عرض قائمة وبحث شعب صف مفتوحة
+### 2.2 `POST /api/v1/academic/class-sections` — تسكين وربط شعبة بصف
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** استرجاع قائمة كافة الشعب المفتوحة والمخصصة لصف دراسي محدد مع دعم البحث النصي باسم الشعبة، الترتيب، والتقسيم الصفحي (CRUDS - Search & Filter Engine).
-
-- **Query Parameters (معاملات الفلترة والبحث والترتيب):**
-  - `search` (optional, string): البحث النصي باسم الشعبة (مثال: `شعبة أ`).
-  - `sort_by` (optional, string, enum: `id`, `section_id`, default `id`): حقل الفرز والترتيب.
-  - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
-  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
-  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
-- **Example Request URL:** `/api/v1/academic/classes/5/sections?search=أ&sort_by=id&sort_order=asc`
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم جلب الشعب المفتوحة للصف بنجاح.",
-      "data": [
-        { "id": 1, "class_id": 5, "class_name": "الصف الخامس", "section_id": 1, "section_name": "شعبة أ" },
-        { "id": 2, "class_id": 5, "class_name": "الصف الخامس", "section_id": 2, "section_name": "شعبة ب" }
-      ],
-      "meta": {
-        "current_page": 1,
-        "per_page": 15,
-        "total": 2,
-        "last_page": 1
-      }
-    }
-    ```
-
----
-
-### 2.2 `POST /api/v1/academic/class-sections` — تسكين/ربط شعبة بصف
-
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** فتح وتسكين شعبة عامة لصف دراسي بالعام الدراسي.
+> **الوصف الوظيفي:** فتح وتسكين شعبة عامة لصف دراسي محدد.
 
 - **Request Body:**
   ```json
@@ -222,108 +331,226 @@
     "section_id": 1
   }
   ```
-- **Response Payloads:**
-  - **`201 Created`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم فتح وتسكين الشعبة للصف بنجاح.",
-      "data": { "id": 1, "class_id": 5, "class_name": "الصف الخامس", "section_id": 1, "section_name": "شعبة أ" }
-    }
-    ```
-  - **`409 Conflict`:** `{"success": false, "message": "الشعبة مفتوحة ومسندة مسبقاً لهذا الصف."}`
-  - **`422 Unprocessable`:** `{"success": false, "message": "الصف الدراسي أو الشعبة غير موجودة."}`
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `201 Created`:
+```json
+{
+  "success": true,
+  "message": "تم فتح وتسكين الشعبة للصف بنجاح.",
+  "data": {
+    "id": 1,
+    "class_id": 5,
+    "class_name": "الصف الخامس",
+    "section_id": 1,
+    "section_name": "شعبة أ"
+  }
+}
+```
+
+##### ⚡ `409 Conflict` (تكرار الشعبة لنفس الصف):
+```json
+{
+  "success": false,
+  "message": "الشعبة مفتوحة ومسندة مسبقاً لهذا الصف (uq_class_sections)."
+}
+```
+
+##### ⚠️ `422 Unprocessable Entity`:
+```json
+{
+  "success": false,
+  "message": "بيانات التسكين غير صالحة.",
+  "errors": {
+    "section_id": ["الشعبة العامة المحددة غير موجودة."]
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
 ### 2.3 `DELETE /api/v1/academic/class-sections/:id` — فك ربط شعبة من صف
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** إلغاء تسكين شعبة من صف بشرط عدم وجود طلاب تسكين مسبق بها.
+> **الوصف الوظيفي:** إلغاء تسكين شعبة من صف دراسي بشرط عدم وجود طلاب مسجلين بها.
 
-- **Response Payloads:**
-  - **`200 OK`:** `{"success": true, "message": "تم فك ربط الشعبة من الصف بنجاح."}`
-  - **`403 Forbidden`:** `{"success": false, "message": "لا يمكن فك ربط الشعبة لوجود طلاب مسجلين بها (RESTRICT)."}`
-  - **`404 Not Found`:** `{"success": false, "message": "سجل تسكين الشعبة غير موجود."}`
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم فك ربط الشعبة من الصف بنجاح."
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "سجل ربط الشعبة بالصف غير موجود."
+}
+```
+
+##### ⚡ `409 Conflict` (منع فك الربط لوجود طلاب RESTRICT):
+```json
+{
+  "success": false,
+  "message": "لا يمكن فك ربط الشعبة لوجود طلاب مسجلين بها في هذا العام (RESTRICT)."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
 ## 📝 الخطوة 3: إدارة مناهج الصفوف والدرجات لكل فترة (`class_subjects`) — [4 مسارات]
 
-> [!NOTE]
-> **الشرح والملاحظات الحوكمية لخطوة مناهج الصفوف:**
-> 1. **استقلالية درجات السمستر:** يتم تعيين درجة النجاح الصغرى `passing_score` والدرجة العظمى `max_score` لكل مادة في كل فصل دراسي على حدة.
-> 2. **قيد قياس الدرجات:** يجب استيفاء قيد النزاهة الإجباري (`passing_score <= max_score`).
-> 3. **حماية التغييرات بالفصل المغلق:** يمنع تعديل أو إزالة المناهج والدرجات إذا كانت الفترة مقفلة للأرشفة (`is_closed = 1`).
-
 ---
 
-### 3.1 `GET /api/v1/academic/classes/:class_id/subjects` — عرض قائمة وبحث منهج الصف بالفترة
+### 3.1 `GET /api/v1/academic/classes/:class_id/subjects` — استعراض منهج ومقررات الصف بالفصول
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** استرجاع تفاصيل منهج الصف الدراسي والمواد المقررة بالفترة مع دعم البحث باسم المادة أو الكود، الترتيب، والتقسيم الصفحي (CRUDS - Search & Filter Engine).
+> **الوصف الوظيفي:** استرجاع الهيكل الكامل لمنهج الصف الدراسي موزَّعاً بحسب الفصول الدراسية (`terms`)، مع تفاصيل المواد ودرجات النجاح والدرجة العظمى لكل فصل دون تكرار لبيانات الصف.
 
-- **Query Parameters (معاملات الفلترة والبحث والترتيب):**
-  - `class_academic_term_id` (required, bigint): معرف تخصيص فترة الصف الحالية.
-  - `search` (optional, string): البحث النصي باسم المادة أو كود المادة (مثال: `الرياضيات` أو `MATH`).
-  - `sort_by` (optional, string, enum: `id`, `passing_score`, `max_score`, default `id`): حقل الفرز والترتيب.
-  - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
-  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
-  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
-- **Example Request URL:** `/api/v1/academic/classes/5/subjects?class_academic_term_id=10&search=MATH&sort_by=id&sort_order=asc`
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم جلب منهج الصف بالفترة الدراسية بنجاح.",
-      "data": [
-        { "id": 12, "class_id": 5, "class_name": "الصف الخامس", "subject_id": 1, "subject_name": "الرياضيات", "subject_code": "MATH", "class_academic_term_id": 10, "term_name": "الفصل الأول", "academic_year_name": "2025/2026", "passing_score": "50.00", "max_score": "100.00" },
-        { "id": 13, "class_id": 5, "class_name": "الصف الخامس", "subject_id": 2, "subject_name": "العلوم", "subject_code": "SCI", "class_academic_term_id": 10, "term_name": "الفصل الأول", "academic_year_name": "2025/2026", "passing_score": "50.00", "max_score": "100.00" }
-      ],
-      "meta": {
-        "current_page": 1,
-        "per_page": 15,
-        "total": 2,
-        "last_page": 1
+- **Query Parameters:**
+  - `class_academic_term_id` (optional, integer): فلترة المنهج لفصل دراسي محدد فقط.
+  - `search` (optional, string): البحث النصي باسم المادة أو كودها.
+- **Example Request URL:** `/api/v1/academic/classes/9/subjects`
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK` (منهج الصف مقسماً بحسب الفصول):
+```json
+{
+  "success": true,
+  "message": "تم جلب منهج ومقررات الصف الدراسي بنجاح.",
+  "data": {
+    "class_id": 9,
+    "class_name": "الصف التاسع",
+    "terms": [
+      {
+        "class_academic_term_id": 10,
+        "term_name": "الفصل الأول",
+        "is_active": 1,
+        "is_closed": 0,
+        "subjects": [
+          {
+            "id": 1,
+            "subject_id": 1,
+            "name": "الرياضيات",
+            "code": "MATH",
+            "passing_score": "50.00",
+            "max_score": "100.00"
+          },
+          {
+            "id": 2,
+            "subject_id": 2,
+            "name": "العلوم",
+            "code": "SCI",
+            "passing_score": "50.00",
+            "max_score": "100.00"
+          }
+        ]
+      },
+      {
+        "class_academic_term_id": 11,
+        "term_name": "الفصل الثاني",
+        "is_active": 0,
+        "is_closed": 0,
+        "subjects": [
+          {
+            "id": 3,
+            "subject_id": 1,
+            "name": "الرياضيات",
+            "code": "MATH",
+            "passing_score": "50.00",
+            "max_score": "100.00"
+          }
+        ]
       }
-    }
-    ```
+    ]
+  }
+}
+```
+
+##### ⚪ `200 OK` (القائمة فارغة):
+```json
+{
+  "success": true,
+  "message": "لا توجد مواد مقررة لهذا الصف.",
+  "data": {
+    "class_id": 9,
+    "class_name": "الصف التاسع",
+    "terms": []
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
 ### 3.2 `POST /api/v1/academic/classes/:class_id/subjects` — إسناد مادة لصف وتحديد درجات الفترة
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** إسناد مادة تعليمية لمنهج صف دراسي محدد وتعيين الدرجة الكلية العظمى ودرجة النجاح الخاصة بالسمستر.
+> **الوصف الوظيفي:** إضافة مادة لمنهج صف في فترة محددة وتعيين درجة النجاح والدرجة العظمى.
 
 - **Request Body:**
   ```json
   {
-    "subject_id": 1,
     "class_academic_term_id": 10,
+    "subject_id": 1,
     "passing_score": 50.00,
     "max_score": 100.00
   }
   ```
-- **Response Payloads:**
-  - **`201 Created`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم إسناد المادة وتحديد درجات الفصل الدراسي بنجاح.",
-      "data": { "id": 12, "class_id": 5, "subject_id": 1, "class_academic_term_id": 10, "passing_score": "50.00", "max_score": "100.00" }
-    }
-    ```
-  - **`409 Conflict`:** `{"success": false, "message": "المادة مضافة ومقررة مسبقاً لهذا الصف في هذا الفصل الدراسي (uq_class_term_subject)."}`
-  - **`422 Unprocessable`:** `{"success": false, "message": "درجة النجاح يجب أن تكون أقل من أو تساوي الدرجة العظمى."}`
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `201 Created`:
+```json
+{
+  "success": true,
+  "message": "تم إسناد المادة وتحديد درجات الفترة بنجاح.",
+  "data": {
+    "id": 1,
+    "class_id": 9,
+    "subject_id": 1,
+    "subject_name": "الرياضيات",
+    "class_academic_term_id": 10,
+    "passing_score": "50.00",
+    "max_score": "100.00"
+  }
+}
+```
+
+##### ⚡ `409 Conflict` (المادة مقررة مسبقاً بنفس الفترة):
+```json
+{
+  "success": false,
+  "message": "المادة مقررة ومسندة مسبقاً لهذه الفترة بالصف الدراسي (uq_class_term_subject)."
+}
+```
+
+##### ⚠️ `422 Unprocessable Entity`:
+```json
+{
+  "success": false,
+  "message": "بيانات إسناد المادة غير صالحة.",
+  "errors": {
+    "passing_score": ["درجة النجاح يجب ألا تتجاوز الدرجة الكلية العظمى."]
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
-### 3.3 `PUT /api/v1/academic/classes/:class_id/subjects/:id` — تعديل درجات مادة بالفترة
+### 3.3 `PUT /api/v1/academic/classes/:class_id/subjects/:id` — تعديل درجات مادة مسندة بالفترة
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** تحديث الدرجة الكلية العظمى أو درجة النجاح المقررة للمادة في هذا السمستر.
+> **الوصف الوظيفي:** تحديث درجة النجاح أو الدرجة العظمى لمادة مسندة بفترة صف.
 
 - **Request Body:**
   ```json
@@ -332,27 +559,81 @@
     "max_score": 100.00
   }
   ```
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم تحديث درجات المادة للفترة بنجاح.",
-      "data": { "id": 12, "passing_score": "60.00", "max_score": "100.00" }
-    }
-    ```
-  - **`404 Not Found`:** `{"success": false, "message": "سجل مادة الصف غير موجود."}`
-  - **`422 Unprocessable`:** `{"success": false, "message": "فشل التحقق من مدخلات الدرجات."}`
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم تحديث درجات المادة بالفترة بنجاح.",
+  "data": {
+    "id": 1,
+    "passing_score": "60.00",
+    "max_score": "100.00"
+  }
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "مقرر المادة بالفترة غير موجود."
+}
+```
+
+##### ⚡ `409 Conflict` (الفترة مغلقة للأرشفة):
+```json
+{
+  "success": false,
+  "message": "لا يمكن تعديل درجات المادة لأن درجات الفترة مغلقة نهائياً للأرشفة (is_closed = 1)."
+}
+```
+
+##### ⚠️ `422 Unprocessable Entity`:
+```json
+{
+  "success": false,
+  "message": "بيانات التحديث غير صالحة.",
+  "errors": {
+    "passing_score": ["درجة النجاح يجب ألا تتجاوز الدرجة العظمى."]
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
-### 3.4 `DELETE /api/v1/academic/classes/:class_id/subjects/:subject_id` — إزالة مادة من منهج فترة
+### 3.4 `DELETE /api/v1/academic/classes/:class_id/subjects/:id` — إزالة مادة من منهج فترة الصف
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** إلغاء مقرر مادة من منهج فترة الصف بالعام الدراسي.
+> **الوصف الوظيفي:** حذف مادة من مقررات فترة الصف بشرط عدم وجود درجات امتحانات مسجلة لها.
 
-- **Query Parameters:** `class_academic_term_id` (required, bigint)
-- **Response Payloads:**
-  - **`200 OK`:** `{"success": true, "message": "تمت إزالة المادة من منهج الفصل الدراسي بنجاح."}`
-  - **`403 Forbidden`:** `{"success": false, "message": "لا يمكن إزالة المادة لوجود درجات أو تكليفات مرتبطة (RESTRICT)."}`
-  - **`404 Not Found`:** `{"success": false, "message": "المادة غير موجودة بملاحظات منهج الصف."}`
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تمت إزالة المادة من منهج الفترة بنجاح."
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "مقرر المادة المراد حذفه غير موجود."
+}
+```
+
+##### ⚡ `409 Conflict` (منع الحذف لوجود درجات أو جدول حصص RESTRICT):
+```json
+{
+  "success": false,
+  "message": "لا يمكن إزالة المادة لوجود درجات امتحانات رسمية أو جدول حصص مسجل لها في هذه الفترة (RESTRICT)."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
