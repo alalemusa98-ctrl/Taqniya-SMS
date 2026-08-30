@@ -791,10 +791,10 @@
 
 ---
 
-## 1. جدول الصحائف المدرسية النهائية المؤرشفة (`student_transcripts`)
+## 1. جدول الصحائف المدرسية المؤرشفة (`student_transcripts`)
 
 > **الوصف:**  
-> جدول أرشفة وتجميد الصحيفة المدرسية السنوية النهائية للطالب، متضمناً تفاصيل الفصول والدرجات وأعمال السنة والامتحانات كلقطة بيانات نهائية ثابتة (Immutable Snapshot) لا تتأثر ببدء العام الجديد أو مسح الحركات التشغيلية السابقة.
+> جدول أرشفة وتجميد الصحيفة المدرسية (سواء صحيفة سمستر دراسي معين أو الصحيفة السنوية النهائية) للطالب، متضمناً تفاصيل الفصول والدرجات وأعمال السنة والامتحانات والدور الثاني كلقطة بيانات نهائية ثابتة (Immutable JSON Snapshot) لا تتأثر ببدء العام الجديد أو مسح الحركات التشغيلية السابقة.
 
 ### 📋 هيكل الأعمدة (Columns Matrix):
 
@@ -802,29 +802,29 @@
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الفريد لسجل الصحيفة. |
 | `student_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الطالب الدائم (يرتبط بـ `students.id` كالمفتاح الخارجي الوحيد). |
+| `transcript_type` | `ENUM('term', 'annual')` | `NOT NULL`, `DEFAULT 'annual'` | نوع الصحيفة المؤرشفة (`term = صحيفة فصل/سمستر محدد`, `annual = صحيفة تجميعية سنوية`). |
+| `class_academic_term_id` | `BIGINT UNSIGNED` | `NULL DEFAULT NULL` | معرف فترة الصف المرتبطة بالصحيفة إذا كانت سمستر محدد (يرتبط بـ `class_academic_terms.id`). |
 | `academic_year_name` | `VARCHAR(50)` | `NOT NULL` | مسمى العام الدراسي كنص صلب (مثال: `2024/2025`). |
 | `class_name` | `VARCHAR(50)` | `NOT NULL` | اسم الصف الدراسي كنص صلب (مثال: `الصف الخامس`). |
 | `section_name` | `VARCHAR(50)` | `NOT NULL` | اسم الشعبة كنص صلب (مثال: `شعبة أ`). |
 | `grade_level` | `SMALLINT UNSIGNED` | `NOT NULL` | المستوى الأكاديمي الرقمي وقت التخرج من السنة (`1` إلى `12`). |
 | `total_score` | `DECIMAL(7,2)` | `NOT NULL` | المجموع الكلي للدرجات التي تحصل عليها الطالب. |
 | `percentage` | `DECIMAL(5,2)` | `NOT NULL` | النسبة المئوية العامة للطالب (مثال: `94.50%`). |
-| `final_status` | `ENUM('passed', 'second_round', 'failed', 'graduated')` | `NOT NULL` | النتيجة والقرار النهائي للطالب بنهاية العام. |
+| `final_status` | `ENUM('passed', 'second_round', 'failed', 'graduated')` | `NOT NULL` | النتيجة والقرار النهائي للطالب بنهاية الفصل أو العام. |
 | `rank` | `SMALLINT UNSIGNED` | `NULL DEFAULT NULL` | الترتيب على مستوى الصف أو الشعبة (مثال: `الأول`, `الثاني`). |
-| `transcript_data` | `JSON` | `NOT NULL` | اللقطة الكاملة للصحيفة التفصيلية: درجات كل مادة في كل فصل دراسي (أعمال سنة + امتحان نهائي)، والمجموع النهائي لكل مادة. |
+| `transcript_data` | `JSON` | `NOT NULL` | اللقطة الكاملة للصحيفة: يتم رصد وإدخال درجات المواد عبر واجهة شيت رصد الدرجات (Grade Entry Sheet UI) وتخزينها بصيغة JSON متضمنة لقطة كل مادة (`coursework_score`, `max_coursework_score`, `exam_score`, `max_exam_score`, `total_score`, `passing_score`, `max_score`, `status`, `second_round_details`). |
 | `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت تجميد وإصدار الصحيفة. |
 | `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
 | `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
 
 ### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
-* `student_id` يرتبط بجدول `students(id)` مع سلوك:
-  * `ON DELETE RESTRICT` (يمنع حذف ملف الطالب طالما يملك صحائف دراسية تاريخية محفوظة).
-  * `ON UPDATE CASCADE`.
-* *لا يحتوي على أي مفاتيح خارجية تشغيلية أخرى لضمان الاستقلالية المطلقة للأرشيف.*
+* `student_id` يرتبط بجدول `students(id)` مع سلوك `ON DELETE RESTRICT, ON UPDATE CASCADE`.
+* `class_academic_term_id` يرتبط بجدول `class_academic_terms(id)` مع سلوك `ON DELETE SET NULL, ON UPDATE CASCADE`.
 
 ### ⚡ الفهارس وقيود التفرد (Indexes & Constraints):
 * `PRIMARY KEY (id)`
-* `UNIQUE INDEX uq_student_transcript_year (student_id, academic_year_name)`  
-  *(يضمن حفظ صحيفة نهائية واحدة معتمدة لكل طالب في العام الدراسي الواحد).*
+* `UNIQUE INDEX uq_student_transcript_term (student_id, academic_year_name, transcript_type, class_academic_term_id)`  
+  *(يضمن حفظ صحيفة سمستر واحدة أو صحيفة سنوية واحدة معتمدة لكل طالب بالعام).*
 * `INDEX idx_transcripts_year_class (academic_year_name, class_name)`
 * `INDEX idx_transcripts_status (final_status)`
 
