@@ -1,6 +1,6 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 02-C (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 11 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المعياري الموجز لـ [`MD/database.md`](../../database.md)، مع عرض عنصرين على الأقل لكل قائمة نتائج لتوضيح نمط المصفوفة (`Multi-Item List Payload`).  
+> **الهدف:** توثيق المسارات الـ 11 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المعياري الموجز لـ [`MD/database.md`](../../database.md)، مع توحيد نمط الروابط والـ Request Body بين الإنشاء والتعديل.  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه.  
@@ -22,21 +22,21 @@
   Accept-Language: ar
   ```
 
-### 📋 مصفوفة المسارات الـ 11 الإجمالية (Master Route Matrix):
+### 📋 مصفوفة المسارات الـ 11 الموحدة (Master Route Matrix):
 
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
-| **1** | `class_academic_terms` | `GET` | `/api/v1/academic/years/:academic_year_id/classes/:class_id/terms` | `admin` | استعراض وبحث فترات وتواريخ صف بالعام |
+| **1** | `class_academic_terms` | `GET` | `/api/v1/academic/class-academic-terms` | `admin` | استعراض وبحث فترات وتواريخ الصفوف بالعام |
 | **2** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms` | `admin` | تخصيص وتخطيط فترة وتواريخ لصف |
 | **3** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/activate` | `admin` | تفعيل الفترة النشطة للصف (Atomic) |
 | **4** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/close` | `admin` | إغلاق/فتح درجات الفترة للصف للأرشفة |
-| **5** | `class_sections` | `GET` | `/api/v1/academic/classes/:class_id/sections` | `admin` | عرض وبحث شعب صف دراسي مفتوحة |
+| **5** | `class_sections` | `GET` | `/api/v1/academic/class-sections` | `admin` | عرض وبحث شعب صف دراسي مفتوحة |
 | **6** | `class_sections` | `POST` | `/api/v1/academic/class-sections` | `admin` | تسكين وربط شعبة بصف دراسي |
 | **7** | `class_sections` | `DELETE` | `/api/v1/academic/class-sections/:id` | `admin` | فك ربط شعبة من صف |
-| **8** | `class_subjects` | `GET` | `/api/v1/academic/classes/:class_id/subjects` | `admin` | استعراض منهج ومقررات الصف بالفترة |
-| **9** | `class_subjects` | `POST` | `/api/v1/academic/classes/:class_id/subjects` | `admin` | إسناد مادة لصف وتحديد درجات الفترة |
-| **10** | `class_subjects` | `PUT` | `/api/v1/academic/classes/:class_id/subjects/:id` | `admin` | تعديل درجات مادة مسندة بالفترة |
-| **11** | `class_subjects` | `DELETE` | `/api/v1/academic/classes/:class_id/subjects/:id` | `admin` | إزالة مادة من منهج فترة الصف |
+| **8** | `class_subjects` | `GET` | `/api/v1/academic/class-subjects` | `admin` | استعراض منهج ومقررات الصف بالفصول |
+| **9** | `class_subjects` | `POST` | `/api/v1/academic/class-subjects` | `admin` | إسناد مادة وتحديد درجات الفترة |
+| **10** | `class_subjects` | `PUT` | `/api/v1/academic/class-subjects/:id` | `admin` | تعديل درجات مادة مسندة بالفترة |
+| **11** | `class_subjects` | `DELETE` | `/api/v1/academic/class-subjects/:id` | `admin` | إزالة مادة من منهج فترة الصف |
 
 ### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
 
@@ -68,60 +68,69 @@
 
 ---
 
-### 1.1 `GET /api/v1/academic/years/:academic_year_id/classes/:class_id/terms` — عرض فترات وتواريخ صف بالعام
+### 1.1 `GET /api/v1/academic/class-academic-terms` — عرض وبحث تقويم فترات صفوف العام
 
-> **الوصف الوظيفي:** استرجاع فترات وتواريخ وتقويم صف دراسي محدد بالعام الدراسي مع دعم البحث والتصفية بالحالة النشطة والمغلقة والترقيم.
+> **الوصف الوظيفي:** استرجاع تقويم فترات وتواريخ كافة صفوف المدرسة بالعام الدراسي مجمعة هرمياً لكل صف، مع إمكانية الفلترة لصف دراسي محدد عبر المعامل `class_id`.
 
 - **Query Parameters:**
-  - `search` (optional, string): البحث النصي بمسمى الفترة (مثال: `الفصل الأول`).
+  - `academic_year_id` (optional, integer): فلترة بحسب العام الدراسي.
+  - `class_id` (optional, integer): فلترة لصف دراسي محدد فقط (مثال: `class_id=9`).
+  - `search` (optional, string): البحث النصي بمسمى الصف أو الفترة.
   - `is_active` (optional, integer: `0` أو `1`): فلترة حسب الفترة النشطة حالياً.
   - `is_closed` (optional, integer: `0` أو `1`): فلترة حسب الفترة المغلقة.
-  - `sort_by` (optional, string, enum: `id`, `start_date`, `end_date`, default `start_date`): حقل الفرز.
-  - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
-  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
-  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
-- **Example Request URL:** `/api/v1/academic/years/1/classes/9/terms?search=الفصل&is_active=1&sort_by=start_date&sort_order=asc`
+- **Example Request URL:** `/api/v1/academic/class-academic-terms?academic_year_id=1&class_id=9`
 
 #### استجابات هذا الرابط (Responses):
 
-##### ✅ `200 OK` (نجاح جلب القائمة):
+##### ✅ `200 OK` (تقويم وفترات الصفوف بالعام):
 ```json
 {
   "success": true,
-  "message": "تم جلب فترات الصف الدراسي بالعام بنجاح.",
-  "data": [
-    {
-      "id": 10,
-      "academic_year_id": 1,
-      "academic_year_name": "2025/2026",
-      "class_id": 9,
-      "class_name": "الصف التاسع",
-      "academic_term_id": 1,
-      "term_name": "الفصل الأول",
-      "start_date": "2025-09-01",
-      "end_date": "2025-12-31",
-      "is_active": 1,
-      "is_closed": 0
-    },
-    {
-      "id": 11,
-      "academic_year_id": 1,
-      "academic_year_name": "2025/2026",
-      "class_id": 9,
-      "class_name": "الصف التاسع",
-      "academic_term_id": 2,
-      "term_name": "الفصل الثاني",
-      "start_date": "2026-01-05",
-      "end_date": "2026-04-15",
-      "is_active": 0,
-      "is_closed": 0
-    }
-  ],
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 2,
-    "last_page": 1
+  "message": "تم جلب تقويم فترات صفوف العام الدراسي بنجاح.",
+  "data": {
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "classes": [
+      {
+        "class_id": 9,
+        "class_name": "الصف التاسع",
+        "terms": [
+          {
+            "id": 10,
+            "academic_term_id": 1,
+            "term_name": "الفصل الأول",
+            "start_date": "2025-09-01",
+            "end_date": "2025-12-31",
+            "is_active": 1,
+            "is_closed": 0
+          },
+          {
+            "id": 11,
+            "academic_term_id": 2,
+            "term_name": "الفصل الثاني",
+            "start_date": "2026-01-05",
+            "end_date": "2026-04-15",
+            "is_active": 0,
+            "is_closed": 0
+          }
+        ]
+      },
+      {
+        "class_id": 10,
+        "class_name": "الصف العاشر",
+        "terms": [
+          {
+            "id": 12,
+            "academic_term_id": 1,
+            "term_name": "الفصل الأول",
+            "start_date": "2025-09-01",
+            "end_date": "2025-12-31",
+            "is_active": 1,
+            "is_closed": 0
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -130,13 +139,11 @@
 ```json
 {
   "success": true,
-  "message": "لا توجد فترات مخصصة لهذا الصف بالعام.",
-  "data": [],
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 0,
-    "last_page": 1
+  "message": "لا توجد فترات مسجلة تطابق محددات البحث.",
+  "data": {
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "classes": []
   }
 }
 ```
@@ -208,7 +215,7 @@
 
 ### 1.3 `POST /api/v1/academic/class-academic-terms/:id/activate` — تفعيل الفترة النشطة للصف (Atomic)
 
-> **الوصف الوظيفي:** تحويل الفترة المستهدفة إلى الفترة النشطة الحصرية للصف بهذا العام (`is_active = 1`) وإلغاء تفعيل بقية فترات نفس الصف ذرياً.
+> **الوصف الوظيفي:** تحويل الفترة المستهدفة إلى الفترة النشطة الحصرية للصف في هذا العام الدراسي (`is_active = 1`) وإلغاء تفعيل بقية فترات نفس الصف ذرياً.
 
 #### استجابات هذا الرابط (Responses):
 
@@ -272,31 +279,52 @@
 
 ---
 
-### 2.1 `GET /api/v1/academic/classes/:class_id/sections` — عرض شعب صف مفتوحة
+### 2.1 `GET /api/v1/academic/class-sections` — عرض وبحث شُعب الصفوف المفتوحة
 
-> **الوصف الوظيفي:** استرجاع قائمة الشعب المفتوحة والمسندة لصف دراسي معين.
+> **الوصف الوظيفي:** استرجاع قائمة الشعب المفتوحة والمسندة لكافة الصفوف الدراسية مجمعة هرمياً، مع إمكانية الفلترة لصف دراسي محدد عبر المعامل `class_id`.
 
 - **Query Parameters:**
-  - `search` (optional, string): البحث باسم الشعبة (مثال: `أ`).
-  - `page` (optional, integer, default `1`): رقم الصفحة.
-  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة.
+  - `class_id` (optional, integer): فلترة الشعب لصف معين فقط (مثال: `class_id=5`).
+  - `search` (optional, string): البحث باسم الشعبة أو الصف.
+- **Example Request URL:** `/api/v1/academic/class-sections?class_id=5`
 
 #### استجابات هذا الرابط (Responses):
 
-##### ✅ `200 OK`:
+##### ✅ `200 OK` (شعب الصفوف الدراسية المفتوحة):
 ```json
 {
   "success": true,
-  "message": "تم جلب شعب الصف الدراسي بنجاح.",
-  "data": [
-    { "id": 1, "class_id": 5, "class_name": "الصف الخامس", "section_id": 1, "section_name": "شعبة أ" },
-    { "id": 2, "class_id": 5, "class_name": "الصف الخامس", "section_id": 2, "section_name": "شعبة ب" }
-  ],
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 2,
-    "last_page": 1
+  "message": "تم جلب شعب الصفوف الدراسية بنجاح.",
+  "data": {
+    "classes": [
+      {
+        "class_id": 5,
+        "class_name": "الصف الخامس",
+        "sections": [
+          {
+            "id": 1,
+            "section_id": 1,
+            "name": "شعبة أ"
+          },
+          {
+            "id": 2,
+            "section_id": 2,
+            "name": "شعبة ب"
+          }
+        ]
+      },
+      {
+        "class_id": 6,
+        "class_name": "الصف السادس",
+        "sections": [
+          {
+            "id": 3,
+            "section_id": 1,
+            "name": "شعبة أ"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -305,13 +333,9 @@
 ```json
 {
   "success": true,
-  "message": "لا توجد شعب مفتوحة لهذا الصف.",
-  "data": [],
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 0,
-    "last_page": 1
+  "message": "لا توجد شعب مسجلة تطابق محددات البحث.",
+  "data": {
+    "classes": []
   }
 }
 ```
@@ -410,63 +434,68 @@
 
 ---
 
-### 3.1 `GET /api/v1/academic/classes/:class_id/subjects` — استعراض منهج ومقررات الصف بالفصول
+### 3.1 `GET /api/v1/academic/class-subjects` — استعراض مناهج ومقررات الصفوف بالفصول
 
-> **الوصف الوظيفي:** استرجاع الهيكل الكامل لمنهج الصف الدراسي موزَّعاً بحسب الفصول الدراسية (`terms`)، مع تفاصيل المواد ودرجات النجاح والدرجة العظمى لكل فصل دون تكرار لبيانات الصف.
+> **الوصف الوظيفي:** استرجاع الهيكل الكامل لمناهج ومقررات صفوف المدرسة موزَّعة بحسب الفصول الدراسية (`terms`)، مع تفاصيل المواد ودرجات النجاح والدرجة العظمى لكل فصل دون تكرار، مع إمكانية الفلترة لصف دراسي محدد أو فصل محدد.
 
 - **Query Parameters:**
+  - `class_id` (optional, integer): فلترة المنهج لصف دراسي محدد فقط (مثال: `class_id=9`).
   - `class_academic_term_id` (optional, integer): فلترة المنهج لفصل دراسي محدد فقط.
   - `search` (optional, string): البحث النصي باسم المادة أو كودها.
-- **Example Request URL:** `/api/v1/academic/classes/9/subjects`
+- **Example Request URL:** `/api/v1/academic/class-subjects?class_id=9`
 
 #### استجابات هذا الرابط (Responses):
 
-##### ✅ `200 OK` (منهج الصف مقسماً بحسب الفصول):
+##### ✅ `200 OK` (مناهج الصفوف مقسمة بحسب الفصول):
 ```json
 {
   "success": true,
-  "message": "تم جلب منهج ومقررات الصف الدراسي بنجاح.",
+  "message": "تم جلب مناهج ومقررات الصفوف الدراسية بنجاح.",
   "data": {
-    "class_id": 9,
-    "class_name": "الصف التاسع",
-    "terms": [
+    "classes": [
       {
-        "class_academic_term_id": 10,
-        "term_name": "الفصل الأول",
-        "is_active": 1,
-        "is_closed": 0,
-        "subjects": [
+        "class_id": 9,
+        "class_name": "الصف التاسع",
+        "terms": [
           {
-            "id": 1,
-            "subject_id": 1,
-            "name": "الرياضيات",
-            "code": "MATH",
-            "passing_score": "50.00",
-            "max_score": "100.00"
+            "class_academic_term_id": 10,
+            "term_name": "الفصل الأول",
+            "is_active": 1,
+            "is_closed": 0,
+            "subjects": [
+              {
+                "id": 1,
+                "subject_id": 1,
+                "name": "الرياضيات",
+                "code": "MATH",
+                "passing_score": "50.00",
+                "max_score": "100.00"
+              },
+              {
+                "id": 2,
+                "subject_id": 2,
+                "name": "العلوم",
+                "code": "SCI",
+                "passing_score": "50.00",
+                "max_score": "100.00"
+              }
+            ]
           },
           {
-            "id": 2,
-            "subject_id": 2,
-            "name": "العلوم",
-            "code": "SCI",
-            "passing_score": "50.00",
-            "max_score": "100.00"
-          }
-        ]
-      },
-      {
-        "class_academic_term_id": 11,
-        "term_name": "الفصل الثاني",
-        "is_active": 0,
-        "is_closed": 0,
-        "subjects": [
-          {
-            "id": 3,
-            "subject_id": 1,
-            "name": "الرياضيات",
-            "code": "MATH",
-            "passing_score": "50.00",
-            "max_score": "100.00"
+            "class_academic_term_id": 11,
+            "term_name": "الفصل الثاني",
+            "is_active": 0,
+            "is_closed": 0,
+            "subjects": [
+              {
+                "id": 3,
+                "subject_id": 1,
+                "name": "الرياضيات",
+                "code": "MATH",
+                "passing_score": "50.00",
+                "max_score": "100.00"
+              }
+            ]
           }
         ]
       }
@@ -479,11 +508,9 @@
 ```json
 {
   "success": true,
-  "message": "لا توجد مواد مقررة لهذا الصف.",
+  "message": "لا توجد مواد مقررة تطابق محددات البحث.",
   "data": {
-    "class_id": 9,
-    "class_name": "الصف التاسع",
-    "terms": []
+    "classes": []
   }
 }
 ```
@@ -492,9 +519,9 @@
 
 ---
 
-### 3.2 `POST /api/v1/academic/classes/:class_id/subjects` — إسناد مادة لصف وتحديد درجات الفترة
+### 3.2 `POST /api/v1/academic/class-subjects` — إسناد مادة وتحديد درجات الفترة
 
-> **الوصف الوظيفي:** إضافة مادة لمنهج صف في فترة محددة وتعيين درجة النجاح والدرجة العظمى.
+> **الوصف الوظيفي:** إضافة مادة لمنهج فترة محددة بالصف وتعيين درجة النجاح والدرجة العظمى. يستخرج الخادم معرف الصف تلقائياً من `class_academic_term_id`.
 
 - **Request Body:**
   ```json
@@ -548,13 +575,15 @@
 
 ---
 
-### 3.3 `PUT /api/v1/academic/classes/:class_id/subjects/:id` — تعديل درجات مادة مسندة بالفترة
+### 3.3 `PUT /api/v1/academic/class-subjects/:id` — تعديل درجات مادة مسندة بالفترة
 
-> **الوصف الوظيفي:** تحديث درجة النجاح أو الدرجة العظمى لمادة مسندة بفترة صف.
+> **الوصف الوظيفي:** تحديث بيانات مادة مسندة بفترة صف (متطابق تماماً مع هيكل الإنشاء).
 
 - **Request Body:**
   ```json
   {
+    "class_academic_term_id": 10,
+    "subject_id": 1,
     "passing_score": 60.00,
     "max_score": 100.00
   }
@@ -606,7 +635,7 @@
 
 ---
 
-### 3.4 `DELETE /api/v1/academic/classes/:class_id/subjects/:id` — إزالة مادة من منهج فترة الصف
+### 3.4 `DELETE /api/v1/academic/class-subjects/:id` — إزالة مادة من منهج فترة الصف
 
 > **الوصف الوظيفي:** حذف مادة من مقررات فترة الصف بشرط عدم وجود درجات امتحانات مسجلة لها.
 

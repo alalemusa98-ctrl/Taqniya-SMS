@@ -12,19 +12,19 @@
 
 ### 🟢 ما تشمله المرحلة (In-Scope):
 - **تواريخ وتخطيط فترات الصفوف (`class_academic_terms`) — [4 مسارات]:**
-  - استعراض وبحث فترات وتواريخ صف بالعام (`GET /api/v1/academic/years/:academic_year_id/classes/:class_id/terms`).
+  - استعراض وبحث فترات وتواريخ الصفوف بالعام (`GET /api/v1/academic/class-academic-terms`).
   - تخصيص وتخطيط فترة وتواريخ لصف بالعام الدراسي (`POST /api/v1/academic/class-academic-terms`).
   - تفعيل الفترة النشطة للصف ذرياً (`POST /api/v1/academic/class-academic-terms/:id/activate`).
   - إغلاق/فتح درجات الفترة للصف للأرشفة (`POST /api/v1/academic/class-academic-terms/:id/close`).
 - **ربط وتسكين الشُعب بالصفوف (`class_sections`) — [3 مسارات]:**
-  - استعراض الشعب المفتوحة لصف دراسي (`GET /api/v1/academic/classes/:class_id/sections`).
+  - استعراض الشعب المفتوحة لصف دراسي (`GET /api/v1/academic/class-sections`).
   - تسكين وفتح شعبة لصف مع فحص تفرد الربط (`POST /api/v1/academic/class-sections`).
   - فك ربط شعبة من صف مع حظر الحذف عند وجود طلاب (`DELETE /api/v1/academic/class-sections/:id`).
 - **مناهج الصفوف والدرجات لكل فترة (`class_subjects`) — [4 مسارات]:**
-  - استعراض منهج ومقررات الصف بالفترة المحددة (`GET /api/v1/academic/classes/:class_id/subjects`).
-  - إسناد مادة لصف وتحديد درجة النجاح والدرجة العظمى للفترة (`POST /api/v1/academic/classes/:class_id/subjects`).
-  - تعديل درجات مادة مسندة بالفترة مع منع التعديل بالفترات المغلقة (`PUT /api/v1/academic/classes/:class_id/subjects/:id`).
-  - إزالة مادة من منهج فترة الصف مع حظر الإزالة عند وجود درجات رصدت (`DELETE /api/v1/academic/classes/:class_id/subjects/:id`).
+  - استعراض هيكل المنهج مقسماً بالفصول للصف (`GET /api/v1/academic/class-subjects`).
+  - إسناد مادة لصف وتحديد درجات الفترة بالهيكل الموحد (`POST /api/v1/academic/class-subjects`).
+  - تعديل درجات مادة مسندة بالفترة مع منع التعديل بالفترات المغلقة (`PUT /api/v1/academic/class-subjects/:id`).
+  - إزالة مادة من منهج فترة الصف مع حظر الإزالة عند وجود درجات رصدت (`DELETE /api/v1/academic/class-subjects/:id`).
 - **الحوكمة والنزاهة:**
   - قصر كافة عمليات الكتابة والتعديل والتفعيل والإغلاق على مدير النظام (`admin`).
   - حظر الحذف في حال وجود ارتباطات نشطة (`ON DELETE RESTRICT`) وإرجاع رمز التعارض `409 Conflict`.
@@ -72,8 +72,9 @@ stateDiagram-v2
    - تفعيل فترة لصف ما يلغي تفعيل باقي فترات نفس الصف لنفس العام بحركة ذرية واحدة داخل المعاملة.
 2. **قفل الفترات المغلقة للأرشفة (Closed Term Lock):**
    - إذا تم إغلاق درجات الفترة للصف (`is_closed = 1`)، يُمنع تعديل درجات المواد بجدول `class_subjects` لهذه الفترة وتصبح للقراءة والأرشفة فقط (`409 Conflict`).
-3. **قيد نزاهة وتناسب الدرجات (Score Invariant):**
-   - يجب دائماً التحقق من أن درجة النجاح الصغرى لا تتجاوز الدرجة الكلية العظمى (`passing_score <= max_score`) مع كون القيم موجبة (`passing_score >= 0` و `max_score > 0`).
+3. **قيد نزاهة وتناسب الدرجات واستنتاج الصف (Score & Security Invariant):**
+   - يجب دائماً التحقق من أن درجة النجاح الصغرى لا تتجاوز الدرجة الكلية العظمى (`passing_score <= max_score`) مع كون القيم موجبة.
+   - يستنتج الخادم معرف الصف الدراسي `class_id` تلقائياً من سجل `class_academic_terms` لضمان منع التلاعب أو إرسال بيانات غير متطابقة.
 4. **الحماية المرجعية الصارمة (Strict RESTRICT Protection):**
    - يمنع فك ربط أي شعبة من صف إذا وجد طلاب مسجلون بتلك الشعبة في `student_enrollments`.
    - يمنع إزالة أي مادة من منهج فترة الصف إذا تم رصد درجات امتحانات رسمية أو جدول حصص للمادة بتلك الفترة.
@@ -94,19 +95,19 @@ stateDiagram-v2
 #### 📋 جدول مسارات الخطوة 1:
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
 | :-: | :--- | :--- | :--- | :---: | :--- |
-| **1.1** | استعراض فترات وتواريخ صف بالعام | `GET /api/v1/academic/years/:academic_year_id/classes/:class_id/terms` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.1** | استعراض فترات وتواريخ الصفوف بالعام | `GET /api/v1/academic/class-academic-terms` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 | **1.2** | تخصيص وتخطيط فترة وتواريخ لصف | `POST /api/v1/academic/class-academic-terms` | `admin` | `201 Created` | [في routes.md](./routes.md) |
 | **1.3** | تفعيل الفترة النشطة للصف (ذري) | `POST /api/v1/academic/class-academic-terms/:id/activate` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 | **1.4** | إغلاق/فتح درجات الفترة للصف | `POST /api/v1/academic/class-academic-terms/:id/close` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 
 ---
 
-#### 🔹 [Operation 1.1] `GET /api/v1/academic/years/:academic_year_id/classes/:class_id/terms` — استعراض فترات وتواريخ صف بالعام
-- **الغرض والوظيفة:** استرجاع فترات وتقويم صف دراسي محدد بالعام الدراسي مع دعم التصفية بالحالة النشطة والمغلقة والترقيم.
+#### 🔹 [Operation 1.1] `GET /api/v1/academic/class-academic-terms` — استعراض وبحث تقويم فترات صفوف العام
+- **الغرض والوظيفة:** استرجاع تقويم فترات وتواريخ كافة صفوف المدرسة بالعام الدراسي مجمعة هرمياً لكل صف، مع إمكانية الفلترة لصف دراسي محدد عبر المعامل `class_id`.
 - **قواعد المعالجة والخادم:**
   - استرجاع السجلات النشطة فقط (`deleted_at IS NULL`).
+  - تجميع الفترات تحت كل صف في مصفوفة `classes`.
   - تضمين مسميات العام والصف والفترة المرجعية (`academic_year_name`, `class_name`, `term_name`).
-  - دعم الفرز حسب `start_date`, `end_date`, `academic_term_id` والفرز الافتراضي تصاعدياً بـ `start_date ASC`.
 - **عقد الاستجابات والمعاملات (Network SSoT):**
   - معاملات الاستعلام وهياكل الـ JSON الصريحة لـ (`200 OK`) موثقة في [`routes.md`](./routes.md).
 
@@ -150,14 +151,14 @@ stateDiagram-v2
 #### 📋 جدول مسارات الخطوة 2:
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
 | :-: | :--- | :--- | :--- | :---: | :--- |
-| **2.1** | استعراض شعب صف مفتوحة | `GET /api/v1/academic/classes/:class_id/sections` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **2.1** | استعراض وبحث شُعب الصفوف المفتوحة | `GET /api/v1/academic/class-sections` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 | **2.2** | تسكين وربط شعبة بصف | `POST /api/v1/academic/class-sections` | `admin` | `201 Created` | [في routes.md](./routes.md) |
 | **2.3** | فك ربط شعبة من صف | `DELETE /api/v1/academic/class-sections/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 
 ---
 
-#### 🔹 [Operation 2.1] `GET /api/v1/academic/classes/:class_id/sections` — استعراض شعب صف مفتوحة
-- **الغرض والوظيفة:** استرجاع قائمة الشعب المفتوحة لصف معين مع الترقيم.
+#### 🔹 [Operation 2.1] `GET /api/v1/academic/class-sections` — استعراض وبحث شُعب الصفوف المفتوحة
+- **الغرض والوظيفة:** استرجاع قائمة الشعب المفتوحة والمسندة لكافة الصفوف الدراسية بالمدرسة مجمعة هرمياً لكل صف، مع إمكانية الفلترة لصف دراسي محدد عبر المعامل `class_id` أو البحث النصي.
 - **عقد الاستجابات والمعاملات (Network SSoT):**
   - معاملات الاستعلام وهياكل الـ JSON الصريحة لـ (`200 OK`) موثقة في [`routes.md`](./routes.md).
 
@@ -184,25 +185,25 @@ stateDiagram-v2
 
 ### 📝 الخطوة 3: إدارة مناهج الصفوف والدرجات لكل فترة (`class_subjects`) — [4 مسارات]
 
-> **الوصف:** إسناد المواد لكل صف بالسمستر المحدد وتخصيص درجة النجاح الصغرى والدرجة العظمى بشكل مستقل.
+> **الوصف:** إسناد المواد لكل صف بالسمستر المحدد وتخصيص درجة النجاح الصغرى والدرجة العظمى بهيكل موحد.
 
 #### 📋 جدول مسارات الخطوة 3:
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
 | :-: | :--- | :--- | :--- | :---: | :--- |
-| **3.1** | استعراض منهج ومقررات الصف بالفصول | `GET /api/v1/academic/classes/:class_id/subjects` | `admin` | `200 OK` | [في routes.md](./routes.md) |
-| **3.2** | إسناد مادة لصف وتحديد درجات الفترة | `POST /api/v1/academic/classes/:class_id/subjects` | `admin` | `201 Created` | [في routes.md](./routes.md) |
-| **3.3** | تعديل درجات مادة مسندة بالفترة | `PUT /api/v1/academic/classes/:class_id/subjects/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
-| **3.4** | إزالة مادة من منهج فترة الصف | `DELETE /api/v1/academic/classes/:class_id/subjects/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **3.1** | استعراض منهج ومقررات الصف بالفصول | `GET /api/v1/academic/class-subjects` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **3.2** | إسناد مادة وتحديد درجات الفترة | `POST /api/v1/academic/class-subjects` | `admin` | `201 Created` | [في routes.md](./routes.md) |
+| **3.3** | تعديل درجات مادة مسندة بالفترة | `PUT /api/v1/academic/class-subjects/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **3.4** | إزالة مادة من منهج فترة الصف | `DELETE /api/v1/academic/class-subjects/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 
 ---
 
-#### 🔹 [Operation 3.1] `GET /api/v1/academic/classes/:class_id/subjects` — استعراض منهج ومقررات الصف بالفصول
+#### 🔹 [Operation 3.1] `GET /api/v1/academic/class-subjects` — استعراض منهج ومقررات الصف بالفصول
 - **الغرض والوظيفة:** استرجاع الهيكل الكامل لمنهج الصف الدراسي موزَّعاً ومنظماً بحسب الفصول الدراسية (`terms`) دون تكرار لبيانات الصف، مع تفاصيل المواد ودرجاتها لكل فصل.
 - **عقد الاستجابات والمعاملات (Network SSoT):**
-  - معاملات التصفية وهياكل JSON الصريحة مقسمة بالفصول لـ (`200 OK`) مسجلة في [`routes.md`](./routes.md).
+  - معاملات التصفية بـ `class_id` وهياكل JSON الصريحة مقسمة بالفصول لـ (`200 OK`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 3.2] `POST /api/v1/academic/classes/:class_id/subjects` — إسناد مادة لصف وتحديد درجات الفترة
-- **الغرض والوظيفة:** إضافة مادة لمنهج صف في فترة محددة وتعيين درجة النجاح والدرجة العظمى.
+#### 🔹 [Operation 3.2] `POST /api/v1/academic/class-subjects` — إسناد مادة وتحديد درجات الفترة
+- **الغرض والوظيفة:** إضافة مادة لمنهج فترة محددة بالصف وتعيين درجة النجاح والدرجة العظمى (يستنتج الخادم `class_id` تلقائياً من `class_academic_term_id`).
 - **قواعد التحقق:**
   - `class_academic_term_id`: مطلوب، معرف فترة صف صالحة وغير محذوفة.
   - `subject_id`: مطلوب، معرف مادة عامة صالحة.
@@ -213,8 +214,8 @@ stateDiagram-v2
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - جسم الطلب والردود (`201 Created`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 3.3] `PUT /api/v1/academic/classes/:class_id/subjects/:id` — تعديل درجات مادة مسندة بالفترة
-- **الغرض والوظيفة:** تحديث درجة النجاح أو الدرجة العظمى لمادة مسندة بفترة صف.
+#### 🔹 [Operation 3.3] `PUT /api/v1/academic/class-subjects/:id` — تعديل درجات مادة مسندة بالفترة
+- **الغرض والوظيفة:** تحديث بيانات مادة مسندة بفترة صف (هيكل المدخلات متطابق تماماً مع هيكل الإنشاء).
 - **قواعد المعالجة:**
   - التحقق من وجود السجل وعدم حذفه (`404 Not Found`).
   - **فحص حالة إغلاق الفترة:** إذا كانت الفترة مغلقة للأرشفة (`is_closed = 1`)، رفض التعديل وإرجاع `409 Conflict`.
@@ -223,7 +224,7 @@ stateDiagram-v2
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - استجابات التعديل (`200 OK`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 3.4] `DELETE /api/v1/academic/classes/:class_id/subjects/:id` — إزالة مادة من منهج فترة الصف
+#### 🔹 [Operation 3.4] `DELETE /api/v1/academic/class-subjects/:id` — إزالة مادة من منهج فترة الصف
 - **الغرض والوظيفة:** حذف مادة من مقررات فترة الصف.
 - **قواعد الحماية المرجعية:**
   - التحقق من عدم وجود درجات امتحانات مسجلة أو جدول حصص للمادة في هذه الفترة.
@@ -257,6 +258,8 @@ stateDiagram-v2
 - [ ] إرجاع `403 Forbidden` عند محاولة المعلم أو الطالب أو ولي الأمر إجراء أي تعديل.
 - [ ] التحقق الصارم من صحة التواريخ ووقوعها ضمن العام الدراسي واشتراط `end_date > start_date`.
 - [ ] التحقق الصارم من قيد الدرجات `passing_score <= max_score` وإرجاع `422` عند المخالفة.
+- [ ] استنتاج `class_id` تلقائياً من `class_academic_term_id` في عمليات مناهج الصفوف.
+- [ ] تطابق هيكل الـ Request Body بين عمليات الإنشاء والتعديل لـ `class-subjects`.
 - [ ] التحقق من تفرد القيود المركبة (`uq_class_term_year`, `uq_class_sections`, `uq_class_term_subject`) وإرجاع `409 Conflict`.
 - [ ] تنفيذ تفعيل فترة الصف داخل Atomic Transaction تضمن وجود فترة نشطة واحدة فقط لكل صف بالعام.
 - [ ] حظر تعديل درجات المواد بالفترات المغلقة للأرشفة (`is_closed = 1`) وإرجاع `409 Conflict`.
