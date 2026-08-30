@@ -22,25 +22,26 @@
   Accept-Language: ar
   ```
 
-### 📋 مصفوفة المسارات الـ 11 الموحدة (Master Route Matrix):
+### 📋 مصفوفة المسارات الـ 12 الموحدة (Master Route Matrix):
 
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
-| **1** | `class_academic_terms` | `GET` | `/api/v1/academic/class-academic-terms` | `admin` | استعراض وبحث فترات وتواريخ الصفوف بالعام |
+| **1** | `class_academic_terms` | `GET` | `/api/v1/academic/class-academic-terms` | `admin` | استعراض وبحث تقويم فترات صفوف العام |
 | **2** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms` | `admin` | تخصيص وتخطيط فترة وتواريخ لصف |
-| **3** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/activate` | `admin` | تفعيل الفترة النشطة للصف (Atomic) |
-| **4** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/close` | `admin` | إغلاق/فتح درجات الفترة للصف للأرشفة |
-| **5** | `class_sections` | `GET` | `/api/v1/academic/class-sections` | `admin` | عرض وبحث شعب صف دراسي مفتوحة |
-| **6** | `class_sections` | `POST` | `/api/v1/academic/class-sections` | `admin` | تسكين وربط شعبة بصف دراسي |
-| **7** | `class_sections` | `DELETE` | `/api/v1/academic/class-sections/:id` | `admin` | فك ربط شعبة من صف |
-| **8** | `class_subjects` | `GET` | `/api/v1/academic/class-subjects` | `admin` | استعراض منهج ومقررات الصف بالفصول |
-| **9** | `class_subjects` | `POST` | `/api/v1/academic/class-subjects` | `admin` | إسناد مادة وتحديد درجات الفترة |
-| **10** | `class_subjects` | `PUT` | `/api/v1/academic/class-subjects/:id` | `admin` | تعديل درجات مادة مسندة بالفترة |
-| **11** | `class_subjects` | `DELETE` | `/api/v1/academic/class-subjects/:id` | `admin` | إزالة مادة من منهج فترة الصف |
+| **3** | `class_academic_terms` | `PUT` | `/api/v1/academic/class-academic-terms/:id` | `admin` | تعديل تواريخ فترة صف |
+| **4** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/activate` | `admin` | تفعيل الفترة النشطة للصف (Atomic) |
+| **5** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/close` | `admin` | إغلاق/فتح درجات الفترة للصف للأرشفة |
+| **6** | `class_sections` | `GET` | `/api/v1/academic/class-sections` | `admin` | عرض وبحث شعب الصفوف المفتوحة |
+| **7** | `class_sections` | `POST` | `/api/v1/academic/class-sections` | `admin` | تسكين وربط شعبة بصف دراسي |
+| **8** | `class_sections` | `DELETE` | `/api/v1/academic/class-sections/:id` | `admin` | فك ربط شعبة من صف |
+| **9** | `class_subjects` | `GET` | `/api/v1/academic/class-subjects` | `admin` | استعراض مناهج ومقررات الصفوف بالفصول |
+| **10** | `class_subjects` | `POST` | `/api/v1/academic/class-subjects` | `admin` | إسناد مادة وتحديد درجات الفترة |
+| **11** | `class_subjects` | `PUT` | `/api/v1/academic/class-subjects/:id` | `admin` | تعديل درجات مادة مسندة بالفترة |
+| **12** | `class_subjects` | `DELETE` | `/api/v1/academic/class-subjects/:id` | `admin` | إزالة مادة من منهج فترة الصف |
 
 ### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
 
-> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 11** بالمنظومة:
+> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 12** بالمنظومة:
 
 ```json
 // 401 Unauthorized (غياب أو تلف التوكن)
@@ -213,7 +214,76 @@
 
 ---
 
-### 1.3 `POST /api/v1/academic/class-academic-terms/:id/activate` — تفعيل الفترة النشطة للصف (Atomic)
+### 1.3 `PUT /api/v1/academic/class-academic-terms/:id` — تعديل تواريخ فترة صف
+
+> **الوصف الوظيفي:** تحديث تواريخ بداية ونهاية أو فترة الصف المخصصة بالعام الدراسي.
+
+- **Request Body:**
+  ```json
+  {
+    "academic_year_id": 1,
+    "class_id": 9,
+    "academic_term_id": 1,
+    "start_date": "2025-09-01",
+    "end_date": "2025-12-31"
+  }
+  ```
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم تحديث تواريخ فترة الصف بنجاح.",
+  "data": {
+    "id": 10,
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "class_id": 9,
+    "class_name": "الصف التاسع",
+    "academic_term_id": 1,
+    "term_name": "الفصل الأول",
+    "start_date": "2025-09-01",
+    "end_date": "2025-12-31",
+    "is_active": 0,
+    "is_closed": 0
+  }
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "تخصيص فترة الصف غير موجود."
+}
+```
+
+##### ⚡ `409 Conflict` (الفترة مغلقة للأرشفة أو تعارض التكرار):
+```json
+{
+  "success": false,
+  "message": "لا يمكن تعديل تواريخ الفترة لأنها مغلقة نهائياً للأرشفة (is_closed = 1)."
+}
+```
+
+##### ⚠️ `422 Unprocessable Entity`:
+```json
+{
+  "success": false,
+  "message": "بيانات التعديل غير صالحة.",
+  "errors": {
+    "end_date": ["تاريخ نهاية الفترة يجب أن يكون بعد تاريخ البداية وضمن العام الدراسي."]
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
+
+---
+
+### 1.4 `POST /api/v1/academic/class-academic-terms/:id/activate` — تفعيل الفترة النشطة للصف (Atomic)
 
 > **الوصف الوظيفي:** تحويل الفترة المستهدفة إلى الفترة النشطة الحصرية للصف في هذا العام الدراسي (`is_active = 1`) وإلغاء تفعيل بقية فترات نفس الصف ذرياً.
 
@@ -245,7 +315,7 @@
 
 ---
 
-### 1.4 `POST /api/v1/academic/class-academic-terms/:id/close` — إغلاق/فتح درجات الفترة للصف
+### 1.5 `POST /api/v1/academic/class-academic-terms/:id/close` — إغلاق/فتح درجات الفترة للصف
 
 > **الوصف الوظيفي:** تبديل حالة إغلاق درجات الفترة للصف (`is_closed: 1 / 0`) للأرشفة ومنع التعديل.
 

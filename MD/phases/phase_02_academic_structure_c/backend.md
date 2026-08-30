@@ -71,7 +71,7 @@ stateDiagram-v2
    - يمتلك الصف الدراسي بالعام الواحد فترة نشطة واحدة فقط (`is_active = 1`) لعمليات التدريس وإدخال الدرجات.
    - تفعيل فترة لصف ما يلغي تفعيل باقي فترات نفس الصف لنفس العام بحركة ذرية واحدة داخل المعاملة.
 2. **قفل الفترات المغلقة للأرشفة (Closed Term Lock):**
-   - إذا تم إغلاق درجات الفترة للصف (`is_closed = 1`)، يُمنع تعديل درجات المواد بجدول `class_subjects` لهذه الفترة وتصبح للقراءة والأرشفة فقط (`409 Conflict`).
+   - إذا تم إغلاق درجات الفترة للصف (`is_closed = 1`)، يُمنع تعديل درجات المواد بجدول `class_subjects` أو تعديل تواريخ الفترة بجدول `class_academic_terms` وتصبح للقراءة والأرشفة فقط (`409 Conflict`).
 3. **قيد نزاهة وتناسب الدرجات واستنتاج الصف (Score & Security Invariant):**
    - يجب دائماً التحقق من أن درجة النجاح الصغرى لا تتجاوز الدرجة الكلية العظمى (`passing_score <= max_score`) مع كون القيم موجبة.
    - يستنتج الخادم معرف الصف الدراسي `class_id` تلقائياً من سجل `class_academic_terms` لضمان منع التلاعب أو إرسال بيانات غير متطابقة.
@@ -88,17 +88,18 @@ stateDiagram-v2
 
 ---
 
-### 🗓️ الخطوة 1: إدارة تواريخ وتخطيط فترات الصفوف (`class_academic_terms`) — [4 مسارات]
+### 🗓️ الخطوة 1: إدارة تواريخ وتخطيط فترات الصفوف (`class_academic_terms`) — [5 مسارات]
 
-> **الوصف:** تخصيص الفترات والتواريخ الرسمية لكل صف دراسي بالعام طبق تقويم الوزارة والتحكم في الفترة النشطة والمغلقة للصف.
+> **الوصف:** تخصيص وتعديل الفترات والتواريخ الرسمية لكل صف دراسي بالعام طبق تقويم الوزارة والتحكم في الفترة النشطة والمغلقة للصف.
 
 #### 📋 جدول مسارات الخطوة 1:
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
-| :-: | :--- | :--- | :--- | :---: | :--- |
-| **1.1** | استعراض فترات وتواريخ الصفوف بالعام | `GET /api/v1/academic/class-academic-terms` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| :-: | :--- | :--- | :--- | :--- | :--- |
+| **1.1** | استعراض وبحث تقويم فترات صفوف العام | `GET /api/v1/academic/class-academic-terms` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 | **1.2** | تخصيص وتخطيط فترة وتواريخ لصف | `POST /api/v1/academic/class-academic-terms` | `admin` | `201 Created` | [في routes.md](./routes.md) |
-| **1.3** | تفعيل الفترة النشطة للصف (ذري) | `POST /api/v1/academic/class-academic-terms/:id/activate` | `admin` | `200 OK` | [في routes.md](./routes.md) |
-| **1.4** | إغلاق/فتح درجات الفترة للصف | `POST /api/v1/academic/class-academic-terms/:id/close` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.3** | تعديل تواريخ فترة صف | `PUT /api/v1/academic/class-academic-terms/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.4** | تفعيل الفترة النشطة للصف (ذري) | `POST /api/v1/academic/class-academic-terms/:id/activate` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.5** | إغلاق/فتح درجات الفترة للصف | `POST /api/v1/academic/class-academic-terms/:id/close` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 
 ---
 
@@ -124,7 +125,17 @@ stateDiagram-v2
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - هيكل الطلب واستجابات (`201 Created`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 1.3] `POST /api/v1/academic/class-academic-terms/:id/activate` — تفعيل الفترة النشطة للصف (Atomic Activation)
+#### 🔹 [Operation 1.3] `PUT /api/v1/academic/class-academic-terms/:id` — تعديل تواريخ فترة صف
+- **الغرض والوظيفة:** تحديث تواريخ أو فترة صف مخصصة بالعام الدراسي.
+- **قواعد المعالجة:**
+  - التحقق من وجود السجل وعدم حذفه (`404 Not Found`).
+  - **فحص حالة إغلاق الفترة:** إذا كانت الفترة مغلقة للأرشفة (`is_closed = 1`)، رفض التعديل وإرجاع `409 Conflict`.
+  - التحقق من شروط التواريخ ووقوعها ضمن نطاق العام الدراسي واشتراط `end_date > start_date` (`422 Unprocessable Entity`).
+  - تحديث بيانات السجل وتسجيل القيم القديمة والجديدة في `audit_logs`.
+- **عقد الاستجابات والمدخلات (Network SSoT):**
+  - استجابات التعديل (`200 OK`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 1.4] `POST /api/v1/academic/class-academic-terms/:id/activate` — تفعيل الفترة النشطة للصف (Atomic Activation)
 - **الغرض والوظيفة:** تحويل الفترة المستهدفة إلى الفترة النشطة الحصرية للصف في هذا العام الدراسي.
 - **المعاملة الذرية وقفل التنافسية:**
   - يتم تنفيذ العملية داخل **معاملة قاعدة بيانات ذرية (Atomic Transaction)**:
@@ -136,7 +147,7 @@ stateDiagram-v2
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - استجابات التفعيل (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 1.4] `POST /api/v1/academic/class-academic-terms/:id/close` — إغلاق/فتح درجات الفترة للصف
+#### 🔹 [Operation 1.5] `POST /api/v1/academic/class-academic-terms/:id/close` — إغلاق/فتح درجات الفترة للصف
 - **الغرض والوظيفة:** تبديل حالة إغلاق درجات الفترة للصف (`is_closed = 1` للأرشفة، أو `is_closed = 0` للفتح).
 - **التنفيذ:** تعديل الحقل وتوثيق الحركة في `audit_logs`.
 - **عقد الاستجابات والمدخلات (Network SSoT):**

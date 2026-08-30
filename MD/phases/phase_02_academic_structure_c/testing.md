@@ -27,6 +27,8 @@
 | `TC-CAT-05` | **Validation** | رفض تواريخ تقع خارج النطاق الزمني للعام الدراسي المستهدف | تواريخ خارج حدود العام | `422 Unprocessable Entity`. |
 | `TC-CAT-06` | **Atomic / Concurrency** | **تفعيل الفترة النشطة للصف (Atomic):** تفعيل فترة يلغي تفعيل باقي فترات نفس الصف | `POST /api/v1/academic/class-academic-terms/:id/activate` | `200 OK` مع ضبط `is_active = 1` وإلغاء تفعيل البقية. |
 | `TC-CAT-07` | **Integration** | إغلاق درجات الفترة للصف للأرشفة | `POST /api/v1/academic/class-academic-terms/:id/close` | `200 OK` مع ضبط `is_closed = 1`. |
+| `TC-CAT-08` | **Integration** | تعديل تواريخ فترة صف بنجاح | `PUT /api/v1/academic/class-academic-terms/:id` | `200 OK` وتحديث التواريخ. |
+| `TC-CAT-09` | **Conflict / Lock** | **قفل الفترات المغلقة:** منع تعديل تواريخ فترة مغلقة للأرشفة | `PUT` لفترة تحمل `is_closed = 1` | `409 Conflict` ورفض التعديل. |
 
 ---
 
