@@ -83,7 +83,7 @@ stateDiagram-v2
 #### 📋 جدول العمليات المدمجة:
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
 | :-: | :--- | :--- | :--- | :---: | :--- |
-| **1.1** | استعراض وبحث جدول إسناد التدريس العام | `GET /api/v1/teaching-assignments` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.1** | استعراض وبحث توزيع الكادر التعليمي على المواد والشعب | `GET /api/v1/teaching-assignments` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 | **1.2** | استعراض تفاصيل سجل إسناد تدريس محدد | `GET /api/v1/teaching-assignments/:id` | `admin` / `teacher` | `200 OK` | [في routes.md](./routes.md) |
 | **1.3** | استعراض النصاب التدريسي لمعلم محدد | `GET /api/v1/teachers/:teacher_id/assignments` | `admin` / `teacher (own)` | `200 OK` | [في routes.md](./routes.md) |
 | **1.4** | استعراض كشف معلمي ومناهج الصف بالشعب | `GET /api/v1/classes/:class_id/assignments` | `admin` | `200 OK` | [في routes.md](./routes.md) |
@@ -92,7 +92,7 @@ stateDiagram-v2
 
 ---
 
-#### 🔹 [Operation 1.1] `GET /api/v1/teaching-assignments` — استعراض وبحث جدول إسناد التدريس العام
+#### 🔹 [Operation 1.1] `GET /api/v1/teaching-assignments` — استعراض وبحث توزيع الكادر التعليمي على المواد والشعب
 - **الغرض والوظيفة:** استرجاع خريطة توزيع الكادر التعليمي على المواد والشعب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (`classes -> sections -> assignments`) بدون تكرار للبيانات.
 - **قواعد المعالجة والخادم:**
   - استرجاع السجلات النشطة فقط (`deleted_at IS NULL`).
