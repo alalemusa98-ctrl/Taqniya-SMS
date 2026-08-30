@@ -99,7 +99,6 @@
 ### 3.1 مصفوفة الإجراءات والروابط بالواجهة:
 | الإجراء بالواجهة (UI Action) | نقطة الاتصال في `routes.md` | المكون التفاعلي بالواجهة (UI Component) | رمز النجاح | مرجع العقد في `routes.md` |
 | :--- | :--- | :--- | :-: | :--- |
-| **استعراض سجلات الوصاية** | `GET /api/v1/guardian-students` | جدول روابط الوصاية (`Custody Links Table`) | `200 OK` | [في routes.md](./routes.md) |
 | **استعراض قائمة أبناء ولي الأمر** | `GET /api/v1/guardians/:id/students` | كروت الأبناء ومحدد السياق (`Children Switcher Cards`) | `200 OK` | [في routes.md](./routes.md) |
 | **ربط وتعديل وصاية ولي أمر بطالب** | `POST` & `PUT /api/v1/guardian-students` | اللوحة الجانبية لربط الوصاية (`Custody Link Drawer`) | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
 | **فك وإلغاء رابط الوصاية** | `DELETE /api/v1/guardian-students/:id` | نافذة تأكيد فك الوصاية (`Confirmation Modal`) | `200 OK` | [في routes.md](./routes.md) |
@@ -108,10 +107,10 @@
 
 ### 3.2 تفاصيل التصميم وتدفق التفاعل:
 
-#### 🔹 [UI-3.2] محدد سياق الأبناء لولي الأمر (Children Switcher):
+#### 🔹 [UI-3.1] محدد سياق الأبناء لولي الأمر (Children Switcher):
 * **المكون:** في واجهة ولي الأمر، يظهر شريط علوي عائم (Children Switcher) يعرض كروت الأبناء المكفولين (`student_name` مع شارة صفه وشعبته) مع إمكانية التبديل بنقرة واحدة لعرض درجات وواجبات كل ابن على حدة.
 
-#### 🔹 [UI-3.3] `POST` & `PUT /api/v1/guardian-students` — ربط وتعديل وصاية ولي أمر بطالب:
+#### 🔹 [UI-3.2] `POST` & `PUT /api/v1/guardian-students` — ربط وتعديل وصاية ولي أمر بطالب:
 * **المكون:** لوحة جانبية منبثقة من اليمين تحتوي على:
   - `ولي الأمر` (قائمة اختيار أو بحث `guardian_id`).
   - `الطالب الابن` (قائمة اختيار أو بحث `student_id`).

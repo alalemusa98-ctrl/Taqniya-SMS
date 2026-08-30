@@ -7,7 +7,7 @@
 ## 1. استراتيجية الاختبارات العامة (Testing Strategy)
 
 - **نمط الاختبار:** اختبارات تكاملية للـ API، اختبارات التوليد الذري للحسابات (`Atomic User Creation`)، واختبارات قيود قاعدة البيانات (Database Constraints & Relational Integrity).
-- **التغطية المطلوبة:** 100% لكافة مسارات الـ API الـ 12، وقواعد التحقق، وحالات التعارض والمنع (409 Conflict).
+- **التغطية المطلوبة:** 100% لكافة مسارات الـ API الـ 11، وقواعد التحقق، وحالات التعارض والمنع (409 Conflict).
 - **البيئة المعتمدة:** بيئة اختبار معزولة (Test Database) يتم تصفيرها وإعادة ضبطها تلقائياً قبل كل جولة اختبار.
 
 ---
@@ -49,12 +49,11 @@
 
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
-| `TC-CST-01` | **Integration** | استرجاع سجلات الوصاية بالمنظومة بالترقيم | `GET /api/v1/guardian-students` | `200 OK` وقائمة الروابط مع `is_primary`. |
-| `TC-CST-02` | **Integration** | استرجاع قائمة الأبناء المكفولين لولي أمر محدد | `GET /api/v1/guardians/1/students` | `200 OK` وقائمة الطلاب التابعين للوصي. |
-| `TC-CST-03` | **Unit / Validation** | **ربط وصاية ولي أمر بطالب بنجاح:** إنشاء رابط وصاية جديد | `guardian_id: 1, student_id: 2, is_primary: 1` | `201 Created` وحفظ السجل بجدول `guardian_students`. |
-| `TC-CST-04` | **Conflict / Invariant** | **قيد تفرد رابط الوصاية (uq_guardian_student):** منع تكرار ربط نفس الوصي بالطالب | محاولة ربط نفس الوصي بالطالب مجدداً | `409 Conflict` (`uq_guardian_student`). |
-| `TC-CST-05` | **Integration** | **تعديل رابط الوصاية:** تبديل صفة الوصي الأساسي | `PUT /api/v1/guardian-students/1` مع `is_primary: 0` | `200 OK` وتحديث السجل. |
-| `TC-CST-06` | **Soft Delete** | فك وإلغاء رابط الوصاية بين ولي الأمر والطالب | `DELETE /api/v1/guardian-students/1` | `200 OK` وضبط `deleted_at` وفك الارتباط. |
+| `TC-CST-01` | **Integration** | استرجاع قائمة الأبناء المكفولين لولي أمر محدد | `GET /api/v1/guardians/1/students` | `200 OK` وقائمة الطلاب التابعين للوصي. |
+| `TC-CST-02` | **Unit / Validation** | **ربط وصاية ولي أمر بطالب بنجاح:** إنشاء رابط وصاية جديد | `guardian_id: 1, student_id: 2, is_primary: 1` | `201 Created` وحفظ السجل بجدول `guardian_students`. |
+| `TC-CST-03` | **Conflict / Invariant** | **قيد تفرد رابط الوصاية (uq_guardian_student):** منع تكرار ربط نفس الوصي بالطالب | محاولة ربط نفس الوصي بالطالب مجدداً | `409 Conflict` (`uq_guardian_student`). |
+| `TC-CST-04` | **Integration** | **تعديل رابط الوصاية:** تبديل صفة الوصي الأساسي | `PUT /api/v1/guardian-students/1` مع `is_primary: 0` | `200 OK` وتحديث السجل. |
+| `TC-CST-05` | **Soft Delete** | فك وإلغاء رابط الوصاية بين ولي الأمر والطالب | `DELETE /api/v1/guardian-students/1` | `200 OK` وضبط `deleted_at` وفك الارتباط. |
 
 ---
 

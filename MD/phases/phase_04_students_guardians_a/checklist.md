@@ -14,7 +14,7 @@
 - [x] إدراج مخطط الكيانات والعلاقات (ERD) المحدث بصيغة Mermaid.
 
 ### 2️⃣ الركيزة الثانية: عقد الشبكة الموحد والمسارات (Network SSoT & Routes Matrix)
-- [x] توثيق كافة المسارات الـ 12 كاملة في جدول موحد (`Master Route Matrix`) في [`routes.md`](./routes.md).
+- [x] توثيق كافة المسارات الـ 11 كاملة في جدول موحد (`Master Route Matrix`) في [`routes.md`](./routes.md).
 - [x] توثيق نمط الأخطاء العامة المشتركة (`401 Unauthorized`, `403 Forbidden`, `500 Internal Server Error`) في القسم 1.1 من `routes.md`.
 - [x] دمج وتوحيد جسم الطلب الصريح (`Request Body`) لمساري الـ `POST` و `PUT` لكل كيان.
 - [x] توثيق مسار استعراض الأبناء المكفولين لولي الأمر (`/guardians/:id/students`).

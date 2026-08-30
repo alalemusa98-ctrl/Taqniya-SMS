@@ -1,6 +1,6 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 04-A (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 12 كاملة لإدارة ملفات وسجلات الطلاب وأولياء الأمور وشبكة الوصاية الأسرية مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، وتوليد الحسابات الموحدة تلقائياً (`STU-XXXX`, `PAR-XXXX`)، مع دمج وتوحيد مواصفات الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح والرشاقة ومنع التكرار، وتزويد مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) مع الترقيم القياسي (`Pagination Meta`).  
+> **الهدف:** توثيق المسارات الـ 11 كاملة لإدارة ملفات وسجلات الطلاب وأولياء الأمور وشبكة الوصاية الأسرية مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، وتوليد الحسابات الموحدة تلقائياً (`STU-XXXX`, `PAR-XXXX`)، مع دمج وتوحيد مواصفات الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح والرشاقة ومنع التكرار، وتزويد مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) مع الترقيم القياسي (`Pagination Meta`).  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
@@ -22,7 +22,7 @@
   Accept-Language: ar
   ```
 
-### 📋 مصفوفة المسارات الـ 12 الموحدة (Master Route Matrix):
+### 📋 مصفوفة المسارات الـ 11 الموحدة (Master Route Matrix):
 
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
@@ -36,15 +36,14 @@
 | **8** | `guardians` | `POST` | `/api/v1/guardians` | `admin` | إنشاء ملف ولي أمر جديد وتوليد حساب دخوله الذري (`PAR-XXXX`) |
 | **9** | `guardians` | `PUT` | `/api/v1/guardians/:id` | `admin` | تحديث وتعديل بيانات ولي الأمر ورقم الهاتف |
 | **10** | `guardians` | `DELETE` | `/api/v1/guardians/:id` | `admin` | حذف ملف ولي الأمر مع فحص الحماية المرجعية (RESTRICT) |
-| **11** | `guardian_students` | `GET` | `/api/v1/guardian-students` | `admin` | استعراض قائمة روابط الوصاية الأسرية بين الأولياء والطلاب |
-| **12** | `guardian_students` | `GET` | `/api/v1/guardians/:guardian_id/students` | `admin` / `parent (own)` | استعراض قائمة الأبناء المكفولين تحت وصاية ولي أمر محدد |
-| **13** | `guardian_students` | `POST` | `/api/v1/guardian-students` | `admin` | ربط وصاية ولي أمر بطالب وتحديد الوصي الرئيسي |
-| **14** | `guardian_students` | `PUT` | `/api/v1/guardian-students/:id` | `admin` | تعديل رابط الوصاية وتبديل صفة الوصي الرئيسي |
-| **15** | `guardian_students` | `DELETE` | `/api/v1/guardian-students/:id` | `admin` | فك وإلغاء رابط الوصاية بين ولي الأمر والطالب |
+| **11** | `guardian_students` | `GET` | `/api/v1/guardians/:guardian_id/students` | `admin` / `parent (own)` | استعراض قائمة الأبناء المكفولين تحت وصاية ولي أمر محدد |
+| **12** | `guardian_students` | `POST` | `/api/v1/guardian-students` | `admin` | ربط وصاية ولي أمر بطالب وتحديد الوصي الرئيسي |
+| **13** | `guardian_students` | `PUT` | `/api/v1/guardian-students/:id` | `admin` | تعديل رابط الوصاية وتبديل صفة الوصي الرئيسي |
+| **14** | `guardian_students` | `DELETE` | `/api/v1/guardian-students/:id` | `admin` | فك وإلغاء رابط الوصاية بين ولي الأمر والطالب |
 
 ### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
 
-> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 12** بالمرحلة:
+> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 11** بالمرحلة:
 
 ```json
 // 401 Unauthorized (غياب أو تلف التوكن)
@@ -323,18 +322,28 @@
       "relationship": "father",
       "students_count": 2,
       "created_at": "2026-08-29T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "user_id": 202,
+      "user_code": "PAR-4002",
+      "full_name": "خالد مسعود السويح",
+      "phone": "0913333333",
+      "relationship": "father",
+      "students_count": 1,
+      "created_at": "2026-08-29T10:15:00Z"
     }
   ],
   "meta": {
     "current_page": 1,
     "per_page": 15,
-    "total": 1,
+    "total": 2,
     "last_page": 1
   }
 }
 ```
 
-##### 🔍 `404 Not Found` / ⚪ `200 OK` (فارغة):
+##### ⚪ `200 OK` (فارغة):
 ```json
 {
   "success": true,
@@ -510,52 +519,9 @@
 
 ---
 
-### 3.1 `GET /api/v1/guardian-students` — استعراض سجلات الوصاية بالمنظومة
+### 3.1 `GET /api/v1/guardians/:guardian_id/students` — استعراض الأبناء المكفولين لولي أمر محدد
 
-> **الوصف الوظيفي:** استرجاع قائمة روابط الوصاية بين أولياء الأمور والطلاب مع بيان الوصي الرئيسي والفرز والترقيم.
-
-- **Query Parameters:**
-  - `guardian_id` (optional, bigint): تصفية بحسب ولي أمر معين.
-  - `student_id` (optional, bigint): تصفية بحسب طالب معين.
-  - `page` (optional, integer, default `1`): رقم الصفحة.
-  - `per_page` (optional, integer, default `15`): عدد السجلات.
-
-#### استجابات هذا الرابط (Responses):
-
-##### ✅ `200 OK`:
-```json
-{
-  "success": true,
-  "message": "تم جلب سجلات الوصاية بنجاح.",
-  "data": [
-    {
-      "id": 1,
-      "guardian_id": 1,
-      "guardian_name": "علي محمد الفيتوري",
-      "guardian_phone": "0912222222",
-      "student_id": 1,
-      "student_name": "محمد علي الفيتوري",
-      "student_code": "STU-3001",
-      "is_primary": 1,
-      "created_at": "2026-08-29T10:00:00Z"
-    }
-  ],
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 1,
-    "last_page": 1
-  }
-}
-```
-
-> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
-
----
-
-### 3.2 `GET /api/v1/guardians/:guardian_id/students` — استعراض الأبناء المكفولين لولي أمر محدد
-
-> **الوصف الوظيفي:** استرجاع قائمة الطلاب التابعين لوصاية ولي أمر معين لتمكينه من التبديل بين سياقات أبنائه في الواجهة.
+> **الوصف الوظيفي:** استرجاع قائمة الطلاب التابعين لوصاية ولي أمر معين لتمكينه من التبديل بين سياقات أبنائه في الواجهة أو لمراجعة أبنائه من قِبل الإدارة.
 
 #### استجابات هذا الرابط (Responses):
 
@@ -595,7 +561,7 @@
 
 ---
 
-### 3.3 `POST /api/v1/guardian-students` & `PUT /api/v1/guardian-students/:id` — ربط وتعديل وصاية ولي أمر بطالب (Combined Specification)
+### 3.2 `POST /api/v1/guardian-students` & `PUT /api/v1/guardian-students/:id` — ربط وتعديل وصاية ولي أمر بطالب (Combined Specification)
 
 > **الوصف الوظيفي:**
 > * **في الإنشاء (`POST`):** إنشاء رابط وصاية جديد بين ولي أمر وطالب وتحديد صفة الوصي الأساسي (`is_primary`) مع منع التكرار (`uq_guardian_student`).
@@ -673,7 +639,7 @@
 
 ---
 
-### 3.4 `DELETE /api/v1/guardian-students/:id` — فك وإلغاء رابط الوصاية
+### 3.3 `DELETE /api/v1/guardian-students/:id` — فك وإلغاء رابط الوصاية
 
 > **الوصف الوظيفي:** فك ارتباط ولي الأمر بالطالب وإلغاء الوصاية.
 

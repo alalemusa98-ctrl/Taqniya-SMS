@@ -22,7 +22,6 @@
   - إنشاء وتعديل ملف ولي أمر وتوليد حساب الدخول الذري `PAR-XXXX` (`POST & PUT /api/v1/guardians`).
   - حذف ملف ولي الأمر مع فحص الحماية المرجعية الصارمة (`DELETE /api/v1/guardians/:id`).
 - **الخطوة 3: إدارة روابط الوصاية الأسرية (`guardian_students`):**
-  - استعراض سجلات الوصاية بالمنظومة (`GET /api/v1/guardian-students`).
   - استعراض قائمة الأبناء المكفولين لولي أمر محدد (`GET /api/v1/guardians/:guardian_id/students`).
   - ربط وتعديل وصاية ولي أمر بطالب (`POST & PUT /api/v1/guardian-students`).
   - فك وإلغاء رابط الوصاية (`DELETE /api/v1/guardian-students/:id`).
@@ -162,29 +161,24 @@ stateDiagram-v2
 #### 📋 جدول العمليات المدمجة:
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
 | :-: | :--- | :--- | :--- | :---: | :--- |
-| **3.1** | استعراض سجلات الوصاية بالمنظومة | `GET /api/v1/guardian-students` | `admin` | `200 OK` | [في routes.md](./routes.md) |
-| **3.2** | استعراض الأبناء المكفولين لولي أمر | `GET /api/v1/guardians/:guardian_id/students` | `admin` / `parent (own)` | `200 OK` | [في routes.md](./routes.md) |
-| **3.3** | ربط وتعديل وصاية ولي أمر بطالب | `POST /api/v1/guardian-students` & `PUT /api/v1/guardian-students/:id` | `admin` | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
-| **3.4** | فك وإلغاء رابط الوصاية | `DELETE /api/v1/guardian-students/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **3.1** | استعراض الأبناء المكفولين لولي أمر | `GET /api/v1/guardians/:guardian_id/students` | `admin` / `parent (own)` | `200 OK` | [في routes.md](./routes.md) |
+| **3.2** | ربط وتعديل وصاية ولي أمر بطالب | `POST /api/v1/guardian-students` & `PUT /api/v1/guardian-students/:id` | `admin` | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
+| **3.3** | فك وإلغاء رابط الوصاية | `DELETE /api/v1/guardian-students/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 
 ---
 
-#### 🔹 [Operation 3.1] `GET /api/v1/guardian-students` — استعراض سجلات الوصاية
-- **الغرض والوظيفة:** استرجاع قائمة روابط الوصاية بين أولياء الأمور والطلاب مع بيان الوصي الرئيسي والترقيم.
-- **عقد الاستجابات والمعاملات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
-
-#### 🔹 [Operation 3.2] `GET /api/v1/guardians/:guardian_id/students` — استعراض الأبناء المكفولين
+#### 🔹 [Operation 3.1] `GET /api/v1/guardians/:guardian_id/students` — استعراض الأبناء المكفولين
 - **الغرض والوظيفة:** استرجاع قائمة الطلاب التابعين لوصاية ولي أمر معين لتمكينه من التبديل بين سياقات أبنائه في الواجهة.
 - **عقد الاستجابات والمدخلات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 3.3] `POST /api/v1/guardian-students` & `PUT /api/v1/guardian-students/:id` — ربط وتعديل وصاية ولي أمر بطالب (Combined Domain Logic)
+#### 🔹 [Operation 3.2] `POST /api/v1/guardian-students` & `PUT /api/v1/guardian-students/:id` — ربط وتعديل وصاية ولي أمر بطالب (Combined Domain Logic)
 - **الغرض والوظيفة:**
   - **في الإنشاء (`POST`):** إنشاء رابط وصاية جديد بين ولي أمر وطالب وتحديد صفة الوصي الأساسي مع منع التكرار (`uq_guardian_student`).
   - **في التعديل (`PUT`):** تعديل رابط الوصاية أو تغيير صفة الوصي الرئيسي (`is_primary`).
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - استجابات (`201 Created`, `200 OK`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 3.4] `DELETE /api/v1/guardian-students/:id` — فك وإلغاء رابط الوصاية
+#### 🔹 [Operation 3.3] `DELETE /api/v1/guardian-students/:id` — فك وإلغاء رابط الوصاية
 - **الغرض والوظيفة:** فك ارتباط ولي الأمر بالطالب وإلغاء الوصاية.
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - استجابات (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).
