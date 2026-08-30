@@ -20,7 +20,7 @@
 
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
-| `TC-ASN-01` | **Integration** | استرجاع جدول إسناد التدريس مع الترقيم والفلترة بالعام والشعبة | `GET /api/v1/teaching-assignments?academic_year_id=1&class_section_id=5` | `200 OK` مع مصفوفة الإسنادات و `meta`. |
+| `TC-ASN-01` | **Integration** | استرجاع جدول إسناد التدريس المجمع بالصفوف والشعب | `GET /api/v1/teaching-assignments?academic_year_id=1` | `200 OK` بهيكل هرمي يضم الصفوف والشعب والمواد ومعلميها. |
 | `TC-ASN-02` | **Integration** | البحث النصي باسم المعلم أو المادة أو الشعبة | `GET /api/v1/teaching-assignments?search=رياضيات` | `200 OK` ومطابقة السجلات المطلوبة. |
 | `TC-ASN-03` | **Integration** | استرجاع تفاصيل سجل إسناد محدد | `GET /api/v1/teaching-assignments/101` | `200 OK` وتفاصيل المادة والشعبة والمعلم. |
 | `TC-ASN-04` | **Integration** | استرجاع النصاب التدريسي لمعلم محدد | `GET /api/v1/teachers/1/assignments` | `200 OK` وقائمة المواد والشعب المكلف بها. |

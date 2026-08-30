@@ -83,48 +83,100 @@
 
 #### استجابات هذا الرابط (Responses):
 
-##### ✅ `200 OK` (نجاح جلب القائمة):
+##### ✅ `200 OK` (نجاح جلب القائمة المجمعة بالشعب والمواد):
 ```json
 {
   "success": true,
-  "message": "تم جلب جدول إسناد التدريس بنجاح.",
-  "data": [
-    {
-      "id": 101,
-      "academic_year_id": 1,
-      "academic_year_name": "2025/2026",
-      "class_id": 5,
-      "class_name": "الصف الخامس",
-      "class_section_id": 5,
-      "section_name": "شعبة أ",
-      "subject_id": 1,
-      "subject_name": "الرياضيات",
-      "subject_code": "MATH",
-      "teacher_id": 1,
-      "teacher_code": "TCH-2001",
-      "teacher_name": "أحمد محمود سالم"
-    },
-    {
-      "id": 102,
-      "academic_year_id": 1,
-      "academic_year_name": "2025/2026",
-      "class_id": 5,
-      "class_name": "الصف الخامس",
-      "class_section_id": 5,
-      "section_name": "شعبة أ",
-      "subject_id": 2,
-      "subject_name": "العلوم",
-      "subject_code": "SCI",
-      "teacher_id": 2,
-      "teacher_code": "TCH-2002",
-      "teacher_name": "خالد عبد السلام الفيتوري"
-    }
-  ],
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 2,
-    "last_page": 1
+  "message": "تم جلب توزيع الكادر التعليمي على المواد والشعب بنجاح.",
+  "data": {
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "classes": [
+      {
+        "class_id": 5,
+        "class_name": "الصف الخامس",
+        "sections": [
+          {
+            "class_section_id": 5,
+            "section_name": "شعبة أ",
+            "assignments": [
+              {
+                "id": 101,
+                "subject_id": 1,
+                "subject_name": "الرياضيات",
+                "subject_code": "MATH",
+                "teacher_id": 1,
+                "teacher_code": "TCH-2001",
+                "teacher_name": "أحمد محمود سالم"
+              },
+              {
+                "id": 102,
+                "subject_id": 2,
+                "subject_name": "العلوم",
+                "subject_code": "SCI",
+                "teacher_id": 2,
+                "teacher_code": "TCH-2002",
+                "teacher_name": "خالد عبد السلام الفيتوري"
+              },
+              {
+                "id": 103,
+                "subject_id": 3,
+                "subject_name": "اللغة العربية",
+                "subject_code": "ARAB",
+                "teacher_id": 3,
+                "teacher_code": "TCH-2003",
+                "teacher_name": "علي مصطفى الورفلي"
+              }
+            ]
+          },
+          {
+            "class_section_id": 6,
+            "section_name": "شعبة ب",
+            "assignments": [
+              {
+                "id": 104,
+                "subject_id": 1,
+                "subject_name": "الرياضيات",
+                "subject_code": "MATH",
+                "teacher_id": 4,
+                "teacher_code": "TCH-2004",
+                "teacher_name": "محمود إبراهيم علي"
+              },
+              {
+                "id": 105,
+                "subject_id": 2,
+                "subject_name": "العلوم",
+                "subject_code": "SCI",
+                "teacher_id": 2,
+                "teacher_code": "TCH-2002",
+                "teacher_name": "خالد عبد السلام الفيتوري"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "class_id": 9,
+        "class_name": "الصف التاسع",
+        "sections": [
+          {
+            "class_section_id": 12,
+            "section_name": "شعبة أ",
+            "assignments": [
+              {
+                "id": 106,
+                "subject_id": 1,
+                "subject_name": "الرياضيات",
+                "subject_code": "MATH",
+                "teacher_id": 1,
+                "teacher_code": "TCH-2001",
+                "teacher_name": "أحمد محمود سالم"
+              }
+            ]
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -134,12 +186,10 @@
 {
   "success": true,
   "message": "لا توجد إسنادات تدريس مسجلة تطابق محددات البحث.",
-  "data": [],
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 0,
-    "last_page": 1
+  "data": {
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "classes": []
   }
 }
 ```
