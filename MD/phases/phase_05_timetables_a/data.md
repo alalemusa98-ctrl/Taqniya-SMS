@@ -1,19 +1,21 @@
 # 📊 مواصفات البيانات والكيانات — المرحلة 05-A (Data Specification)
 
-> **الهدف:** توثيق المخطط الهيكلي لجدول أوقات الحصص اليومية (`period_slots`) المطابق بنسبة 100% للمصدر الرئيسي والحصري للحقيقة: [`MD/database.md`](../../database.md).  
+> **الهدف:** توثيق المخطط الهيكلي لجدول فترات وتوقيتات الحصص والفسح اليومية (`period_slots`) المطابق بنسبة 100% للمصدر الرئيسي والحصري للحقيقة: [`MD/database.md`](../../database.md).  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
-> 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم على المطور أو الذكاء الاصطناعي قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
-> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** ملف [`routes.md`](./routes.md) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`).  
+> 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
+> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** ملف [`routes.md`](./routes.md) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**معاملات البحث والفلترة (`Query Parameters & Filters`)**، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`, `500 Server Error`).  
 > 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
 
 ---
 
-## 1. هيكل جدول فترات الحصص اليومية (`period_slots`)
+## 1. هيكل الجداول والكيانات (Tables Matrix)
 
-> **الوصف:** جدول تحديد مواعيد الحصص المدرسية اليومية والفسحة/الاستراحة المنظمة لليوم المدرسي والمحددة مركزياً من الإدارة.
+---
 
-### 📋 هيكل الأعمدة (Columns Matrix):
+### 1.1 [الخطوة 1] جدول أوقات الحصص اليومية (`period_slots`)
+
+> **الوصف:** جدول تحديد مواعيد وتوقيتات الحصص المدرسية اليومية والفسحة/الاستراحة المنظمة لليوم المدرسي والمحددة مركزياً من الإدارة.
 
 | اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود والخصائص (Constraints) | الوصف والدلالة الوظيفية |
 | :--- | :--- | :--- | :--- |
@@ -25,20 +27,21 @@
 | `is_break` | `TINYINT(1)` | `NOT NULL, DEFAULT 0` | هل هي فترة راحة/فسحة لا تتطلب تدريساً (`1 = استراحة`, `0 = حصة دراسية`). |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
 | `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
-| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
+| `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي (Soft Delete). |
 
 ---
 
 ### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
-* *لا يحتوي على مفاتيح خارجية (جدول مرجعي عام لتوقيتات اليوم المدرسي Master Time Catalog).*
+* *لا يحتوي على مفاتيح خارجية مباشرة.*
 
 ---
 
 ### ⚡ الفهارس والقيود (Indexes & Constraints):
 * `PRIMARY KEY (id)`
 * `UNIQUE INDEX uq_period_slots_number (slot_number)`  
-  *(قيد الحوكمة المحوري: يضمن فرادة الرقم التسلسلي للحصة لليوم المدرسي).*
+  *(قيد الحوكمة المحوري: يضمن عدم تكرار الرقم التسلسلي للحصة لضمان الترتيب المحكم لليوم الدراسي).*
 * `INDEX idx_period_slots_times (start_time, end_time)`
+* `INDEX idx_period_slots_deleted_at (deleted_at)`
 
 ---
 
@@ -54,6 +57,7 @@ erDiagram
         tinyint slot_number UK
         time start_time
         time end_time
-        boolean is_break
+        tinyint is_break
+        timestamp deleted_at
     }
 ```
