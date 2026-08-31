@@ -1,0 +1,49 @@
+# ✅ قائمة التحقق المعمارية والتدقيق — المرحلة 06 (Phase Checklist)
+
+> **الهدف:** التحقق من استيفاء المرحلة 06 لكافة معايير الركائز السبع (7-Pillars Standards)، ومطابقة الـ API وعقد الشبكة وقواعد البيانات 1:1 بدون أي نواقص.
+
+---
+
+## 1. مصفوفة التحقق من الركائز السبع (The 7-Pillars Checklist)
+
+### 🏛️ الركيزة الأولى: مطابقة قاعدة البيانات (Database Integrity SSoT)
+- [x] مطابقة جدول `assignments` بنسبة 100% مع [`MD/database.md`](../../database.md).
+- [x] توثيق كافة القيود (`NOT NULL`, `FOREIGN KEY`, `ON DELETE RESTRICT`).
+- [x] توثيق الفهارس (`idx_assignments_section_term`, `idx_assignments_teaching`, `idx_assignments_academic_year`, `idx_assignments_due_date`).
+- [x] توثيق مخطط العلاقات (ERD) في [`data.md`](./data.md).
+
+### 🌐 الركيزة الثانية: عقد الشبكة الموحد (Network SSoT)
+- [x] توثيق كافة المسارات الـ 6 في [`routes.md`](./routes.md) مع جدول الـ Master Route Matrix.
+- [x] اعتماد القسم 1.1 لنمط الأخطاء المشتركة (`401`, `403`, `500`).
+- [x] دمج مواصفات الإنشاء والتعديل (`POST & PUT`) في مواصفة واحدة رشيقة بجسم طلب موحد واستجابات `201 Created` و `200 OK`.
+- [x] تزويد مسارات القوائم باستجابات متعددة العناصر (`Multi-Item List Payload`) مع الترقيم (`meta`).
+- [x] استخدام المسار المعياري الموحد `/api/v1/class-sections/:class_section_id/assignments`.
+
+### ⚙️ الركيزة الثالثة: نقاء المعمارية الخلفية (Zero ORM Leakage)
+- [x] خلو [`backend.md`](./backend.md) من أي تسريب تقني خاص بأطر العمل (خلو من لارافيل/إيلوكوينت).
+- [x] توثيق مصفوفة الفاعلين والصلاحيات (RBAC) وعزل صلاحيات المعلم (`Scoped RBAC`).
+- [x] توثيق حوكمة تسلسل التواريخ (`due_date >= assigned_date`).
+- [x] توثيق دورة حياة الواجب المدرسي وسجل التدقيق `audit_logs`.
+
+### 🎨 الركيزة الرابعة: معايير واجهات المستخدم (Spatial UI & RTL)
+- [x] دعم الاتجاه من اليمين لليسار (`dir="rtl"`).
+- [x] توثيق الحالات التفاعلية الأربع (Loading, Empty, Error, Success).
+- [x] توثيق كروت الواجبات واللوحة الجانبية للمعاينة وللإنشاء والتعديل مع منتقي التواريخ والمرفقات في [`frontend.md`](./frontend.md).
+
+### 🧪 الركيزة الخامسة: مصفوفة الاختبارات الشاملة (Testing Matrix)
+- [x] تغطية كافة المسارات الـ 6 باختبارات التكامل والتحقق والأمان في [`testing.md`](./testing.md).
+- [x] تغطية حالات رفض تسلسل التواريخ (`422`) وحظر الصلاحيات (`403`).
+
+### 🔗 الركيزة السادسة: سلامة الروابط النسبية (Markdown Link Integrity)
+- [x] استخدام روابط نسبية مباشرة ونظيفة بدون وسوم الهاش الهشة (`#`).
+
+### 📋 الركيزة السابعة: اكتمال ملفات المرحلة الـ 8 (Standard 8-Files Completeness)
+- [x] وجود كافة الملفات الـ 8 في مجلد المرحلة `phase_06_homework`:
+  1. `README.md`
+  2. `data.md`
+  3. `routes.md`
+  4. `backend.md`
+  5. `frontend.md`
+  6. `testing.md`
+  7. `checklist.md`
+  8. `audit_report.md`
