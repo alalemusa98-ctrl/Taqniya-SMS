@@ -23,7 +23,7 @@
 
 1. **الخطوة 1: إدارة جدول الحصص الأسبوعي وحظر التعارضات (`timetable_slots`):** [6 مسارات]
    - **استعراض وتصفية وبحث سجلات جدول الحصص العام بالترقيم والفلترة:** `GET /api/v1/timetable-slots`.
-   - **استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة:** `GET /api/v1/sections/:section_id/timetable`.
+   - **استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة:** `GET /api/v1/class-sections/:class_section_id/timetable`.
    - **استعراض جدول الحصص الأسبوعي لمعلم محدد:** `GET /api/v1/teachers/:teacher_id/timetable`.
    - **استعراض مصفوفة جدول الحصص المجمع لكافة شعب الصف الدراسي:** `GET /api/v1/classes/:class_id/timetable`.
    - **تسكين وتعديل حصة بالجدول الأسبوعي (Combined POST & PUT):** `POST` & `PUT /api/v1/timetable-slots`.

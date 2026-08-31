@@ -13,7 +13,7 @@
 ### 🟢 ما تشمله المرحلة (In-Scope):
 - **إدارة سجل وجدول الحصص الأسبوعي (`timetable_slots`) — [6 مسارات]:**
   - استعراض وتصفية جدول الحصص العام بالترقيم والفلترة (`GET /api/v1/timetable-slots`).
-  - استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة (`GET /api/v1/sections/:section_id/timetable`).
+  - استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة (`GET /api/v1/class-sections/:class_section_id/timetable`).
   - استعراض جدول الحصص الأسبوعي لمعلم محدد (`GET /api/v1/teachers/:teacher_id/timetable`).
   - استعراض مصفوفة جدول الحصص المجمع لكافة شعب الصف الدراسي (`GET /api/v1/classes/:class_id/timetable`).
   - تسكين وتعديل حصة بالجدول الأسبوعي مع الفحص الذري لحظر التعارضات (`POST & PUT /api/v1/timetable-slots`).
@@ -42,7 +42,7 @@
   - يمتلك صلاحية استعراض جدول حصصه الخاص (`GET /api/v1/teachers/:teacher_id/timetable` حيث `teacher_id = auth.teacher.id`) واستعراض جداول الشعب التي يدرسها.
   - يُحظر عليه تسكين أو تعديل أو حذف أي حصة في الجدول (`403 Forbidden`).
 - **الطالب (Student) وولي الأمر (Parent):**
-  - يمتلك الطالب وولي أمره صلاحية القراءة فقط لجدول الشعبة المسكن بها الطالب (`GET /api/v1/sections/:section_id/timetable`).
+  - يمتلك الطالب وولي أمره صلاحية القراءة فقط لجدول الشعبة المسكن بها الطالب (`GET /api/v1/class-sections/:class_section_id/timetable`).
   - يُحظر عليهم تعديل أو حذف أي حصة (`403 Forbidden`).
 - **المستخدم غير المصادق عليه (Unauthenticated):**
   - أي طلب يفتقر إلى توكن `Bearer JWT` صالح ونشط يُرفض برمز `401 Unauthorized`.
@@ -84,7 +84,7 @@ stateDiagram-v2
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
 | :-: | :--- | :--- | :--- | :---: | :--- |
 | **1.1** | استعراض وتصفية سجلات الجدول الأسبوعي | `GET /api/v1/timetable-slots` | `admin` | `200 OK` | [في routes.md](./routes.md) |
-| **1.2** | استعراض مصفوفة جدول الحصص لشعبة محددة | `GET /api/v1/sections/:section_id/timetable` | `admin` / `teacher` / `student` / `parent` | `200 OK` | [في routes.md](./routes.md) |
+| **1.2** | استعراض مصفوفة جدول الحصص لشعبة محددة | `GET /api/v1/class-sections/:class_section_id/timetable` | `admin` / `teacher` / `student` / `parent` | `200 OK` | [في routes.md](./routes.md) |
 | **1.3** | استعراض جدول الحصص الأسبوعي لمعلم محدد | `GET /api/v1/teachers/:teacher_id/timetable` | `admin` / `teacher (own)` | `200 OK` | [في routes.md](./routes.md) |
 | **1.4** | استعراض مصفوفة جدول الحصص لكافة شعب الصف | `GET /api/v1/classes/:class_id/timetable` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 | **1.5** | تسكين وتعديل حصة بالجدول الأسبوعي | `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` | `admin` | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
@@ -93,11 +93,11 @@ stateDiagram-v2
 ---
 
 #### 🔹 [Operation 1.1] `GET /api/v1/timetable-slots` — استعراض وتصفية سجلات الجدول الأسبوعي
-- **الغرض والوظيفة:** استرجاع قائمة سجلات جدول الحصص الأسبوعية مع دعم الفلترة بالشعبة، المعلم، المادة، اليوم، الحصة والترتيب والترقيم.
+- **الغرض والوظيفة:** استرجاع مصفوفة سجلات جدول الحصص الأسبوعية مجمعة هرمياً بالصفوف والشعب والأيام والحصص (`classes -> sections -> days -> slots`) بدون تكرار للبيانات؛ حيث يتيح فلتر الصف (`class_id`) جلب جدول كافة شُعب الصف المحدد، مع دعم الفلترة بالشعبة، المعلم، المادة، اليوم، والبحث.
 - **عقد الاستجابات والمعاملات (Network SSoT):**
   - معاملات الاستعلام وهياكل الـ JSON الصريحة لـ (`200 OK`) موثقة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 1.2] `GET /api/v1/sections/:section_id/timetable` — استعراض مصفوفة جدول الحصص لشعبة محددة
+#### 🔹 [Operation 1.2] `GET /api/v1/class-sections/:class_section_id/timetable` — استعراض مصفوفة جدول الحصص لشعبة محددة
 - **الغرض والوظيفة:** جلب مصفوفة الجدول الأسبوعي الكاملة لشعبة معينة مقسمة بأيام الأسبوع.
 - **عقد الاستجابات والمعاملات (Network SSoT):**
   - استجابات (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).

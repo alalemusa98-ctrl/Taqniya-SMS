@@ -27,7 +27,7 @@
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
 | **1** | `timetable_slots` | `GET` | `/api/v1/timetable-slots` | `admin` | استعراض وتصفية وبحث جدول الحصص الأسبوعي بالترقيم والفلترة |
-| **2** | `timetable_slots` | `GET` | `/api/v1/sections/:section_id/timetable` | `admin` / `teacher` / `student` / `parent` | استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة |
+| **2** | `timetable_slots` | `GET` | `/api/v1/class-sections/:class_section_id/timetable` | `admin` / `teacher` / `student` / `parent` | استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة |
 | **3** | `timetable_slots` | `GET` | `/api/v1/teachers/:teacher_id/timetable` | `admin` / `teacher (own)` | استعراض جدول الحصص الأسبوعي لمعلم محدد |
 | **4** | `timetable_slots` | `GET` | `/api/v1/classes/:class_id/timetable` | `admin` | استعراض مصفوفة جدول الحصص المجمع لكافة شعب الصف الدراسي |
 | **5** | `timetable_slots` | `POST` | `/api/v1/timetable-slots` | `admin` | تسكين وإدراج حصة جديدة بالجدول الأسبوعي (مع فحص التضارب) |
@@ -66,12 +66,13 @@
 
 ### 1.1 `GET /api/v1/timetable-slots` — استعراض وتصفية سجلات الجدول الأسبوعي
 
-> **الوصف الوظيفي:** استرجاع قائمة سجلات جدول الحصص الأسبوعية مع دعم الفلترة بالشعبة، المعلم، المادة، اليوم، الحصة والترتيب والترقيم.
+> **الوصف الوظيفي:** استرجاع مصفوفة سجلات جدول الحصص الأسبوعية مجمعة هرمياً (`classes -> sections -> days -> slots`)؛ حيث يتيح تحديد معامل الصف الدراسي (`class_id`) جلب واستعراض جدول الحصص الأسبوعي الشامل لكافة الشُعب التابعة لذلك الصف في استجابة واحدة منظمة، مع دعم الفلترة بالشعبة المحددة، المعلم، المادة، اليوم، والبحث.
 
 - **Query Parameters:**
   - `search` (optional, string): البحث النصي باسم المادة أو المعلم أو الشعبة.
   - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي (افتراضياً العام النشط).
-  - `class_section_id` (optional, bigint): تصفية حسب الشعبة الدراسية.
+  - `class_id` (optional, bigint): تصفية حسب الصف الدراسي لجلب جدول كافة شُعبه.
+  - `class_section_id` (optional, bigint): تصفية حسب الشعبة الدراسية المحددة.
   - `teacher_id` (optional, bigint): تصفية الحصص الموكلة لمعلم محدد.
   - `subject_id` (optional, bigint): تصفية حسب المادة التعليمية.
   - `day_of_week` (optional, string, enum: `saturday`, `sunday`, `monday`, `tuesday`, `wednesday`, `thursday`): تصفية حسب اليوم.
@@ -80,58 +81,99 @@
   - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
   - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
   - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
-- **Example Request URL:** `/api/v1/timetable-slots?class_section_id=5&day_of_week=sunday&sort_by=period_slot_id&sort_order=asc`
+- **Example Request URL:** `/api/v1/timetable-slots?class_id=5&day_of_week=sunday&sort_by=period_slot_id&sort_order=asc`
 
 #### استجابات هذا الرابط (Responses):
 
-##### ✅ `200 OK` (نجاح جلب القائمة):
+##### ✅ `200 OK` (نجاح جلب مصفوفة الجدول الأسبوعي الهرمية):
 ```json
 {
   "success": true,
   "message": "تم جلب مصفوفة الجدول الأسبوعي بنجاح.",
-  "data": [
-    {
-      "id": 1,
-      "academic_year_id": 1,
-      "class_section_id": 5,
-      "class_name": "الصف الخامس",
-      "section_name": "شعبة أ",
-      "day_of_week": "sunday",
-      "day_of_week_ar": "الأحد",
-      "period_slot_id": 1,
-      "period_name": "الحصة الأولى",
-      "start_time": "08:00:00",
-      "end_time": "08:45:00",
-      "teaching_assignment_id": 10,
-      "subject_name": "الرياضيات",
-      "teacher_id": 3,
-      "teacher_name": "أحمد عبد السلام",
-      "created_at": "2026-08-29T10:00:00Z"
-    },
-    {
-      "id": 2,
-      "academic_year_id": 1,
-      "class_section_id": 5,
-      "class_name": "الصف الخامس",
-      "section_name": "شعبة أ",
-      "day_of_week": "sunday",
-      "day_of_week_ar": "الأحد",
-      "period_slot_id": 2,
-      "period_name": "الحصة الثانية",
-      "start_time": "08:45:00",
-      "end_time": "09:30:00",
-      "teaching_assignment_id": 12,
-      "subject_name": "اللغة العربية",
-      "teacher_id": 4,
-      "teacher_name": "سالم خليفة",
-      "created_at": "2026-08-29T10:05:00Z"
-    }
-  ],
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 2,
-    "last_page": 1
+  "data": {
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "classes": [
+      {
+        "class_id": 5,
+        "class_name": "الصف الخامس",
+        "grade_level": 5,
+        "sections": [
+          {
+            "class_section_id": 5,
+            "section_name": "شعبة أ",
+            "days": [
+              {
+                "day_of_week": "sunday",
+                "day_of_week_ar": "الأحد",
+                "slots": [
+                  {
+                    "id": 1,
+                    "period_slot_id": 1,
+                    "period_name": "الحصة الأولى",
+                    "subject_name": "الرياضيات",
+                    "teacher_name": "أحمد عبد السلام"
+                  },
+                  {
+                    "id": 2,
+                    "period_slot_id": 2,
+                    "period_name": "الحصة الثانية",
+                    "subject_name": "اللغة العربية",
+                    "teacher_name": "سالم خليفة"
+                  }
+                ]
+              },
+              {
+                "day_of_week": "monday",
+                "day_of_week_ar": "الإثنين",
+                "slots": [
+                  {
+                    "id": 3,
+                    "period_slot_id": 1,
+                    "period_name": "الحصة الأولى",
+                    "subject_name": "العلوم",
+                    "teacher_name": "منى الهوني"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "class_id": 9,
+        "class_name": "الصف التاسع",
+        "grade_level": 9,
+        "sections": [
+          {
+            "class_section_id": 12,
+            "section_name": "شعبة أ",
+            "days": [
+              {
+                "day_of_week": "sunday",
+                "day_of_week_ar": "الأحد",
+                "slots": [
+                  {
+                    "id": 4,
+                    "period_slot_id": 1,
+                    "period_name": "الحصة الأولى",
+                    "subject_name": "اللغة الإنجليزية",
+                    "teacher_name": "فاطمة الزهراء"
+                  },
+                  {
+                    "id": 5,
+                    "period_slot_id": 2,
+                    "period_name": "الحصة الثانية",
+                    "subject_name": "التاريخ",
+                    "teacher_name": "عمر المختار التاورغي"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -141,12 +183,10 @@
 {
   "success": true,
   "message": "لا توجد حصص مسجلة تطابق محددات البحث.",
-  "data": [],
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 0,
-    "last_page": 1
+  "data": {
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "classes": []
   }
 }
 ```
@@ -155,7 +195,7 @@
 
 ---
 
-### 1.2 `GET /api/v1/sections/:section_id/timetable` — استعراض مصفوفة الجدول الأسبوعي لشعبة محددة
+### 1.2 `GET /api/v1/class-sections/:class_section_id/timetable` — استعراض مصفوفة الجدول الأسبوعي لشعبة محددة
 
 > **الوصف الوظيفي:** استرجاع جدول الحصص الأسبوعي الكامل لشعبة محددة مقسماً بحسب أيام الأسبوع والفترات الزمنية.
 
@@ -178,16 +218,60 @@
           {
             "period_slot_id": 1,
             "period_name": "الحصة الأولى",
-            "start_time": "08:00:00",
-            "end_time": "08:45:00",
             "subject_name": "الرياضيات",
             "teacher_name": "أحمد عبد السلام"
           },
           {
             "period_slot_id": 2,
             "period_name": "الحصة الثانية",
-            "start_time": "08:45:00",
-            "end_time": "09:30:00",
+            "subject_name": "اللغة العربية",
+            "teacher_name": "سالم خليفة"
+          },
+          {
+            "period_slot_id": 3,
+            "period_name": "الحصة الثالثة",
+            "subject_name": "التربية الإسلامية",
+            "teacher_name": "عمر المختار التاورغي"
+          }
+        ]
+      },
+      {
+        "day_of_week": "monday",
+        "day_of_week_ar": "الإثنين",
+        "slots": [
+          {
+            "period_slot_id": 1,
+            "period_name": "الحصة الأولى",
+            "subject_name": "العلوم",
+            "teacher_name": "منى الهوني"
+          },
+          {
+            "period_slot_id": 2,
+            "period_name": "الحصة الثانية",
+            "subject_name": "اللغة الإنجليزية",
+            "teacher_name": "فاطمة الزهراء"
+          },
+          {
+            "period_slot_id": 4,
+            "period_name": "الحصة الرابعة",
+            "subject_name": "الرياضيات",
+            "teacher_name": "أحمد عبد السلام"
+          }
+        ]
+      },
+      {
+        "day_of_week": "tuesday",
+        "day_of_week_ar": "الثلاثاء",
+        "slots": [
+          {
+            "period_slot_id": 1,
+            "period_name": "الحصة الأولى",
+            "subject_name": "التاريخ والجغرافيا",
+            "teacher_name": "علي مصطفى الورفلي"
+          },
+          {
+            "period_slot_id": 2,
+            "period_name": "الحصة الثانية",
             "subject_name": "اللغة العربية",
             "teacher_name": "سالم خليفة"
           }
@@ -234,6 +318,53 @@
             "period_name": "الحصة الأولى",
             "class_name": "الصف الخامس",
             "section_name": "شعبة أ",
+            "subject_name": "الرياضيات"
+          },
+          {
+            "period_slot_id": 2,
+            "period_name": "الحصة الثانية",
+            "class_name": "الصف الخامس",
+            "section_name": "شعبة ب",
+            "subject_name": "الرياضيات"
+          }
+        ]
+      },
+      {
+        "day_of_week": "monday",
+        "day_of_week_ar": "الإثنين",
+        "slots": [
+          {
+            "period_slot_id": 1,
+            "period_name": "الحصة الأولى",
+            "class_name": "الصف السادس",
+            "section_name": "شعبة أ",
+            "subject_name": "الرياضيات"
+          },
+          {
+            "period_slot_id": 3,
+            "period_name": "الحصة الثالثة",
+            "class_name": "الصف التاسع",
+            "section_name": "شعبة أ",
+            "subject_name": "الرياضيات"
+          }
+        ]
+      },
+      {
+        "day_of_week": "tuesday",
+        "day_of_week_ar": "الثلاثاء",
+        "slots": [
+          {
+            "period_slot_id": 2,
+            "period_name": "الحصة الثانية",
+            "class_name": "الصف الخامس",
+            "section_name": "شعبة أ",
+            "subject_name": "الرياضيات"
+          },
+          {
+            "period_slot_id": 4,
+            "period_name": "الحصة الرابعة",
+            "class_name": "الصف السادس",
+            "section_name": "شعبة ب",
             "subject_name": "الرياضيات"
           }
         ]
@@ -283,8 +414,6 @@
           {
             "period_slot_id": 1,
             "period_name": "الحصة الأولى",
-            "start_time": "08:00:00",
-            "end_time": "08:45:00",
             "subject_name": "الرياضيات",
             "teacher_id": 1,
             "teacher_name": "أحمد محمود سالم"
@@ -292,8 +421,6 @@
           {
             "period_slot_id": 2,
             "period_name": "الحصة الثانية",
-            "start_time": "08:45:00",
-            "end_time": "09:30:00",
             "subject_name": "الرياضيات",
             "teacher_id": 1,
             "teacher_name": "أحمد محمود سالم"
@@ -301,8 +428,6 @@
           {
             "period_slot_id": 3,
             "period_name": "الحصة الثالثة",
-            "start_time": "09:45:00",
-            "end_time": "10:30:00",
             "subject_name": "العلوم",
             "teacher_id": 2,
             "teacher_name": "خالد عبد السلام"
@@ -316,8 +441,6 @@
           {
             "period_slot_id": 1,
             "period_name": "الحصة الأولى",
-            "start_time": "08:00:00",
-            "end_time": "08:45:00",
             "subject_name": "العلوم",
             "teacher_id": 2,
             "teacher_name": "خالد عبد السلام"
@@ -325,8 +448,6 @@
           {
             "period_slot_id": 2,
             "period_name": "الحصة الثانية",
-            "start_time": "08:45:00",
-            "end_time": "09:30:00",
             "subject_name": "اللغة العربية",
             "teacher_id": 3,
             "teacher_name": "علي مصطفى الورفلي"
