@@ -240,7 +240,6 @@
   {
     "academic_year_id": 1,
     "student_id": 3,
-    "class_id": 5,
     "class_section_id": 5,
     "seating_number": "SEAT-5003",
     "status": "enrolled"
@@ -310,7 +309,7 @@
   "message": "بيانات التسكين غير صالحة.",
   "errors": {
     "student_id": ["الطالب المحدد غير موجود أو غير نشط."],
-    "class_section_id": ["الشعبة المحددة غير تابعة للصف المختار."]
+    "class_section_id": ["الشعبة المحددة غير صالحة أو غير موجودة."]
   }
 }
 ```
@@ -327,7 +326,6 @@
   ```json
   {
     "academic_year_id": 1,
-    "class_id": 5,
     "class_section_id": 5,
     "student_ids": [4, 5, 6]
   }
@@ -343,6 +341,7 @@
   "data": {
     "enrolled_count": 3,
     "class_id": 5,
+    "class_name": "الصف الخامس",
     "class_section_id": 5,
     "academic_year_id": 1
   }

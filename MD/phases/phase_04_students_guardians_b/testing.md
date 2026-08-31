@@ -24,7 +24,7 @@
 | `TC-ENR-02` | **Integration** | تصفية كشف التسكين لصف دراسي محدد | `GET /api/v1/student-enrollments?class_id=5` | `200 OK` بهيكل الصف الخامس وشعبه وطلابه فقط. |
 | `TC-ENR-03` | **Integration** | البحث النصي باسم الطالب أو كوده الموحد أو رقم الجلوس | `GET /api/v1/student-enrollments?search=STU-3001` | `200 OK` ومطابقة السجل المطلوب. |
 | `TC-ENR-04` | **Integration** | استرجاع السجل التسكيني التاريخي لطالب محدد عبر الأعوام | `GET /api/v1/students/1/enrollments` | `200 OK` وقائمة تدرج الطالب الأكاديمي. |
-| `TC-ENR-05` | **Unit / Validation** | **تسكين طالب بنجاح:** إنشاء تسكين فردي لطالب غير مسكن بالعام | `year: 1, student: 3, class: 5, section: 5, seating: 'SEAT-5003'` | `201 Created` واشتقاق `grade_level` وحفظ السجل. |
+| `TC-ENR-05` | **Unit / Validation** | **تسكين طالب بنجاح:** إنشاء تسكين فردي لطالب غير مسكن بالعام | `year: 1, student: 3, section: 5, seating: 'SEAT-5003'` | `201 Created` واشتقاق `grade_level` وحفظ السجل. |
 | `TC-ENR-06` | **Conflict / Invariant** | **قيد التسكين السنوي الفريد (uq_student_year_enrollment):** منع تكرار تسكين الطالب بالعام | محاولة تسكين طالب مسكن مسبقاً بنفس العام الدراسي | `409 Conflict` (`uq_student_year_enrollment`). |
 | `TC-ENR-07` | **Validation** | رفض تسكين طالب غير موجود أو شعبة غير تابعة للصف | `student_id: 99999` | `422 Unprocessable Entity`. |
 | `TC-ENR-08` | **Integration** | **تعديل ونقل تسكين الطالب بنجاح:** نقل الطالب لشعبة أخرى بنفس الصف أو تعديل رقم الجلوس | `PUT /api/v1/student-enrollments/3` مع `class_section_id: 6` | `200 OK` وتحديث الشعبة ورقم الجلوس. |
