@@ -1,6 +1,6 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 06 (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 6 كاملة لإدارة ونشر ومتابعة الواجبات المدرسية والتكاليف المنزلية والمرفقات مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، مع دمج وتوحيد مواصفات الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح والرشاقة ومنع التكرار، وتزويد مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) مع الترقيم القياسي (`Pagination Meta`).  
+> **الهدف:** توثيق المسارات الـ 4 الأساسية والمركزية لإدارة ونشر ومتابعة الواجبات المدرسية والتكاليف المنزلية والمرفقات مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، مع دمج وتوحيد مواصفات الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح والرشاقة ومنع التكرار، وتزويد مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) محصورة بالترقيم القياسي (`Pagination Meta`) والفصل الدراسي النشط لحماية أداء الخادم وقاعدة البيانات.  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
@@ -22,22 +22,19 @@
   Accept-Language: ar
   ```
 
-### 📋 مصفوفة المسارات الـ 6 الموحدة (Master Route Matrix):
+### 📋 مصفوفة المسارات الـ 4 الموحدة (Master Route Matrix):
 
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
-| **1** | `assignments` | `GET` | `/api/v1/assignments` | `admin` / `teacher` | استعراض وتصفية وبحث قائمة الواجبات المدرسية بالترقيم والفلترة |
+| **1** | `assignments` | `GET` | `/api/v1/assignments` | `admin` / `teacher` / `student` / `parent` | استعراض وتصفية وبحث قائمة الواجبات المدرسية بالترقيم والفلترة المحصورة |
 | **2** | `assignments` | `GET` | `/api/v1/assignments/:id` | `admin` / `teacher` / `student` / `parent` | استعراض التفاصيل الكاملة والمرفقات لواجب مدرسي محدد |
-| **3** | `assignments` | `GET` | `/api/v1/class-sections/:class_section_id/assignments` | `admin` / `teacher` / `student` / `parent` | استعراض كراس واجبات شعبة دراسية محددة في الفصل الدراسي |
-| **4** | `assignments` | `GET` | `/api/v1/classes/:class_id/assignments` | `admin` / `teacher` | استعراض كراس واجبات صف دراسي كامل بكافة شعبه |
-| **5** | `assignments` | `GET` | `/api/v1/teachers/:teacher_id/assignments` | `admin` / `teacher (own)` | استعراض الواجبات والتكاليف الصادرة عن معلم محدد |
-| **6** | `assignments` | `POST` | `/api/v1/assignments` | `admin` / `teacher` | إنشاء ونشر واجب مدرسي جديد مع المرفقات وتاريخ الاستحقاق |
-| **7** | `assignments` | `PUT` | `/api/v1/assignments/:id` | `admin` / `teacher (creator/assigned)` | تعديل وتحديث بيانات ومرفقات وموعد استحقاق واجب مدرسي |
-| **8** | `assignments` | `DELETE` | `/api/v1/assignments/:id` | `admin` / `teacher (creator/assigned)` | حذف وإلغاء واجب مدرسي من المنظومة (Soft Delete) |
+| **3** | `assignments` | `POST` | `/api/v1/assignments` | `admin` / `teacher` | إنشاء ونشر واجب مدرسي جديد مع المرفقات وتاريخ الاستحقاق |
+| **4** | `assignments` | `PUT` | `/api/v1/assignments/:id` | `admin` / `teacher (creator/assigned)` | تعديل وتحديث بيانات ومرفقات وموعد استحقاق واجب مدرسي |
+| **5** | `assignments` | `DELETE` | `/api/v1/assignments/:id` | `admin` / `teacher (creator/assigned)` | حذف وإلغاء واجب مدرسي من المنظومة (Soft Delete) |
 
 ### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
 
-> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 6** بالمرحلة:
+> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API** بالمرحلة:
 
 ```json
 // 401 Unauthorized (غياب أو تلف التوكن)
@@ -65,24 +62,26 @@
 
 ---
 
-### 1.1 `GET /api/v1/assignments` — عرض وتصفية قائمة الواجبات المدرسية
+### 1.1 `GET /api/v1/assignments` — عرض وتصفية قائمة الواجبات المدرسية بالترقيم والفلترة
 
-> **الوصف الوظيفي:** استرجاع قائمة الواجبات المدرسية المسجلة بالمنظومة مع دعم الفلترة بالصف الدراسي `class_id` والشعبة والسمستر والمادة والمعلم وتاريخ الاستحقاق والبحث والترقيم.
+> **الوصف الوظيفي:** استرجاع قائمة الواجبات المدرسية بالترقيم المحصور والفرز والبحث، مع دعم الفلترة الدقيقة بالصف الدراسي `class_id` والشعبة `class_section_id` والمعلم `teacher_id` والمادة `subject_id` وحالة الاستحقاق `status`، مع حصر الاستعلام افتراضياً بالفصل الدراسي النشط لضمان السرعة الفائقة.
 
 - **Query Parameters:**
   - `search` (optional, string): البحث النصي بعنوان الواجب أو وصف التكليف.
   - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي (افتراضياً العام النشط).
-  - `academic_term_id` (optional, bigint): تصفية حسب الفصل الدراسي / السمستر.
+  - `academic_term_id` (optional, bigint): تصفية حسب الفصل الدراسي / السمستر (افتراضياً السمستر النشط).
   - `class_id` (optional, bigint): تصفية الواجبات حسب الصف الدراسي (لكافة شُعبه).
   - `class_section_id` (optional, bigint): تصفية حسب الشعبة الدراسية المحددة.
-  - `teaching_assignment_id` (optional, bigint): تصفية حسب إسناد تدريس محدد.
   - `teacher_id` (optional, bigint): تصفية الواجبات الصادرة عن معلم محدد.
+  - `subject_id` (optional, bigint): تصفية حسب المادة التعليمية.
+  - `teaching_assignment_id` (optional, bigint): تصفية حسب إسناد تدريس محدد (مادة + شعبة + معلم).
+  - `status` (optional, string, enum: `active`, `expired`, `all`, default `active`): تصفية الواجبات السارية أو المنتهية.
   - `due_date` (optional, date): تصفية الواجبات المستحقة في تاريخ محدد (`YYYY-MM-DD`).
-  - `sort_by` (optional, string, enum: `id`, `assigned_date`, `due_date`, default `id`): حقل الترتيب.
-  - `sort_order` (optional, string, enum: `asc`, `desc`, default `desc`): اتجاه الفرز.
+  - `sort_by` (optional, string, enum: `id`, `assigned_date`, `due_date`, default `due_date`): حقل الترتيب.
+  - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
   - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
-  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
-- **Example Request URL:** `/api/v1/assignments?class_id=5&academic_term_id=1&sort_by=due_date&sort_order=asc`
+  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة (بحد أقصى `50`).
+- **Example Request URL:** `/api/v1/assignments?class_id=5&status=active&sort_by=due_date&sort_order=asc&page=1&per_page=15`
 
 #### استجابات هذا الرابط (Responses):
 
@@ -166,6 +165,12 @@
         ]
       }
     ]
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 4,
+    "last_page": 1
   }
 }
 ```
@@ -181,6 +186,12 @@
     "academic_term_id": 1,
     "academic_term_name": "الفصل الدراسي الأول",
     "classes": []
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 0,
+    "last_page": 1
   }
 }
 ```
@@ -191,7 +202,7 @@
 
 ### 1.2 `GET /api/v1/assignments/:id` — عرض تفاصيل واجب مدرسي محدد
 
-> **الوصف الوظيفي:** استرجاع البيانات التفصيلية والمرفقات الكاملة لواجب مدرسي محدد.
+> **الوصف الوظيفي:** استرجاع البيانات التفصيلية والمرفقات الكاملة والتعليمات لواجب مدرسي محدد.
 
 #### استجابات هذا الرابط (Responses):
 
@@ -210,12 +221,14 @@
     "class_section_id": 5,
     "section_name": "شعبة أ",
     "teaching_assignment_id": 10,
+    "subject_id": 1,
     "subject_name": "الرياضيات",
+    "teacher_id": 3,
     "teacher_name": "أحمد عبد السلام",
     "created_by_user_id": 3,
     "created_by_name": "أحمد عبد السلام",
     "title": "حل تمارين ص 45 - الجبر",
-    "description": "يرجى حل التمارين من السؤال 1 إلى 5 في كراسة الواجب المنزلية.",
+    "description": "يرجى حل التمارين من السؤال 1 إلى 5 في كراسة الواجب المنزلية ومراجعة أمثلة الدرس.",
     "attachments": [
       {
         "file_name": "exercise_page_45.pdf",
@@ -226,6 +239,7 @@
     ],
     "assigned_date": "2026-09-10",
     "due_date": "2026-09-15",
+    "status": "active",
     "created_at": "2026-09-10T08:00:00Z",
     "updated_at": "2026-09-10T08:00:00Z"
   }
@@ -244,230 +258,7 @@
 
 ---
 
-### 1.3 `GET /api/v1/class-sections/:class_section_id/assignments` — عرض جميع واجبات شعبة محددة
-
-> **الوصف الوظيفي:** استرجاع كراس ومستجدات الواجبات الخاصة بشعبة دراسية محددة في الفصل الدراسي النشط لعرضها للطلاب والمعلمين وأولياء الأمور.
-
-#### استجابات هذا الرابط (Responses):
-
-##### ✅ `200 OK`:
-```json
-{
-  "success": true,
-  "message": "تم جلب واجبات الشعبة الدراسية بنجاح.",
-  "data": {
-    "class_section_id": 5,
-    "class_name": "الصف الخامس",
-    "section_name": "شعبة أ",
-    "total_assignments": 3,
-    "assignments": [
-      {
-        "id": 1,
-        "subject_name": "الرياضيات",
-        "teacher_name": "أحمد عبد السلام",
-        "title": "حل تمارين ص 45 - الجبر",
-        "attachments_count": 1,
-        "assigned_date": "2026-09-10",
-        "due_date": "2026-09-15"
-      },
-      {
-        "id": 2,
-        "subject_name": "اللغة العربية",
-        "teacher_name": "سالم خليفة",
-        "title": "قراءة ونقل نص الإعراب ص 12",
-        "attachments_count": 0,
-        "assigned_date": "2026-09-11",
-        "due_date": "2026-09-16"
-      },
-      {
-        "id": 3,
-        "subject_name": "العلوم العامة",
-        "teacher_name": "منى الهوني",
-        "title": "رسم مخطط الخلية النباتية والحيوانية",
-        "attachments_count": 1,
-        "assigned_date": "2026-09-12",
-        "due_date": "2026-09-17"
-      }
-    ]
-  }
-}
-```
-
-##### 🔍 `404 Not Found`:
-```json
-{
-  "success": false,
-  "message": "الشعبة الدراسية غير موجودة."
-}
-```
-
-> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
-
----
-
-### 1.4 `GET /api/v1/classes/:class_id/assignments` — عرض واجبات صف دراسي كامل
-
-> **الوصف الوظيفي:** استرجاع كافة الواجبات والتكاليف المسجلة لصف دراسي محدد (لكافة الشُعب) في الفصل الدراسي النشط.
-
-#### استجابات هذا الرابط (Responses):
-
-##### ✅ `200 OK`:
-```json
-{
-  "success": true,
-  "message": "تم جلب واجبات الصف الدراسي بنجاح.",
-  "data": {
-    "class_id": 5,
-    "class_name": "الصف الخامس",
-    "grade_level": 5,
-    "total_assignments": 3,
-    "sections": [
-      {
-        "class_section_id": 5,
-        "section_name": "شعبة أ",
-        "assignments": [
-          {
-            "id": 1,
-            "subject_name": "الرياضيات",
-            "teacher_name": "أحمد عبد السلام",
-            "title": "حل تمارين ص 45 - الجبر",
-            "attachments_count": 1,
-            "assigned_date": "2026-09-10",
-            "due_date": "2026-09-15"
-          },
-          {
-            "id": 2,
-            "subject_name": "اللغة العربية",
-            "teacher_name": "سالم خليفة",
-            "title": "قراءة ونقل نص الإعراب ص 12",
-            "attachments_count": 0,
-            "assigned_date": "2026-09-11",
-            "due_date": "2026-09-16"
-          }
-        ]
-      },
-      {
-        "class_section_id": 6,
-        "section_name": "شعبة ب",
-        "assignments": [
-          {
-            "id": 4,
-            "subject_name": "العلوم العامة",
-            "teacher_name": "منى الهوني",
-            "title": "رسم مخطط الخلية النباتية",
-            "attachments_count": 1,
-            "assigned_date": "2026-09-12",
-            "due_date": "2026-09-17"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-##### 🔍 `404 Not Found`:
-```json
-{
-  "success": false,
-  "message": "الصف الدراسي غير موجود."
-}
-```
-
-> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
-
----
-
-### 1.5 `GET /api/v1/teachers/:teacher_id/assignments` — عرض الواجبات المنشأة بواسطة معلم محدد
-
-> **الوصف الوظيفي:** استرجاع جميع الواجبات والتكاليف الصادرة عن معلم محدد عبر مختلف الشعب والصفوف التي يدرسها.
-
-#### استجابات هذا الرابط (Responses):
-
-##### ✅ `200 OK`:
-```json
-{
-  "success": true,
-  "message": "تم جلب واجبات المعلم بنجاح.",
-  "data": {
-    "teacher_id": 3,
-    "teacher_name": "أحمد عبد السلام",
-    "total_assignments": 3,
-    "classes": [
-      {
-        "class_id": 5,
-        "class_name": "الصف الخامس",
-        "grade_level": 5,
-        "sections": [
-          {
-            "class_section_id": 5,
-            "section_name": "شعبة أ",
-            "assignments": [
-              {
-                "id": 1,
-                "subject_name": "الرياضيات",
-                "title": "حل تمارين ص 45 - الجبر",
-                "attachments_count": 1,
-                "assigned_date": "2026-09-10",
-                "due_date": "2026-09-15"
-              }
-            ]
-          },
-          {
-            "class_section_id": 6,
-            "section_name": "شعبة ب",
-            "assignments": [
-              {
-                "id": 4,
-                "subject_name": "الرياضيات",
-                "title": "حل تمارين ص 45 و 46 - الجبر",
-                "attachments_count": 0,
-                "assigned_date": "2026-09-10",
-                "due_date": "2026-09-15"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "class_id": 9,
-        "class_name": "الصف التاسع",
-        "grade_level": 9,
-        "sections": [
-          {
-            "class_section_id": 12,
-            "section_name": "شعبة أ",
-            "assignments": [
-              {
-                "id": 8,
-                "subject_name": "الهندسة والقياس",
-                "title": "رسم وحساب مساحة المثلث المتساوي الساقين",
-                "attachments_count": 1,
-                "assigned_date": "2026-09-12",
-                "due_date": "2026-09-18"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-##### 🔍 `404 Not Found`:
-```json
-{
-  "success": false,
-  "message": "المعلم غير موجود."
-}
-```
-
-> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
-
----
-
-### 1.6 `POST /api/v1/assignments` & `PUT /api/v1/assignments/:id` — إنشاء وتعديل واجب مدرسي (Combined Specification)
+### 1.3 `POST /api/v1/assignments` & `PUT /api/v1/assignments/:id` — إنشاء وتعديل واجب مدرسي (Combined Specification)
 
 > **الوصف الوظيفي:**
 > * **في الإنشاء (`POST`):** إنشاء ونشر واجب مدرسي جديد وتحديد تفاصيله ومرفقاته وتاريخ التكليف والاستحقاق، مع التحقق من أن المعلم مسند له تدريس الشعبة والمادة.
@@ -582,7 +373,7 @@
 
 ---
 
-### 1.7 `DELETE /api/v1/assignments/:id` — حذف واجب مدرسي من المنظومة
+### 1.4 `DELETE /api/v1/assignments/:id` — حذف واجب مدرسي من المنظومة
 
 > **الوصف الوظيفي:** حذف وإلغاء الواجب المدرسي منطقياً (Soft Delete) مع توثيق العملية في سجل التدقيق `audit_logs`.
 
