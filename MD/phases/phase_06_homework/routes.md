@@ -393,36 +393,62 @@
     "teacher_id": 3,
     "teacher_name": "أحمد عبد السلام",
     "total_assignments": 3,
-    "assignments": [
+    "classes": [
       {
-        "id": 1,
-        "class_section_id": 5,
+        "class_id": 5,
         "class_name": "الصف الخامس",
-        "section_name": "شعبة أ",
-        "subject_name": "الرياضيات",
-        "title": "حل تمارين ص 45 - الجبر",
-        "assigned_date": "2026-09-10",
-        "due_date": "2026-09-15"
+        "grade_level": 5,
+        "sections": [
+          {
+            "class_section_id": 5,
+            "section_name": "شعبة أ",
+            "assignments": [
+              {
+                "id": 1,
+                "subject_name": "الرياضيات",
+                "title": "حل تمارين ص 45 - الجبر",
+                "attachments_count": 1,
+                "assigned_date": "2026-09-10",
+                "due_date": "2026-09-15"
+              }
+            ]
+          },
+          {
+            "class_section_id": 6,
+            "section_name": "شعبة ب",
+            "assignments": [
+              {
+                "id": 4,
+                "subject_name": "الرياضيات",
+                "title": "حل تمارين ص 45 و 46 - الجبر",
+                "attachments_count": 0,
+                "assigned_date": "2026-09-10",
+                "due_date": "2026-09-15"
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": 4,
-        "class_section_id": 6,
-        "class_name": "الصف الخامس",
-        "section_name": "شعبة ب",
-        "subject_name": "الرياضيات",
-        "title": "حل تمارين ص 45 و 46 - الجبر",
-        "assigned_date": "2026-09-10",
-        "due_date": "2026-09-15"
-      },
-      {
-        "id": 8,
-        "class_section_id": 12,
+        "class_id": 9,
         "class_name": "الصف التاسع",
-        "section_name": "شعبة أ",
-        "subject_name": "الهندسة والقياس",
-        "title": "رسم وحساب مساحة المثلث المتساوي الساقين",
-        "assigned_date": "2026-09-12",
-        "due_date": "2026-09-18"
+        "grade_level": 9,
+        "sections": [
+          {
+            "class_section_id": 12,
+            "section_name": "شعبة أ",
+            "assignments": [
+              {
+                "id": 8,
+                "subject_name": "الهندسة والقياس",
+                "title": "رسم وحساب مساحة المثلث المتساوي الساقين",
+                "attachments_count": 1,
+                "assigned_date": "2026-09-12",
+                "due_date": "2026-09-18"
+              }
+            ]
+          }
+        ]
       }
     ]
   }
