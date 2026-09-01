@@ -25,7 +25,6 @@
 | الإجراء بالواجهة (UI Action) | نقطة الاتصال في `routes.md` | المكون التفاعلي بالواجهة (UI Component) | رمز النجاح | مرجع العقد في `routes.md` |
 | :--- | :--- | :--- | :-: | :--- |
 | **استعراض وتصفية توزيع التدريس** | `GET /api/v1/teaching-assignments` | بطاقات الصفوف وتبويبات الشعب (`Class Cards & Section Tabs`) | `200 OK` | [في routes.md](./routes.md) |
-| **معاينة تفاصيل إسناد محدد** | `GET /api/v1/teaching-assignments/:id` | بطاقة تفاصيل الإسناد المنبثقة (`Quick View Card`) | `200 OK` | [في routes.md](./routes.md) |
 | **عرض النصاب التدريسي لمعلم** | `GET /api/v1/teachers/:teacher_id/assignments` | لوحة كشف نصاب المعلم (`Teacher Workload Drawer`) | `200 OK` | [في routes.md](./routes.md) |
 | **إسناد وتعديل تكليف التدريس** | `POST` & `PUT /api/v1/teaching-assignments` | اللوحة الجانبية المنبثقة (`Slide-over Drawer`) | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
 | **فك وإلغاء إسناد تدريس مادة** | `DELETE /api/v1/teaching-assignments/:id` | نافذة التأكيد المركزية (`Confirmation Modal`) | `200 OK` | [في routes.md](./routes.md) |
@@ -51,16 +50,17 @@
       2. `المادة التعليمية` (`subject_name` مع كود المادة `subject_code`).
       3. `المعلم المسؤول` (`teacher_name` مع شارة `teacher_code`).
       4. `الإجراءات` (تعديل ✏️، فك الإسناد 🗑️).
+  - **شريط الترقيم القياسي (Pagination Footer):** أزرار التنقل بين الصفحات مع `meta.total`, `meta.current_page`.
 * **معالجة الاستجابات وحالات الشاشة (طبق `routes.md`):**
   - **Loading:** عرض Skeleton Cards أثناء جلب البيانات.
   - **Empty (`data.classes: []` في `routes.md`):** عرض بطاقة الحالة الفارغة "لا توجد إسنادات تدريس مسجلة تطابق محددات البحث" مع زر `+ إسناد أول مادة`.
   - **Success (`200 OK` في `routes.md`):** رسم مصفوفة الصفوف والشعب والمواد بالكامل من مصفوفة `data.classes`.
   - **Error (`401` / `403` / `500` في `routes.md`):** إظهار Toast باللون الأحمر بنص `message` القادم من `routes.md`.
 
-#### 🔹 [UI-1.2 & UI-1.3] استعراض التفاصيل والنصاب التدريسي:
-* **المكون:** عرض لوحة جانبية منبثقة (Slide-over Drawer) بعرض `500px` تعرض كشف النصاب التدريسي المكتمل للمعلم والمواد والشعب المكلف بها.
+#### 🔹 [UI-1.2] `GET /api/v1/teachers/:teacher_id/assignments` — استعراض النصاب التدريسي لمعلم:
+* **المكون:** عرض لوحة جانبية منبثقة (Slide-over Drawer) بعرض `500px` تعرض كشف النصاب التدريسي المكتمل للمعلم والمواد والشعب المكلف بها مع شريط الترقيم.
 
-#### 🔹 [UI-1.4] `POST` & `PUT /api/v1/teaching-assignments` — إسناد وتعديل تكليف التدريس:
+#### 🔹 [UI-1.3] `POST` & `PUT /api/v1/teaching-assignments` — إسناد وتعديل تكليف التدريس:
 * **المكون:** لوحة جانبية منبثقة من اليمين (Slide-over Drawer) بعرض `500px` مع تأثير تعتيم خلفي تحتوي على الحقول التالية:
   - `العام الدراسي` (`academic_year_id`).
   - `الصف والشعبة الدراسية` (`class_section_id`).
@@ -71,7 +71,7 @@
   - **تكرار إسناد المادة (`409 Conflict`):** إظهار Toast تحذيري بالرسالة الصريحة الموثقة في `routes.md` ("تعارض في الإسناد: هذه المادة مسندة بالفعل لمعلم آخر في هذه الشعبة خلال العام الدراسي الحالي").
   - **أخطاء التحقق (`422 Unprocessable Entity`):** قراءة كائن `errors` من استجابة `routes.md` ورسم التنبيهات أسفل الحقول المعنية.
 
-#### 🔹 [UI-1.5] `DELETE /api/v1/teaching-assignments/:id` — فك وإلغاء إسناد تدريس مادة:
+#### 🔹 [UI-1.4] `DELETE /api/v1/teaching-assignments/:id` — فك وإلغاء إسناد تدريس مادة:
 * **المكون:** نافذة تأكيد مركزية (Confirmation Modal) لتأكيد فك ارتباط المعلم بالمادة.
 * **معالجة الاستجابات (Response Handlers — طبق `routes.md`):**
   - **نجاح الفك (`200 OK`):** إغلاق النافذة، إظهار Toast أخضر بنص `message` في `routes.md`، وتحديث القائمة.

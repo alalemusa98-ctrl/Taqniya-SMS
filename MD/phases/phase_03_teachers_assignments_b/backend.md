@@ -11,9 +11,8 @@
 ## 1. نطاق المرحلة والحدود المعمارية (Scope & Boundaries)
 
 ### 🟢 ما تشمله المرحلة (In-Scope):
-- **إدارة سجل وجدول إسناد التدريس الأكاديمي (`teaching_assignments`) — [5 مسارات موثقة برباعية العمليات المدمجة]:**
+- **إدارة سجل وجدول إسناد التدريس الأكاديمي (`teaching_assignments`) — [4 مسارات موثقة برباعية العمليات المدمجة]:**
   - استعراض وبحث توزيع الكادر التعليمي على المواد والشعب مجمعاً بالصفوف والشعب (`GET /api/v1/teaching-assignments`).
-  - استعراض تفاصيل سجل إسناد تدريس محدد بالمعرف (`GET /api/v1/teaching-assignments/:id`).
   - استعراض النصاب التدريسي والمواد لمعلم محدد بالعام الدراسي (`GET /api/v1/teachers/:teacher_id/assignments`).
   - إنشاء وتعديل إسناد التدريس لمعلم ومادة بشعبة في عام دراسي (`POST & PUT /api/v1/teaching-assignments`).
   - فك وإلغاء إسناد التدريس مع فحص الحماية المرجعية الصارمة (`DELETE /api/v1/teaching-assignments/:id`).
@@ -89,15 +88,14 @@ stateDiagram-v2
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
 | :-: | :--- | :--- | :--- | :---: | :--- |
 | **1.1** | استعراض وبحث توزيع الكادر التعليمي على المواد والشعب | `GET /api/v1/teaching-assignments` | `admin` | `200 OK` | [في routes.md](./routes.md) |
-| **1.2** | استعراض تفاصيل سجل إسناد تدريس محدد | `GET /api/v1/teaching-assignments/:id` | `admin` / `teacher` | `200 OK` | [في routes.md](./routes.md) |
-| **1.3** | استعراض النصاب التدريسي لمعلم محدد | `GET /api/v1/teachers/:teacher_id/assignments` | `admin` / `teacher (own)` | `200 OK` | [في routes.md](./routes.md) |
-| **1.4** | إسناد وتعديل تكليف التدريس | `POST /api/v1/teaching-assignments` & `PUT /api/v1/teaching-assignments/:id` | `admin` | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
-| **1.5** | فك وإلغاء إسناد تدريس | `DELETE /api/v1/teaching-assignments/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.2** | استعراض النصاب التدريسي لمعلم محدد | `GET /api/v1/teachers/:teacher_id/assignments` | `admin` / `teacher (own)` | `200 OK` | [في routes.md](./routes.md) |
+| **1.3** | إسناد وتعديل تكليف التدريس | `POST /api/v1/teaching-assignments` & `PUT /api/v1/teaching-assignments/:id` | `admin` | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
+| **1.4** | فك وإلغاء إسناد تدريس | `DELETE /api/v1/teaching-assignments/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 
 ---
 
 #### 🔹 [Operation 1.1] `GET /api/v1/teaching-assignments` — استعراض وبحث توزيع الكادر التعليمي على المواد والشعب
-- **الغرض والوظيفة:** استرجاع خريطة توزيع الكادر التعليمي على المواد والشعب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (`classes -> sections -> assignments`) بدون تكرار للبيانات مع دعم التصفية بالصف أو الشعبة أو المعلم أو المادة.
+- **الغرض والوظيفة:** استرجاع خريطة توزيع الكادر التعليمي على المواد والشعب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (`classes -> sections -> assignments`) بدون تكرار للبيانات مع دعم التصفية بالصف أو الشعبة أو المعلم أو المادة ودعم الترقيم.
 - **قواعد المعالجة والخادم:**
   - استرجاع السجلات النشطة فقط (`deleted_at IS NULL`).
   - تجميع الشُعب والمواد المخصصة ومعلميها تحت الصف الدراسي التابع لها في مصفوفة `classes`.
@@ -105,18 +103,13 @@ stateDiagram-v2
 - **عقد الاستجابات والمعاملات (Network SSoT):**
   - معاملات الاستعلام وهياكل الـ JSON الصريحة لـ (`200 OK`) موثقة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 1.2] `GET /api/v1/teaching-assignments/:id` — استعراض تفاصيل سجل إسناد تدريس محدد
-- **الغرض والوظيفة:** جلب بيانات سجل إسناد تدريس محدد بالمعرف.
-- **عقد الاستجابات والمدخلات (Network SSoT):**
-  - استجابات (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).
-
-#### 🔹 [Operation 1.3] `GET /api/v1/teachers/:teacher_id/assignments` — استعراض النصاب التدريسي لمعلم محدد
+#### 🔹 [Operation 1.2] `GET /api/v1/teachers/:teacher_id/assignments` — استعراض النصاب التدريسي لمعلم محدد
 - **الغرض والوظيفة:** جلب قائمة كافة المواد والشعب المكلف بها معلم محدد بالعام الدراسي.
 - **قواعد الوصول:** متاح لمدير النظام (`admin`)، أو للمعلم صاحب النصاب حصراً (`teacher`).
 - **عقد الاستجابات والمعاملات (Network SSoT):**
   - استجابات (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 1.4] `POST /api/v1/teaching-assignments` & `PUT /api/v1/teaching-assignments/:id` — إسناد وتعديل تكليف التدريس (Combined Domain Logic)
+#### 🔹 [Operation 1.3] `POST /api/v1/teaching-assignments` & `PUT /api/v1/teaching-assignments/:id` — إسناد وتعديل تكليف التدريس (Combined Domain Logic)
 - **الغرض والوظيفة:**
   - **في الإنشاء (`POST`):** تكليف معلم مسؤول عن تدريس مادة لشعبة في عام دراسي محدد.
   - **في التعديل (`PUT`):** تحديث وتعديل سجل الإسناد (تغيير المعلم المكلف أو الشعبة أو المادة) مع التحقق من عدم التعارض.
@@ -129,7 +122,7 @@ stateDiagram-v2
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - هيكل الطلب الموحد واستجابات (`201 Created`, `200 OK`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 1.5] `DELETE /api/v1/teaching-assignments/:id` — فك وإلغاء إسناد تدريس مادة
+#### 🔹 [Operation 1.4] `DELETE /api/v1/teaching-assignments/:id` — فك وإلغاء إسناد تدريس مادة
 - **الغرض والوظيفة:** فك ارتباط المعلم بالمادة والشعبة، مع التحقق الإجباري الصارم من عدم وجود ارتباطات بحصص أو درجات أو واجبات (`RESTRICT`).
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - ردود الفك والحذف (`200 OK`, `404 Not Found`, `409 Conflict`) مسجلة صراحةً في [`routes.md`](./routes.md).
@@ -138,24 +131,26 @@ stateDiagram-v2
 
 ## 5. الأداء، التزامن، والنزاهة المرجعية (Performance & Data Integrity)
 
-1. **الاستعلامات والفهارس:**
-   - استخدام الفهارس المعتمدة في `MD/database.md`: `uq_teaching_assignment`، `idx_teaching_assignments_year`، `idx_teaching_assignments_section`، `idx_teaching_assignments_teacher`، `idx_teaching_assignments_subject`، `idx_teaching_assignments_deleted_at`.
-2. **الحماية المرجعية:**
-   - تطبيق `RESTRICT` على العلاقات الخارجية لضمان عدم حذف إسناد مرتبط بجدول الحصص أو الدرجات.
-3. **تجنب التسريب التقني والأمني في الاستجابات:**
-   - توحيد رسائل الأخطاء عبر الرموز المعيارية (`401`, `403`, `404`, `409`, `422`, `500`).
+1. **تحسين الاستعلامات والفهارس:**
+   - استخدام الفهارس المعتمدة في `MD/database.md`:
+     - `uq_teaching_assignment` لمنع تكرار تكليف أكثر من معلم لنفس المادة والشعبة.
+     - `idx_teaching_assignments_teacher` لسرعة جلب النصاب التدريسي للمعلم.
+     - `idx_teaching_assignments_section` لسرعة جلب مواد ومعلمي الشعبة.
+2. **عزل المعاملات المصرفية (Atomic Transactions):**
+   - تنفيذ عمليات التكليف والتعديل داخل Transaction تضمن عدم التكرار.
+3. **تجنب التسريب التقني:**
+   - كافة الاستجابات والأخطاء موحدة ومطابقة لمعايير الـ JSON الصريحة في `routes.md`.
 
 ---
 
 ## 6. معايير القبول الهندسية للباك إند (Backend Acceptance Criteria)
 
-تعتبر متطلبات الخادم لهذه المرحلة مستوفاة بالكامل عند تحقق المعايير التالية:
-
-- [ ] قصر صلاحية إدارة إسناد التدريس (تكليف، تعديل، فك إسناد) حصراً على المستخدمين بدور `admin`.
+- [ ] قصر صلاحيات التكليف والتعديل وفك الإسناد حصراً على المستخدمين بدور `admin`.
+- [ ] السماح للمعلم باستعراض نصابه التدريسي الخاص به فقط برقم معرفه.
 - [ ] إرجاع `401 Unauthorized` لأي طلب بدون توكن مصادقة صالح.
-- [ ] إرجاع `403 Forbidden` عند محاولة المعلم الوصول لبيانات غير مصرح له بها.
-- [ ] التحقق الصارم من قيد المعلم المسؤول الوحيد `uq_teaching_assignment` وإرجاع `409 Conflict` عند محاولة إسناد مادة مسندة مسبقاً.
-- [ ] فرض الحماية المرجعية ومنع فك الإسناد المرتبط بحصص أو درجات وإرجاع `409 Conflict`.
-- [ ] دعم استرجاع خريطة توزيع الكادر التعليمي هرمياً بالصفوف والشعب (`classes -> sections -> assignments`).
-- [ ] تنفيذ الحذف المنطقي بضبط `deleted_at` وتوثيق كافة العمليات في `audit_logs`.
-- [ ] مطابقة كافة المدخلات والمخرجات بنسبة 100% لعقد الشبكة في [`routes.md`](./routes.md).
+- [ ] إرجاع `403 Forbidden` عند محاولة المعلم إجراء أي تعديل على إسنادات التدريس.
+- [ ] منع تكرار إسناد المادة لنفس الشعبة بالعام الدراسي لمعلم آخر وإرجاع `409 Conflict`.
+- [ ] منع فك إسناد تدريس مرتبط بحصص أو درجات أو واجبات وإرجاع `409 Conflict` (حماية RESTRICT).
+- [ ] تطابق كامل بين حقول الـ Request Body في الإنشاء والتعديل.
+- [ ] استبعاد السجلات المحذوفة منطقياً من كافة استعلامات القوائم.
+- [ ] تسجيل جميع حركات التكليف والتعديل وفك الإسناد في جدول `audit_logs`.
