@@ -111,6 +111,9 @@ stateDiagram-v2
 #### 🔹 [Operation 1.3] `POST /api/v1/students` & `PUT /api/v1/students/:id` — إنشاء وتعديل ملف طالب (Combined Domain Logic)
 - **الغرض والوظيفة:**
   - **في الإنشاء (`POST`):** إنشاء ملف طالب وتوليد حساب مستخدم ذري بكود `STU-XXXX` وتشفير كلمة المرور.
+  - **منطق التسكين الفوري الاختياري (Atomic Immediate Enrollment):**
+    - عند إرسال الحقل الاختياري `class_section_id`، يتحقق الخادم من صحة الشعبة، ويقوم داخل نفس المعاملة الذرية (`Atomic Transaction`) بإنشاء سجل التسكين في جدول `student_enrollments` للعام الدراسي النشط (أو المحدد في `academic_year_id`) مع حفظ رقم الجلوس `seating_number` إن وجد.
+    - في حال عدم إرسال `class_section_id`، يتم إنشاء ملف الطالب فقط دون تسكين (`enrollment: null`) ليتسنى تسكينه لاحقاً عبر التسكين الفردي أو الجماعي.
   - **في التعديل (`PUT`):** تحديث بيانات الطالب وتحديث كلمة المرور عند الرغبة.
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - هيكل الطلب واستجابات (`201 Created`, `200 OK`, `404 Not Found`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).

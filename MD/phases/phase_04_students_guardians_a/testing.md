@@ -23,7 +23,8 @@
 | `TC-STU-01` | **Integration** | استرجاع قائمة الطلاب مع الترقيم والفلترة بالجنس | `GET /api/v1/students?gender=male&page=1` | `200 OK` مع مصفوفة الطلاب و `meta`. |
 | `TC-STU-02` | **Integration** | البحث النصي باسم الطالب أو كود `STU-XXXX` | `GET /api/v1/students?search=STU-3001` | `200 OK` ومطابقة السجل المطلوب. |
 | `TC-STU-03` | **Integration** | استرجاع تفاصيل ملف طالب محدد بالمعرف | `GET /api/v1/students/1` | `200 OK` وتفاصيل الحساب والصف الحالي. |
-| `TC-STU-04` | **Unit / Atomic** | **إنشاء طالب وتوليد الحساب الذري:** إنشاء ملف طالب والتحقق من إنشاء حساب `users` | `full_name: 'طارق الورفلي', gender: 'male', password: '...'` | `201 Created` وتوليد كود `STU-XXXX` وتشفير كلمة المرور. |
+| `TC-STU-04` | **Unit / Atomic** | **إنشاء طالب وتوليد الحساب الذري (بدون تسكين):** إنشاء ملف طالب وتوليد حساب `users` | `full_name: 'طارق الورفلي', gender: 'male', password: '...'` | `201 Created` وتوليد كود `STU-XXXX` مع `enrollment: null`. |
+| `TC-STU-04B` | **Unit / Atomic** | **إنشاء طالب مع تسكين فوري:** إنشاء ملف طالب وتسكينه مباشرة بالشعبة | `full_name: 'طارق الورفلي', class_section_id: 5, seating_number: '105'` | `201 Created` وإنشاء سجل `student_enrollments` ذرياً مع تفاصيل الشعبة. |
 | `TC-STU-05` | **Validation** | رفض إضافة طالب بدون اسم رباعي أو بجنس غير صالح | `full_name: '', gender: 'invalid'` | `422 Unprocessable Entity`. |
 | `TC-STU-06` | **Integration** | **تعديل ملف الطالب بنجاح:** تحديث الاسم وتاريخ الميلاد | `PUT /api/v1/students/1` مع `full_name: 'محمد علي جديد'` | `200 OK` وتحديث بيانات الطالب. |
 | `TC-STU-07` | **Relational Integrity** | **منع حذف طالب مسكن أو له درجات (RESTRICT):** محاولة حذف طالب مسكن | `DELETE /api/v1/students/1` (مسكن بشعبة) | `409 Conflict` ورفض الحذف. |

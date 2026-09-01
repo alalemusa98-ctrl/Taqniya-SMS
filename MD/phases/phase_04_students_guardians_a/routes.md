@@ -183,8 +183,9 @@
 ### 1.3 `POST /api/v1/students` & `PUT /api/v1/students/:id` — إنشاء وتعديل ملف طالب (Combined Specification)
 
 > **الوصف الوظيفي:**
-> * **في الإنشاء (`POST`):** إنشاء ملف طالب وتوليد حساب مستخدم ذري بجدول `users` بالرمز الموحد `STU-XXXX` وكلمة المرور المشفرة.
-> * **في التعديل (`PUT`):** تحديث بيانات الطالب وتحديث كلمة المرور عند الرغبة.
+> * **في الإنشاء (`POST`):** إنشاء ملف طالب وتوليد حساب مستخدم ذري بجدول `users` بالرمز الموحد `STU-XXXX` وكلمة المرور المشفرة. 
+>   - **التسكين الفوري الاختياري (Optional Immediate Enrollment):** يدعم الطلب تمرير الحقل الاختياري `class_section_id` لتسكين الطالب فوراً في صف وشعبة محددة للعام الدراسي النشط دون الحاجة لخطوة منفصلة، مع تسجيل بيانات التسكين داخل نفس المعاملة الذرية (Atomic Transaction).
+> * **في التعديل (`PUT`):** تحديث بيانات الطالب وتحديث كلمة المرور عند الرغبة (مع إمكانية تحديث الشعبة المسكن بها).
 
 - **Request Body (موحد للإنشاء والتعديل):**
   ```json
@@ -193,13 +194,46 @@
     "phone": "0933333333",
     "birth_date": "2015-08-10",
     "gender": "male",
-    "password": "Password123!"
+    "password": "Password123!",
+    "class_section_id": 5,
+    "academic_year_id": 1,
+    "seating_number": "105"
   }
   ```
+  * *ملاحظة:* الحقول `class_section_id` و `academic_year_id` و `seating_number` هي **حقول اختيارية (Optional)**. إذا تم تمرير `class_section_id`، يقوم الخادم تلقائياً بتسكين الطالب في الشعبة المحددة للعام الدراسي (الممرر أو النشط حالياً).
 
 #### استجابات الإنشاء والتعديل (Responses):
 
-##### ✅ `201 Created` (خاص بالإنشاء POST):
+##### ✅ `201 Created` (خاص بالإنشاء POST — مع تسكين فوري):
+```json
+{
+  "success": true,
+  "message": "تم إنشاء ملف الطالب وتوليد حساب الدخول وتسكينه بالشعبة بنجاح.",
+  "data": {
+    "id": 3,
+    "user_id": 103,
+    "user_code": "STU-3003",
+    "full_name": "طارق زياد الورفلي",
+    "phone": "0933333333",
+    "birth_date": "2015-08-10",
+    "gender": "male",
+    "enrollment": {
+      "id": 501,
+      "academic_year_id": 1,
+      "academic_year_name": "2025/2026",
+      "class_id": 5,
+      "class_name": "الصف الخامس",
+      "class_section_id": 5,
+      "section_name": "شعبة أ",
+      "seating_number": "105",
+      "status": "enrolled"
+    },
+    "created_at": "2026-08-29T12:00:00Z"
+  }
+}
+```
+
+##### ✅ `201 Created` (خاص بالإنشاء POST — بدون تسكين `class_section_id: null`):
 ```json
 {
   "success": true,
@@ -212,6 +246,7 @@
     "phone": "0933333333",
     "birth_date": "2015-08-10",
     "gender": "male",
+    "enrollment": null,
     "created_at": "2026-08-29T12:00:00Z"
   }
 }
@@ -249,7 +284,8 @@
   "message": "بيانات الطالب غير صالحة.",
   "errors": {
     "full_name": ["الاسم الرباعي مطلوب."],
-    "gender": ["الجنس المحدد غير صالح."]
+    "gender": ["الجنس المحدد غير صالح."],
+    "class_section_id": ["الشعبة المحددة للتسكين غير موجودة."]
   }
 }
 ```
