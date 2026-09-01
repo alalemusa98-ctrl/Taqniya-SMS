@@ -1,6 +1,6 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 02-C (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 11 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المعياري الموجز لـ [`MD/database.md`](../../database.md)، مع توحيد نمط الروابط والـ Request Body بين الإنشاء والتعديل.  
+> **الهدف:** توثيق المسارات الـ 12 كاملة مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المعياري الموجز لـ [`MD/database.md`](../../database.md)، مع توحيد نمط الروابط والـ Request Body بين الإنشاء والتعديل.  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه.  
@@ -26,9 +26,9 @@
 
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
-| **1** | `class_academic_terms` | `GET` | `/api/v1/academic/class-academic-terms` | `admin` | استعراض وبحث تقويم فترات صفوف العام |
-| **2** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms` | `admin` | تخصيص وتخطيط فترة وتواريخ لصف |
-| **3** | `class_academic_terms` | `PUT` | `/api/v1/academic/class-academic-terms/:id` | `admin` | تعديل تواريخ فترة صف |
+| **1** | `class_academic_terms` | `GET` | `/api/v1/academic/class-academic-terms` | `admin` | استعراض وبحث فترات وحالات الصفوف |
+| **2** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms` | `admin` | تخصيص وربط فترة بصف دراسي |
+| **3** | `class_academic_terms` | `PUT` | `/api/v1/academic/class-academic-terms/:id` | `admin` | تعديل فترة صف دراسي |
 | **4** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/activate` | `admin` | تفعيل الفترة النشطة للصف (Atomic) |
 | **5** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/close` | `admin` | إغلاق/فتح درجات الفترة للصف للأرشفة |
 | **6** | `class_sections` | `GET` | `/api/v1/academic/class-sections` | `admin` | عرض وبحث شعب الصفوف المفتوحة |
@@ -65,34 +65,32 @@
 
 ---
 
-## 🗓️ الخطوة 1: إدارة تواريخ وتخطيط فترات الصفوف (`class_academic_terms`) — [4 مسارات]
+## 🗓️ الخطوة 1: إدارة فترات وحالات الصفوف (`class_academic_terms`) — [5 مسارات]
 
 ---
 
-### 1.1 `GET /api/v1/academic/class-academic-terms` — عرض وبحث تقويم فترات صفوف العام
+### 1.1 `GET /api/v1/academic/class-academic-terms` — عرض وبحث فترات وحالات الصفوف
 
-> **الوصف الوظيفي:** استرجاع تقويم فترات وتواريخ كافة صفوف المدرسة بالعام الدراسي مجمعة هرمياً لكل صف، مع إمكانية الفلترة لصف دراسي محدد عبر المعامل `class_id`.
+> **الوصف الوظيفي:** استرجاع فترات وحالات كافة صفوف المدرسة مجمعة هرمياً لكل صف، مع إمكانية الفلترة لصف دراسي محدد والترقيم القياسي.
 
 - **Query Parameters:**
-  - `academic_year_id` (optional, integer): فلترة بحسب العام الدراسي.
   - `class_id` (optional, integer): فلترة لصف دراسي محدد فقط (مثال: `class_id=9`).
+  - `academic_term_id` (optional, integer): فلترة بحسب الفترة المرجعية.
   - `search` (optional, string): البحث النصي بمسمى الصف أو الفترة.
   - `is_active` (optional, integer: `0` أو `1`): فلترة حسب الفترة النشطة حالياً.
   - `is_closed` (optional, integer: `0` أو `1`): فلترة حسب الفترة المغلقة.
   - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
   - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
-- **Example Request URL:** `/api/v1/academic/class-academic-terms?academic_year_id=1&class_id=9&page=1&per_page=15`
+- **Example Request URL:** `/api/v1/academic/class-academic-terms?class_id=9&page=1&per_page=15`
 
 #### استجابات هذا الرابط (Responses):
 
-##### ✅ `200 OK` (تقويم وفترات الصفوف بالعام):
+##### ✅ `200 OK` (فترات وحالات الصفوف):
 ```json
 {
   "success": true,
-  "message": "تم جلب تقويم فترات صفوف العام الدراسي بنجاح.",
+  "message": "تم جلب فترات وحالات صفوف المدرسة بنجاح.",
   "data": {
-    "academic_year_id": 1,
-    "academic_year_name": "2025/2026",
     "classes": [
       {
         "class_id": 9,
@@ -102,8 +100,6 @@
             "id": 10,
             "academic_term_id": 1,
             "term_name": "الفصل الأول",
-            "start_date": "2025-09-01",
-            "end_date": "2025-12-31",
             "is_active": 1,
             "is_closed": 0
           },
@@ -111,8 +107,13 @@
             "id": 11,
             "academic_term_id": 2,
             "term_name": "الفصل الثاني",
-            "start_date": "2026-01-05",
-            "end_date": "2026-04-15",
+            "is_active": 0,
+            "is_closed": 0
+          },
+          {
+            "id": 12,
+            "academic_term_id": 3,
+            "term_name": "الفصل الثالث",
             "is_active": 0,
             "is_closed": 0
           }
@@ -123,12 +124,17 @@
         "class_name": "الصف العاشر",
         "terms": [
           {
-            "id": 12,
+            "id": 13,
             "academic_term_id": 1,
             "term_name": "الفصل الأول",
-            "start_date": "2025-09-01",
-            "end_date": "2025-12-31",
             "is_active": 1,
+            "is_closed": 0
+          },
+          {
+            "id": 14,
+            "academic_term_id": 2,
+            "term_name": "الفصل الثاني",
+            "is_active": 0,
             "is_closed": 0
           }
         ]
@@ -150,8 +156,6 @@
   "success": true,
   "message": "لا توجد فترات مسجلة تطابق محددات البحث.",
   "data": {
-    "academic_year_id": 1,
-    "academic_year_name": "2025/2026",
     "classes": []
   },
   "meta": {
@@ -167,18 +171,15 @@
 
 ---
 
-### 1.2 `POST /api/v1/academic/class-academic-terms` — تخصيص وتخطيط فترة وتواريخ لصف
+### 1.2 `POST /api/v1/academic/class-academic-terms` — تخصيص وربط فترة بصف دراسي
 
-> **الوصف الوظيفي:** تخصيص فترة وتواريخ رسمية لصف بالعام الدراسي طبق تقويم الوزارة.
+> **الوصف الوظيفي:** تخصيص وربط فترة رسمية لصف دراسي في القالب العام بحالة افتراضية (`is_active = 0, is_closed = 0`).
 
 - **Request Body:**
   ```json
   {
-    "academic_year_id": 1,
     "class_id": 9,
-    "academic_term_id": 1,
-    "start_date": "2025-09-01",
-    "end_date": "2025-12-31"
+    "academic_term_id": 1
   }
   ```
 
@@ -188,28 +189,24 @@
 ```json
 {
   "success": true,
-  "message": "تم تخصيص الفترة وتواريخ التقويم للصف بنجاح.",
+  "message": "تم تخصيص الفترة للصف بنجاح.",
   "data": {
     "id": 10,
-    "academic_year_id": 1,
-    "academic_year_name": "2025/2026",
     "class_id": 9,
     "class_name": "الصف التاسع",
     "academic_term_id": 1,
     "term_name": "الفصل الأول",
-    "start_date": "2025-09-01",
-    "end_date": "2025-12-31",
     "is_active": 0,
     "is_closed": 0
   }
 }
 ```
 
-##### ⚡ `409 Conflict` (تكرار تخصيص الفترة لنفس الصف بالعام):
+##### ⚡ `409 Conflict` (تكرار تخصيص الفترة لنفس الصف):
 ```json
 {
   "success": false,
-  "message": "هذه الفترة مخصصة مسبقاً لهذا الصف بالعام الدراسي (uq_class_term_year)."
+  "message": "هذه الفترة مخصصة مسبقاً لهذا الصف الدراسي (uq_class_term)."
 }
 ```
 
@@ -219,7 +216,7 @@
   "success": false,
   "message": "بيانات التخصيص غير صالحة.",
   "errors": {
-    "end_date": ["تاريخ نهاية الفترة يجب أن يكون بعد تاريخ البداية وضمن العام الدراسي."]
+    "academic_term_id": ["الفترة المحددة غير صالحة."]
   }
 }
 ```
@@ -228,18 +225,15 @@
 
 ---
 
-### 1.3 `PUT /api/v1/academic/class-academic-terms/:id` — تعديل تواريخ فترة صف
+### 1.3 `PUT /api/v1/academic/class-academic-terms/:id` — تعديل فترة صف دراسي
 
-> **الوصف الوظيفي:** تحديث تواريخ بداية ونهاية أو فترة الصف المخصصة بالعام الدراسي.
+> **الوصف الوظيفي:** تحديث فترة الصف المخصصة.
 
 - **Request Body:**
   ```json
   {
-    "academic_year_id": 1,
     "class_id": 9,
-    "academic_term_id": 1,
-    "start_date": "2025-09-01",
-    "end_date": "2025-12-31"
+    "academic_term_id": 2
   }
   ```
 
@@ -249,17 +243,13 @@
 ```json
 {
   "success": true,
-  "message": "تم تحديث تواريخ فترة الصف بنجاح.",
+  "message": "تم تحديث فترة الصف بنجاح.",
   "data": {
     "id": 10,
-    "academic_year_id": 1,
-    "academic_year_name": "2025/2026",
     "class_id": 9,
     "class_name": "الصف التاسع",
-    "academic_term_id": 1,
-    "term_name": "الفصل الأول",
-    "start_date": "2025-09-01",
-    "end_date": "2025-12-31",
+    "academic_term_id": 2,
+    "term_name": "الفصل الثاني",
     "is_active": 0,
     "is_closed": 0
   }
@@ -278,7 +268,7 @@
 ```json
 {
   "success": false,
-  "message": "لا يمكن تعديل تواريخ الفترة لأنها مغلقة نهائياً للأرشفة (is_closed = 1)."
+  "message": "لا يمكن تعديل الفترة لأنها مغلقة نهائياً للأرشفة (is_closed = 1)."
 }
 ```
 
@@ -288,7 +278,7 @@
   "success": false,
   "message": "بيانات التعديل غير صالحة.",
   "errors": {
-    "end_date": ["تاريخ نهاية الفترة يجب أن يكون بعد تاريخ البداية وضمن العام الدراسي."]
+    "academic_term_id": ["الفترة المحددة غير صالحة."]
   }
 }
 ```
@@ -299,7 +289,7 @@
 
 ### 1.4 `POST /api/v1/academic/class-academic-terms/:id/activate` — تفعيل الفترة النشطة للصف (Atomic)
 
-> **الوصف الوظيفي:** تحويل الفترة المستهدفة إلى الفترة النشطة الحصرية للصف في هذا العام الدراسي (`is_active = 1`) وإلغاء تفعيل بقية فترات نفس الصف ذرياً.
+> **الوصف الوظيفي:** تحويل الفترة المستهدفة إلى الفترة النشطة الحصرية للصف (`is_active = 1`) وإلغاء تفعيل بقية فترات نفس الصف ذرياً داخل Atomic Transaction.
 
 #### استجابات هذا الرابط (Responses):
 
@@ -682,6 +672,10 @@
   "message": "تم تحديث درجات المادة بالفترة بنجاح.",
   "data": {
     "id": 1,
+    "class_id": 9,
+    "subject_id": 1,
+    "subject_name": "الرياضيات",
+    "class_academic_term_id": 10,
     "passing_score": "60.00",
     "max_score": "100.00"
   }

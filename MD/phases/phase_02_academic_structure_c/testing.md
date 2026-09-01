@@ -7,7 +7,7 @@
 ## 1. استراتيجية الاختبارات العامة (Testing Strategy)
 
 - **نمط الاختبار:** اختبارات تكاملية للـ API واختبارات منطق الأعمال للخدمات والقيود المركبة والمعاملات الذرية.
-- **التغطية المطلوبة:** 100% لكافة مسارات الـ API الـ 11، وقواعد التحقق، وحالات الحدود (Boundary Cases)، والنزاهة المرجعية.
+- **التغطية المطلوبة:** 100% لكافة مسارات الـ API الـ 12، وقواعد التحقق، وحالات الحدود (Boundary Cases)، والنزاهة المرجعية.
 - **البيئة المعتمدة:** بيئة اختبار معزولة (Test Database) يتم تصفيرها وإعادة ضبطها تلقائياً قبل كل جولة اختبار.
 
 ---
@@ -16,19 +16,17 @@
 
 ---
 
-### 2.1 اختبارات فترات وتقويم الصفوف (`class_academic_terms`) — [الخطوة 1]
+### 2.1 اختبارات فترات وحالات الصفوف (`class_academic_terms`) — [الخطوة 1]
 
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
-| `TC-CAT-01` | **Integration** | استرجاع فترات وتقويم صف محدد بالعام مقسماً بالفترات | `GET /api/v1/academic/class-academic-terms?academic_year_id=1&class_id=9` | `200 OK` بهيكل يضم الصف والفصول والتواريخ. |
-| `TC-CAT-02` | **Unit / Validation** | تخصيص فترة وتواريخ لصف بنجاح | `year: 1, class: 9, term: 1, start: '2025-09-01', end: '2025-12-31'` | `201 Created`، وحفظ السجل. |
-| `TC-CAT-03` | **Conflict** | **منع تكرار تخصيص الفترة لنفس الصف بالعام:** محاولة تخصيص نفس الفترة مجدداً | `year: 1, class: 9, term: 1` (مخصص مسبقاً) | `409 Conflict` (`uq_class_term_year`). |
-| `TC-CAT-04` | **Validation** | رفض تواريخ غير منطقية (`end_date <= start_date`) | `start: '2025-12-31', end: '2025-09-01'` | `422 Unprocessable Entity`. |
-| `TC-CAT-05` | **Validation** | رفض تواريخ تقع خارج النطاق الزمني للعام الدراسي المستهدف | تواريخ خارج حدود العام | `422 Unprocessable Entity`. |
-| `TC-CAT-06` | **Atomic / Concurrency** | **تفعيل الفترة النشطة للصف (Atomic):** تفعيل فترة يلغي تفعيل باقي فترات نفس الصف | `POST /api/v1/academic/class-academic-terms/:id/activate` | `200 OK` مع ضبط `is_active = 1` وإلغاء تفعيل البقية. |
-| `TC-CAT-07` | **Integration** | إغلاق درجات الفترة للصف للأرشفة | `POST /api/v1/academic/class-academic-terms/:id/close` | `200 OK` مع ضبط `is_closed = 1`. |
-| `TC-CAT-08` | **Integration** | تعديل تواريخ فترة صف بنجاح | `PUT /api/v1/academic/class-academic-terms/:id` | `200 OK` وتحديث التواريخ. |
-| `TC-CAT-09` | **Conflict / Lock** | **قفل الفترات المغلقة:** منع تعديل تواريخ فترة مغلقة للأرشفة | `PUT` لفترة تحمل `is_closed = 1` | `409 Conflict` ورفض التعديل. |
+| `TC-CAT-01` | **Integration** | استرجاع فترات وحالات صف محدد مقسماً بالفترات مع الترقيم | `GET /api/v1/academic/class-academic-terms?class_id=9&page=1` | `200 OK` بهيكل يضم الصف والفصول وحالاتها و `meta`. |
+| `TC-CAT-02` | **Unit / Validation** | تخصيص وربط فترة لصف بنجاح | `class_id: 9, academic_term_id: 1` | `201 Created`، وحفظ السجل. |
+| `TC-CAT-03` | **Conflict** | **منع تكرار تخصيص الفترة لنفس الصف:** محاولة تخصيص نفس الفترة مجدداً | `class_id: 9, academic_term_id: 1` (مخصص مسبقاً) | `409 Conflict` (`uq_class_term`). |
+| `TC-CAT-04` | **Atomic / Concurrency** | **تفعيل الفترة النشطة للصف (Atomic):** تفعيل فترة يلغي تفعيل باقي فترات نفس الصف | `POST /api/v1/academic/class-academic-terms/:id/activate` | `200 OK` مع ضبط `is_active = 1` وإلغاء تفعيل البقية. |
+| `TC-CAT-05` | **Integration** | إغلاق درجات الفترة للصف للأرشفة | `POST /api/v1/academic/class-academic-terms/:id/close` | `200 OK` مع ضبط `is_closed = 1`. |
+| `TC-CAT-06` | **Integration** | تعديل فترة صف بنجاح | `PUT /api/v1/academic/class-academic-terms/:id` مع `academic_term_id: 2` | `200 OK` وتحديث الفترة. |
+| `TC-CAT-07` | **Conflict / Lock** | **قفل الفترات المغلقة:** منع تعديل فترة مغلقة للأرشفة | `PUT` لفترة تحمل `is_closed = 1` | `409 Conflict` ورفض التعديل. |
 
 ---
 
@@ -50,8 +48,8 @@
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
 | `TC-CSU-01` | **Integration** | استرجاع منهج ومقررات الصف مقسماً بحسب الفصول | `GET /api/v1/academic/class-subjects?class_id=9` | `200 OK` بهيكل هرمي يضم الفصول والمواد والدرجات. |
-| `TC-CSU-02` | **Unit / Validation** | إسناد مادة وتحديد درجات الفترة | `term: 10, subject: 1, pass: 50.00, max: 100.00` | `201 Created` وحفظ السجل. |
-| `TC-CSU-03` | **Conflict** | منع تكرار إسناد نفس المادة لنفس الفترة بالصف | `term: 10, subject: 1` (مسندة مسبقاً) | `409 Conflict` (`uq_class_term_subject`). |
+| `TC-CSU-02` | **Unit / Validation** | إسناد مادة وتحديد درجات الفترة | `class_academic_term_id: 10, subject_id: 1, pass: 50.00, max: 100.00` | `201 Created` وحفظ السجل. |
+| `TC-CSU-03` | **Conflict** | منع تكرار إسناد نفس المادة لنفس الفترة بالصف | `class_academic_term_id: 10, subject_id: 1` (مسندة مسبقاً) | `409 Conflict` (`uq_class_term_subject`). |
 | `TC-CSU-04` | **Validation** | **قيد النزاهة:** رفض درجة نجاح أكبر من الدرجة العظمى | `passing_score: 110.00, max_score: 100.00` | `422 Unprocessable Entity`. |
 | `TC-CSU-05` | **Integration** | تعديل درجات مادة مسندة بفترة مفتوحة | `PUT /api/v1/academic/class-subjects/:id` | `200 OK` وتحديث السجل. |
 | `TC-CSU-06` | **Conflict / Lock** | **قفل الفترات المغلقة:** محاولة تعديل درجات مادة بفترة مغلقة للأرشفة | `PUT /api/v1/academic/class-subjects/:id` لفترة مغلقة | `409 Conflict` ورفض التعديل. |

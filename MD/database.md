@@ -244,21 +244,18 @@
 
 ---
 
-## 5. جدول تواريخ وفترات الصفوف الدراسية (`class_academic_terms`)
+## 5. جدول فترات وحالات الصفوف الدراسية (`class_academic_terms`)
 
 > **الوصف:**  
-> جدول تخصيص فترات وتواريخ الوزارة وحالتها النشطة والمغلقة لكل صف دراسي بالعام الدراسي، لتلبية التفاوت بين الصفوف العادية والانتقالية والشهادات (9 إعدادي و 12 ثانوية).
+> جدول إدارة وتخصيص فترات/سمسترات الصفوف الدراسية وحالتها النشطة والمغلقة لكل صف دراسي كقالب عام مستقل عن السنوات والتواريخ لتلبية التفاوت بين الصفوف العادية والانتقالية والشهادات.
 
 ### 📋 هيكل الأعمدة (Columns Matrix):
 
 | اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود (Constraints) | الوصف والدور المنطقي |
 | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الفريد لتخصيص فترة الصف. |
-| `academic_year_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف العام الدراسي (يرتبط بـ `academic_years.id`). |
+| `id` | `BIGINT UNSIGNED` | `AUTO_INCREMENT`, `PRIMARY KEY` | المعرف الرقمي الفريد لربط فترة الصف. |
 | `class_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الصف الدراسي (يرتبط بـ `classes.id`). |
 | `academic_term_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الفترة المرجعية (يرتبط بـ `academic_terms.id`). |
-| `start_date` | `DATE` | `NOT NULL` | تاريخ بداية الفترة الرسمية لهذا الصف بالذات طبق تقويم الوزارة. |
-| `end_date` | `DATE` | `NOT NULL` | تاريخ نهاية الفترة الرسمية لهذا الصف بالذات طبق تقويم الوزارة. |
 | `is_active` | `TINYINT(1)` | `NOT NULL`, `DEFAULT 0` | هل هي الفترة النشطة حالياً لهذا الصف لعمليات التدريس والدرجات؟ (`1 = نشطة`, `0 = غير نشطة`). |
 | `is_closed` | `TINYINT(1)` | `NOT NULL`, `DEFAULT 0` | هل تم إغلاق درجات هذه الفترة نهائياً لهذا الصف؟ (`1 = مغلقة للأرشفة`, `0 = مفتوحة`). |
 | `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
@@ -266,14 +263,12 @@
 | `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
 
 ### 🔗 العلاقات والمفاتيح الخارجية (Foreign Keys):
-* `academic_year_id` يرتبط بجدول `academic_years(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
 * `class_id` يرتبط بجدول `classes(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
 * `academic_term_id` يرتبط بجدول `academic_terms(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
 
 ### ⚡ الفهارس والقيود (Indexes & Constraints):
 * `PRIMARY KEY (id)`
-* `UNIQUE INDEX uq_class_term_year (academic_year_id, class_id, academic_term_id)`
-* `INDEX idx_class_terms_year (academic_year_id)`
+* `UNIQUE INDEX uq_class_term (class_id, academic_term_id)`
 * `INDEX idx_class_terms_class (class_id)`
 * `INDEX idx_class_terms_term (academic_term_id)`
 * `INDEX idx_class_terms_active (is_active)`
