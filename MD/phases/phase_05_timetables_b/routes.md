@@ -22,17 +22,16 @@
   Accept-Language: ar
   ```
 
-### 📋 مصفوفة المسارات الـ 6 الموحدة (Master Route Matrix):
+### 📋 مصفوفة المسارات الـ 5 الموحدة (Master Route Matrix):
 
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
 | **1** | `timetable_slots` | `GET` | `/api/v1/timetable-slots` | `admin` | استعراض وتصفية وبحث جدول الحصص الأسبوعي بالترقيم والفلترة |
 | **2** | `timetable_slots` | `GET` | `/api/v1/class-sections/:class_section_id/timetable` | `admin` / `teacher` / `student` / `parent` | استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة |
 | **3** | `timetable_slots` | `GET` | `/api/v1/teachers/:teacher_id/timetable` | `admin` / `teacher (own)` | استعراض جدول الحصص الأسبوعي لمعلم محدد |
-| **4** | `timetable_slots` | `GET` | `/api/v1/classes/:class_id/timetable` | `admin` | استعراض مصفوفة جدول الحصص المجمع لكافة شعب الصف الدراسي |
-| **5** | `timetable_slots` | `POST` | `/api/v1/timetable-slots` | `admin` | تسكين وإدراج حصة جديدة بالجدول الأسبوعي (مع فحص التضارب) |
-| **6** | `timetable_slots` | `PUT` | `/api/v1/timetable-slots/:id` | `admin` | تعديل وتحديث توقيت أو معلم/شعبة الحصة الأسبوعية |
-| **7** | `timetable_slots` | `DELETE` | `/api/v1/timetable-slots/:id` | `admin` | حذف وإلغاء حصة من الجدول الأسبوعي |
+| **4** | `timetable_slots` | `POST` | `/api/v1/timetable-slots` | `admin` | تسكين وإدراج حصة جديدة بالجدول الأسبوعي (مع فحص التضارب) |
+| **5** | `timetable_slots` | `PUT` | `/api/v1/timetable-slots/:id` | `admin` | تعديل وتحديث توقيت أو معلم/شعبة الحصة الأسبوعية |
+| **6** | `timetable_slots` | `DELETE` | `/api/v1/timetable-slots/:id` | `admin` | حذف وإلغاء حصة من الجدول الأسبوعي |
 
 ### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
 
@@ -439,92 +438,7 @@
 
 ---
 
-### 1.4 `GET /api/v1/classes/:class_id/timetable` — استعراض مصفوفة جدول الحصص المجمع لكافة شعب الصف الدراسي
-
-> **الوصف الوظيفي:** استرجاع مصفوفة جدول الحصص المجمع لكافة شُعب الصف الدراسي ليوم محدد لعرض جدول الناظر الشامل لجميع الشُعب والحصص في شاشة واحدة.
-
-- **Query Parameters:**
-  - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي (افتراضياً العام النشط).
-  - `day_of_week` (optional, string, enum: `saturday`, `sunday`, `monday`, `tuesday`, `wednesday`, `thursday`, default `sunday`): تصفية حسب اليوم.
-
-#### استجابات هذا الرابط (Responses):
-
-##### ✅ `200 OK`:
-```json
-{
-  "success": true,
-  "message": "تم جلب مصفوفة جدول حصص الصف بنجاح.",
-  "data": {
-    "class_id": 5,
-    "class_name": "الصف الخامس",
-    "day_of_week": "sunday",
-    "day_of_week_ar": "الأحد",
-    "sections": [
-      {
-        "class_section_id": 5,
-        "section_name": "شعبة أ",
-        "slots": [
-          {
-            "period_slot_id": 1,
-            "period_name": "الحصة الأولى",
-            "subject_name": "الرياضيات",
-            "teacher_id": 1,
-            "teacher_name": "أحمد محمود سالم"
-          },
-          {
-            "period_slot_id": 2,
-            "period_name": "الحصة الثانية",
-            "subject_name": "الرياضيات",
-            "teacher_id": 1,
-            "teacher_name": "أحمد محمود سالم"
-          },
-          {
-            "period_slot_id": 3,
-            "period_name": "الحصة الثالثة",
-            "subject_name": "العلوم",
-            "teacher_id": 2,
-            "teacher_name": "خالد عبد السلام"
-          }
-        ]
-      },
-      {
-        "class_section_id": 6,
-        "section_name": "شعبة ب",
-        "slots": [
-          {
-            "period_slot_id": 1,
-            "period_name": "الحصة الأولى",
-            "subject_name": "العلوم",
-            "teacher_id": 2,
-            "teacher_name": "خالد عبد السلام"
-          },
-          {
-            "period_slot_id": 2,
-            "period_name": "الحصة الثانية",
-            "subject_name": "اللغة العربية",
-            "teacher_id": 3,
-            "teacher_name": "علي مصطفى الورفلي"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-##### 🔍 `404 Not Found`:
-```json
-{
-  "success": false,
-  "message": "الصف الدراسي غير موجود."
-}
-```
-
-> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
-
----
-
-### 1.5 `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` — تسكين وتعديل حصة بالجدول الأسبوعي (Combined Specification)
+### 1.4 `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` — تسكين وتعديل حصة بالجدول الأسبوعي (Combined Specification)
 
 > **الوصف الوظيفي:**
 > * **في الإنشاء (`POST`):** إدراج حصة جديدة بالجدول الأسبوعي مع الفحص الذري ومنع تضارب شعبة الفصل (`uq_timetable_section_slot`) وتضارب جدول المعلم.
@@ -551,10 +465,19 @@
   "data": {
     "id": 1,
     "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "class_id": 5,
+    "class_name": "الصف الخامس",
     "class_section_id": 5,
+    "section_name": "شعبة أ",
+    "subject_id": 1,
+    "subject_name": "الرياضيات",
+    "teacher_id": 3,
+    "teacher_name": "أحمد عبد السلام",
     "day_of_week": "sunday",
+    "day_of_week_ar": "الأحد",
     "period_slot_id": 1,
-    "teaching_assignment_id": 10,
+    "period_name": "الحصة الأولى",
     "created_at": "2026-08-29T10:00:00Z"
   }
 }
@@ -568,10 +491,19 @@
   "data": {
     "id": 1,
     "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "class_id": 5,
+    "class_name": "الصف الخامس",
     "class_section_id": 5,
+    "section_name": "شعبة أ",
+    "subject_id": 1,
+    "subject_name": "الرياضيات",
+    "teacher_id": 3,
+    "teacher_name": "أحمد عبد السلام",
     "day_of_week": "sunday",
+    "day_of_week_ar": "الأحد",
     "period_slot_id": 2,
-    "teaching_assignment_id": 10
+    "period_name": "الحصة الثانية"
   }
 }
 ```
@@ -608,7 +540,7 @@
 
 ---
 
-### 1.6 `DELETE /api/v1/timetable-slots/:id` — حذف وإلغاء حصة من الجدول الأسبوعي
+### 1.5 `DELETE /api/v1/timetable-slots/:id` — حذف وإلغاء حصة من الجدول الأسبوعي
 
 > **الوصف الوظيفي:** حذف الحصة من الجدول الأسبوعي وإخلاء التوقيت الزمني.
 

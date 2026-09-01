@@ -14,11 +14,11 @@
 - [x] إدراج مخطط الكيانات والعلاقات (ERD) المحدث بصيغة Mermaid.
 
 ### 2️⃣ الركيزة الثانية: عقد الشبكة الموحد والمسارات (Network SSoT & Routes Matrix)
-- [x] توثيق كافة المسارات الـ 6 كاملة في جدول موحد (`Master Route Matrix`) في [`routes.md`](./routes.md).
+- [x] توثيق كافة المسارات الـ 5 كاملة في جدول موحد (`Master Route Matrix`) في [`routes.md`](./routes.md).
 - [x] توثيق نمط الأخطاء العامة المشتركة (`401 Unauthorized`, `403 Forbidden`, `500 Internal Server Error`) في القسم 1.1 من `routes.md`.
 - [x] دمج وتوحيد جسم الطلب الصريح (`Request Body`) لمساري الـ `POST` و `PUT`.
 - [x] توثيق استجابات الـ JSON الصريحة لجميع الرموز (`200 OK`, `201 Created`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`).
-- [x] توثيق مسار مصفوفة الصف الشاملة (`GET /api/v1/classes/:class_id/timetable`) لاستعراض كافة شعب الصف جنباً إلى جنب.
+- [x] دعم استعراض مصفوفة جدول الحصص الهرمية لكافة شُعب الصف بالترقيم عبر فلتر `class_id` بمسار `GET /api/v1/timetable-slots`.
 
 ### 3️⃣ الركيزة الثالثة: منطق الأعمال وقواعد الحوكمة (Domain Logic & Invariants)
 - [x] توثيق قيد تفرد حصة الشعبة الزمني (`uq_timetable_section_slot`).

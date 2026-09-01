@@ -11,11 +11,10 @@
 ## 1. نطاق المرحلة والحدود المعمارية (Scope & Boundaries)
 
 ### 🟢 ما تشمله المرحلة (In-Scope):
-- **إدارة سجل وجدول الحصص الأسبوعي (`timetable_slots`) — [6 مسارات]:**
-  - استعراض وتصفية جدول الحصص العام بالترقيم والفلترة (`GET /api/v1/timetable-slots`).
+- **إدارة سجل وجدول الحصص الأسبوعي (`timetable_slots`) — [5 مسارات موثقة برباعية العمليات المدمجة]:**
+  - استعراض وتصفية جدول الحصص العام بالترقيم والفلترة بالصف والشعبة والمعلم (`GET /api/v1/timetable-slots`).
   - استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة (`GET /api/v1/class-sections/:class_section_id/timetable`).
   - استعراض جدول الحصص الأسبوعي لمعلم محدد (`GET /api/v1/teachers/:teacher_id/timetable`).
-  - استعراض مصفوفة جدول الحصص المجمع لكافة شعب الصف الدراسي (`GET /api/v1/classes/:class_id/timetable`).
   - تسكين وتعديل حصة بالجدول الأسبوعي مع الفحص الذري لحظر التعارضات (`POST & PUT /api/v1/timetable-slots`).
   - حذف وإلغاء حصة من الجدول الأسبوعي (`DELETE /api/v1/timetable-slots/:id`).
 - **الحوكمة ومنع التعارضات:**
@@ -86,14 +85,13 @@ stateDiagram-v2
 | **1.1** | استعراض وتصفية سجلات الجدول الأسبوعي | `GET /api/v1/timetable-slots` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 | **1.2** | استعراض مصفوفة جدول الحصص لشعبة محددة | `GET /api/v1/class-sections/:class_section_id/timetable` | `admin` / `teacher` / `student` / `parent` | `200 OK` | [في routes.md](./routes.md) |
 | **1.3** | استعراض جدول الحصص الأسبوعي لمعلم محدد | `GET /api/v1/teachers/:teacher_id/timetable` | `admin` / `teacher (own)` | `200 OK` | [في routes.md](./routes.md) |
-| **1.4** | استعراض مصفوفة جدول الحصص لكافة شعب الصف | `GET /api/v1/classes/:class_id/timetable` | `admin` | `200 OK` | [في routes.md](./routes.md) |
-| **1.5** | تسكين وتعديل حصة بالجدول الأسبوعي | `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` | `admin` | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
-| **1.6** | حذف وإلغاء حصة من الجدول الأسبوعي | `DELETE /api/v1/timetable-slots/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.4** | تسكين وتعديل حصة بالجدول الأسبوعي | `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` | `admin` | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
+| **1.5** | حذف وإلغاء حصة من الجدول الأسبوعي | `DELETE /api/v1/timetable-slots/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 
 ---
 
 #### 🔹 [Operation 1.1] `GET /api/v1/timetable-slots` — استعراض وتصفية سجلات الجدول الأسبوعي
-- **الغرض والوظيفة:** استرجاع مصفوفة سجلات جدول الحصص الأسبوعية مجمعة هرمياً بالصفوف والشعب والأيام والحصص (`classes -> sections -> days -> slots`) بدون تكرار للبيانات؛ حيث يتيح فلتر الصف (`class_id`) جلب جدول كافة شُعب الصف المحدد، مع دعم الفلترة بالشعبة، المعلم، المادة، اليوم، والبحث.
+- **الغرض والوظيفة:** استرجاع مصفوفة سجلات جدول الحصص الأسبوعية مجمعة هرمياً بالصفوف والشعب والأيام والحصص (`classes -> sections -> days -> slots`) بدون تكرار للبيانات؛ حيث يتيح فلتر الصف (`class_id`) جلب جدول كافة شُعب الصف المحدد، مع دعم الفلترة بالشعبة، المعلم، المادة، اليوم، والبحث مع الترقيم.
 - **عقد الاستجابات والمعاملات (Network SSoT):**
   - معاملات الاستعلام وهياكل الـ JSON الصريحة لـ (`200 OK`) موثقة في [`routes.md`](./routes.md).
 
@@ -107,12 +105,7 @@ stateDiagram-v2
 - **عقد الاستجابات والمعاملات (Network SSoT):**
   - استجابات (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 1.4] `GET /api/v1/classes/:class_id/timetable` — استعراض مصفوفة جدول الحصص لكافة شعب الصف
-- **الغرض والوظيفة:** جلب مصفوفة جدول الحصص المجمع لكافة شُعب الصف الدراسي ليوم محدد لعرض جدول الناظر الشامل لجميع الشُعب والحصص في شاشة واحدة.
-- **عقد الاستجابات والمعاملات (Network SSoT):**
-  - استجابات (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).
-
-#### 🔹 [Operation 1.5] `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` — تسكين وتعديل حصة بالجدول الأسبوعي (Combined Domain Logic)
+#### 🔹 [Operation 1.4] `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` — تسكين وتعديل حصة بالجدول الأسبوعي (Combined Domain Logic)
 - **الغرض والوظيفة:**
   - **في الإنشاء (`POST`):** تسكين حصة جديدة بالجدول الأسبوعي للشعبة.
   - **في التعديل (`PUT`):** تحديث وتعديل توقيت أو شعبة أو مادة/معلم الحصة الأسبوعية.
@@ -127,7 +120,7 @@ stateDiagram-v2
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - هيكل الطلب واستجابات (`201 Created`, `200 OK`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 1.6] `DELETE /api/v1/timetable-slots/:id` — حذف وإلغاء حصة من الجدول الأسبوعي
+#### 🔹 [Operation 1.5] `DELETE /api/v1/timetable-slots/:id` — حذف وإلغاء حصة من الجدول الأسبوعي
 - **الغرض والوظيفة:** تنفيذ الحذف المنطقي لسجل الحصة بالجدول وتفريغ الفترة الزمنية.
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - ردود الحذف (`200 OK`, `404 Not Found`) مسجلة صراحةً في [`routes.md`](./routes.md).
@@ -154,6 +147,6 @@ stateDiagram-v2
 - [ ] إرجاع `403 Forbidden` عند محاولة المعلم أو الطالب تعديل الجدول الأسبوعي.
 - [ ] التحقق الصارم من قيد تفرد حصة الشعبة الزمني `uq_timetable_section_slot` وإرجاع `409 Conflict` عند التكرار.
 - [ ] التحقق الصارم من قيد حظر تضارب جدول المعلم وإرجاع `409 Conflict` عند محاولة تسكين المعلم لشعبتين في نفس الحصة.
-- [ ] دعم استرجاع مصفوفة الجدول المجمع للصف الدراسي وكافة شعبه في مسار واحد.
+- [ ] دعم استرجاع مصفوفة الجدول المجمع للصف الدراسي وكافة شعبه عبر فلتر `class_id` بمسار واحد.
 - [ ] تنفيذ الحذف المنطقي بضبط `deleted_at` وتوثيق العمليات في `audit_logs`.
 - [ ] مطابقة كافة المدخلات والمخرجات بنسبة 100% لعقد الشبكة في [`routes.md`](./routes.md).
