@@ -1,35 +1,56 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 08 (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 6 كاملة لإدارة وتصفية جدول الامتحانات الرسمية (النصفية والنهائية والدور الثاني) مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، وتزويد كافة مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) مع الترقيم المالي القياسي (`Pagination Meta`) ودعم البحث والتصفية (`CRUDS Standard: Create, Read, Update, Delete, Search`).  
+> **الهدف:** توثيق المسارات الـ 6 كاملة لإدارة وتصفية جدول الامتحانات الرسمية (النصفية والنهائية والدور الثاني) مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، مع دمج وتوحيد مواصفات الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح والرشاقة ومنع التكرار، وتزويد مسارات جلب القوائم باستجابات موجزة ومستوفية لعدة عناصر (`Multi-Item List Payload`) مع الترقيم القياسي (`Pagination Meta`) ودعم البحث والترتيب والتصفية.  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
-> 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم على المطور أو الذكاء الاصطناعي قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
-> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** يعتبر هذا الملف (`routes.md`) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**معاملات البحث والفلترة (`Query Parameters & Filters`)**، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`).  
-> 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
+> 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
+> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** يعتبر هذا الملف ([`routes.md`](./routes.md)) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**معاملات البحث والفلترة (`Query Parameters & Filters`)**، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`, `500 Server Error`).  
+> 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في هذا الملف حصراً بدون أي اجتهاد شخصي.
 
 ---
 
 ## 1. الإعدادات والترويسات العامة (API Base Configuration)
 
 - **Base URI:** `/api/v1`
-- **Headers:** `Authorization: Bearer <TOKEN>`, `Accept: application/json`, `Content-Type: application/json`
+- **Protocol:** `HTTPS`
+- **Data Format:** `JSON` (`application/json`)
+- **Required Headers:**
+  ```http
+  Authorization: Bearer <TOKEN>
+  Accept: application/json
+  Content-Type: application/json
+  Accept-Language: ar
+  ```
 
-### 📋 نمط الاستجابات العامة والأخطاء الشائعة (Standard Error Responses)
+### 📋 مصفوفة المسارات الـ 6 الموحدة (Master Route Matrix):
+
+| # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
+| :-: | :--- | :--- | :--- | :--- | :--- |
+| **1** | `official_exams` | `GET` | `/api/v1/official-exams` | الجميع | استعراض وتصفية وبحث جدول الامتحانات الرسمية بالترقيم والفلترة |
+| **2** | `official_exams` | `GET` | `/api/v1/official-exams/:id` | الجميع | استعراض تفاصيل امتحان رسمي محدد والتعليمات والقاعة |
+| **3** | `official_exams` | `GET` | `/api/v1/classes/:class_id/official-exams` | الجميع | استعراض جدول امتحانات الصف الدراسي المعتمد بالسمستر |
+| **4** | `official_exams` | `POST` | `/api/v1/official-exams` | `admin` | إضافة وجدولة موعد امتحان رسمي لصف ومادة بالسمستر |
+| **5** | `official_exams` | `PUT` | `/api/v1/official-exams/:id` | `admin` | تعديل موعد أو تعليمات الامتحان الرسمي القائم |
+| **6** | `official_exams` | `DELETE` | `/api/v1/official-exams/:id` | `admin` | حذف وإلغاء امتحان رسمي من الجدول المعتمد |
+
+### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
+
+> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 6** بالمرحلة:
 
 ```json
-// 401 Unauthorized
+// 401 Unauthorized (غياب أو تلف التوكن)
 {
   "success": false,
   "message": "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
 }
 
-// 403 Forbidden
+// 403 Forbidden (نقص الصلاحيات ومخالفة مصفوفة RBAC)
 {
   "success": false,
   "message": "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
 }
 
-// 500 Server Error
+// 500 Internal Server Error (خطأ غير متوقع في الخادم)
 {
   "success": false,
   "message": "حدث خطأ غير متوقع في الخادم. يرجى المحاولة لاحقاً."
@@ -38,173 +59,209 @@
 
 ---
 
-## 📝 الخطوة 1: إدارة جدول الامتحانات الرسمية (`official_exams`) — [6 مسارات]
-
-> [!NOTE]
-> **الشرح والملاحظات الحوكمية لـ الامتحانات الرسمية:**
-> 1. **صلاحية الإدارة الحصرية (Strict Admin RBAC):** جدولة وإضافة وتعديل وحذف الامتحانات الرسمية (النصفية والنهائية والدور الثاني) مقتصرة **حصراً على مدير النظام** (`role_type = 'admin'`).
-> 2. **القراءة العامة المقيدة (Read-Only Context):** يستعرض الطلاب والمعلمون وأولياء الأمور جدول الامتحانات الرسمية المخصص لصفوفهم وأبنائهم على نمط القراءة فقط دون إمكانية التعديل.
-> 3. **قيد تفرد المادة بالنوع والسمستر (`uq_official_exam_schedule`):** يمنع تكرار جدولة امتحان رسمي لنفس المادة والصف والسمستر والنوع (مثال: يمنع وجود امتحانين نهائيين لنفس المادة للصف الخامس بالسمستر الأول). عند المخالفة يرجِع الخادم خطأ `409 Conflict`.
+## 📝 الخطوة 1: إدارة جدول الامتحانات الرسمية (`official_exams`) — [مواصفات المسارات]
 
 ---
 
 ### 1.1 `GET /api/v1/official-exams` — عرض وتصفية قائمة الامتحانات الرسمية
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** استرجاع قائمة سجلات جدول الامتحانات الرسمية بالمنظومة مع دعم الفلترة بالصف الدراسي `class_id` والمادة والسمستر ونوع الامتحان والتاريخ (CRUDS - Search & Filter Engine).
+> **الوصف الوظيفي:** استرجاع قائمة سجلات جدول الامتحانات الرسمية بالمنظومة مع دعم الفلترة بالصف الدراسي `class_id` والمادة والسمستر ونوع الامتحان والتاريخ والبحث والترقيم (CRUDS - Search & Filter Engine).
 
-- **Query Parameters (معاملات الفلترة والبحث والترتيب):**
-  - `search` (optional, string): البحث النصي باسم المادة أو نوتس الامتحان (مثال: `الرياضيات` أو `القاعة الكبرى`).
+- **Query Parameters:**
+  - `search` (optional, string): البحث النصي باسم المادة أو التعليمات (مثال: `الرياضيات` أو `القاعة الكبرى`).
   - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي (افتراضياً العام النشط).
   - `academic_term_id` (optional, bigint): تصفية حسب الفصل الدراسي / السمستر.
-  - `class_id` (optional, bigint): تصفية الامتحانات حسب الصف الدراسي (مثال: `الصف الخامس`).
+  - `class_id` (optional, bigint): تصفية الامتحانات حسب الصف الدراسي (مثال: `class_id=3`).
   - `subject_id` (optional, bigint): تصفية الامتحانات حسب المادة الدراسية.
   - `exam_type` (optional, string, enum: `midterm`, `final`, `second_round`): تصفية حسب نوع الامتحان الرسمي.
-  - `exam_date` (optional, date): تصفية حسب تاريخ اليوم الخادمي للامتحان (`YYYY-MM-DD`).
+  - `exam_date` (optional, date): تصفية حسب تاريخ يوم الامتحان (`YYYY-MM-DD`).
   - `sort_by` (optional, string, enum: `id`, `exam_date`, `created_at`, default `exam_date`): حقل الفرز والترتيب.
   - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
   - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
   - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
 - **Example Request URL:** `/api/v1/official-exams?class_id=3&academic_term_id=1&exam_type=midterm&sort_by=exam_date&sort_order=asc`
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK` (نجاح جلب القائمة):
+```json
+{
+  "success": true,
+  "message": "تم جلب جدول الامتحانات الرسمية بنجاح.",
+  "data": [
     {
-      "success": true,
-      "message": "تم جلب جدول الامتحانات الرسمية بنجاح.",
-      "data": [
-        {
-          "id": 1,
-          "academic_year_id": 1,
-          "academic_term_id": 1,
-          "term_name": "الفصل الدراسي الأول",
-          "class_id": 3,
-          "class_name": "الصف الخامس",
-          "subject_id": 2,
-          "subject_name": "الرياضيات",
-          "exam_type": "midterm",
-          "exam_type_ar": "امتحان نصفي",
-          "exam_date": "2026-11-15",
-          "notes": "الامتحان من الساعة 09:00 إلى 11:00 في القاعة الكبرى (ممنوع الآلة الحاسبة).",
-          "created_at": "2026-10-20T08:00:00Z"
-        },
-        {
-          "id": 2,
-          "academic_year_id": 1,
-          "academic_term_id": 1,
-          "term_name": "الفصل الدراسي الأول",
-          "class_id": 3,
-          "class_name": "الصف الخامس",
-          "subject_id": 4,
-          "subject_name": "اللغة العربية",
-          "exam_type": "midterm",
-          "exam_type_ar": "امتحان نصفي",
-          "exam_date": "2026-11-17",
-          "notes": "الامتحان من الساعة 09:00 إلى 11:00 بقاعات الصف الخامس.",
-          "created_at": "2026-10-20T08:30:00Z"
-        }
-      ],
-      "meta": {
-        "current_page": 1,
-        "per_page": 15,
-        "total": 2,
-        "last_page": 1
-      }
+      "id": 1,
+      "academic_year_id": 1,
+      "academic_year_name": "2025/2026",
+      "academic_term_id": 1,
+      "term_name": "الفصل الدراسي الأول",
+      "class_id": 3,
+      "class_name": "الصف الخامس",
+      "subject_id": 2,
+      "subject_name": "الرياضيات",
+      "exam_type": "midterm",
+      "exam_type_ar": "امتحان نصفي",
+      "exam_date": "2026-11-15",
+      "notes": "الامتحان من الساعة 09:00 إلى 11:00 في القاعة الكبرى (ممنوع الآلة الحاسبة).",
+      "created_at": "2026-10-20T08:00:00Z"
+    },
+    {
+      "id": 2,
+      "academic_year_id": 1,
+      "academic_year_name": "2025/2026",
+      "academic_term_id": 1,
+      "term_name": "الفصل الدراسي الأول",
+      "class_id": 3,
+      "class_name": "الصف الخامس",
+      "subject_id": 4,
+      "subject_name": "اللغة العربية",
+      "exam_type": "midterm",
+      "exam_type_ar": "امتحان نصفي",
+      "exam_date": "2026-11-17",
+      "notes": "الامتحان من الساعة 09:00 إلى 11:00 بقاعات الصف الخامس.",
+      "created_at": "2026-10-20T08:30:00Z"
     }
-    ```
+  ],
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 2,
+    "last_page": 1
+  }
+}
+```
+
+##### ⚪ `200 OK` (القائمة فارغة):
+```json
+{
+  "success": true,
+  "message": "لا توجد امتحانات رسمية مسجلة تطابق محددات البحث.",
+  "data": [],
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 0,
+    "last_page": 1
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
 ### 1.2 `GET /api/v1/official-exams/:id` — عرض تفاصيل امتحان رسمي محدد
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** استرجاع البيانات التفصيلية والتوجيهات الخاصة بسجل امتحان رسمي محدد.
+> **الوصف الوظيفي:** استرجاع البيانات التفصيلية والتوجيهات الخاصة بسجل امتحان رسمي محدد بالمعرف.
 
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم جلب تفاصيل الامتحان الرسمي بنجاح.",
-      "data": {
-        "id": 1,
-        "academic_year_id": 1,
-        "academic_term_id": 1,
-        "term_name": "الفصل الدراسي الأول",
-        "class_id": 3,
-        "class_name": "الصف الخامس",
-        "subject_id": 2,
-        "subject_name": "الرياضيات",
-        "exam_type": "midterm",
-        "exam_type_ar": "امتحان نصفي",
-        "exam_date": "2026-11-15",
-        "notes": "الامتحان من الساعة 09:00 إلى 11:00 في القاعة الكبرى (ممنوع الآلة الحاسبة).",
-        "created_at": "2026-10-20T08:00:00Z"
-      }
-    }
-    ```
-  - **`404 Not Found`:** `{"success": false, "message": "سجل الامتحان الرسمي غير موجود."}`
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم جلب تفاصيل الامتحان الرسمي بنجاح.",
+  "data": {
+    "id": 1,
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "academic_term_id": 1,
+    "term_name": "الفصل الدراسي الأول",
+    "class_id": 3,
+    "class_name": "الصف الخامس",
+    "subject_id": 2,
+    "subject_name": "الرياضيات",
+    "exam_type": "midterm",
+    "exam_type_ar": "امتحان نصفي",
+    "exam_date": "2026-11-15",
+    "notes": "الامتحان من الساعة 09:00 إلى 11:00 في القاعة الكبرى (ممنوع الآلة الحاسبة).",
+    "created_at": "2026-10-20T08:00:00Z"
+  }
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "سجل الامتحان الرسمي غير موجود."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
 ### 1.3 `GET /api/v1/classes/:class_id/official-exams` — عرض جدول الامتحانات الرسمية لصف دراسي محدد
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** استرجاع جدول الامتحانات المعتمد بالكامل لصف دراسي محدد (مثل: جدول امتحانات الصف الخامس النصفية) بالسمستر النشط مع إرجاع 3 أمثلة حقيقية متكاملة.
+> **الوصف الوظيفي:** استرجاع جدول الامتحانات المعتمد بالكامل لصف دراسي محدد بالسمستر النشط؛ مخصص للطلاب والمعلمين وأولياء الأمور لعرض وطباعة جدول الامتحانات المجمع للصف.
 
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم جلب جدول امتحانات الصف الدراسي بنجاح.",
-      "data": {
-        "class_id": 3,
-        "class_name": "الصف الخامس",
-        "academic_term_name": "الفصل الدراسي الأول",
-        "total_exams": 3,
-        "exams": [
-          {
-            "id": 1,
-            "subject_id": 2,
-            "subject_name": "الرياضيات",
-            "exam_type": "midterm",
-            "exam_type_ar": "امتحان نصفي",
-            "exam_date": "2026-11-15",
-            "notes": "الامتحان من 09:00 إلى 11:00 بالقاعة الكبرى."
-          },
-          {
-            "id": 2,
-            "subject_id": 4,
-            "subject_name": "اللغة العربية",
-            "exam_type": "midterm",
-            "exam_type_ar": "امتحان نصفي",
-            "exam_date": "2026-11-17",
-            "notes": "الامتحان من 09:00 إلى 11:00 بالقاعة 5أ و 5ب."
-          },
-          {
-            "id": 3,
-            "subject_id": 6,
-            "subject_name": "العلوم العامة",
-            "exam_type": "midterm",
-            "exam_type_ar": "امتحان نصفي",
-            "exam_date": "2026-11-19",
-            "notes": "الامتحان يشمل الجانب النظري والتجريبي المختبري."
-          }
-        ]
+- **Query Parameters:**
+  - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي.
+  - `academic_term_id` (optional, bigint): تصفية حسب الفصل الدراسي / السمستر.
+  - `exam_type` (optional, string, enum: `midterm`, `final`, `second_round`): تصفية حسب نوع الامتحان.
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم جلب جدول امتحانات الصف الدراسي بنجاح.",
+  "data": {
+    "class_id": 3,
+    "class_name": "الصف الخامس",
+    "academic_term_id": 1,
+    "academic_term_name": "الفصل الدراسي الأول",
+    "exam_type": "midterm",
+    "exam_type_ar": "امتحان نصفي",
+    "total_exams": 3,
+    "exams": [
+      {
+        "id": 1,
+        "subject_id": 2,
+        "subject_name": "الرياضيات",
+        "exam_date": "2026-11-15",
+        "notes": "الامتحان من 09:00 إلى 11:00 بالقاعة الكبرى."
+      },
+      {
+        "id": 2,
+        "subject_id": 4,
+        "subject_name": "اللغة العربية",
+        "exam_date": "2026-11-17",
+        "notes": "الامتحان من 09:00 إلى 11:00 بقاعات الصف الخامس."
+      },
+      {
+        "id": 3,
+        "subject_id": 6,
+        "subject_name": "العلوم العامة",
+        "exam_date": "2026-11-19",
+        "notes": "الامتحان يشمل الجانب النظري والتجريبي المختبري."
       }
-    }
-    ```
-  - **`404 Not Found`:** `{"success": false, "message": "الصف الدراسي غير موجود."}`
+    ]
+  }
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "الصف الدراسي غير موجود."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
-### 1.4 `POST /api/v1/official-exams` — إضافة وجدولة امتحان رسمي جديد
+### 1.4 `POST /api/v1/official-exams` & `PUT /api/v1/official-exams/:id` — إضافة وتعديل جدولة امتحان رسمي (Combined Specification)
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** اعتماد وجدولة موعد امتحان رسمي جديد مخصص لصف ومادة بالسمستر (مقتصر على الإدارة)، مع التحقق من عدم تكرار `uq_official_exam_schedule`.
+> **الوصف الوظيفي:**
+> * **في الإنشاء (`POST`):** اعتماد وجدولة موعد امتحان رسمي جديد مخصص لصف ومادة بالسمستر (مقتصر على الإدارة)، مع التحقق من عدم تكرار `uq_official_exam_schedule`.
+> * **في التعديل (`PUT`):** تحديث موعد الامتحان أو التاريخ أو الملاحظات والإرشادات.
 
-- **Request Body:**
+- **Request Body (موحد للإنشاء والتعديل):**
   ```json
   {
     "academic_year_id": 1,
@@ -216,66 +273,108 @@
     "notes": "الامتحان من الساعة 09:00 إلى 11:00 في القاعة الكبرى (ممنوع الآلة الحاسبة)."
   }
   ```
-- **Response Payloads:**
-  - **`201 Created`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم إضافة وجدولة الامتحان الرسمي بنجاح.",
-      "data": {
-        "id": 1,
-        "academic_year_id": 1,
-        "academic_term_id": 1,
-        "class_id": 3,
-        "subject_id": 2,
-        "exam_type": "midterm",
-        "exam_date": "2026-11-15",
-        "notes": "الامتحان من الساعة 09:00 إلى 11:00 في القاعة الكبرى (ممنوع الآلة الحاسبة).",
-        "created_at": "2026-10-20T08:00:00Z"
-      }
-    }
-    ```
-  - **`409 Conflict`:** `{"success": false, "message": "يوجد امتحان رسمي مجدول مسبقاً لهذه المادة والصف بنفس السمستر ونوع الامتحان (uq_official_exam_schedule)."}`
-  - **`422 Unprocessable`:** `{"success": false, "message": "فشل التحقق من مدخلات جدولة الامتحان الرسمي."}`
 
----
+#### استجابات الإنشاء والتعديل (Responses):
 
-### 1.5 `PUT /api/v1/official-exams/:id` — تعديل موعد أو تعليمات امتحان رسمي قائم
-
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** تحديث تاريخ يوم الامتحان أو النوتس والتعليمات الخاصة بالامتحان الرسمي.
-
-- **Request Body:**
-  ```json
-  {
-    "exam_date": "2026-11-16",
-    "notes": "تم تعديل الموعد إلى يوم الاثنين من الساعة 09:00 إلى 11:00 بالقاعة الكبرى."
+##### ✅ `201 Created` (خاص بالإنشاء POST):
+```json
+{
+  "success": true,
+  "message": "تم إضافة وجدولة الامتحان الرسمي بنجاح.",
+  "data": {
+    "id": 1,
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "academic_term_id": 1,
+    "term_name": "الفصل الدراسي الأول",
+    "class_id": 3,
+    "class_name": "الصف الخامس",
+    "subject_id": 2,
+    "subject_name": "الرياضيات",
+    "exam_type": "midterm",
+    "exam_type_ar": "امتحان نصفي",
+    "exam_date": "2026-11-15",
+    "notes": "الامتحان من الساعة 09:00 إلى 11:00 في القاعة الكبرى (ممنوع الآلة الحاسبة).",
+    "created_at": "2026-10-20T08:00:00Z"
   }
-  ```
-- **Response Payloads:**
-  - **`200 OK`:**
-    ```json
-    {
-      "success": true,
-      "message": "تم تحديث موعد الامتحان الرسمي بنجاح.",
-      "data": {
-        "id": 1,
-        "exam_date": "2026-11-16",
-        "notes": "تم تعديل الموعد إلى يوم الاثنين من الساعة 09:00 إلى 11:00 بالقاعة الكبرى."
-      }
-    }
-    ```
-  - **`404 Not Found`:** `{"success": false, "message": "سجل الامتحان الرسمي غير موجود."}`
-  - **`409 Conflict`:** `{"success": false, "message": "تعارض؛ الموعد أو المادة مجدولة مسبقاً بسجل آخر."}`
+}
+```
+
+##### ✅ `200 OK` (خاص بالتعديل PUT):
+```json
+{
+  "success": true,
+  "message": "تم تحديث موعد الامتحان الرسمي بنجاح.",
+  "data": {
+    "id": 1,
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "academic_term_id": 1,
+    "term_name": "الفصل الدراسي الأول",
+    "class_id": 3,
+    "class_name": "الصف الخامس",
+    "subject_id": 2,
+    "subject_name": "الرياضيات",
+    "exam_type": "midterm",
+    "exam_type_ar": "امتحان نصفي",
+    "exam_date": "2026-11-16",
+    "notes": "تم تعديل الموعد إلى يوم الإثنين من الساعة 09:00 إلى 11:00 بالقاعة الكبرى."
+  }
+}
+```
+
+##### 🔍 `404 Not Found` (خاص بالتعديل PUT):
+```json
+{
+  "success": false,
+  "message": "سجل الامتحان الرسمي غير موجود."
+}
+```
+
+##### ⚡ `409 Conflict` (تكرار جدولة المادة بالنوع نفسه):
+```json
+{
+  "success": false,
+  "message": "يوجد امتحان رسمي مجدول مسبقاً لهذه المادة والصف بنفس السمستر ونوع الامتحان (uq_official_exam_schedule)."
+}
+```
+
+##### ⚠️ `422 Unprocessable Entity`:
+```json
+{
+  "success": false,
+  "message": "بيانات جدولة الامتحان الرسمي غير صالحة.",
+  "errors": {
+    "exam_date": ["تاريخ الامتحان مطلوب ويجب أن يكون تاريخاً صحيحاً."],
+    "subject_id": ["المادة المحددة غير موجودة أو غير مسندة للصف الدراسي."]
+  }
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
 
 ---
 
-### 1.6 `DELETE /api/v1/official-exams/:id` — إلغاء وحذف امتحان رسمي من الجدول
+### 1.5 `DELETE /api/v1/official-exams/:id` — إلغاء وحذف امتحان رسمي من الجدول
 
-> [!NOTE]
-> **الوصف الوظيفي والملاحظات:** حذف وإلغاء امتحان رسمي منطقياً من الجدول المعتمد مع توثيق العملية بسجل التدقيق `audit_logs`.
+> **الوصف الوظيفي:** حذف وإلغاء امتحان رسمي منطقياً من الجدول المعتمد مع توثيق العملية بسجل التدقيق `audit_logs`.
 
-- **Response Payloads:**
-  - **`200 OK`:** `{"success": true, "message": "تم حذف الامتحان الرسمي من الجدول بنجاح."}`
-  - **`403 Forbidden`:** `{"success": false, "message": "غير مصرح لك بحذف الامتحانات الرسمية (مقتصر على مدير النظام)."}`
-  - **`404 Not Found`:** `{"success": false, "message": "سجل الامتحان الرسمي غير موجود."}`
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم حذف الامتحان الرسمي من الجدول بنجاح."
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "سجل الامتحان الرسمي غير موجود."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
