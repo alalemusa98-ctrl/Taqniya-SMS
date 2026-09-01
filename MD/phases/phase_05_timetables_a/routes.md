@@ -5,7 +5,7 @@
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
 > 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** يعتبر هذا الملف ([`routes.md`](./routes.md)) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**معاملات البحث والفلترة (`Query Parameters & Filters`)**، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`, `500 Server Error`).  
-> 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
+> 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في هذا الملف حصراً بدون أي اجتهاد شخصي.
 
 ---
 
@@ -27,10 +27,9 @@
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
 | **1** | `period_slots` | `GET` | `/api/v1/period-slots` | `admin` / `teacher` / `student` / `parent` | استعراض وبحث فترات وتوقيتات الحصص والفسح اليومية |
-| **2** | `period_slots` | `GET` | `/api/v1/period-slots/:id` | `admin` / `teacher` | استعراض تفاصيل فترة حصة أو استراحة محددة بالمعرف |
-| **3** | `period_slots` | `POST` | `/api/v1/period-slots` | `admin` | إضافة فترة حصة أو استراحة جديدة مع فحص تفرد التسلسل |
-| **4** | `period_slots` | `PUT` | `/api/v1/period-slots/:id` | `admin` | تعديل مسمى وتوقيتات فترة الحصة أو الاستراحة |
-| **5** | `period_slots` | `DELETE` | `/api/v1/period-slots/:id` | `admin` | حذف فترة الحصة مع فحص الحماية المرجعية (RESTRICT) |
+| **2** | `period_slots` | `POST` | `/api/v1/period-slots` | `admin` | إضافة فترة حصة أو استراحة جديدة مع فحص تفرد التسلسل |
+| **3** | `period_slots` | `PUT` | `/api/v1/period-slots/:id` | `admin` | تعديل مسمى وتوقيتات فترة الحصة أو الاستراحة |
+| **4** | `period_slots` | `DELETE` | `/api/v1/period-slots/:id` | `admin` | حذف فترة الحصة مع فحص الحماية المرجعية (RESTRICT) |
 
 ### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
 
@@ -139,42 +138,7 @@
 
 ---
 
-### 1.2 `GET /api/v1/period-slots/:id` — استعراض تفاصيل فترة حصة محددة
-
-> **الوصف الوظيفي:** استرجاع البيانات التفصيلية لفترة زمنية محددة باليوم المدرسي وتوقيتات البداية والنهاية.
-
-#### استجابات هذا الرابط (Responses):
-
-##### ✅ `200 OK`:
-```json
-{
-  "success": true,
-  "message": "تم جلب تفاصيل فترة الحصة بنجاح.",
-  "data": {
-    "id": 1,
-    "name": "الحصة الأولى",
-    "slot_number": 1,
-    "start_time": "08:00:00",
-    "end_time": "08:45:00",
-    "is_break": 0,
-    "created_at": "2026-08-29T08:00:00Z"
-  }
-}
-```
-
-##### 🔍 `404 Not Found`:
-```json
-{
-  "success": false,
-  "message": "فترة الحصة غير موجودة."
-}
-```
-
-> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
-
----
-
-### 1.3 `POST /api/v1/period-slots` & `PUT /api/v1/period-slots/:id` — إنشاء وتعديل فترة حصة (Combined Specification)
+### 1.2 `POST /api/v1/period-slots` & `PUT /api/v1/period-slots/:id` — إنشاء وتعديل فترة حصة (Combined Specification)
 
 > **الوصف الوظيفي:**
 > * **في الإنشاء (`POST`):** إضافة فترة حصة أو فسحة جديدة لليوم المدرسي مع التحقق من تفرد التسلسل (`uq_period_slots_number`) وأسبقية وقت البداية على وقت النهاية.
@@ -258,7 +222,7 @@
 
 ---
 
-### 1.4 `DELETE /api/v1/period-slots/:id` — حذف فترة حصة
+### 1.3 `DELETE /api/v1/period-slots/:id` — حذف فترة حصة
 
 > **الوصف الوظيفي:** حذف فترة الحصة اليومية بشرط عدم استخدامها في أي جدول حصص أسبوعي (`timetable_slots`).
 

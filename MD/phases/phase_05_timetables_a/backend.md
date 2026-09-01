@@ -11,9 +11,8 @@
 ## 1. نطاق المرحلة والحدود المعمارية (Scope & Boundaries)
 
 ### 🟢 ما تشمله المرحلة (In-Scope):
-- **إدارة سجل فترات وتوقيتات الحصص اليومية (`period_slots`) — [4 مسارات موثقة برباعية العمليات المدمجة]:**
+- **إدارة سجل فترات وتوقيتات الحصص اليومية (`period_slots`) — [3 مسارات موثقة برباعية العمليات المدمجة]:**
   - استعراض وبحث فترات وتوقيتات الحصص والفسح اليومية بالترقيم والفلترة (`GET /api/v1/period-slots`).
-  - استعراض تفاصيل فترة حصة أو استراحة محددة بالمعرف (`GET /api/v1/period-slots/:id`).
   - إنشاء وتعديل فترة حصة أو استراحة مع فحص تفرد التسلسل (`POST & PUT /api/v1/period-slots`).
   - حذف فترة الحصة مع فحص الحماية المرجعية الصارمة (`DELETE /api/v1/period-slots/:id`).
 - **الحوكمة والأمان:**
@@ -82,9 +81,8 @@ stateDiagram-v2
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
 | :-: | :--- | :--- | :--- | :---: | :--- |
 | **1.1** | استعراض وبحث فترات الحصص والفسح | `GET /api/v1/period-slots` | الجميع | `200 OK` | [في routes.md](./routes.md) |
-| **1.2** | استعراض تفاصيل فترة حصة محددة | `GET /api/v1/period-slots/:id` | `admin` / `teacher` | `200 OK` | [في routes.md](./routes.md) |
-| **1.3** | إنشاء وتعديل فترة حصة | `POST /api/v1/period-slots` & `PUT /api/v1/period-slots/:id` | `admin` | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
-| **1.4** | حذف فترة حصة | `DELETE /api/v1/period-slots/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.2** | إنشاء وتعديل فترة حصة | `POST /api/v1/period-slots` & `PUT /api/v1/period-slots/:id` | `admin` | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
+| **1.3** | حذف فترة حصة | `DELETE /api/v1/period-slots/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 
 ---
 
@@ -92,11 +90,7 @@ stateDiagram-v2
 - **الغرض والوظيفة:** استرجاع قائمة الفترات الزمنية باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفرز والترقيم وتصفية فترات الاستراحة `is_break`.
 - **عقد الاستجابات والمعاملات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 1.2] `GET /api/v1/period-slots/:id` — استعراض تفاصيل فترة حصة محددة
-- **الغرض والوظيفة:** جلب البيانات التفصيلية لفترة زمنية محددة باليوم المدرسي.
-- **عقد الاستجابات والمدخلات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
-
-#### 🔹 [Operation 1.3] `POST /api/v1/period-slots` & `PUT /api/v1/period-slots/:id` — إنشاء وتعديل فترة حصة (Combined Domain Logic)
+#### 🔹 [Operation 1.2] `POST /api/v1/period-slots` & `PUT /api/v1/period-slots/:id` — إنشاء وتعديل فترة حصة (Combined Domain Logic)
 - **الغرض والوظيفة:**
   - **في الإنشاء (`POST`):** إضافة فترة حصة أو فسحة جديدة لليوم المدرسي مع التحقق من تفرد التسلسل (`uq_period_slots_number`) وأسبقية وقت البداية.
   - **في التعديل (`PUT`):** تحديث مسمى وتوقيتات الحصة.
@@ -109,7 +103,7 @@ stateDiagram-v2
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - استجابات (`201 Created`, `200 OK`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
 
-#### 🔹 [Operation 1.4] `DELETE /api/v1/period-slots/:id` — حذف فترة حصة
+#### 🔹 [Operation 1.3] `DELETE /api/v1/period-slots/:id` — حذف فترة حصة
 - **الغرض والوظيفة:** حذف فترة الحصة اليومية بشرط عدم استخدامها في أي جدول حصص أسبوعي (`RESTRICT`).
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - استجابات (`200 OK`, `404 Not Found`, `409 Conflict`) مسجلة في [`routes.md`](./routes.md).
@@ -138,4 +132,3 @@ stateDiagram-v2
 - [ ] التحقق الصارم من أسبقية وقت البداية على وقت النهاية `start_time < end_time` وإرجاع `422 Unprocessable Entity` عند المخالفة.
 - [ ] فرض الحماية المرجعية ومنع حذف فترة الحصة المرتبطة بجدول أسبوعي وإرجاع `409 Conflict`.
 - [ ] تنفيذ الحذف المنطقي بضبط `deleted_at` وتوثيق كافة العمليات في `audit_logs`.
-- [ ] مطابقة كافة المدخلات والمخرجات بنسبة 100% لعقد الشبكة في [`routes.md`](./routes.md).

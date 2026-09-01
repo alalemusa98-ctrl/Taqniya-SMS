@@ -23,8 +23,8 @@
 
 1. **الخطوة 1: إدارة سجل فترات وتوقيتات الحصص اليومية (`period_slots`):** [4 مسارات]
    - **استعراض وبحث فترات الحصص والفسح اليومية:** `GET /api/v1/period-slots`.
-   - **استعراض تفاصيل فترة حصة أو استراحة محددة:** `GET /api/v1/period-slots/:id`.
-   - **إنشاء وتعديل فترة حصة (Combined POST & PUT):** `POST` & `PUT /api/v1/period-slots`.
+   - **إضافة فترة حصة أو استراحة جديدة:** `POST /api/v1/period-slots`.
+   - **تعديل مسمى وتوقيتات فترة الحصة:** `PUT /api/v1/period-slots/:id`.
    - **حذف فترة الحصة مع فحص الحماية المرجعية (RESTRICT):** `DELETE /api/v1/period-slots/:id`.
 
 ### 🔴 ما يقع خارج نطاق المرحلة (Out of Scope):

@@ -20,15 +20,14 @@
 
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
-| `TC-SLOT-01` | **Integration** | استرجاع قائمة فترات الحصص مع الفرز بحسب `slot_number` | `GET /api/v1/period-slots?sort_by=slot_number&sort_order=asc` | `200 OK` مع قائمة الفترات مرتبة تصاعدياً. |
+| `TC-SLOT-01` | **Integration** | استرجاع قائمة فترات الحصص مع الفرز بحسب `slot_number` | `GET /api/v1/period-slots?sort_by=slot_number&sort_order=asc&page=1` | `200 OK` مع قائمة الفترات مرتبة تصاعدياً و `meta`. |
 | `TC-SLOT-02` | **Integration** | تصفية فترات الاستراحة/الفسح فقط | `GET /api/v1/period-slots?is_break=1` | `200 OK` وجلب فترات الفسحة فقط. |
-| `TC-SLOT-03` | **Integration** | استرجاع تفاصيل فترة حصة محددة بالمعرف | `GET /api/v1/period-slots/1` | `200 OK` وتفاصيل الحصة والتوقيتات. |
-| `TC-SLOT-04` | **Unit / Validation** | **إنشاء فترة حصة بنجاح:** إضافة فترة حصة جديدة بتوقيت صالح | `name: 'الحصة السادسة', slot_number: 6, start_time: '12:00:00', end_time: '12:45:00'` | `201 Created` وحفظ السجل بجدول `period_slots`. |
-| `TC-SLOT-05` | **Validation / Invariant** | **قيد الترتيب الزمني المنطقي:** رفض فترة حصة بوقت نهاية أسبق من البداية | `start_time: '10:00:00', end_time: '09:00:00'` | `422 Unprocessable Entity`. |
-| `TC-SLOT-06` | **Conflict / Invariant** | **قيد تفرد الرقم التسلسلي (uq_period_slots_number):** منع تكرار `slot_number` | محاولة إنشاء حصة برقم تسلسلي مسجل مسبقاً | `409 Conflict` (`uq_period_slots_number`). |
-| `TC-SLOT-07` | **Integration** | **تعديل فترة الحصة بنجاح:** تحديث المسمى والتوقيت | `PUT /api/v1/period-slots/6` | `200 OK` وتحديث السجل. |
-| `TC-SLOT-08` | **Relational Integrity** | **منع حذف فترة حصة مستخدمة بالجدول الأسبوعي (RESTRICT):** محاولة حذف حصة مرتبطة | `DELETE /api/v1/period-slots/1` (مرتبطة بـ timetable_slots) | `409 Conflict` ورفض الحذف. |
-| `TC-SLOT-09` | **Soft Delete** | حذف فترة حصة حرة غير مستخدمة في أي جدول | `DELETE /api/v1/period-slots/9` (فترة حرة) | `200 OK` وضبط `deleted_at`. |
+| `TC-SLOT-03` | **Unit / Validation** | **إنشاء فترة حصة بنجاح:** إضافة فترة حصة جديدة بتوقيت صالح | `name: 'الحصة السادسة', slot_number: 6, start_time: '12:00:00', end_time: '12:45:00'` | `201 Created` وحفظ السجل بجدول `period_slots`. |
+| `TC-SLOT-04` | **Validation / Invariant** | **قيد الترتيب الزمني المنطقي:** رفض فترة حصة بوقت نهاية أسبق من البداية | `start_time: '10:00:00', end_time: '09:00:00'` | `422 Unprocessable Entity`. |
+| `TC-SLOT-05` | **Conflict / Invariant** | **قيد تفرد الرقم التسلسلي (uq_period_slots_number):** منع تكرار `slot_number` | محاولة إنشاء حصة برقم تسلسلي مسجل مسبقاً | `409 Conflict` (`uq_period_slots_number`). |
+| `TC-SLOT-06` | **Integration** | **تعديل فترة الحصة بنجاح:** تحديث المسمى والتوقيت | `PUT /api/v1/period-slots/6` | `200 OK` وتحديث السجل. |
+| `TC-SLOT-07` | **Relational Integrity** | **منع حذف فترة حصة مستخدمة بالجدول الأسبوعي (RESTRICT):** محاولة حذف حصة مرتبطة | `DELETE /api/v1/period-slots/1` (مرتبطة بـ timetable_slots) | `409 Conflict` ورفض الحذف. |
+| `TC-SLOT-08` | **Soft Delete** | حذف فترة حصة حرة غير مستخدمة في أي جدول | `DELETE /api/v1/period-slots/9` (فترة حرة) | `200 OK` وضبط `deleted_at`. |
 
 ---
 
