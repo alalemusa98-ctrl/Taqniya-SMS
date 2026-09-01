@@ -98,6 +98,7 @@
         "class_id": 5,
         "class_name": "الصف الخامس",
         "grade_level": 5,
+        "sections_count": 2,
         "sections": [
           {
             "class_section_id": 5,
@@ -137,6 +138,45 @@
                 ]
               }
             ]
+          },
+          {
+            "class_section_id": 6,
+            "section_name": "شعبة ب",
+            "days": [
+              {
+                "day_of_week": "sunday",
+                "day_of_week_ar": "الأحد",
+                "slots": [
+                  {
+                    "id": 6,
+                    "period_slot_id": 1,
+                    "period_name": "الحصة الأولى",
+                    "subject_name": "اللغة العربية",
+                    "teacher_name": "سالم خليفة"
+                  },
+                  {
+                    "id": 7,
+                    "period_slot_id": 2,
+                    "period_name": "الحصة الثانية",
+                    "subject_name": "الرياضيات",
+                    "teacher_name": "أحمد عبد السلام"
+                  }
+                ]
+              },
+              {
+                "day_of_week": "monday",
+                "day_of_week_ar": "الإثنين",
+                "slots": [
+                  {
+                    "id": 8,
+                    "period_slot_id": 1,
+                    "period_name": "الحصة الأولى",
+                    "subject_name": "التربية الإسلامية",
+                    "teacher_name": "خالد القمودي"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
@@ -144,6 +184,7 @@
         "class_id": 9,
         "class_name": "الصف التاسع",
         "grade_level": 9,
+        "sections_count": 1,
         "sections": [
           {
             "class_section_id": 12,
@@ -174,6 +215,12 @@
         ]
       }
     ]
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 2,
+    "last_page": 1
   }
 }
 ```
@@ -187,6 +234,12 @@
     "academic_year_id": 1,
     "academic_year_name": "2025/2026",
     "classes": []
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 0,
+    "last_page": 1
   }
 }
 ```
