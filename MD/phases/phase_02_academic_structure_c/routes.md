@@ -79,7 +79,9 @@
   - `search` (optional, string): البحث النصي بمسمى الصف أو الفترة.
   - `is_active` (optional, integer: `0` أو `1`): فلترة حسب الفترة النشطة حالياً.
   - `is_closed` (optional, integer: `0` أو `1`): فلترة حسب الفترة المغلقة.
-- **Example Request URL:** `/api/v1/academic/class-academic-terms?academic_year_id=1&class_id=9`
+  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
+  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
+- **Example Request URL:** `/api/v1/academic/class-academic-terms?academic_year_id=1&class_id=9&page=1&per_page=15`
 
 #### استجابات هذا الرابط (Responses):
 
@@ -132,6 +134,12 @@
         ]
       }
     ]
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 2,
+    "last_page": 1
   }
 }
 ```
@@ -145,6 +153,12 @@
     "academic_year_id": 1,
     "academic_year_name": "2025/2026",
     "classes": []
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 0,
+    "last_page": 1
   }
 }
 ```
