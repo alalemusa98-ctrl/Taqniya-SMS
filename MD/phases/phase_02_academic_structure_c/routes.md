@@ -360,7 +360,9 @@
 - **Query Parameters:**
   - `class_id` (optional, integer): فلترة الشعب لصف معين فقط (مثال: `class_id=5`).
   - `search` (optional, string): البحث باسم الشعبة أو الصف.
-- **Example Request URL:** `/api/v1/academic/class-sections?class_id=5`
+  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
+  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
+- **Example Request URL:** `/api/v1/academic/class-sections?class_id=5&page=1&per_page=15`
 
 #### استجابات هذا الرابط (Responses):
 
@@ -374,6 +376,7 @@
       {
         "class_id": 5,
         "class_name": "الصف الخامس",
+        "sections_count": 2,
         "sections": [
           {
             "id": 1,
@@ -390,6 +393,7 @@
       {
         "class_id": 6,
         "class_name": "الصف السادس",
+        "sections_count": 1,
         "sections": [
           {
             "id": 3,
@@ -399,6 +403,12 @@
         ]
       }
     ]
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 2,
+    "last_page": 1
   }
 }
 ```
@@ -410,6 +420,12 @@
   "message": "لا توجد شعب مسجلة تطابق محددات البحث.",
   "data": {
     "classes": []
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 0,
+    "last_page": 1
   }
 }
 ```
@@ -516,7 +532,9 @@
   - `class_id` (optional, integer): فلترة المنهج لصف دراسي محدد فقط (مثال: `class_id=9`).
   - `class_academic_term_id` (optional, integer): فلترة المنهج لفصل دراسي محدد فقط.
   - `search` (optional, string): البحث النصي باسم المادة أو كودها.
-- **Example Request URL:** `/api/v1/academic/class-subjects?class_id=9`
+  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
+  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
+- **Example Request URL:** `/api/v1/academic/class-subjects?class_id=9&page=1&per_page=15`
 
 #### استجابات هذا الرابط (Responses):
 
@@ -568,12 +586,96 @@
                 "code": "MATH",
                 "passing_score": "50.00",
                 "max_score": "100.00"
+              },
+              {
+                "id": 4,
+                "subject_id": 2,
+                "name": "العلوم",
+                "code": "SCI",
+                "passing_score": "50.00",
+                "max_score": "100.00"
+              }
+            ]
+          },
+          {
+            "class_academic_term_id": 12,
+            "term_name": "الفصل الثالث",
+            "is_active": 0,
+            "is_closed": 0,
+            "subjects": [
+              {
+                "id": 5,
+                "subject_id": 1,
+                "name": "الرياضيات",
+                "code": "MATH",
+                "passing_score": "50.00",
+                "max_score": "100.00"
+              },
+              {
+                "id": 6,
+                "subject_id": 3,
+                "name": "اللغة الإنجليزية",
+                "code": "ENG",
+                "passing_score": "50.00",
+                "max_score": "100.00"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "class_id": 10,
+        "class_name": "الصف العاشر",
+        "terms": [
+          {
+            "class_academic_term_id": 13,
+            "term_name": "الفصل الأول",
+            "is_active": 1,
+            "is_closed": 0,
+            "subjects": [
+              {
+                "id": 7,
+                "subject_id": 4,
+                "name": "الفيزياء",
+                "code": "PHYS",
+                "passing_score": "50.00",
+                "max_score": "100.00"
+              },
+              {
+                "id": 8,
+                "subject_id": 5,
+                "name": "الكيمياء",
+                "code": "CHEM",
+                "passing_score": "50.00",
+                "max_score": "100.00"
+              }
+            ]
+          },
+          {
+            "class_academic_term_id": 14,
+            "term_name": "الفصل الثاني",
+            "is_active": 0,
+            "is_closed": 0,
+            "subjects": [
+              {
+                "id": 9,
+                "subject_id": 4,
+                "name": "الفيزياء",
+                "code": "PHYS",
+                "passing_score": "50.00",
+                "max_score": "100.00"
               }
             ]
           }
         ]
       }
     ]
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 2,
+    "last_page": 1
   }
 }
 ```
@@ -585,6 +687,12 @@
   "message": "لا توجد مواد مقررة تطابق محددات البحث.",
   "data": {
     "classes": []
+  },
+  "meta": {
+    "current_page": 1,
+    "per_page": 15,
+    "total": 0,
+    "last_page": 1
   }
 }
 ```

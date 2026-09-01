@@ -34,7 +34,7 @@
 
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
-| `TC-CSE-01` | **Integration** | استرجاع قائمة الشعب المفتوحة لصف معين مجمعة بالصف | `GET /api/v1/academic/class-sections?class_id=5` | `200 OK` بهيكل يضم الصف وقائمة شعبه. |
+| `TC-CSE-01` | **Integration** | استرجاع قائمة الشعب المفتوحة لصف معين مجمعة بالصف مع الترقيم | `GET /api/v1/academic/class-sections?class_id=5&page=1` | `200 OK` بهيكل يضم الصف وقائمة شعبه و `meta`. |
 | `TC-CSE-02` | **Unit / Validation** | تسكين وفتح شعبة لصف دراسي | `class_id: 5, section_id: 1` | `201 Created` وحفظ السجل. |
 | `TC-CSE-03` | **Conflict** | منع تكرار فتح نفس الشعبة لنفس الصف | `class_id: 5, section_id: 1` (مفتوحة مسبقاً) | `409 Conflict` (`uq_class_sections`). |
 | `TC-CSE-04` | **Validation** | محاولة تسكين شعبة غير موجودة | `section_id: 99999` | `422 Unprocessable Entity`. |
@@ -47,7 +47,7 @@
 
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
-| `TC-CSU-01` | **Integration** | استرجاع منهج ومقررات الصف مقسماً بحسب الفصول | `GET /api/v1/academic/class-subjects?class_id=9` | `200 OK` بهيكل هرمي يضم الفصول والمواد والدرجات. |
+| `TC-CSU-01` | **Integration** | استرجاع منهج ومقررات الصف مقسماً بحسب الفصول مع الترقيم | `GET /api/v1/academic/class-subjects?class_id=9&page=1` | `200 OK` بهيكل هرمي يضم الفصول والمواد والدرجات و `meta`. |
 | `TC-CSU-02` | **Unit / Validation** | إسناد مادة وتحديد درجات الفترة | `class_academic_term_id: 10, subject_id: 1, pass: 50.00, max: 100.00` | `201 Created` وحفظ السجل. |
 | `TC-CSU-03` | **Conflict** | منع تكرار إسناد نفس المادة لنفس الفترة بالصف | `class_academic_term_id: 10, subject_id: 1` (مسندة مسبقاً) | `409 Conflict` (`uq_class_term_subject`). |
 | `TC-CSU-04` | **Validation** | **قيد النزاهة:** رفض درجة نجاح أكبر من الدرجة العظمى | `passing_score: 110.00, max_score: 100.00` | `422 Unprocessable Entity`. |
