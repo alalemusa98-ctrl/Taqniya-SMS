@@ -256,30 +256,48 @@
     "class_name": "الصف الخامس",
     "academic_term_id": 1,
     "academic_term_name": "الفصل الدراسي الأول",
-    "exam_type": "midterm",
-    "exam_type_ar": "امتحان نصفي",
-    "total_exams": 3,
-    "exams": [
+    "exam_types": [
       {
-        "id": 1,
-        "subject_id": 2,
-        "subject_name": "الرياضيات",
-        "exam_date": "2026-11-15",
-        "notes": "الامتحان من 09:00 إلى 11:00 بالقاعة الكبرى."
+        "exam_type": "midterm",
+        "exam_type_ar": "امتحان نصفي",
+        "total_exams": 2,
+        "exams": [
+          {
+            "id": 1,
+            "subject_id": 2,
+            "subject_name": "الرياضيات",
+            "exam_date": "2026-11-15",
+            "notes": "الامتحان من 09:00 إلى 11:00 بالقاعة الكبرى."
+          },
+          {
+            "id": 2,
+            "subject_id": 4,
+            "subject_name": "اللغة العربية",
+            "exam_date": "2026-11-17",
+            "notes": "الامتحان من 09:00 إلى 11:00 بقاعات الصف الخامس."
+          }
+        ]
       },
       {
-        "id": 2,
-        "subject_id": 4,
-        "subject_name": "اللغة العربية",
-        "exam_date": "2026-11-17",
-        "notes": "الامتحان من 09:00 إلى 11:00 بقاعات الصف الخامس."
-      },
-      {
-        "id": 3,
-        "subject_id": 6,
-        "subject_name": "العلوم العامة",
-        "exam_date": "2026-11-19",
-        "notes": "الامتحان يشمل الجانب النظري والتجريبي المختبري."
+        "exam_type": "final",
+        "exam_type_ar": "امتحان نهائي",
+        "total_exams": 2,
+        "exams": [
+          {
+            "id": 10,
+            "subject_id": 2,
+            "subject_name": "الرياضيات",
+            "exam_date": "2027-01-10",
+            "notes": "الامتحان من 09:00 إلى 12:00 بالقاعة الكبرى."
+          },
+          {
+            "id": 11,
+            "subject_id": 4,
+            "subject_name": "اللغة العربية",
+            "exam_date": "2027-01-12",
+            "notes": "الامتحان من 09:00 إلى 12:00 بقاعات الصف الخامس."
+          }
+        ]
       }
     ]
   }

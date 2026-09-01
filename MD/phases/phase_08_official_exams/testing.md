@@ -23,7 +23,7 @@
 | `TC-EXM-01` | **Integration** | استرجاع جدول الامتحانات بالهيكل الهرمي مع الفلترة والترقيم | `GET /api/v1/official-exams?class_id=3&academic_term_id=1&page=1` | `200 OK` مع الهيكل الهرمي للصفوف وأنواع الامتحانات والمواد و `meta`. |
 | `TC-EXM-02` | **Integration** | البحث النصي باسم المادة أو التعليمات | `GET /api/v1/official-exams?search=رياضيات` | `200 OK` ومطابقة السجلات المطلوبة. |
 | `TC-EXM-03` | **Integration** | استرجاع تفاصيل سجل امتحان رسمي محدد بالمعرف | `GET /api/v1/official-exams/1` | `200 OK` وتفاصيل الموعد والقاعة والملاحظات. |
-| `TC-EXM-04` | **Integration** | استرجاع جدول امتحانات الصف الدراسي المعتمد بالسمستر | `GET /api/v1/classes/3/official-exams?exam_type=midterm` | `200 OK` وهيكل جدول امتحانات الصف بالكامل. |
+| `TC-EXM-04` | **Integration** | استرجاع جدول امتحانات الصف الدراسي المعتمد بالسمستر | `GET /api/v1/classes/3/official-exams` | `200 OK` وهيكل جدول امتحانات الصف مجمعاً بأنواع الامتحانات (نصفي ونهائي). |
 | `TC-EXM-04B` | **Integration** | استرجاع جدول الامتحانات الرسمية لمواد معلم محدد | `GET /api/v1/teachers/3/official-exams` | `200 OK` ومصفوفة امتحانات المواد المسندة للمعلم. |
 | `TC-EXM-05` | **Unit / Validation** | **جدولة امتحان رسمي بنجاح:** إضافة موعد امتحان جديد لصف ومادة | `year: 1, term: 1, class: 3, subject: 2, type: 'midterm', date: '2026-11-15'` | `201 Created` وحفظ السجل بجدول `official_exams`. |
 | `TC-EXM-06` | **Conflict / Invariant** | **قيد تفرد جدولة المادة (uq_official_exam_schedule):** منع تكرار جدولة نفس المادة والنوع بالسمستر | محاولة جدولة امتحان نصفي لنفس المادة والصف بالسمستر مجدداً | `409 Conflict` (`uq_official_exam_schedule`). |
