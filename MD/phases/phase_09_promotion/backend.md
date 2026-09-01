@@ -1,77 +1,172 @@
-# ⚙️ مواصفات Backend — المرحلة 09 (Domain Logic & Architecture)
+# ⚙️ مواصفات Backend — المرحلة 09: محرك الترحيل والأرشفة النهائية للصحائف (Promotion & Transcripts Archiving)
 
-> **الهدف:** توثيق الخدمات والتحقق وقواعد البزنس الحصرية لجدولي الصحائف المؤرشفة (`student_transcripts`) ودفعات الترحيل السنوي (`promotion_batches`) المطابقة بنسبة 100% لـ [`MD/database.md`](../../database.md).  
+> **الهدف:** توثيق منطق المعالجة وقواعد التحقق وقواعد حوكمة أرشفة الصحائف المدرسية (`student_transcripts`) ومحرك الترحيل الأكاديمي السنوي الجماعي (`promotion_batches`) المطابقة بنسبة 100% لـ [`MD/database.md`](../../database.md) و [`MD/business_rules.md`](../../business_rules.md)، مع الالتزام الصارم بالحيادية التقنية التامة (Zero ORM Leakage).  
 > 
 > ⚠️ **تكامل حوكمي صريح وملزم — مرجع الاستجابات (Network SSoT):**  
-> ملف [`routes.md`](./routes.md) هو **المصدر الرئيسي والحصري والوحيد لكافة استجابات الـ API (Network SSoT)**. تم تسجيل كامل شكل الاستجابة (JSON Response Body) ورسائل الخطأ والنجاح صراحةً في [`routes.md`](./routes.md) لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`) لكل رابط.  
-> 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل بإنشاء ورسم كود الـ Controllers واستجابات الخادم بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
+> ملف [`routes.md`](./routes.md) هو **المصدر الرئيسي والحصري والوحيد لكافة استجابات ومدخلات الـ API (Network SSoT)**. تم تسجيل كامل شكل الاستجابة (JSON Response Body) ورسائل الخطأ والنجاح صراحةً في [`routes.md`](./routes.md) لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`, `500 Internal Server Error`) لكل رابط.  
+> 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور أو نموذج الذكاء الاصطناعي بالكامل بإنشاء ورسم كود الخادم واستجابات الـ API بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
 
 ---
 
-## 📄 الخطوة 1: أرشفة وتصفح الصحائف المدرسية المؤرشفة (`student_transcripts`) — [4 مسارات]
+## 1. نطاق المرحلة والحدود المعمارية (Scope & Boundaries)
 
-> **الوصف المختصر:** تجميد الصحائف المدرسية للفصول الدراسية والصحائف السنوية النهائية وتوليد لقطات البيانات الثابتة JSON لحفظ السجل التاريخي للطلاب.
+### 🟢 ما تشمله المرحلة (In-Scope):
+- **الخطوة 1: أرشفة وتصفح الصحائف المدرسية (`student_transcripts`) — [4 مسارات]:**
+  - استعراض وتصفية الصحائف المدرسية المؤرشفة بالترقيم والفلترة (`GET /api/v1/transcripts`).
+  - استعراض لقطة الصحيفة التجميدية الكاملة وتفاصيل درجات المواد (`GET /api/v1/transcripts/:id`).
+  - استعراض السجل الأكاديمي التاريخي لكافة صحائف طالب محدد (`GET /api/v1/students/:student_id/transcripts`).
+  - تجميد وإصدار صحيفة دراسية فصلية أو سنوية عبر شيت رصد الدرجات (`POST /api/v1/transcripts/freeze`).
+- **الخطوة 2: محرك الترحيل الأكاديمي الجماعي (`promotion_batches`) — [4 مسارات]:**
+  - استعراض سجل دفعات الترحيل السنوي المنفذة بالترقيم (`GET /api/v1/promotions/batches`).
+  - استعراض تفاصيل وإحصائيات ورسوم بيانية لدفعة ترحيل محددة (`GET /api/v1/promotions/batches/:id`).
+  - محاكاة ومعاينة نتائج الترحيل وتنبيهات الشعب المنخفضة قبل التنفيذ (`POST /api/v1/promotions/preview`).
+  - اعتماد وتنفيذ الترحيل السنوي الجماعي وتسكين الطلاب بالعام الجديد (`POST /api/v1/promotions/execute`).
 
-### 1.1 جدول العمليات والروابط للخلفية (`student_transcripts`):
-| الوصف الوظيفي للإجراء (Action Description) | العملية الخلفية (Service Method) | HTTP Method & Endpoint | حالة النجاح | مرجع الهيكل الكامل في `routes.md` |
-| :--- | :--- | :--- | :-: | :--- |
-| **عرض وتصفية الصحائف المدرسية** | `TranscriptService::listTranscripts` | `GET /api/v1/transcripts` | `200 OK` | [في `routes.md`](./routes.md#11-get-apiv1transcripts--عرض-وتصفية-الصحائف-المدرسية-المؤرشفة) |
-| **عرض لقطة صحيفة تجميدية** | `TranscriptService::getTranscript` | `GET /api/v1/transcripts/:id` | `200 OK` | [في `routes.md`](./routes.md#12-get-apiv1transcriptsid--عرض-تفاصيل-لقطة-الصحيفة-المؤرشفة-الكاملة) |
-| **عرض صحائف طالب تاريخية** | `TranscriptService::getStudentTranscripts` | `GET /api/v1/students/:student_id/transcripts` | `200 OK` | [في `routes.md`](./routes.md#13-get-apiv1studentsstudent_idtranscripts--عرض-جميع-الصحائف-التاريخية-لطالب-محدد) |
-| **تجميد وإصدار صحيفة دراسية** | `TranscriptService::freezeTranscript` | `POST /api/v1/transcripts/freeze` | `201 Created` | [في `routes.md`](./routes.md#14-post-apiv1transcriptsfreeze--تجميد-وإصدار-صحيفة-دراسية-فصلية-أو-سنوية) |
-
-### 1.2 قواعد التحقق (`TranscriptFreezeRequest`):
-- `student_id`: مطلوب، `integer` وموجود بجدول `students`.
-- `transcript_type`: مطلوب، enum (`term`, `annual`).
-- `class_academic_term_id`: مطلوب إذا كانت `transcript_type = 'term'` وموجود بجدول `class_academic_terms`.
-- `academic_year_name`: مطلوب، `string` (مثال: `2024/2025`).
-- `class_name`: مطلوب، `string`.
-- `section_name`: مطلوب، `string`.
-- `grade_level`: مطلوب، `integer` من 1 إلى 12.
-- `total_score`: مطلوب، `numeric`.
-- `percentage`: مطلوب، `numeric`.
-- `final_status`: مطلوب، enum (`passed`, `second_round`, `failed`, `graduated`).
-- `transcript_data`: مطلوب، `array` صالحة للتحويل إلى `JSON` متضمنة حقول `max_coursework_score` و `max_exam_score` و `second_round_details`.
-- **قيد التفرد المركب:** `uq_student_transcript_term (student_id, academic_year_name, transcript_type, class_academic_term_id)`.
+### 🔴 خارج نطاق المرحلة (Out-of-Scope):
+- إدارة جداول الحصص والتسكين الأسبوعي $\rightarrow$ تابعة للمرحلة `05`.
+- جداول الامتحانات الرسمية $\rightarrow$ تابعة للمرحلة `08`.
 
 ---
 
-## 🚀 الخطوة 2: محرك الترحيل الأكاديمي الجماعي (`promotion_batches`) — [4 مسارات]
+## 2. حوكمة الأدوار وقواعد الوصول وعزل البيانات (RBAC & Scoping Rules)
 
-> **الوصف المختصر:** المعالجة الذرية لتنفيذ الترحيل السنوي ونقل الطلاب الناجحين والراسبين وتوزيعهم المتوازن على الشعب.
-
-### 2.1 جدول العمليات والروابط للخلفية (`promotion_batches`):
-| الوصف الوظيفي للإجراء (Action Description) | العملية الخلفية (Service Method) | HTTP Method & Endpoint | حالة النجاح | مرجع الهيكل الكامل في `routes.md` |
-| :--- | :--- | :--- | :-: | :--- |
-| **عرض سجل دفعات الترحيل** | `PromotionService::listBatches` | `GET /api/v1/promotions/batches` | `200 OK` | [في `routes.md`](./routes.md#21-get-apiv1promotionsbatches--عرض-سجل-ودفعات-الترحيل-السنوي-المنفذة) |
-| **عرض إحصائيات دفعة ترحيل** | `PromotionService::getBatch` | `GET /api/v1/promotions/batches/:id` | `200 OK` | [في `routes.md`](./routes.md#22-get-apiv1promotionsbatchesid--عرض-تفاصيل-وإحصائيات-دفعة-ترحيل-محددة) |
-| **معاينة نتائج الترحيل السنوي** | `PromotionService::previewPromotion` | `POST /api/v1/promotions/preview` | `200 OK` | [في `routes.md`](./routes.md#23-post-apiv1promotionspreview--معاينة-واختبار-نتائج-الترحيل-وتنبيهات-الشعب-قبل-التنفيذ) |
-| **تنفيذ الترحيل الجماعي** | `PromotionService::executePromotion` | `POST /api/v1/promotions/execute` | `200 OK` | [في `routes.md`](./routes.md#24-post-apiv1promotionsexecute--اعتماد-وتنفيذ-الترحيل-السنوي-الجماعي) |
-
-### 2.2 قواعد التحقق (`PromotionExecuteRequest`):
-- `from_academic_year_id`: مطلوب، `integer` وموجود بجدول `academic_years`.
-- `to_academic_year_id`: مطلوب، `integer` وموجود بجدول `academic_years`.
-- `execution_notes`: اختياري، `string`.
-- **قيد التفرد المركب:** `uq_promotion_batch_years (from_academic_year_id, to_academic_year_id)`.
+### 👥 مصفوفة الفاعلين والصلاحيات:
+- **مدير النظام (Admin - `role_type = 'admin'`):**
+  - يمتلك الصلاحية الحصرية لتجميد الصحائف الدراسية (`freeze`) وتنفيذ دفعات الترحيل السنوي (`execute`) ومعاينتها (`preview`).
+- **المعلم (Teacher - `role_type = 'teacher'`):**
+  - يمتلك صلاحية استعراض الصحائف المدرسية لطلابه للاطلاع بنمط القراءة فقط (`200 OK`).
+  - يُحظر عليه تنفيذ أو معاينة الترحيل السنوي الجماعي (`403 Forbidden`).
+- **الطالب (Student) وولي الأمر (Parent):**
+  - يستعرض الطالب وولي أمره الصحائف المؤرشفة الخاصة بالطالب فقط عبر السجل التاريخي بنمط القراءة فقط.
+- **المستخدم غير المصادق عليه (Unauthenticated):**
+  - يرفض أي طلب غير مزود بتوكن صالح برمز `401 Unauthorized`.
 
 ---
 
-## ⚖️ 3. قواعد منطق الأعمال الأكاديمية والمحددات العامة (Domain & System Business Rules)
+## 3. دورة حياة الكيانات وقواعد ثبات النظام (Lifecycles & System Invariants)
 
-تلتزم الخدمات (Services) والمتحكمات (Controllers) بالقواعد المقتبسة من [`MD/business_rules.md`](../../business_rules.md):
+```mermaid
+stateDiagram-v2
+    [*] --> GradeEntry: رصد الدرجات عبر شيت الرصد
+    GradeEntry --> FrozenTranscript: تجميد الصحيفة (POST /transcripts/freeze)
+    FrozenTranscript --> PromotionPreview: معاينة الترحيل وتنبيهات الشعب (POST /promotions/preview)
+    PromotionPreview --> PromotionExecuted: تنفيذ الترحيل الذري (POST /promotions/execute)
+    PromotionExecuted --> [*]
+```
 
-### 3.1 حوكمة الترحيل الجماعي الذري (`One-Click DB Transaction`):
-- تنفذ خدمة `PromotionService::executePromotion` عملية الترحيل لجميع طلاب المدرسة في حدث ذري حازم (`DB::transaction`).
-- يتم نقل الطلاب الناجحين (`passed`) للصف الأعلى، والطلاب الراسبين (`failed`) لنفس الصف للإعادة، وتخزين سجل الدفعة `promotion_batches`.
+### 🔒 قواعد ثبات النظام الصارمة (System Invariants):
+1. **اللقطة التجميدية الثابتة والدقيقة للصحائف (`Immutable JSON Snapshot`):**
+   - تحفظ درجات المواد والتقييمات بصيغة JSON غير قابلة للتعديل بجدول `student_transcripts.transcript_data` متضمنة `coursework_score` والحد الأقصى `max_coursework_score` و `exam_score` والحد الأقصى `max_exam_score` و `second_round_details`.
+2. **قيد تفرد الصحيفة (`uq_student_transcript_term`):**
+   - يمنع تكرار تجميد أكثر من صحيفة معتمدة لنفس الطالب في نفس العام الدراسي والفترة ونوع الصحيفة.
+3. **سياسة النقل المباشر لرموز الشعب (Direct Section-to-Section Mapping):**
+   - يُنقل الطلاب الناجحون بنفس رمز شعبتهم الأصلية إلى الصف الأعلى بالعام الجديد (5/أ $\rightarrow$ 6/أ، و 5/ب $\rightarrow$ 6/ب، و 5/ج $\rightarrow$ 6/ج).
+4. **تنبيه السعة المنخفضة لشعب الراسبين (Low Enrollment Alert):**
+   - في حال وجود طلاب راسبين بشعبة سابقة لا مقابل لها (مثل 7 طلاب راسبين بـ 6/د)، تُبقى الشعبة كما هي مع إصدار تنبيه مرئي `low_enrollment_warnings` للإدارة بالمعاينة.
+5. **التنفيذ الذري للترحيل الجماعي (Atomic Execution Invariant):**
+   - تنفذ عملية الترحيل لجميع طلاب المدرسة في معاملة ذرية متكاملة تضمن إما نجاح ترحيل وتسكين كافة الطلاب أو التراجع التام عند حدوث أي خطأ.
 
-### 3.2 سياسة النقل المباشر للشعب وتنبيه الشعب المنخفضة (Direct Section Promotion & Low Enrollment Alert):
-- **النقل المباشر لذات الشعبة (Direct Section-to-Section Mapping):** يُنقل الطلاب الناجحون بنفس رمز شعبتهم الأصلية إلى الصف الأعلى بالعام الجديد (الناجحون من 5/أ يتسكنون تلقائياً في 6/أ، و 5/ب في 6/ب، و 5/ج في 6/ج) للحفاظ على استقرار واستمرار بيئة المجموعة الطلابية.
-- **معالجة الشعب الإضافية للراسبين (Retained Students in Excess Sections):** في حال وجود طلاب راسبين بشعبة سابقة لا مقابل لها في الصف المنقول منه (مثل وجود 7 طلاب راسبين بشعبة 6/د)، يُبقي النظام الشعبة (6/د) بالعام الجديد كما هي دون فرض دمج قسري.
-- **مؤشر وتنبيه السعة المنخفضة (Low Enrollment Alert):** يصدر المحرك تنبيهاً وإشعاراً مرئياً للإدارة بتقرير الترحيل وفي الواجهة:  
-  `⚠️ تنبيه إداري: الشعبة (السادس/د) تحتوي على عدد طلاب منخفض جداً (7 طلاب - أقل من الحد الأدنى المقترح 10 طلاب). تتيح المنظومة خيار الإبقاء أو الدمج اليدوي.`
+---
 
-### 3.3 اللقطة التجميدية الثابتة والدقيقة للصحائف (`Immutable JSON Transcript Invariant`):
-- تحفظ درجات المواد والتقييمات بصيغة JSON غير قابلة للتعديل بجدول `student_transcripts.transcript_data` متضمنة `coursework_score` والحد الأقصى `max_coursework_score` (لمعرفة هل 35 من 35 أم من 40) و `exam_score` والحد الأقصى `max_exam_score` وتفاصيل امتحانات الدور الثاني عند وجودها.
+## 4. العمليات المنطقية والمسارات التفصيلية للمجال (Domain Operations & Routes)
 
-### 3.4 الصلاحيات الحصرية بسجلات التدقيق (Admin RBAC & Audit Trail):
-- جميع عمليات الترحيل السنوي وتجميد الصحائف الفترية والسنوية مقتصرة حصراً على مدير النظام (`role_type = 'admin'`) وتسجل في `audit_logs`.
+---
+
+### 📄 الخطوة 1: أرشفة وتصفح الصحائف المدرسية (`student_transcripts`)
+
+#### 📋 جدول العمليات:
+| # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
+| :-: | :--- | :--- | :--- | :---: | :--- |
+| **1.1** | استعراض وتصفية الصحائف المدرسية | `GET /api/v1/transcripts` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.2** | استعراض تفاصيل لقطة الصحيفة الكاملة | `GET /api/v1/transcripts/:id` | الجميع | `200 OK` | [في routes.md](./routes.md) |
+| **1.3** | استعراض صحائف طالب تاريخية | `GET /api/v1/students/:student_id/transcripts` | الجميع | `200 OK` | [في routes.md](./routes.md) |
+| **1.4** | تجميد وإصدار صحيفة دراسية | `POST /api/v1/transcripts/freeze` | `admin` | `201 Created` | [في routes.md](./routes.md) |
+
+---
+
+#### 🔹 [Operation 1.1] `GET /api/v1/transcripts` — استعراض وتصفية الصحائف المدرسية
+- **الغرض والوظيفة:** جلب سجلات الصحائف المدرسية المؤرشفة بالمنظومة مع دعم الفلترة بنوع الصحيفة (`transcript_type`)، اسم العام الدراسي، اسم الصف، حالة النتيجة النهائية، والترقيم.
+- **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 1.2] `GET /api/v1/transcripts/:id` — استعراض تفاصيل لقطة الصحيفة الكاملة
+- **الغرض والوظيفة:** استرجاع البيانات التجميدية الكاملة لدرجات الطالب مع لقطة الـ JSON الثابتة.
+- **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 1.3] `GET /api/v1/students/:student_id/transcripts` — استعراض صحائف طالب تاريخية
+- **الغرض والوظيفة:** جلب السجل الأكاديمي التاريخي الكامل لصحائف الطالب عبر كافة الأعوام السابقة.
+- **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 1.4] `POST /api/v1/transcripts/freeze` — تجميد وإصدار صحيفة دراسية
+- **الغرض والوظيفة:** اعتماد وتجميد نتيجة طالب لفصل دراسي محدد أو لعام كامل وحفظ كائن الـ JSON المتكامل.
+- **قواعد التحقق المشتركة (Validation Rules):**
+  - `student_id`: مطلوب، معرف طالب صالح ونشط.
+  - `transcript_type`: مطلوب، أحد النوعين (`term`, `annual`).
+  - `class_academic_term_id`: مطلوب إذا كانت الصحيفة فصلية (`term`).
+  - `academic_year_name`, `class_name`, `section_name`: نصوص مطلوبة.
+  - `grade_level`: مطلوب من 1 إلى 12.
+  - `total_score`, `percentage`: أرقام صالحة.
+  - `final_status`: مطلوب، أحد القرارات (`passed`, `second_round`, `failed`, `graduated`).
+  - `transcript_data`: كائن/مصفوفة صالحة متضمنة تفاصيل المواد والدرجات وأعمال السنة والامتحانات.
+  - **قيد التفرد:** التحقق من عدم وجود صحيفة معتمدة سابقة بنفس النوع والفترة (`uq_student_transcript_term`).
+- **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
+
+---
+
+### 🚀 الخطوة 2: محرك الترحيل الأكاديمي الجماعي (`promotion_batches`)
+
+#### 📋 جدول العمليات:
+| # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
+| :-: | :--- | :--- | :--- | :---: | :--- |
+| **2.1** | استعراض سجل دفعات الترحيل السنوي | `GET /api/v1/promotions/batches` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **2.2** | استعراض إحصائيات دفعة ترحيل محددة | `GET /api/v1/promotions/batches/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **2.3** | معاينة نتائج الترحيل وتنبيهات الشعب | `POST /api/v1/promotions/preview` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **2.4** | اعتماد وتنفيذ الترحيل السنوي الجماعي | `POST /api/v1/promotions/execute` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+
+---
+
+#### 🔹 [Operation 2.1] `GET /api/v1/promotions/batches` — استعراض سجل دفعات الترحيل السنوي
+- **الغرض والوظيفة:** جلب سجل عمليات الترحيل السنوي المعتمدة مع الترقيم القياسي.
+- **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 2.2] `GET /api/v1/promotions/batches/:id` — استعراض إحصائيات دفعة ترحيل محددة
+- **الغرض والوظيفة:** جلب الإحصائيات الشاملة ونسب نجاح الصفوف ومعدلات الرسوب للدفعة المحددة.
+- **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 2.3] `POST /api/v1/promotions/preview` — معاينة نتائج الترحيل وتنبيهات الشعب
+- **الغرض والوظيفة:** محاكاة عملية الترحيل وحساب أعداد الناجحين والراسبين ورصد الشعب ذات السعة المنخفضة (أقل من 10 طلاب) وإرجاع `low_enrollment_warnings`.
+- **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 2.4] `POST /api/v1/promotions/execute` — اعتماد وتنفيذ الترحيل السنوي الجماعي
+- **الغرض والوظيفة:** تنفيذ الترحيل الذري للطلاب وتسكينهم بالعام الجديد وتوثيق السجل في `promotion_batches`.
+- **قواعد التحقق والتنفيذ:**
+  - `from_academic_year_id`: مطلوب، معرف عام دراسي سابق.
+  - `to_academic_year_id`: مطلوب، معرف عام دراسي جديد.
+  - التحقق من عدم تنفيذ ترحيل مسبق بين العامين (`uq_promotion_batch_years`).
+  - نقل الناجحين للصف الأعلى بنفس رمز الشعبة، ونقل الراسبين لنفس الصف للإعادة.
+- **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
+
+---
+
+## 5. الأداء، التزامن، والنزاهة المرجعية (Performance & Data Integrity)
+
+1. **المعاملات الذرية الحازمة (Atomic DB Transactions):**
+   - تنفيذ كافة عمليات الترحيل الجماعي داخل Transaction تضمن التماسك المطلق للبيانات.
+2. **الفهارس واستعلامات التجميع:**
+   - استخدام الفهارس المعتمدة في `MD/database.md`: `uq_student_transcript_term`، `idx_transcripts_year_class`، `idx_transcripts_status`، `uq_promotion_batch_years`، `idx_promotion_executed_by`.
+3. **تجنب التسريب التقني:**
+   - توحيد الردود ورسائل الخطأ عبر الرموز المعيارية (`401`, `403`, `404`, `409`, `422`, `500`).
+
+---
+
+## 6. معايير القبول الهندسية للباك إند (Backend Acceptance Criteria)
+
+تعتبر متطلبات الخادم لهذه المرحلة مستوفاة بالكامل عند تحقق المعايير التالية:
+
+- [ ] قصر صلاحيات تجميد الصحائف وتنفيذ الترحيل السنوي حصراً على المستخدمين بدور `admin`.
+- [ ] إتاحة استعراض الصحائف المدرسية بنمط القراءة فقط للطلاب وأولياء الأمور والمعلمين.
+- [ ] حفظ لقطة الصحيفة التجميدية الدقيقة بصيغة JSON الثابتة متضمنة درجات أعمال السنة والامتحانات والدور الثاني.
+- [ ] التحقق من قيد تفرد الصحيفة `uq_student_transcript_term` وإرجاع `409 Conflict` عند التكرار.
+- [ ] تطبيق سياسة النقل المباشر لرموز الشعب (5/أ $\rightarrow$ 6/أ).
+- [ ] توليد تنبيهات السعة المنخفضة (`low_enrollment_warnings`) للشعب التي تقل عن 10 طلاب.
+- [ ] تنفيذ الترحيل السنوي الجماعي في معاملة ذرية متكاملة وتسجيل السجل بجدول `promotion_batches`.
+- [ ] مطابقة كافة المدخلات والمخرجات بنسبة 100% لعقد الشبكة في [`routes.md`](./routes.md).

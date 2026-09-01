@@ -4,7 +4,7 @@
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم على المطور أو الذكاء الاصطناعي قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
-> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** ملف [`routes.md`](./routes.md) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable`, `500 Server Error`).  
+> 2. **مرجع شبكة الطلبات والاستجابات (Network SSoT):** ملف [`routes.md`](./routes.md) هو المصدر الرئيسي والوحيد لعقد الشبكة بالمنظومة؛ حيث تم توثيق **جسم الطلب الكامل (`Request Body Payload`)** لكل رابط، و**كامل شكل الاستجابة الصريحة (`Response Body Payload`)** لجميع الرموز والـ Status Codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`, `500 Internal Server Error`).  
 > 📌 **توجيه إجباري عند البناء والتطوير:** يلتزم المطور بالكامل برسم وبناء مدخلات ومخرجات كود الـ Controllers والواجهات بناءً على الهياكل والرموز المسجلة في ملف [`routes.md`](./routes.md) حصراً بدون أي اجتهاد شخصي.
 
 ---
@@ -48,6 +48,7 @@
   *(يضمن حفظ صحيفة سمستر واحدة أو صحيفة سنوية واحدة معتمدة لكل طالب بالعام).*
 * `INDEX idx_transcripts_year_class (academic_year_name, class_name)`
 * `INDEX idx_transcripts_status (final_status)`
+* `INDEX idx_transcripts_deleted_at (deleted_at)`
 
 ---
 
@@ -90,6 +91,7 @@
   *(يضمن تسجيل دفعة ترحيل واحدة معتمدة بين كل عامين دراسيين).*
 * `INDEX idx_promotion_executed_by (executed_by_user_id)`
 * `INDEX idx_promotion_created_at (created_at)`
+* `INDEX idx_promotion_deleted_at (deleted_at)`
 
 ---
 
@@ -115,7 +117,11 @@ erDiagram
         decimal total_score
         decimal percentage
         enum final_status
+        smallint rank
         json transcript_data
+        timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at
     }
 
     promotion_batches {
@@ -125,7 +131,14 @@ erDiagram
         bigint executed_by_user_id FK
         int total_students
         int total_promoted
+        int total_second_round
+        int total_retained
+        int total_graduated
         decimal overall_passing_rate
         json class_statistics
+        varchar execution_notes
+        timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at
     }
 ```
