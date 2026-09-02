@@ -762,6 +762,7 @@
 | `exam_type` | `ENUM('midterm', 'final', 'second_round')` | `NOT NULL`, `DEFAULT 'final'` | نوع الامتحان الرسمي (`midterm = نصفي`, `final = نهائي`, `second_round = دور ثانٍ`). |
 | `exam_date` | `DATE` | `NOT NULL` | تاريخ يوم الامتحان. |
 | `notes` | `VARCHAR(255)` | `NULL DEFAULT NULL` | تعليمات وإرشادات إضافية للطلاب بخصوص الامتحان. |
+| `attachments` | `JSON` | `NULL DEFAULT NULL` | مصفوفة ملفات وصور مرفقة بالامتحان الرسمي بصيغة JSON (دليل المراجعة، جدول المواصفات، ونماذج استرشادية). |
 | `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
 | `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
 | `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |

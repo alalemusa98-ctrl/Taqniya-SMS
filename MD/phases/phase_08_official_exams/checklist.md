@@ -7,8 +7,8 @@
 ## 🏛️ مصفوفة فحص الركائز المعمارية السبع (The 7 Pillars Audit)
 
 ### 1️⃣ الركيزة الأولى: مطابقة مخطط قاعدة البيانات (Data Schema SSoT)
-- [x] مطابقة أسماء الجداول والأعمدة بنسبة 100% مع [`MD/database.md`](../../database.md) (الجدول في المرحلة 08 — `official_exams`).
-- [x] توثيق نوع البيانات والقيود (`BIGINT UNSIGNED`, `ENUM exam_type`, المفاتيح الخارجية).
+- [x] مطابقة أسماء الجداول والأعمدة بنسبة 100% مع [`MD/database.md`](../../database.md) (الجدول في المرحلة 08 — `official_exams` متضمناً `attachments JSON`).
+- [x] توثيق نوع البيانات والقيود (`BIGINT UNSIGNED`, `ENUM exam_type`, `JSON attachments`, المفاتيح الخارجية).
 - [x] توثيق الحذف المنطقي (`deleted_at TIMESTAMP NULL DEFAULT NULL`).
 - [x] توثيق المفاتيح الخارجية والفهارس: `uq_official_exam_schedule`، `idx_official_exams_lookup`، `idx_official_exams_date`، `idx_official_exams_deleted_at`.
 - [x] إدراج مخطط الكيانات والعلاقات (ERD) المحدث بصيغة Mermaid.

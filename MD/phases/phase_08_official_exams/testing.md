@@ -22,13 +22,13 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `TC-EXM-01` | **Integration** | استرجاع جدول الامتحانات بالهيكل الهرمي مع الفلترة والترقيم | `GET /api/v1/official-exams?class_id=3&academic_term_id=1&page=1` | `200 OK` مع الهيكل الهرمي للصفوف وأنواع الامتحانات والمواد و `meta`. |
 | `TC-EXM-02` | **Integration** | البحث النصي باسم المادة أو التعليمات | `GET /api/v1/official-exams?search=رياضيات` | `200 OK` ومطابقة السجلات المطلوبة. |
-| `TC-EXM-03` | **Integration** | استرجاع تفاصيل سجل امتحان رسمي محدد بالمعرف | `GET /api/v1/official-exams/1` | `200 OK` وتفاصيل الموعد والقاعة والملاحظات. |
+| `TC-EXM-03` | **Integration** | استرجاع تفاصيل سجل امتحان رسمي محدد بالمعرف والمرفقات | `GET /api/v1/official-exams/1` | `200 OK` وتفاصيل الموعد والقاعة والملاحظات ومصفوفة `attachments`. |
 | `TC-EXM-04` | **Integration** | استرجاع جدول امتحانات الصف الدراسي المعتمد بالسمستر | `GET /api/v1/classes/3/official-exams` | `200 OK` وهيكل جدول امتحانات الصف مجمعاً بأنواع الامتحانات (نصفي ونهائي). |
 | `TC-EXM-04B` | **Integration** | استرجاع جدول الامتحانات الرسمية لمواد معلم محدد | `GET /api/v1/teachers/3/official-exams` | `200 OK` ومصفوفة امتحانات المواد المسندة للمعلم. |
-| `TC-EXM-05` | **Unit / Validation** | **جدولة امتحان رسمي بنجاح:** إضافة موعد امتحان جديد لصف ومادة | `year: 1, term: 1, class: 3, subject: 2, type: 'midterm', date: '2026-11-15'` | `201 Created` وحفظ السجل بجدول `official_exams`. |
+| `TC-EXM-05` | **Unit / Validation** | **جدولة امتحان رسمي بنجاح مع المرفقات:** إضافة موعد ومرفقات الامتحان | `year: 1, term: 1, class: 3, subject: 2, type: 'midterm', date: '2026-11-15', attachments: [...]` | `201 Created` وحفظ السجل والمرفقات بجدول `official_exams`. |
 | `TC-EXM-06` | **Conflict / Invariant** | **قيد تفرد جدولة المادة (uq_official_exam_schedule):** منع تكرار جدولة نفس المادة والنوع بالسمستر | محاولة جدولة امتحان نصفي لنفس المادة والصف بالسمستر مجدداً | `409 Conflict` (`uq_official_exam_schedule`). |
 | `TC-EXM-07` | **Validation** | رفض مدخلات بدون تاريخ امتحان أو بمعرف مادة غير صالح | `exam_date: '', subject_id: 9999` | `422 Unprocessable Entity`. |
-| `TC-EXM-08` | **Integration** | **تعديل موعد الامتحان بنجاح:** تحديث تاريخ الامتحان والتعليمات | `PUT /api/v1/official-exams/1` مع `exam_date: '2026-11-16'` | `200 OK` وتحديث السجل. |
+| `TC-EXM-08` | **Integration** | **تعديل موعد ومرفقات الامتحان بنجاح:** تحديث تاريخ الامتحان والمرفقات | `PUT /api/v1/official-exams/1` مع `exam_date: '2026-11-16', attachments: [...]` | `200 OK` وتحديث السجل والمرفقات. |
 | `TC-EXM-09` | **Soft Delete** | حذف وإلغاء امتحان رسمي من الجدول المعتمد | `DELETE /api/v1/official-exams/1` | `200 OK` وضبط `deleted_at` وتحديث السجل. |
 
 ---

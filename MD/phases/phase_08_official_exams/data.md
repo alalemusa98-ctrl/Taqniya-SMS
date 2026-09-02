@@ -25,6 +25,7 @@
 | `exam_type` | `ENUM('midterm', 'final', 'second_round')` | `NOT NULL, DEFAULT 'final'` | نوع الامتحان الرسمي (`midterm = نصفي`, `final = نهائي`, `second_round = دور ثانٍ`). |
 | `exam_date` | `DATE` | `NOT NULL, INDEXED` | تاريخ يوم الامتحان. |
 | `notes` | `VARCHAR(255)` | `NULL DEFAULT NULL` | تعليمات وإرشادات إضافية للطلاب بخصوص الامتحان (مثل القاعات والأدوات المسموحة). |
+| `attachments` | `JSON` | `NULL DEFAULT NULL` | مصفوفة ملفات وصور مرفقة بالامتحان الرسمي بصيغة JSON (دليل المراجعة، جدول المواصفات، ونماذج استرشادية). |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
 | `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
 | `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
@@ -68,6 +69,7 @@ erDiagram
         enum exam_type
         date exam_date
         varchar notes
+        json attachments
         timestamp created_at
         timestamp updated_at
         timestamp deleted_at
