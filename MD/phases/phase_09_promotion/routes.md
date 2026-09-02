@@ -74,6 +74,8 @@
   - `transcript_type` (optional, string, enum: `term`, `annual`): تصفية حسب نوع الصحيفة (فصلية أم سنوية).
   - `academic_year_name` (optional, string): فلترة باسم العام الدراسي (مثل: `2024/2025`).
   - `class_name` (optional, string): فلترة باسم الصف (مثل: `الصف الخامس`).
+  - `section_name` (optional, string): فلترة باسم الشعبة الدراسية (مثل: `شعبة أ` أو `شعبة ب`).
+  - `class_academic_term_id` (optional, bigint): تصفية حسب الفترة/الفصل الدراسي الخاص بالصف (يرتبط بـ `class_academic_terms.id`، لجلب نتائج فترة محددة للصف مثل الفترة 1 أو 2 أو 3).
   - `final_status` (optional, string, enum: `passed`, `second_round`, `failed`, `graduated`): فلترة حسب قرار النتيجة.
   - `sort_by` (optional, string, enum: `id`, `total_score`, `percentage`, default `id`): حقل الفرز.
   - `sort_order` (optional, string, enum: `asc`, `desc`, default `desc`): اتجاه الفرز.
@@ -82,51 +84,82 @@
 
 #### استجابات هذا الرابط (Responses):
 
-##### ✅ `200 OK` (نجاح جلب القائمة):
+##### ✅ `200 OK` (نجاح جلب مصفوفة الصحائف المدرسية المؤرشفة بالهيكل الشجري الموحد):
 ```json
 {
   "success": true,
-  "message": "تم جلب قائمة الصحائف المدرسية بنجاح.",
-  "data": [
-    {
-      "id": 1,
-      "student_id": 101,
-      "student_code": "STU-3001",
-      "student_name": "محمد علي الفيتوري",
-      "transcript_type": "annual",
-      "transcript_type_ar": "صحيفة سنوية نهائية",
-      "class_academic_term_id": null,
-      "academic_year_name": "2024/2025",
-      "class_name": "الصف الخامس",
-      "section_name": "شعبة أ",
-      "grade_level": 5,
-      "total_score": 950.00,
-      "percentage": 95.00,
-      "final_status": "passed",
-      "final_status_ar": "ناجح ومرحل",
-      "rank": 1,
-      "created_at": "2025-06-30T10:00:00Z"
-    },
-    {
-      "id": 2,
-      "student_id": 101,
-      "student_code": "STU-3001",
-      "student_name": "محمد علي الفيتوري",
-      "transcript_type": "term",
-      "transcript_type_ar": "صحيفة الفصل الدراسي الأول",
-      "class_academic_term_id": 10,
-      "academic_year_name": "2024/2025",
-      "class_name": "الصف الخامس",
-      "section_name": "شعبة أ",
-      "grade_level": 5,
-      "total_score": 475.00,
-      "percentage": 95.00,
-      "final_status": "passed",
-      "final_status_ar": "ناجح بالفصل",
-      "rank": 1,
-      "created_at": "2025-01-15T10:00:00Z"
-    }
-  ],
+  "message": "تم جلب مصفوفة الصحائف المدرسية المؤرشفة بنجاح.",
+  "data": {
+    "academic_year_name": "2024/2025",
+    "transcript_types": [
+      {
+        "transcript_type": "annual",
+        "transcript_type_ar": "صحيفة سنوية نهائية",
+        "class_academic_term_id": null,
+        "term_name": "الصحيفة الكلية",
+        "classes": [
+          {
+            "class_name": "الصف الخامس",
+            "grade_level": 5,
+            "sections_count": 1,
+            "sections": [
+              {
+                "section_name": "شعبة أ",
+                "students_count": 1,
+                "transcripts": [
+                  {
+                    "id": 1,
+                    "student_id": 101,
+                    "student_code": "STU-3001",
+                    "student_name": "محمد علي الفيتوري",
+                    "total_score": 950.00,
+                    "percentage": 95.00,
+                    "final_status": "passed",
+                    "final_status_ar": "ناجح ومرحل",
+                    "rank": 1,
+                    "created_at": "2025-06-30T10:00:00Z"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "transcript_type": "term",
+        "transcript_type_ar": "صحيفة فصلية",
+        "class_academic_term_id": 10,
+        "term_name": "الفصل الدراسي الأول",
+        "classes": [
+          {
+            "class_name": "الصف الخامس",
+            "grade_level": 5,
+            "sections_count": 1,
+            "sections": [
+              {
+                "section_name": "شعبة أ",
+                "students_count": 1,
+                "transcripts": [
+                  {
+                    "id": 2,
+                    "student_id": 101,
+                    "student_code": "STU-3001",
+                    "student_name": "محمد علي الفيتوري",
+                    "total_score": 475.00,
+                    "percentage": 95.00,
+                    "final_status": "passed",
+                    "final_status_ar": "ناجح بالفصل",
+                    "rank": 1,
+                    "created_at": "2025-01-15T10:00:00Z"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "meta": {
     "current_page": 1,
     "per_page": 15,
@@ -141,7 +174,10 @@
 {
   "success": true,
   "message": "لا توجد صحائف مدرسية مؤرشفة تطابق محددات البحث.",
-  "data": [],
+  "data": {
+    "academic_year_name": "2024/2025",
+    "transcript_types": []
+  },
   "meta": {
     "current_page": 1,
     "per_page": 15,
