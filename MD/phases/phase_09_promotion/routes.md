@@ -268,7 +268,14 @@
 
 ### 1.3 `GET /api/v1/students/:student_id/transcripts` — عرض جميع الصحائف التاريخية لطالب محدد
 
-> **الوصف الوظيفي:** استرجاع السجل الأكاديمي التاريخي الكامل للطالب عبر جميع الأعوام الدراسية والفصول السابقة مع إرجاع أمثلة لصحائف فصلية وسنوية.
+> **الوصف الوظيفي:** استرجاع السجل الأكاديمي التاريخي الكامل للطالب عبر جميع الأعوام الدراسية والفصول السابقة مع دعم الفلترة بالسنة الدراسية ونوع الصحيفة والصف الدراسي.
+
+- **Query Parameters:**
+  - `academic_year_name` (optional, string): فلترة حسب العام الدراسي (مثل: `2024/2025`).
+  - `transcript_type` (optional, string, enum: `term`, `annual`): تصفية حسب نوع الصحيفة (فصلية أم سنوية).
+  - `class_name` (optional, string): فلترة حسب الصف الدراسي (مثل: `الصف الخامس`).
+  - `sort_by` (optional, string, enum: `id`, `created_at`, `percentage`, default `id`): حقل الفرز.
+  - `sort_order` (optional, string, enum: `asc`, `desc`, default `desc`): اتجاه الفرز.
 
 #### استجابات هذا الرابط (Responses):
 
