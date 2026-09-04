@@ -137,7 +137,7 @@ stateDiagram-v2
   - إذا وجدت ارتباطات: رفض الحذف وإرجاع `409 Conflict` مع رسالة منع الحذف المرجعي (RESTRICT).
   - إذا كان الصف حراً: ضبط `deleted_at = CURRENT_TIMESTAMP` وتسجيل العملية في `audit_logs`.
 - **عقد الاستجابات والمدخلات (Network SSoT):**
-  - تخضع استجابات الحذف (`200 OK`, `404 Not Found`, `409 Conflict`, `403 Forbidden`) للموثق في [`routes.md`](./routes.md).
+  - تخضع استجابات الحذف (`200 OK`, `404 Not Found`, `409 Conflict`) للموثق في [`routes.md`](./routes.md).
 
 ---
 

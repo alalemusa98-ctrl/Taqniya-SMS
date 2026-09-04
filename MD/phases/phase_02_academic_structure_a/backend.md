@@ -138,7 +138,7 @@ stateDiagram-v2
   - إذا وجدت ارتباطات: رفض الحذف وإرجاع `409 Conflict` مع رسالة منع الحذف المرجعي (RESTRICT).
   - إذا كانت السنة حرة: ضبط `deleted_at = CURRENT_TIMESTAMP` وتسجيل العملية في `audit_logs`.
 - **عقد الاستجابات والمدخلات (Network SSoT):**
-  - تخضع استجابات الحذف (`200 OK`, `404 Not Found`, `409 Conflict`, `403 Forbidden`) بالكامل للموثق في [`routes.md`](./routes.md).
+  - تخضع استجابات الحذف (`200 OK`, `404 Not Found`, `409 Conflict`) بالكامل للموثق في [`routes.md`](./routes.md).
 
 #### 🔹 [Operation 1.5] `POST /api/v1/academic/years/:id/activate` — تفعيل العام الدراسي النشط (Atomic Activation)
 - **الغرض والوظيفة:** تحويل السنة المستهدفة إلى العام الدراسي النشط الحصري بالمنظومة (`is_active = 1`).
