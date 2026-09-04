@@ -23,7 +23,7 @@
 
 1. **الخطوة 1: إدارة تسكين وسجل تسجيل الطلاب الأكاديمي (`student_enrollments`):** [5 مسارات]
    - **استعراض وبحث كشف تسكين الطلاب مجمعاً هرمياً بالصفوف والشعب:** `GET /api/v1/student-enrollments`.
-   - **استعراض السجل والأرشيف التسكيني التاريخي لطالب محدد عبر الأعوام:** `GET /api/v1/students/:student_id/enrollments`.
+   - **استعراض السجل والأرشيف التسكيني التاريخي لطالب محدد عبر الأعوام:** `GET /api/v1/students/:student_id/enrollments` (يعتمد على جدول الصحائف المؤرشفة `student_transcripts` من المرحلة 09 لحماية السجل الدائم).
    - **تسكين وتعديل تسجيل طالب في صف وشعبة (Combined POST & PUT):** `POST` & `PUT /api/v1/student-enrollments`.
    - **التسكين والتوزيع الجماعي لمجموعة طلاب دفعة واحدة في شعبة:** `POST /api/v1/student-enrollments/bulk-enroll`.
    - **إلغاء وتجريد تسكين طالب مع فحص الحماية المرجعية (RESTRICT):** `DELETE /api/v1/student-enrollments/:id`.

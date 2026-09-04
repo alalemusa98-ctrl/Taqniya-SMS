@@ -39,6 +39,9 @@
 * `class_id` يرتبط بجدول `classes(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
 * `class_section_id` يرتبط بجدول `class_sections(id)` مع `ON DELETE RESTRICT, ON UPDATE CASCADE`.
 
+> 📌 **تكامل النزاهة التاريخية (Historical Persistence & Phase 09):**  
+> بينما يدير جدول `student_enrollments` عمليات التسكين التشغيلية الجارية خلال العام النشط، تعتمد المنظومة في حفظ وتتبع السجل الأكاديمي التاريخي للطالب عبر الأعوام على **جدول الصحائف المدرسية المؤرشفة (`student_transcripts` من المرحلة 09)** الذي يحتفظ بلقطات بيانات صلبة وغير قابلة للتلف (Immutable Snapshots) تضمن عدم ضياع التدرج الأكاديمي للطالب في حال إعادة تهيئة أو تصفير جداول التسكين السنوية.
+
 ---
 
 ### ⚡ الفهارس والقيود (Indexes & Constraints):
