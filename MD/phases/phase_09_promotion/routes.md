@@ -27,8 +27,8 @@
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
 | **1** | `student_transcripts` | `GET` | `/api/v1/transcripts` | `admin` | استعراض وتصفية الصحائف المدرسية المؤرشفة بالترقيم والفلترة |
-| **2** | `student_transcripts` | `GET` | `/api/v1/transcripts/:id` | الجميع | استعراض تفاصيل لقطة الصحيفة التجميدية الكاملة وتفاصيل درجات المواد |
-| **3** | `student_transcripts` | `GET` | `/api/v1/students/:student_id/transcripts` | الجميع | استعراض السجل التاريخي لكافة صحائف طالب محدد |
+| **2** | `student_transcripts` | `GET` | `/api/v1/transcripts/:id` | `admin`, `student`, `parent` | استعراض تفاصيل لقطة الصحيفة التجميدية الكاملة وتفاصيل درجات المواد |
+| **3** | `student_transcripts` | `GET` | `/api/v1/students/:student_id/transcripts` | `admin`, `student (own)`, `parent (child)` | استعراض السجل التاريخي لكافة صحائف طالب محدد |
 | **4** | `student_transcripts` | `POST` | `/api/v1/transcripts/freeze` | `admin` | تجميد وإصدار صحيفة دراسية (فصلية/سنوية) عبر شيت رصد الدرجات |
 | **5** | `promotion_batches` | `GET` | `/api/v1/promotions/batches` | `admin` | استعراض سجل دفعات الترحيل السنوي المنفذة بالترقيم |
 | **6** | `promotion_batches` | `GET` | `/api/v1/promotions/batches/:id` | `admin` | استعراض تفاصيل وإحصائيات ورسوم بيانية لدفعة ترحيل محددة |

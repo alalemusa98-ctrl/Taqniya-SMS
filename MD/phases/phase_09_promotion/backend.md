@@ -78,8 +78,8 @@ stateDiagram-v2
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
 | :-: | :--- | :--- | :--- | :---: | :--- |
 | **1.1** | استعراض وتصفية الصحائف المدرسية | `GET /api/v1/transcripts` | `admin` | `200 OK` | [في routes.md](./routes.md) |
-| **1.2** | استعراض تفاصيل لقطة الصحيفة الكاملة | `GET /api/v1/transcripts/:id` | الجميع | `200 OK` | [في routes.md](./routes.md) |
-| **1.3** | استعراض صحائف طالب تاريخية | `GET /api/v1/students/:student_id/transcripts` | الجميع | `200 OK` | [في routes.md](./routes.md) |
+| **1.2** | استعراض تفاصيل لقطة الصحيفة الكاملة | `GET /api/v1/transcripts/:id` | `admin`, `student`, `parent` | `200 OK` | [في routes.md](./routes.md) |
+| **1.3** | استعراض صحائف طالب تاريخية | `GET /api/v1/students/:student_id/transcripts` | `admin`, `student (own)`, `parent (child)` | `200 OK` | [في routes.md](./routes.md) |
 | **1.4** | تجميد وإصدار صحيفة دراسية | `POST /api/v1/transcripts/freeze` | `admin` | `201 Created` | [في routes.md](./routes.md) |
 
 ---
