@@ -22,20 +22,21 @@
   Accept-Language: ar
   ```
 
-### 📋 مصفوفة المسارات الـ 5 الموحدة (Master Route Matrix):
+### 📋 مصفوفة المسارات الـ 7 الموحدة (Master Route Matrix):
 
-| # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
-| :-: | :--- | :--- | :--- | :--- | :--- |
-| **1** | `timetable_slots` | `GET` | `/api/v1/timetable-slots` | `admin` | استعراض وتصفية وبحث جدول الحصص الأسبوعي بالترقيم والفلترة |
-| **2** | `timetable_slots` | `GET` | `/api/v1/class-sections/:class_section_id/timetable` | `admin` / `teacher` / `student` / `parent` | استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة |
-| **3** | `timetable_slots` | `GET` | `/api/v1/teachers/:teacher_id/timetable` | `admin` / `teacher (own)` | استعراض جدول الحصص الأسبوعي لمعلم محدد |
-| **4** | `timetable_slots` | `POST` | `/api/v1/timetable-slots` | `admin` | تسكين وإدراج حصة جديدة بالجدول الأسبوعي (مع فحص التضارب) |
-| **5** | `timetable_slots` | `PUT` | `/api/v1/timetable-slots/:id` | `admin` | تعديل وتحديث توقيت أو معلم/شعبة الحصة الأسبوعية |
-| **6** | `timetable_slots` | `DELETE` | `/api/v1/timetable-slots/:id` | `admin` | حذف وإلغاء حصة من الجدول الأسبوعي |
+| # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة | سياق وتوقيت الاستخدام |
+| :-: | :--- | :--- | :--- | :--- | :--- | :--- |
+| **1** | `timetable_slots` | `GET` | `/api/v1/timetable-slots` | `admin` / `teacher` | استعراض هيكل الصفوف والشعب العام للجدول الأسبوعي | **الوضع اليومي الافتراضي:** يُستدعى فورياً عند فتح الشاشة لتجهيز الكروت دون أي أحمال أو استعلامات تجميعية. |
+| **2** | `timetable_slots` | `GET` | `/api/v1/timetable-slots/completion-status` | `admin` | كشف تدقيق واكتمال الجداول وحصر الحصص الشاغرة | **وضع التخطيط والتدقيق:** يُستدعى عند النقر على زر "تدقيق اكتمال الجدول والشواغر" لإبراز النواقص. |
+| **3** | `timetable_slots` | `GET` | `/api/v1/class-sections/:class_section_id/timetable` | `admin` / `teacher` / `student` / `parent` | استعراض مصفوفة جدول الحصص الأسبوعي لشعبة محددة | **عند النقر على الشعبة:** جلب مصفوفة الحصص التفصيلية للشعبة المحددة بنمط التحميل عند الطلب (Lazy Loading). |
+| **4** | `timetable_slots` | `GET` | `/api/v1/teachers/:teacher_id/timetable` | `admin` / `teacher (own)` | استعراض جدول الحصص الأسبوعي لمعلم محدد | كشف النصاب الأسبوعي وجدول حصص المعلم. |
+| **5** | `timetable_slots` | `POST` | `/api/v1/timetable-slots` | `admin` | تسكين وإدراج حصة جديدة بالجدول الأسبوعي | عند إضافة وتسكين مادة ومعلم في فترة زمنية شاغرة. |
+| **6** | `timetable_slots` | `PUT` | `/api/v1/timetable-slots/:id` | `admin` | تعديل وتحديث توقيت أو معلم/شعبة الحصة الأسبوعية | عند تعديل موعد الحصة أو تبديل المعلم/المادة. |
+| **7** | `timetable_slots` | `DELETE` | `/api/v1/timetable-slots/:id` | `admin` | حذف وإلغاء حصة من الجدول الأسبوعي | عند تفريغ وإلغاء حصة من الجدول الأسبوعي. |
 
 ### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
 
-> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 6** بالمرحلة:
+> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 7** بالمرحلة:
 
 ```json
 // 401 Unauthorized (غياب أو تلف التوكن)
@@ -63,32 +64,24 @@
 
 ---
 
-### 1.1 `GET /api/v1/timetable-slots` — استعراض وتصفية سجلات الجدول الأسبوعي
+### 1.1 `GET /api/v1/timetable-slots` — استعراض هيكل الصفوف والشعب العام للجدول (الوضع التشغيلي الخفيف)
 
-> **الوصف الوظيفي:** استرجاع مصفوفة سجلات جدول الحصص الأسبوعية مجمعة هرمياً (`classes -> sections -> days -> slots`)؛ حيث يتيح تحديد معامل الصف الدراسي (`class_id`) جلب واستعراض جدول الحصص الأسبوعي الشامل لكافة الشُعب التابعة لذلك الصف في استجابة واحدة منظمة، مع دعم الفلترة بالشعبة المحددة، المعلم، المادة، اليوم، والبحث.
+> **الوصف الوظيفي:** استرجاع الهيكل الصافي للصفوف الدراسية والشُعب التابعة لها للعام الدراسي النشط بصورة فائقة السرعة والخفة؛ حيث يقتصر هذا المسار على جلب المعرفات والأسماء الأساسية لتمكين الواجهة من رسم كروت الصفوف وتبويبات الشعب فور فتح الصفحة، بدون تنفيذ أي استعلامات تجميعية ثقيلة (`COUNT` أو `GROUP BY`) على جدول الحصص.  
+> 👤 **الصلاحية المطلوبة:** `admin` / `teacher`.  
+> ⏱️ **سياق وتوقيت الاستخدام:** يُستدعى تلقائياً عند فتح شاشة جدول الحصص الرئيسية في الاستخدام اليومي المعتاد.
 
 - **Query Parameters:**
-  - `search` (optional, string): البحث النصي باسم المادة أو المعلم أو الشعبة.
   - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي (افتراضياً العام النشط).
-  - `class_id` (optional, bigint): تصفية حسب الصف الدراسي لجلب جدول كافة شُعبه.
-  - `class_section_id` (optional, bigint): تصفية حسب الشعبة الدراسية المحددة.
-  - `teacher_id` (optional, bigint): تصفية الحصص الموكلة لمعلم محدد.
-  - `subject_id` (optional, bigint): تصفية حسب المادة التعليمية.
-  - `day_of_week` (optional, string, enum: `saturday`, `sunday`, `monday`, `tuesday`, `wednesday`, `thursday`): تصفية حسب اليوم.
-  - `period_slot_id` (optional, bigint): تصفية حسب الحصة اليومية.
-  - `sort_by` (optional, string, enum: `id`, `day_of_week`, `period_slot_id`, default `id`): حقل الفرز.
-  - `sort_order` (optional, string, enum: `asc`, `desc`, default `asc`): اتجاه الفرز.
-  - `page` (optional, integer, default `1`): رقم الصفحة الحالية.
-  - `per_page` (optional, integer, default `15`): عدد السجلات في الصفحة الواحدة.
-- **Example Request URL:** `/api/v1/timetable-slots?class_id=5&day_of_week=sunday&sort_by=period_slot_id&sort_order=asc`
+  - `class_id` (optional, bigint): تصفية لجلب شُعب صف دراسي محدد فقط.
+- **Example Request URL:** `/api/v1/timetable-slots?academic_year_id=1`
 
 #### استجابات هذا الرابط (Responses):
 
-##### ✅ `200 OK` (نجاح جلب مصفوفة الجدول الأسبوعي الهرمية):
+##### ✅ `200 OK` (نجاح جلب الهيكل الصافي للصفوف والشعب):
 ```json
 {
   "success": true,
-  "message": "تم جلب مصفوفة الجدول الأسبوعي بنجاح.",
+  "message": "تم جلب هيكل الصفوف والشعب للجدول الأسبوعي بنجاح.",
   "data": {
     "academic_year_id": 1,
     "academic_year_name": "2025/2026",
@@ -97,148 +90,114 @@
         "class_id": 5,
         "class_name": "الصف الخامس",
         "grade_level": 5,
-        "sections_count": 2,
         "sections": [
           {
             "class_section_id": 5,
-            "section_name": "شعبة أ",
-            "days": [
-              {
-                "day_of_week": "sunday",
-                "day_of_week_ar": "الأحد",
-                "slots": [
-                  {
-                    "id": 1,
-                    "period_slot_id": 1,
-                    "period_name": "الحصة الأولى",
-                    "subject_name": "الرياضيات",
-                    "teacher_name": "أحمد عبد السلام"
-                  },
-                  {
-                    "id": 2,
-                    "period_slot_id": 2,
-                    "period_name": "الحصة الثانية",
-                    "subject_name": "اللغة العربية",
-                    "teacher_name": "سالم خليفة"
-                  }
-                ]
-              },
-              {
-                "day_of_week": "monday",
-                "day_of_week_ar": "الإثنين",
-                "slots": [
-                  {
-                    "id": 3,
-                    "period_slot_id": 1,
-                    "period_name": "الحصة الأولى",
-                    "subject_name": "العلوم",
-                    "teacher_name": "منى الهوني"
-                  }
-                ]
-              }
-            ]
+            "section_name": "شعبة أ"
           },
           {
             "class_section_id": 6,
-            "section_name": "شعبة ب",
-            "days": [
-              {
-                "day_of_week": "sunday",
-                "day_of_week_ar": "الأحد",
-                "slots": [
-                  {
-                    "id": 6,
-                    "period_slot_id": 1,
-                    "period_name": "الحصة الأولى",
-                    "subject_name": "اللغة العربية",
-                    "teacher_name": "سالم خليفة"
-                  },
-                  {
-                    "id": 7,
-                    "period_slot_id": 2,
-                    "period_name": "الحصة الثانية",
-                    "subject_name": "الرياضيات",
-                    "teacher_name": "أحمد عبد السلام"
-                  }
-                ]
-              },
-              {
-                "day_of_week": "monday",
-                "day_of_week_ar": "الإثنين",
-                "slots": [
-                  {
-                    "id": 8,
-                    "period_slot_id": 1,
-                    "period_name": "الحصة الأولى",
-                    "subject_name": "التربية الإسلامية",
-                    "teacher_name": "خالد القمودي"
-                  }
-                ]
-              }
-            ]
+            "section_name": "شعبة ب"
           }
         ]
       },
       {
-        "class_id": 9,
-        "class_name": "الصف التاسع",
-        "grade_level": 9,
-        "sections_count": 1,
+        "class_id": 6,
+        "class_name": "الصف السادس",
+        "grade_level": 6,
         "sections": [
           {
-            "class_section_id": 12,
-            "section_name": "شعبة أ",
-            "days": [
-              {
-                "day_of_week": "sunday",
-                "day_of_week_ar": "الأحد",
-                "slots": [
-                  {
-                    "id": 4,
-                    "period_slot_id": 1,
-                    "period_name": "الحصة الأولى",
-                    "subject_name": "اللغة الإنجليزية",
-                    "teacher_name": "فاطمة الزهراء"
-                  },
-                  {
-                    "id": 5,
-                    "period_slot_id": 2,
-                    "period_name": "الحصة الثانية",
-                    "subject_name": "التاريخ",
-                    "teacher_name": "عمر المختار التاورغي"
-                  }
-                ]
-              }
-            ]
+            "class_section_id": 7,
+            "section_name": "شعبة أ"
           }
         ]
       }
     ]
-  },
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 2,
-    "last_page": 1
   }
 }
 ```
 
-##### ⚪ `200 OK` (القائمة فارغة):
+##### ⚪ `200 OK` (لا توجد صفوف أو شعب):
 ```json
 {
   "success": true,
-  "message": "لا توجد حصص مسجلة تطابق محددات البحث.",
+  "message": "لا توجد صفوف أو شُعب مسجلة بالعام الدراسي المحدد.",
   "data": {
     "academic_year_id": 1,
     "academic_year_name": "2025/2026",
     "classes": []
-  },
-  "meta": {
-    "current_page": 1,
-    "per_page": 15,
-    "total": 0,
-    "last_page": 1
+  }
+}
+```
+
+---
+
+### 1.2 `GET /api/v1/timetable-slots/completion-status` — كشف تدقيق واكتمال الجداول وحصر الحصص الشاغرة (وضع التخطيط)
+
+> **الوصف الوظيفي:** مسار تحليلي وتدقيقي مخصص لحساب إحصائيات اكتمال جدول الحصص الأسبوعي لكل صف وشعبة؛ يقوم بمطابقة الحصص المسكنة فعلياً مع السعة الإجمالية المطلوبة، وتحديد عدد الحصص الشاغرة/الناقصة الإجمالية على مستوى كل صف دراسي ولكل شعبة دراسية على حدة.  
+> 👤 **الصلاحية المطلوبة:** `admin` حصراً (إجراء إداري تخطيطي).  
+> ⏱️ **سياق وتوقيت الاستخدام:** يُستدعى حصراً وبشكل مستقل عند نقر مدير النظام على زر **`📊 تدقيق اكتمال الجدول والشواغر`** في أعلى الصفحة أثناء مرحلة بناء وتجهيز الجدول، لتمييز الصفوف والشعب الناقصة بإطارات وشارات تحذيرية ملونة.
+
+- **Query Parameters:**
+  - `academic_year_id` (optional, bigint): تصفية حسب العام الدراسي (افتراضياً العام النشط).
+  - `class_id` (optional, bigint): تصفية حسب صف محدد.
+- **Example Request URL:** `/api/v1/timetable-slots/completion-status?academic_year_id=1`
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK` (نجاح جلب تقرير التدقيق والشواغر):
+```json
+{
+  "success": true,
+  "message": "تم جلب تقرير تدقيق واكتمال جداول الحصص بنجاح.",
+  "data": {
+    "academic_year_id": 1,
+    "academic_year_name": "2025/2026",
+    "total_unscheduled_school_slots": 5,
+    "classes": [
+      {
+        "class_id": 5,
+        "class_name": "الصف الخامس",
+        "grade_level": 5,
+        "total_unscheduled_slots": 5,
+        "is_fully_scheduled": false,
+        "sections": [
+          {
+            "class_section_id": 5,
+            "section_name": "شعبة أ",
+            "total_slots": 30,
+            "scheduled_slots_count": 28,
+            "unscheduled_slots_count": 2,
+            "is_fully_scheduled": false
+          },
+          {
+            "class_section_id": 6,
+            "section_name": "شعبة ب",
+            "total_slots": 30,
+            "scheduled_slots_count": 27,
+            "unscheduled_slots_count": 3,
+            "is_fully_scheduled": false
+          }
+        ]
+      },
+      {
+        "class_id": 6,
+        "class_name": "الصف السادس",
+        "grade_level": 6,
+        "total_unscheduled_slots": 0,
+        "is_fully_scheduled": true,
+        "sections": [
+          {
+            "class_section_id": 7,
+            "section_name": "شعبة أ",
+            "total_slots": 30,
+            "scheduled_slots_count": 30,
+            "unscheduled_slots_count": 0,
+            "is_fully_scheduled": true
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -247,7 +206,8 @@
 
 ---
 
-### 1.2 `GET /api/v1/class-sections/:class_section_id/timetable` — استعراض مصفوفة الجدول الأسبوعي لشعبة محددة
+
+### 1.3 `GET /api/v1/class-sections/:class_section_id/timetable` — استعراض مصفوفة الجدول الأسبوعي لشعبة محددة
 
 > **الوصف الوظيفي:** استرجاع جدول الحصص الأسبوعي الكامل لشعبة محددة مقسماً بحسب أيام الأسبوع والفترات الزمنية.
 
@@ -346,7 +306,7 @@
 
 ---
 
-### 1.3 `GET /api/v1/teachers/:teacher_id/timetable` — استعراض جدول الحصص الأسبوعي لمعلم محدد
+### 1.4 `GET /api/v1/teachers/:teacher_id/timetable` — استعراض جدول الحصص الأسبوعي لمعلم محدد
 
 > **الوصف الوظيفي:** استرجاع جدول نصاب الحصص الأسبوعي لمعلم محدد لمعرفة توزيع حصصه وشعبه على أيام الأسبوع.
 
@@ -438,7 +398,7 @@
 
 ---
 
-### 1.4 `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` — تسكين وتعديل حصة بالجدول الأسبوعي (Combined Specification)
+### 1.5 `POST /api/v1/timetable-slots` & `PUT /api/v1/timetable-slots/:id` — تسكين وتعديل حصة بالجدول الأسبوعي (Combined Specification)
 
 > **الوصف الوظيفي:**
 > * **في الإنشاء (`POST`):** إدراج حصة جديدة بالجدول الأسبوعي مع الفحص الذري ومنع تضارب شعبة الفصل (`uq_timetable_section_slot`) وتضارب جدول المعلم.
@@ -540,7 +500,7 @@
 
 ---
 
-### 1.5 `DELETE /api/v1/timetable-slots/:id` — حذف وإلغاء حصة من الجدول الأسبوعي
+### 1.6 `DELETE /api/v1/timetable-slots/:id` — حذف وإلغاء حصة من الجدول الأسبوعي
 
 > **الوصف الوظيفي:** حذف الحصة من الجدول الأسبوعي وإخلاء التوقيت الزمني.
 

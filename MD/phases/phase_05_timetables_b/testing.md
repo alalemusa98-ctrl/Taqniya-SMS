@@ -20,7 +20,8 @@
 
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
-| `TC-TBL-01` | **Integration** | استرجاع جدول الحصص بالفلترة بالصف والشعبة واليوم | `GET /api/v1/timetable-slots?class_id=5&day_of_week=sunday&page=1` | `200 OK` مع مصفوفة الحصص الهرمية لكافة الشعب و `meta`. |
+| `TC-TBL-01` | **Integration** | استرجاع هيكل الصفوف والشعب العام للجدول (الوضع الخفيف) | `GET /api/v1/timetable-slots?academic_year_id=1` | `200 OK` بهيكل الصفوف والشعب بدون استعلامات تجميعية. |
+| `TC-TBL-01-B` | **Integration** | استرجاع كشف تدقيق واكتمال الجداول وحصر الحصص الشاغرة | `GET /api/v1/timetable-slots/completion-status?academic_year_id=1` | `200 OK` مع أعداد الحصص الشاغرة والمكتملة لكل صف وشعبة. |
 | `TC-TBL-02` | **Integration** | استرجاع مصفوفة جدول الحصص الأسبوعي لشعبة محددة | `GET /api/v1/class-sections/5/timetable` | `200 OK` وهيكل الأيام والحصص للشعبة. |
 | `TC-TBL-03` | **Integration** | استرجاع جدول الحصص الأسبوعي لمعلم محدد | `GET /api/v1/teachers/3/timetable` | `200 OK` وجدول نصاب حصص المعلم. |
 | `TC-TBL-04` | **Unit / Validation** | **تسكين حصة بنجاح:** تسكين مادة لمعلم بشعبة في وقت ويوم شاغر | `year: 1, section: 5, day: 'sunday', period: 1, assignment: 10` | `201 Created` وحفظ السجل وإرجاع تفاصيل الصف والشعبة والمادة والمعلم. |
