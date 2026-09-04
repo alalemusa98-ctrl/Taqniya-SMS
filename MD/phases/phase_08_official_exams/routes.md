@@ -26,10 +26,10 @@
 
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
-| **1** | `official_exams` | `GET` | `/api/v1/official-exams` | الجميع | استعراض وتصفية وبحث جدول الامتحانات الرسمية بالترقيم والفلترة بالصف والمادة والمعلم |
-| **2** | `official_exams` | `GET` | `/api/v1/official-exams/:id` | الجميع | استعراض تفاصيل امتحان رسمي محدد والتعليمات والقاعة والمرفقات الكاملة |
-| **3** | `official_exams` | `GET` | `/api/v1/classes/:class_id/official-exams` | الجميع | استعراض جدول امتحانات الصف الدراسي المعتمد بالسمستر (للعرض والطباعة) |
-| **4** | `official_exams` | `GET` | `/api/v1/teachers/:teacher_id/official-exams` | `admin` / `teacher` | استعراض جدول الامتحانات الرسمية لمواد وصفوف معلم محدد |
+| **1** | `official_exams` | `GET` | `/api/v1/official-exams` | `admin` / `teacher` / `student` / `parent` | استعراض وتصفية وبحث جدول الامتحانات الرسمية بالترقيم والفلترة بالصف والمادة والمعلم |
+| **2** | `official_exams` | `GET` | `/api/v1/official-exams/:id` | `admin` / `teacher` / `student` / `parent` | استعراض تفاصيل امتحان رسمي محدد والتعليمات والقاعة والمرفقات الكاملة |
+| **3** | `official_exams` | `GET` | `/api/v1/classes/:class_id/official-exams` | `student` / `parent` / `admin` | استعراض جدول امتحانات الصف الدراسي المعتمد بالسمستر (للعرض والطباعة) |
+| **4** | `official_exams` | `GET` | `/api/v1/teachers/:teacher_id/official-exams` | `teacher` / `admin` | استعراض جدول الامتحانات الرسمية لمواد وصفوف معلم محدد |
 | **5** | `official_exams` | `POST` | `/api/v1/official-exams` | `admin` | إضافة وجدولة موعد امتحان رسمي لصف ومادة بالسمستر مع المرفقات |
 | **6** | `official_exams` | `PUT` | `/api/v1/official-exams/:id` | `admin` | تعديل موعد أو تعليمات أو مرفقات الامتحان الرسمي القائم |
 | **7** | `official_exams` | `DELETE` | `/api/v1/official-exams/:id` | `admin` | حذف وإلغاء امتحان رسمي من الجدول المعتمد |
