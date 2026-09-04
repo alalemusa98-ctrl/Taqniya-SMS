@@ -20,7 +20,7 @@
 
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
-| `TC-TRN-01` | **Integration** | استرجاع مصفوفة الصحائف بالهيكل الشجري الموحد مع الفلترة والترقيم | `GET /api/v1/transcripts?academic_year_name=2024/2025&class_name=الصف الخامس&section_name=شعبة أ&page=1` | `200 OK` مع الهيكل الشجري الموحد لنوع الصحائف والصفوف والشعب وبيانات الطلاب و `meta`. |
+| `TC-TRN-01` | **Integration** | استرجاع شبكة بطاقات الصفوف وكشف ترتيب الطلاب مع الفلترة بـ grade_level والترقيم | `GET /api/v1/transcripts?academic_year_name=2024/2025&grade_level=5&sort_by=percentage&sort_order=desc&page=1` | `200 OK` مع بطاقات `classes_summary` وكشف `transcripts` المرتب تنازلياً من الأعلى تقييماً للأقل و `meta`. |
 | `TC-TRN-02` | **Integration** | البحث النصي باسم الطالب أو رمزه المؤسسي | `GET /api/v1/transcripts?search=STU-3001` | `200 OK` ومطابقة صحائف الطالب المحدد. |
 | `TC-TRN-03` | **Integration** | استرجاع لقطة الصحيفة التجميدية الكاملة بالـ JSON | `GET /api/v1/transcripts/1` | `200 OK` وتفاصيل المواد والدرجات وأعمال السنة والامتحان والدور الثاني. |
 | `TC-TRN-04` | **Integration** | استرجاع السجل التاريخي الكامل لصحائف طالب محدد | `GET /api/v1/students/101/transcripts` | `200 OK` وكافة الصحائف الفصلية والسنوية السابقة. |

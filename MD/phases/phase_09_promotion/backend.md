@@ -77,15 +77,15 @@ stateDiagram-v2
 #### 📋 جدول العمليات:
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
 | :-: | :--- | :--- | :--- | :---: | :--- |
-| **1.1** | استعراض وتصفية الصحائف المدرسية | `GET /api/v1/transcripts` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.1** | استعراض وتصفية الصحائف وبطاقات الصفوف | `GET /api/v1/transcripts` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 | **1.2** | استعراض تفاصيل لقطة الصحيفة الكاملة | `GET /api/v1/transcripts/:id` | `admin`, `student`, `parent` | `200 OK` | [في routes.md](./routes.md) |
 | **1.3** | استعراض صحائف طالب تاريخية | `GET /api/v1/students/:student_id/transcripts` | `admin`, `student (own)`, `parent (child)` | `200 OK` | [في routes.md](./routes.md) |
 | **1.4** | تجميد وإصدار صحيفة دراسية | `POST /api/v1/transcripts/freeze` | `admin` | `201 Created` | [في routes.md](./routes.md) |
 
 ---
 
-#### 🔹 [Operation 1.1] `GET /api/v1/transcripts` — استعراض وتصفية الصحائف المدرسية
-- **الغرض والوظيفة:** جلب سجلات الصحائف المدرسية المؤرشفة بالمنظومة بالهيكل الشجري الموحد مع دعم الفلترة بنوع الصحيفة (`transcript_type`)، اسم العام الدراسي، اسم الصف، اسم الشعبة (`section_name`)، معرف فترة الصف (`class_academic_term_id`)، حالة النتيجة النهائية، والترقيم.
+#### 🔹 [Operation 1.1] `GET /api/v1/transcripts` — استعراض وتصفية الصحائف وبطاقات الصفوف التنفيذية
+- **الغرض والوظيفة:** جلب ملخص بطاقات مؤشرات الصفوف التنفيذية (نسب النجاح، أعداد الناجحين والدور الثاني والراسبين) مع كشف تفصيلي لترتيب طلاب الصف المختار من الأعلى تقييماً إلى الأقل تقييماً، مع دعم الفرز التنازلي بنسبة الدرجات (`percentage`) والفلترة بالمستوى الأكاديمي (`grade_level`) أو معرف الشعبة (`class_section_id`) أو اسم العام والفترات والترقيم.
 - **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
 
 #### 🔹 [Operation 1.2] `GET /api/v1/transcripts/:id` — استعراض تفاصيل لقطة الصحيفة الكاملة

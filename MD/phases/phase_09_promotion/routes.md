@@ -65,106 +65,97 @@
 
 ---
 
-### 1.1 `GET /api/v1/transcripts` — عرض وتصفية الصحائف المدرسية المؤرشفة
+### 1.1 `GET /api/v1/transcripts` — عرض وتصفية الصحائف المدرسية وبطاقات الصفوف التنفيذية
 
-> **الوصف الوظيفي:** استرجاع سجلات الصحائف المدرسية المؤرشفة بالمنظومة مع دعم الفلترة بنوع الصحيفة (`transcript_type`)، اسم العام الدراسي، اسم الصف، حالة النتيجة النهائية، والترتيب والترقيم الصفحي (CRUDS Engine).
+> **الوصف الوظيفي:** استرجاع شبكة بطاقات مؤشرات الصفوف التنفيذية (نسب النجاح، عدادات الناجحين والراسبين والدور الثاني) مع كشف تفصيلي لترتيب طلاب الصف المختار من الأعلى تقييماً إلى الأقل تقييماً عبر كافة الشعب مع دعم الفرز والترقيم الصفحي والفلترة بـ `grade_level` و `class_section_id`.
 
 - **Query Parameters:**
-  - `search` (optional, string): البحث النصي باسم الطالب أو رمزه الموحد (`STU-3001`).
-  - `transcript_type` (optional, string, enum: `term`, `annual`): تصفية حسب نوع الصحيفة (فصلية أم سنوية).
   - `academic_year_name` (optional, string): فلترة باسم العام الدراسي (مثل: `2024/2025`).
+  - `transcript_type` (optional, string, enum: `term`, `annual`, default `annual`): تصفية حسب نوع الصحيفة (فصلية أم سنوية).
+  - `grade_level` (optional, integer): فلترة مباشرة وسريعة بالمستوى الأكاديمي الرقمي للصف الدراسي المختار (مثل: `5` للصف الخامس لجلب كشف ترتيب طلابه).
   - `class_name` (optional, string): فلترة باسم الصف (مثل: `الصف الخامس`).
+  - `class_section_id` (optional, bigint): فلترة اختيارية بمعرف ربط الصف بالشعبة `class_sections.id`.
   - `section_name` (optional, string): فلترة باسم الشعبة الدراسية (مثل: `شعبة أ` أو `شعبة ب`).
   - `class_academic_term_id` (optional, bigint): تصفية حسب الفترة/الفصل الدراسي الخاص بالصف (يرتبط بـ `class_academic_terms.id`، لجلب نتائج فترة محددة للصف مثل الفترة 1 أو 2 أو 3).
   - `final_status` (optional, string, enum: `passed`, `second_round`, `failed`, `graduated`): فلترة حسب قرار النتيجة.
-  - `sort_by` (optional, string, enum: `id`, `total_score`, `percentage`, default `id`): حقل الفرز.
-  - `sort_order` (optional, string, enum: `asc`, `desc`, default `desc`): اتجاه الفرز.
+  - `search` (optional, string): البحث النصي باسم الطالب أو رمزه الموحد (`STU-3001`).
+  - `sort_by` (optional, string, enum: `percentage`, `total_score`, `rank`, `id`, default `percentage`): حقل الفرز (افتراضياً `percentage` للترتيب التنازلي للمتفوقين).
+  - `sort_order` (optional, string, enum: `desc`, `asc`, default `desc`): اتجاه الفرز (افتراضياً `desc` من الأعلى تقييماً إلى الأقل).
   - `page` (optional, integer, default `1`): رقم الصفحة.
   - `per_page` (optional, integer, default `15`): عدد السجلات بالصفحة.
 
 #### استجابات هذا الرابط (Responses):
 
-##### ✅ `200 OK` (نجاح جلب مصفوفة الصحائف المدرسية المؤرشفة بالهيكل الشجري الموحد):
+##### ✅ `200 OK` (نجاح جلب بطاقات مؤشرات الصفوف التنفيذية وكشف ترتيب طلاب الصف المختار):
 ```json
 {
   "success": true,
   "message": "تم جلب مصفوفة الصحائف المدرسية المؤرشفة بنجاح.",
   "data": {
     "academic_year_name": "2024/2025",
-    "transcript_types": [
+    "transcript_type": "annual",
+    "transcript_type_ar": "صحيفة سنوية نهائية",
+    "classes_summary": [
       {
-        "transcript_type": "annual",
-        "transcript_type_ar": "صحيفة سنوية نهائية",
-        "class_academic_term_id": null,
-        "term_name": "الصحيفة الكلية",
-        "classes": [
-          {
-            "class_name": "الصف الخامس",
-            "grade_level": 5,
-            "sections_count": 1,
-            "sections": [
-              {
-                "section_name": "شعبة أ",
-                "students_count": 1,
-                "transcripts": [
-                  {
-                    "id": 1,
-                    "student_id": 101,
-                    "student_code": "STU-3001",
-                    "student_name": "محمد علي الفيتوري",
-                    "total_score": 950.00,
-                    "percentage": 95.00,
-                    "final_status": "passed",
-                    "final_status_ar": "ناجح ومرحل",
-                    "rank": 1,
-                    "created_at": "2025-06-30T10:00:00Z"
-                  }
-                ]
-              }
-            ]
-          }
-        ]
+        "grade_level": 5,
+        "class_name": "الصف الخامس",
+        "total_students": 97,
+        "pass_rate_percentage": 94.85,
+        "passed_count": 92,
+        "second_round_count": 3,
+        "failed_count": 2
       },
       {
-        "transcript_type": "term",
-        "transcript_type_ar": "صحيفة فصلية",
-        "class_academic_term_id": 10,
-        "term_name": "الفصل الدراسي الأول",
-        "classes": [
-          {
-            "class_name": "الصف الخامس",
-            "grade_level": 5,
-            "sections_count": 1,
-            "sections": [
-              {
-                "section_name": "شعبة أ",
-                "students_count": 1,
-                "transcripts": [
-                  {
-                    "id": 2,
-                    "student_id": 101,
-                    "student_code": "STU-3001",
-                    "student_name": "محمد علي الفيتوري",
-                    "total_score": 475.00,
-                    "percentage": 95.00,
-                    "final_status": "passed",
-                    "final_status_ar": "ناجح بالفصل",
-                    "rank": 1,
-                    "created_at": "2025-01-15T10:00:00Z"
-                  }
-                ]
-              }
-            ]
-          }
-        ]
+        "grade_level": 6,
+        "class_name": "الصف السادس",
+        "total_students": 88,
+        "pass_rate_percentage": 88.64,
+        "passed_count": 78,
+        "second_round_count": 6,
+        "failed_count": 4
+      }
+    ],
+    "selected_class": {
+      "grade_level": 5,
+      "class_name": "الصف الخامس",
+      "total_students": 97
+    },
+    "transcripts": [
+      {
+        "id": 1,
+        "student_id": 101,
+        "student_code": "STU-3001",
+        "student_name": "محمد علي الفيتوري",
+        "class_section_id": 12,
+        "section_name": "شعبة أ",
+        "total_score": 985.00,
+        "percentage": 98.50,
+        "final_status": "passed",
+        "final_status_ar": "ناجح ومرحل",
+        "rank": 1,
+        "created_at": "2025-06-30T10:00:00Z"
+      },
+      {
+        "id": 14,
+        "student_id": 114,
+        "student_code": "STU-3014",
+        "student_name": "فاطمة أحمد التاجوري",
+        "class_section_id": 13,
+        "section_name": "شعبة ب",
+        "total_score": 978.00,
+        "percentage": 97.80,
+        "final_status": "passed",
+        "final_status_ar": "ناجح ومرحل",
+        "rank": 2,
+        "created_at": "2025-06-30T10:00:00Z"
       }
     ]
   },
   "meta": {
     "current_page": 1,
     "per_page": 15,
-    "total": 2,
-    "last_page": 1
+    "total": 97,
+    "last_page": 7
   }
 }
 ```
