@@ -1,0 +1,662 @@
+// ==============================================================================
+// TAQNIYA SCHOOL MANAGEMENT SYSTEM (Taqniya-SMS)
+// Prisma Schema Definition (SSoT Materialization)
+// Dialect: MySQL 8.0
+// Governed by: PROJECT/MD/database.md (Authoritative Blueprint)
+// ==============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------------------------------
+
+enum RoleType {
+  admin
+  teacher
+  student
+  parent
+}
+
+enum Gender {
+  male
+  female
+}
+
+enum GuardianRelationship {
+  father
+  mother
+  brother
+  uncle
+  other
+}
+
+enum EnrollmentStatus {
+  enrolled
+  passed
+  second_round
+  failed
+  graduated
+}
+
+enum DayOfWeek {
+  saturday
+  sunday
+  monday
+  tuesday
+  wednesday
+  thursday
+}
+
+enum ExamType {
+  midterm
+  final
+  second_round
+}
+
+enum TranscriptType {
+  term
+  annual
+}
+
+// ------------------------------------------------------------------------------
+// 📦 Phase 01: Authentication, Identity & Audit (3 Tables)
+// ------------------------------------------------------------------------------
+
+model User {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_code    String    @unique(map: "uq_users_user_code") @db.VarChar(30)
+  password     String    @db.VarChar(255)
+  role_type    RoleType
+  is_active    Int       @default(1) @db.TinyInt
+  last_login_at DateTime? @db.Timestamp(0)
+  created_at   DateTime  @default(now()) @db.Timestamp(0)
+  updated_at   DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at   DateTime? @db.Timestamp(0)
+
+  // Relations
+  tokens               PersonalAccessToken[]
+  audit_logs           AuditLog[]
+  teacher_profile      Teacher?
+  student_profile      Student?
+  guardian_profile     Guardian?
+  created_assignments  Assignment[]
+  created_quizzes      Quiz[]
+  executed_promotions  PromotionBatch[]
+
+  @@index([role_type], map: "idx_users_role_type")
+  @@index([is_active], map: "idx_users_is_active")
+  @@index([deleted_at], map: "idx_users_deleted_at")
+  @@map("users")
+}
+
+model PersonalAccessToken {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id      BigInt    @db.UnsignedBigInt
+  token_hash   String    @unique(map: "uq_tokens_token_hash") @db.VarChar(64)
+  device_name  String?   @db.VarChar(255)
+  ip_address   String?   @db.VarChar(45)
+  expires_at   DateTime  @db.Timestamp(0)
+  created_at   DateTime  @default(now()) @db.Timestamp(0)
+  last_used_at DateTime? @db.Timestamp(0)
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "fk_tokens_user_id")
+
+  @@index([user_id], map: "idx_tokens_user_id")
+  @@index([expires_at], map: "idx_tokens_expires_at")
+  @@map("personal_access_tokens")
+}
+
+model AuditLog {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id     BigInt?   @db.UnsignedBigInt
+  action      String    @db.VarChar(50)
+  entity_type String    @db.VarChar(100)
+  entity_id   BigInt?   @db.UnsignedBigInt
+  old_values  Json?     @db.Json
+  new_values  Json?     @db.Json
+  ip_address  String?   @db.VarChar(45)
+  user_agent  String?   @db.VarChar(255)
+  created_at  DateTime  @default(now()) @db.Timestamp(0)
+
+  // Relations
+  user User? @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: Cascade, map: "fk_audit_user_id")
+
+  @@index([user_id], map: "idx_audit_user_id")
+  @@index([action], map: "idx_audit_action")
+  @@index([entity_type, entity_id], map: "idx_audit_entity")
+  @@index([created_at], map: "idx_audit_created_at")
+  @@map("audit_logs")
+}
+
+// ------------------------------------------------------------------------------
+// 📦 Phase 02: Academic Hierarchy & Curriculum (9 Tables)
+// ------------------------------------------------------------------------------
+
+model AcademicYear {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @unique(map: "uq_academic_years_name") @db.VarChar(50)
+  start_date DateTime  @db.Date
+  end_date   DateTime  @db.Date
+  is_active  Int       @default(0) @db.TinyInt
+  created_at DateTime  @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at DateTime? @db.Timestamp(0)
+
+  // Relations
+  teaching_assignments TeachingAssignment[]
+  student_enrollments  StudentEnrollment[]
+  timetable_slots      TimetableSlot[]
+  assignments          Assignment[]
+  quizzes              Quiz[]
+  official_exams       OfficialExam[]
+  promotions_from      PromotionBatch[]     @relation("PromotionFromYear")
+  promotions_to        PromotionBatch[]     @relation("PromotionToYear")
+
+  @@index([is_active], map: "idx_academic_years_is_active")
+  @@index([deleted_at], map: "idx_academic_years_deleted_at")
+  @@map("academic_years")
+}
+
+model AcademicTerm {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String    @unique(map: "uq_terms_name") @db.VarChar(50)
+  term_number Int       @unique(map: "uq_terms_number") @db.TinyInt
+  created_at  DateTime  @default(now()) @db.Timestamp(0)
+  updated_at  DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at  DateTime? @db.Timestamp(0)
+
+  // Relations
+  class_academic_terms ClassAcademicTerm[]
+  assignments          Assignment[]
+  quizzes              Quiz[]
+  official_exams       OfficialExam[]
+
+  @@map("academic_terms")
+}
+
+model AcademicStage {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String    @unique(map: "uq_stages_name") @db.VarChar(50)
+  order_index Int       @default(1) @db.SmallInt
+  created_at  DateTime  @default(now()) @db.Timestamp(0)
+  updated_at  DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at  DateTime? @db.Timestamp(0)
+
+  // Relations
+  classes Class[]
+
+  @@index([order_index], map: "idx_stages_order_index")
+  @@map("academic_stages")
+}
+
+model Class {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  stage_id    BigInt    @db.UnsignedBigInt
+  name        String    @db.VarChar(50)
+  grade_level Int       @db.SmallInt
+  created_at  DateTime  @default(now()) @db.Timestamp(0)
+  updated_at  DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at  DateTime? @db.Timestamp(0)
+
+  // Relations
+  stage                AcademicStage       @relation(fields: [stage_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_classes_stage_id")
+  class_academic_terms ClassAcademicTerm[]
+  class_sections       ClassSection[]
+  class_subjects       ClassSubject[]
+  student_enrollments  StudentEnrollment[]
+  official_exams       OfficialExam[]
+
+  @@unique([stage_id, grade_level], map: "uq_classes_stage_level")
+  @@index([stage_id], map: "idx_classes_stage_id")
+  @@index([grade_level], map: "idx_classes_grade_level")
+  @@map("classes")
+}
+
+model ClassAcademicTerm {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  class_id         BigInt    @db.UnsignedBigInt
+  academic_term_id BigInt    @db.UnsignedBigInt
+  is_active        Int       @default(0) @db.TinyInt
+  is_closed        Int       @default(0) @db.TinyInt
+  created_at       DateTime  @default(now()) @db.Timestamp(0)
+  updated_at       DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at       DateTime? @db.Timestamp(0)
+
+  // Relations
+  class          Class               @relation(fields: [class_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_class_terms_class_id")
+  academic_term  AcademicTerm        @relation(fields: [academic_term_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_class_terms_term_id")
+  class_subjects ClassSubject[]
+  transcripts    StudentTranscript[]
+
+  @@unique([class_id, academic_term_id], map: "uq_class_term")
+  @@index([class_id], map: "idx_class_terms_class")
+  @@index([academic_term_id], map: "idx_class_terms_term")
+  @@index([is_active], map: "idx_class_terms_active")
+  @@index([is_closed], map: "idx_class_terms_closed")
+  @@map("class_academic_terms")
+}
+
+model Section {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @unique(map: "uq_sections_name") @db.VarChar(50)
+  created_at DateTime  @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at DateTime? @db.Timestamp(0)
+
+  // Relations
+  class_sections ClassSection[]
+
+  @@map("sections")
+}
+
+model ClassSection {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  class_id   BigInt    @db.UnsignedBigInt
+  section_id BigInt    @db.UnsignedBigInt
+  created_at DateTime  @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at DateTime? @db.Timestamp(0)
+
+  // Relations
+  class                Class                @relation(fields: [class_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_class_sections_class_id")
+  section              Section              @relation(fields: [section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_class_sections_section_id")
+  teaching_assignments TeachingAssignment[]
+  student_enrollments  StudentEnrollment[]
+  timetable_slots      TimetableSlot[]
+  assignments          Assignment[]
+  quizzes              Quiz[]
+
+  @@unique([class_id, section_id], map: "uq_class_sections")
+  @@index([class_id], map: "idx_class_sections_class")
+  @@index([section_id], map: "idx_class_sections_section")
+  @@map("class_sections")
+}
+
+model Subject {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String    @unique(map: "uq_subjects_name") @db.VarChar(100)
+  code        String?   @unique(map: "uq_subjects_code") @db.VarChar(30)
+  created_at  DateTime  @default(now()) @db.Timestamp(0)
+  updated_at  DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at  DateTime? @db.Timestamp(0)
+
+  // Relations
+  class_subjects       ClassSubject[]
+  teaching_assignments TeachingAssignment[]
+  official_exams       OfficialExam[]
+
+  @@map("subjects")
+}
+
+model ClassSubject {
+  id                     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  class_id               BigInt    @db.UnsignedBigInt
+  subject_id             BigInt    @db.UnsignedBigInt
+  class_academic_term_id BigInt    @db.UnsignedBigInt
+  passing_score          Decimal   @default(50.00) @db.Decimal(5, 2)
+  max_score              Decimal   @default(100.00) @db.Decimal(5, 2)
+  created_at             DateTime  @default(now()) @db.Timestamp(0)
+  updated_at             DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at             DateTime? @db.Timestamp(0)
+
+  // Relations
+  class               Class             @relation(fields: [class_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_class_subjects_class_id")
+  subject             Subject           @relation(fields: [subject_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_class_subjects_subject_id")
+  class_academic_term ClassAcademicTerm @relation(fields: [class_academic_term_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_class_subjects_term_id")
+
+  @@unique([class_academic_term_id, subject_id], map: "uq_class_term_subject")
+  @@index([class_id], map: "idx_class_subjects_class")
+  @@index([subject_id], map: "idx_class_subjects_subject")
+  @@index([class_academic_term_id], map: "idx_class_subjects_class_term")
+  @@map("class_subjects")
+}
+
+// ------------------------------------------------------------------------------
+// 📦 Phase 03: Teachers & Teaching Assignments (2 Tables)
+// ------------------------------------------------------------------------------
+
+model Teacher {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id        BigInt    @unique(map: "uq_teachers_user_id") @db.UnsignedBigInt
+  full_name      String    @db.VarChar(150)
+  phone          String?   @db.VarChar(20)
+  specialization String?   @db.VarChar(100)
+  hire_date      DateTime? @db.Date
+  created_at     DateTime  @default(now()) @db.Timestamp(0)
+  updated_at     DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at     DateTime? @db.Timestamp(0)
+
+  // Relations
+  user                 User                 @relation(fields: [user_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_teachers_user_id")
+  teaching_assignments TeachingAssignment[]
+
+  @@index([full_name], map: "idx_teachers_full_name")
+  @@map("teachers")
+}
+
+model TeachingAssignment {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  academic_year_id BigInt    @db.UnsignedBigInt
+  class_section_id BigInt    @db.UnsignedBigInt
+  subject_id       BigInt    @db.UnsignedBigInt
+  teacher_id       BigInt    @db.UnsignedBigInt
+  created_at       DateTime  @default(now()) @db.Timestamp(0)
+  updated_at       DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at       DateTime? @db.Timestamp(0)
+
+  // Relations
+  academic_year   AcademicYear    @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_teaching_year_id")
+  class_section   ClassSection    @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_teaching_class_section_id")
+  subject         Subject         @relation(fields: [subject_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_teaching_subject_id")
+  teacher         Teacher         @relation(fields: [teacher_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_teaching_teacher_id")
+  timetable_slots TimetableSlot[]
+  assignments     Assignment[]
+  quizzes         Quiz[]
+
+  @@unique([academic_year_id, class_section_id, subject_id], map: "uq_teaching_assignment")
+  @@index([teacher_id], map: "idx_teaching_teacher")
+  @@index([class_section_id], map: "idx_teaching_class_section")
+  @@index([subject_id], map: "idx_teaching_subject")
+  @@map("teaching_assignments")
+}
+
+// ------------------------------------------------------------------------------
+// 📦 Phase 04: Students, Guardians & Enrollments (4 Tables)
+// ------------------------------------------------------------------------------
+
+model Student {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id    BigInt    @unique(map: "uq_students_user_id") @db.UnsignedBigInt
+  full_name  String    @db.VarChar(150)
+  phone      String?   @db.VarChar(20)
+  birth_date DateTime? @db.Date
+  gender     Gender
+  created_at DateTime  @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at DateTime? @db.Timestamp(0)
+
+  // Relations
+  user             User                @relation(fields: [user_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_students_user_id")
+  guardians        GuardianStudent[]
+  enrollments      StudentEnrollment[]
+  transcripts      StudentTranscript[]
+
+  @@index([full_name], map: "idx_students_full_name")
+  @@map("students")
+}
+
+model Guardian {
+  id           BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id      BigInt               @unique(map: "uq_guardians_user_id") @db.UnsignedBigInt
+  full_name    String               @db.VarChar(150)
+  phone        String               @unique(map: "uq_guardians_phone") @db.VarChar(20)
+  relationship GuardianRelationship @default(father)
+  created_at   DateTime             @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?            @updatedAt @db.Timestamp(0)
+  deleted_at   DateTime?            @db.Timestamp(0)
+
+  // Relations
+  user     User              @relation(fields: [user_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_guardians_user_id")
+  students GuardianStudent[]
+
+  @@index([full_name], map: "idx_guardians_full_name")
+  @@map("guardians")
+}
+
+model GuardianStudent {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  guardian_id BigInt    @db.UnsignedBigInt
+  student_id  BigInt    @db.UnsignedBigInt
+  is_primary  Int       @default(1) @db.TinyInt
+  created_at  DateTime  @default(now()) @db.Timestamp(0)
+  updated_at  DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at  DateTime? @db.Timestamp(0)
+
+  // Relations
+  guardian Guardian @relation(fields: [guardian_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_guardian_students_guardian_id")
+  student  Student  @relation(fields: [student_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_guardian_students_student_id")
+
+  @@unique([guardian_id, student_id], map: "uq_guardian_student")
+  @@index([guardian_id], map: "idx_guardian_students_guardian")
+  @@index([student_id], map: "idx_guardian_students_student")
+  @@map("guardian_students")
+}
+
+model StudentEnrollment {
+  id               BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  academic_year_id BigInt           @db.UnsignedBigInt
+  student_id       BigInt           @db.UnsignedBigInt
+  class_id         BigInt           @db.UnsignedBigInt
+  grade_level      Int              @db.SmallInt
+  class_section_id BigInt           @db.UnsignedBigInt
+  seating_number   String?          @db.VarChar(50)
+  status           EnrollmentStatus @default(enrolled)
+  created_at       DateTime         @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?        @updatedAt @db.Timestamp(0)
+  deleted_at       DateTime?        @db.Timestamp(0)
+
+  // Relations
+  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_enrollments_year_id")
+  student       Student      @relation(fields: [student_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_enrollments_student_id")
+  class         Class        @relation(fields: [class_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_enrollments_class_id")
+  class_section ClassSection @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_enrollments_class_section_id")
+
+  @@unique([academic_year_id, student_id], map: "uq_student_year_enrollment")
+  @@index([class_id], map: "idx_enrollments_class_id")
+  @@index([academic_year_id, grade_level], map: "idx_enrollments_grade_level")
+  @@index([class_section_id], map: "idx_enrollments_class_section")
+  @@index([status], map: "idx_enrollments_status")
+  @@index([seating_number], map: "idx_enrollments_seating")
+  @@map("student_enrollments")
+}
+
+// ------------------------------------------------------------------------------
+// 📦 Phase 05: Timetables & Daily Period Slots (2 Tables)
+// ------------------------------------------------------------------------------
+
+model PeriodSlot {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String    @db.VarChar(50)
+  slot_number Int       @unique(map: "uq_period_slots_number") @db.TinyInt
+  start_time  DateTime  @db.Time(0)
+  end_time    DateTime  @db.Time(0)
+  is_break    Int       @default(0) @db.TinyInt
+  created_at  DateTime  @default(now()) @db.Timestamp(0)
+  updated_at  DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at  DateTime? @db.Timestamp(0)
+
+  // Relations
+  timetable_slots TimetableSlot[]
+
+  @@index([start_time, end_time], map: "idx_period_slots_times")
+  @@map("period_slots")
+}
+
+model TimetableSlot {
+  id                     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  academic_year_id       BigInt    @db.UnsignedBigInt
+  class_section_id       BigInt    @db.UnsignedBigInt
+  day_of_week            DayOfWeek
+  period_slot_id         BigInt    @db.UnsignedBigInt
+  teaching_assignment_id BigInt    @db.UnsignedBigInt
+  created_at             DateTime  @default(now()) @db.Timestamp(0)
+  updated_at             DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at             DateTime? @db.Timestamp(0)
+
+  // Relations
+  academic_year       AcademicYear       @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_year_id")
+  class_section       ClassSection       @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_class_section_id")
+  period_slot         PeriodSlot         @relation(fields: [period_slot_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_period_slot_id")
+  teaching_assignment TeachingAssignment @relation(fields: [teaching_assignment_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_teaching_assignment_id")
+
+  @@unique([academic_year_id, class_section_id, day_of_week, period_slot_id], map: "uq_timetable_section_slot")
+  @@index([academic_year_id, day_of_week, period_slot_id, teaching_assignment_id], map: "idx_timetable_teacher_conflict")
+  @@index([class_section_id], map: "idx_timetable_class_section")
+  @@map("timetable_slots")
+}
+
+// ------------------------------------------------------------------------------
+// 📦 Phase 06: Homework & Assignments (1 Table)
+// ------------------------------------------------------------------------------
+
+model Assignment {
+  id                     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  academic_year_id       BigInt    @db.UnsignedBigInt
+  academic_term_id       BigInt    @db.UnsignedBigInt
+  class_section_id       BigInt    @db.UnsignedBigInt
+  teaching_assignment_id BigInt    @db.UnsignedBigInt
+  created_by_user_id     BigInt    @db.UnsignedBigInt
+  title                  String    @db.VarChar(200)
+  description            String?   @db.Text
+  attachments            Json?     @db.Json
+  assigned_date          DateTime  @db.Date
+  due_date               DateTime  @db.Date
+  created_at             DateTime  @default(now()) @db.Timestamp(0)
+  updated_at             DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at             DateTime? @db.Timestamp(0)
+
+  // Relations
+  academic_year       AcademicYear       @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_year_id")
+  academic_term       AcademicTerm       @relation(fields: [academic_term_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_term_id")
+  class_section       ClassSection       @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_class_section_id")
+  teaching_assignment TeachingAssignment @relation(fields: [teaching_assignment_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_teaching_assignment_id")
+  creator             User               @relation(fields: [created_by_user_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_created_by_user_id")
+
+  @@index([class_section_id, academic_term_id], map: "idx_assignments_section_term")
+  @@index([teaching_assignment_id], map: "idx_assignments_teaching")
+  @@index([academic_year_id], map: "idx_assignments_academic_year")
+  @@index([due_date], map: "idx_assignments_due_date")
+  @@map("assignments")
+}
+
+// ------------------------------------------------------------------------------
+// 📦 Phase 07: Class Quizzes & Tests (1 Table)
+// ------------------------------------------------------------------------------
+
+model Quiz {
+  id                     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  academic_year_id       BigInt    @db.UnsignedBigInt
+  academic_term_id       BigInt    @db.UnsignedBigInt
+  class_section_id       BigInt    @db.UnsignedBigInt
+  teaching_assignment_id BigInt    @db.UnsignedBigInt
+  created_by_user_id     BigInt    @db.UnsignedBigInt
+  title                  String    @db.VarChar(200)
+  description            String?   @db.Text
+  attachments            Json?     @db.Json
+  quiz_date              DateTime  @db.Date
+  created_at             DateTime  @default(now()) @db.Timestamp(0)
+  updated_at             DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at             DateTime? @db.Timestamp(0)
+
+  // Relations
+  academic_year       AcademicYear       @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_year_id")
+  academic_term       AcademicTerm       @relation(fields: [academic_term_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_term_id")
+  class_section       ClassSection       @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_class_section_id")
+  teaching_assignment TeachingAssignment @relation(fields: [teaching_assignment_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_teaching_assignment_id")
+  creator             User               @relation(fields: [created_by_user_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_created_by_user_id")
+
+  @@index([class_section_id, academic_term_id], map: "idx_quizzes_section_term")
+  @@index([teaching_assignment_id], map: "idx_quizzes_teaching")
+  @@index([academic_year_id], map: "idx_quizzes_academic_year")
+  @@index([quiz_date], map: "idx_quizzes_date")
+  @@map("quizzes")
+}
+
+// ------------------------------------------------------------------------------
+// 📦 Phase 08: Official Exams Schedule (1 Table)
+// ------------------------------------------------------------------------------
+
+model OfficialExam {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  academic_year_id BigInt    @db.UnsignedBigInt
+  academic_term_id BigInt    @db.UnsignedBigInt
+  class_id         BigInt    @db.UnsignedBigInt
+  subject_id       BigInt    @db.UnsignedBigInt
+  exam_type        ExamType  @default(final)
+  exam_date        DateTime  @db.Date
+  notes            String?   @db.VarChar(255)
+  attachments      Json?     @db.Json
+  created_at       DateTime  @default(now()) @db.Timestamp(0)
+  updated_at       DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at       DateTime? @db.Timestamp(0)
+
+  // Relations
+  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_official_exams_year_id")
+  academic_term AcademicTerm @relation(fields: [academic_term_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_official_exams_term_id")
+  class         Class        @relation(fields: [class_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_official_exams_class_id")
+  subject       Subject      @relation(fields: [subject_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_official_exams_subject_id")
+
+  @@unique([academic_year_id, academic_term_id, class_id, subject_id, exam_type], map: "uq_official_exam_schedule")
+  @@index([academic_year_id, academic_term_id, class_id], map: "idx_official_exams_lookup")
+  @@index([exam_date], map: "idx_official_exams_date")
+  @@map("official_exams")
+}
+
+// ------------------------------------------------------------------------------
+// 📦 Phase 09: Promotion & Transcripts Archiving (2 Tables)
+// ------------------------------------------------------------------------------
+
+model StudentTranscript {
+  id                     BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  student_id             BigInt            @db.UnsignedBigInt
+  transcript_type        TranscriptType    @default(annual)
+  class_academic_term_id BigInt?           @db.UnsignedBigInt
+  academic_year_name     String            @db.VarChar(50)
+  class_name             String            @db.VarChar(50)
+  section_name           String            @db.VarChar(50)
+  grade_level            Int               @db.SmallInt
+  total_score            Decimal           @db.Decimal(7, 2)
+  percentage             Decimal           @db.Decimal(5, 2)
+  final_status           EnrollmentStatus
+  rank                   Int?              @db.SmallInt
+  transcript_data        Json              @db.Json
+  created_at             DateTime          @default(now()) @db.Timestamp(0)
+  updated_at             DateTime?         @updatedAt @db.Timestamp(0)
+  deleted_at             DateTime?         @db.Timestamp(0)
+
+  // Relations
+  student             Student            @relation(fields: [student_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_transcripts_student_id")
+  class_academic_term ClassAcademicTerm? @relation(fields: [class_academic_term_id], references: [id], onDelete: SetNull, onUpdate: Cascade, map: "fk_transcripts_class_term_id")
+
+  @@unique([student_id, academic_year_name, transcript_type, class_academic_term_id], map: "uq_student_transcript_term")
+  @@index([academic_year_name, class_name], map: "idx_transcripts_year_class")
+  @@index([final_status], map: "idx_transcripts_status")
+  @@map("student_transcripts")
+}
+
+model PromotionBatch {
+  id                    BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  from_academic_year_id BigInt    @db.UnsignedBigInt
+  to_academic_year_id   BigInt    @db.UnsignedBigInt
+  executed_by_user_id   BigInt    @db.UnsignedBigInt
+  total_students        Int       @db.UnsignedInt
+  total_promoted        Int       @db.UnsignedInt
+  total_second_round    Int       @db.UnsignedInt
+  total_retained        Int       @db.UnsignedInt
+  total_graduated       Int       @db.UnsignedInt
+  overall_passing_rate  Decimal   @db.Decimal(5, 2)
+  class_statistics      Json      @db.Json
+  execution_notes       String?   @db.VarChar(255)
+  created_at            DateTime  @default(now()) @db.Timestamp(0)
+  updated_at            DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at            DateTime? @db.Timestamp(0)
+
+  // Relations
+  from_year AcademicYear @relation("PromotionFromYear", fields: [from_academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_promotion_from_year_id")
+  to_year   AcademicYear @relation("PromotionToYear", fields: [to_academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_promotion_to_year_id")
+  executor  User         @relation(fields: [executed_by_user_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_promotion_executed_by_user_id")
+
+  @@unique([from_academic_year_id, to_academic_year_id], map: "uq_promotion_batch_years")
+  @@index([executed_by_user_id], map: "idx_promotion_executed_by")
+  @@index([created_at], map: "idx_promotion_created_at")
+  @@map("promotion_batches")
+}
