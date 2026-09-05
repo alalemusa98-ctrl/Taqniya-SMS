@@ -5,12 +5,28 @@ import { Search, Eye, KeyRound, UserX, UserCheck, Shield, GraduationCap, School,
 import UserDetailsDrawer from './UserDetailsDrawer.vue';
 import UserStatusModal from './UserStatusModal.vue';
 import ResetPasswordModal from '../modals/ResetPasswordModal.vue';
+import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
+import { formatDate } from '../../utils/formatters';
 
 const roleGroups = ref<any[]>([]);
 const isLoading = ref(true);
 const searchQuery = ref('');
 const selectedRole = ref('');
 const selectedStatus = ref('');
+
+const roleOptions = [
+  { value: '', label: 'جميع الأدوار' },
+  { value: 'admin', label: 'مديرو النظام' },
+  { value: 'teacher', label: 'المعلمون' },
+  { value: 'student', label: 'الطلاب' },
+  { value: 'parent', label: 'أولياء الأمور' },
+];
+
+const statusOptions = [
+  { value: '', label: 'كافة الحالات' },
+  { value: '1', label: 'حسابات نشطة' },
+  { value: '0', label: 'حسابات معطلة' },
+];
 
 // Modals & Drawers state
 const selectedUser = ref<any>(null);
@@ -66,10 +82,10 @@ const getRoleIcon = (role: string) => {
 
 const getRoleTheme = (role: string) => {
   switch (role) {
-    case 'admin': return 'border-purple-500/20 bg-purple-500/5 text-purple-600';
-    case 'teacher': return 'border-blue-500/20 bg-blue-500/5 text-blue-600';
-    case 'student': return 'border-emerald-500/20 bg-emerald-500/5 text-emerald-600';
-    default: return 'border-amber-500/20 bg-amber-500/5 text-amber-600';
+    case 'admin': return 'border-purple-500/30 bg-purple-500/10 text-purple-600';
+    case 'teacher': return 'border-blue-500/30 bg-blue-500/10 text-blue-600';
+    case 'student': return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600';
+    default: return 'border-amber-500/30 bg-amber-500/10 text-amber-600';
   }
 };
 </script>
@@ -79,13 +95,13 @@ const getRoleTheme = (role: string) => {
     <!-- Header & Action Bar -->
     <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
       <div>
-        <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white">إدارة حسابات المستخدمين</h2>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        <h2 class="font-display font-black text-2xl sm:text-3xl text-bx-title">إدارة حسابات المستخدمين</h2>
+        <p class="text-xs text-bx-muted font-bold mt-1">
           مصفوفة الأدوار الشجرية والتحكم في الحالات وإعادة تعيين كلمات المرور
         </p>
       </div>
 
-      <!-- Filters -->
+      <!-- Filters & Search Toolbar -->
       <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
         <div class="relative flex-1 md:w-64">
           <input
@@ -93,57 +109,37 @@ const getRoleTheme = (role: string) => {
             @input="loadUsers"
             type="text"
             placeholder="بحث بالرمز المؤسسي..."
-            class="w-full ps-9 pe-4 py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 outline-none transition-all shadow-sm"
+            class="w-full ps-9 pe-4 py-2.5 rounded-2xl border border-bx-border bg-[var(--bx-surface-solid)] text-xs font-bold text-bx-text placeholder-bx-muted focus:border-bx-primary outline-none transition-all shadow-sm"
           />
-          <Search class="w-4 h-4 text-slate-400 absolute start-3 top-3" />
+          <Search class="w-4 h-4 text-bx-muted absolute start-3 top-3" />
         </div>
 
-        <!-- Role Filter Dropdown -->
-        <div class="relative">
-          <select
-            v-model="selectedRole"
-            @change="loadUsers"
-            class="appearance-none ps-3.5 pe-8 py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 text-xs font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 outline-none transition-all shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/70"
-          >
-            <option value="">جميع الأدوار</option>
-            <option value="admin">مديرو النظام</option>
-            <option value="teacher">المعلمون</option>
-            <option value="student">الطلاب</option>
-            <option value="parent">أولياء الأمور</option>
-          </select>
-          <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-slate-400">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-          </div>
-        </div>
+        <!-- Taqniya Dropdown Component for Roles -->
+        <TaqniyaSelect
+          v-model="selectedRole"
+          :options="roleOptions"
+          @update:model-value="loadUsers"
+        />
 
-        <!-- Status Filter Dropdown -->
-        <div class="relative">
-          <select
-            v-model="selectedStatus"
-            @change="loadUsers"
-            class="appearance-none ps-3.5 pe-8 py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 text-xs font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 outline-none transition-all shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/70"
-          >
-            <option value="">كافة الحالات</option>
-            <option value="1">حسابات نشطة</option>
-            <option value="0">حسابات معطلة</option>
-          </select>
-          <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-slate-400">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-          </div>
-        </div>
+        <!-- Taqniya Dropdown Component for Status -->
+        <TaqniyaSelect
+          v-model="selectedStatus"
+          :options="statusOptions"
+          @update:model-value="loadUsers"
+        />
       </div>
     </div>
 
     <!-- Loading State -->
     <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div v-for="i in 4" :key="i" class="h-64 rounded-3xl bg-slate-200/50 dark:bg-slate-800/40 animate-pulse"></div>
+      <div v-for="i in 4" :key="i" class="h-64 rounded-3xl bg-[var(--bx-table-header)] animate-pulse border border-bx-border"></div>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="roleGroups.length === 0 || roleGroups.every(g => g.users.length === 0)" class="p-12 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
-      <UsersIcon class="w-12 h-12 text-slate-400 mx-auto opacity-40" />
-      <h3 class="text-base font-bold text-slate-700 dark:text-slate-300">لا يوجد مستخدمون يطابقون محددات البحث</h3>
-      <p class="text-xs text-slate-400">جرب تغيير محددات التصفية أو مسح حقل البحث</p>
+    <div v-else-if="roleGroups.length === 0 || roleGroups.every(g => g.users.length === 0)" class="p-12 text-center rounded-3xl bg-[var(--bx-surface-solid)] border-2 border-bx-border space-y-3">
+      <UsersIcon class="w-12 h-12 text-bx-muted mx-auto opacity-40" />
+      <h3 class="font-display font-bold text-base text-bx-title">لا يوجد مستخدمون يطابقون محددات البحث</h3>
+      <p class="text-xs text-bx-muted font-bold">جرب تغيير محددات التصفية أو مسح حقل البحث</p>
     </div>
 
     <!-- Role-Tree Matrix Cards -->
@@ -151,20 +147,20 @@ const getRoleTheme = (role: string) => {
       <div
         v-for="group in roleGroups"
         :key="group.role_type"
-        class="rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/70 dark:border-slate-800/80 shadow-sm p-6 space-y-4"
+        class="bx-card p-6 space-y-4 bg-[var(--bx-surface-solid)]"
       >
         <!-- Card Header -->
-        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-4">
+        <div class="flex items-center justify-between border-b border-bx-border pb-4">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl flex items-center justify-center border" :class="getRoleTheme(group.role_type)">
+            <div class="w-10 h-10 rounded-2xl flex items-center justify-center border-2" :class="getRoleTheme(group.role_type)">
               <component :is="getRoleIcon(group.role_type)" class="w-5 h-5" />
             </div>
             <div>
-              <h3 class="text-base font-bold text-slate-900 dark:text-white">{{ group.role_title_ar }}</h3>
-              <p class="text-[11px] text-slate-400 font-mono">{{ group.role_type.toUpperCase() }}</p>
+              <h3 class="font-display font-black text-base text-bx-title">{{ group.role_title_ar }}</h3>
+              <p class="text-[11px] text-bx-muted font-mono font-bold">{{ group.role_type.toUpperCase() }}</p>
             </div>
           </div>
-          <span class="px-3 py-1 rounded-full text-xs font-bold border" :class="getRoleTheme(group.role_type)">
+          <span class="px-3 py-1 rounded-full text-xs font-black border" :class="getRoleTheme(group.role_type)">
             {{ group.users_count }} حسابات
           </span>
         </div>
@@ -173,50 +169,50 @@ const getRoleTheme = (role: string) => {
         <div class="overflow-x-auto">
           <table class="w-full text-start text-xs">
             <thead>
-              <tr class="text-slate-400 border-b border-slate-100 dark:border-slate-800/50">
-                <th class="py-2.5 px-3 font-semibold text-start">#</th>
-                <th class="py-2.5 px-3 font-semibold text-start">الرمز المؤسسي</th>
-                <th class="py-2.5 px-3 font-semibold text-start">الحالة</th>
-                <th class="py-2.5 px-3 font-semibold text-start">آخر دخول</th>
-                <th class="py-2.5 px-3 font-semibold text-end">الإجراءات</th>
+              <tr class="text-bx-muted border-b border-bx-border bg-[var(--bx-table-header)] rounded-xl">
+                <th class="py-2.5 px-3 font-black text-start">#</th>
+                <th class="py-2.5 px-3 font-black text-start">الرمز المؤسسي</th>
+                <th class="py-2.5 px-3 font-black text-start">الحالة</th>
+                <th class="py-2.5 px-3 font-black text-start">آخر دخول</th>
+                <th class="py-2.5 px-3 font-black text-end">الإجراءات</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/40">
-              <tr v-for="user in group.users" :key="user.id" class="hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
-                <td class="py-3 px-3 text-slate-400 font-mono">{{ user.id }}</td>
-                <td class="py-3 px-3 font-bold font-mono text-slate-800 dark:text-slate-200">{{ user.user_code }}</td>
+            <tbody class="divide-y divide-bx-divider">
+              <tr v-for="user in group.users" :key="user.id" class="hover:bg-[var(--bx-row-hover)] transition-colors">
+                <td class="py-3 px-3 text-bx-muted font-mono font-bold">{{ user.id }}</td>
+                <td class="py-3 px-3 font-black font-mono text-bx-title">{{ user.user_code }}</td>
                 <td class="py-3 px-3">
                   <span
-                    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black border"
                     :class="user.is_active === 1
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
-                      : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400'"
+                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                      : 'bg-rose-500/10 text-rose-600 border-rose-500/30'"
                   >
                     <span class="w-1.5 h-1.5 rounded-full" :class="user.is_active === 1 ? 'bg-emerald-500' : 'bg-rose-500'"></span>
                     {{ user.is_active === 1 ? 'نشط' : 'معطل' }}
                   </span>
                 </td>
-                <td class="py-3 px-3 text-slate-500 text-[11px]">
+                <td class="py-3 px-3 text-bx-muted text-[11px] font-bold font-mono">
                   <span v-if="user.last_login_at" class="flex items-center gap-1">
-                    <Clock class="w-3 h-3 text-slate-400" />
-                    {{ new Date(user.last_login_at).toLocaleDateString('ar-EG') }}
+                    <Clock class="w-3 h-3 text-bx-muted" />
+                    {{ formatDate(user.last_login_at) }}
                   </span>
-                  <span v-else class="text-slate-400">—</span>
+                  <span v-else class="text-bx-muted/60">—</span>
                 </td>
                 <td class="py-3 px-3 text-end">
-                  <div class="flex items-center justify-end gap-1">
+                  <div class="flex items-center justify-end gap-1.5">
                     <button
                       @click="openDetails(user)"
                       title="معاينة التفاصيل"
-                      class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600 transition-colors"
+                      class="bx-icon-btn p-1.5 rounded-xl border border-bx-border hover:border-bx-primary text-bx-muted hover:text-bx-primary transition-all cursor-pointer"
                     >
                       <Eye class="w-4 h-4" />
                     </button>
                     <button
                       @click="openStatusToggle(user)"
                       :title="user.is_active === 1 ? 'إيقاف الحساب' : 'تفعيل الحساب'"
-                      class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                      :class="user.is_active === 1 ? 'text-slate-500 hover:text-rose-600' : 'text-slate-500 hover:text-emerald-600'"
+                      class="bx-icon-btn p-1.5 rounded-xl border border-bx-border transition-all cursor-pointer"
+                      :class="user.is_active === 1 ? 'hover:border-bx-danger text-bx-muted hover:text-bx-danger' : 'hover:border-bx-success text-bx-muted hover:text-bx-success'"
                     >
                       <UserX v-if="user.is_active === 1" class="w-4 h-4" />
                       <UserCheck v-else class="w-4 h-4" />
@@ -224,7 +220,7 @@ const getRoleTheme = (role: string) => {
                     <button
                       @click="openResetPassword(user)"
                       title="إعادة تعيين كلمة المرور"
-                      class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600 transition-colors"
+                      class="bx-icon-btn p-1.5 rounded-xl border border-bx-border hover:border-bx-warning text-bx-muted hover:text-bx-warning transition-all cursor-pointer"
                     >
                       <KeyRound class="w-4 h-4" />
                     </button>

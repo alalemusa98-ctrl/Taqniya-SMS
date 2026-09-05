@@ -29,21 +29,24 @@ const handleLogout = async () => {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
       dir="rtl"
     >
+      <!-- Backdrop click handler -->
+      <div class="fixed inset-0" @click="emit('close')"></div>
+
+      <!-- Centered Modal Dialog (Using Taqniya bx-modal-card) -->
       <div
-        @click.stop
-        class="relative w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xl p-6 sm:p-8 space-y-6 text-center animate-in zoom-in-95 duration-200"
+        class="relative z-10 w-full max-w-md bx-modal-card p-6 sm:p-8 space-y-6 text-center animate-in zoom-in-95 duration-200"
       >
-        <div class="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 mx-auto flex items-center justify-center shadow-inner">
-          <LogOut class="w-7 h-7" />
+        <div class="w-16 h-16 rounded-full bg-rose-500/10 text-bx-danger mx-auto flex items-center justify-center border-2 border-bx-danger/20 shadow-lg shadow-rose-500/10">
+          <LogOut class="w-8 h-8" />
         </div>
 
         <div class="space-y-2">
-          <h3 class="text-base font-bold text-slate-900 dark:text-white">تسجيل الخروج من المنظومة</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            هل أنت متأكد من رغبتك في تسجيل الخروج؟ سيتم إبطال جلستك الحالية والعودة لشاشة الدخول.
+          <h3 class="font-display font-black text-xl text-bx-title">تسجيل الخروج من المنظومة</h3>
+          <p class="text-xs text-bx-muted leading-relaxed font-bold">
+            هل أنت متأكد من رغبتك في تسجيل الخروج؟ سيتم إبطال جلستك الحالية والعودة لشاشة تسجيل الدخول.
           </p>
         </div>
 
@@ -51,7 +54,7 @@ const handleLogout = async () => {
           <button
             type="button"
             @click="emit('close')"
-            class="w-full py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+            class="bx-btn bx-btn-outline bx-btn-md flex-1 text-xs"
           >
             إلغاء
           </button>
@@ -59,9 +62,10 @@ const handleLogout = async () => {
             type="button"
             @click="handleLogout"
             :disabled="isLoading"
-            class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-500/20 disabled:opacity-50 transition-all"
+            class="bx-btn bx-btn-danger bx-btn-md flex-1 text-xs"
           >
-            {{ isLoading ? 'جاري الخروج...' : 'تأكيد الخروج' }}
+            <span v-if="isLoading" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+            <span>{{ isLoading ? 'جاري الخروج...' : 'تأكيد الخروج' }}</span>
           </button>
         </div>
       </div>

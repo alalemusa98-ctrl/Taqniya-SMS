@@ -1,0 +1,1884 @@
+/* ==========================================================================
+   TAQNIYA DESIGN SYSTEM — AUTHORITATIVE CORE STYLESHEET
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@600;700;800;900&family=JetBrains+Mono:wght@500;700&family=Syne:wght@700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap');
+
+/* ==================== OFFCANVAS ZERO-PEEK VISIBILITY ==================== */
+#offcanvasRight:not(.bx-drawer-open),
+#offcanvasLeft:not(.bx-drawer-open),
+#offcanvasTop:not(.bx-drawer-open),
+#offcanvasBottom:not(.bx-drawer-open) {
+    visibility: hidden !important;
+    pointer-events: none !important;
+    box-shadow: none !important;
+}
+
+/* ==================== DROPDOWNS & CUSTOM SELECTS ==================== */
+.bx-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 1rem;
+    border-radius: 1rem;
+    border: 1.5px solid var(--bx-border);
+    background-color: transparent;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    min-height: 2.75rem;
+}
+
+.bx-dropdown-trigger:hover {
+    border-color: var(--bx-primary);
+}
+
+.bx-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    right: 0;
+    z-index: 50;
+    border-radius: 1.25rem;
+    border: 1.5px solid var(--bx-border);
+    background-color: var(--bx-surface-solid);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--bx-shadow-dropdown, 0 15px 30px -5px rgba(72, 52, 166, 0.12));
+    overflow: hidden;
+}
+
+.bx-dropdown-item {
+    padding: 0.625rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.bx-dropdown-item:hover, .bx-dropdown-item.active {
+    background-color: var(--bx-row-hover);
+}
+
+.multi-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.75rem;
+    background-color: var(--bx-surface-solid);
+    border: 1px solid var(--bx-border);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--bx-primary);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* ==================== CUSTOM CHECKBOXES, RADIOS & SWITCHES ==================== */
+.bx-custom-check {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 1.5px solid var(--bx-border);
+    border-radius: 6px;
+    background-color: transparent;
+    cursor: pointer;
+    display: inline-grid;
+    place-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    outline: none;
+    margin: 0 auto;
+}
+
+.bx-custom-check:hover {
+    border-color: var(--bx-primary);
+    background-color: var(--bx-pill);
+    transform: scale(1.08);
+}
+
+.bx-custom-check:checked {
+    background-color: var(--bx-primary);
+    border-color: var(--bx-primary);
+    box-shadow: 0 0 0 3px var(--bx-pill);
+    transform: scale(1.05);
+}
+
+.bx-custom-check:checked::after {
+    content: '';
+    width: 5px;
+    height: 9px;
+    border: solid #FFFFFF;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-0.5px, -1px);
+    display: block;
+}
+
+.bx-custom-check:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    border-color: var(--bx-border);
+}
+
+.bx-custom-radio {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 1.5px solid var(--bx-border);
+    border-radius: 50%;
+    background-color: transparent;
+    cursor: pointer;
+    display: inline-grid;
+    place-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    outline: none;
+    margin: 0;
+}
+
+.bx-custom-radio:hover {
+    border-color: var(--bx-primary);
+    background-color: var(--bx-pill);
+    transform: scale(1.08);
+}
+
+.bx-custom-radio:checked {
+    border-color: var(--bx-primary);
+    background-color: transparent;
+    box-shadow: 0 0 0 3px var(--bx-pill);
+}
+
+.bx-custom-radio:checked::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--bx-primary);
+    display: block;
+    animation: radioPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.bx-custom-radio:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+@keyframes radioPop {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.bx-switch-label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.bx-custom-switch {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.bx-switch-slider {
+    position: relative;
+    width: 2.75rem;
+    height: 1.5rem;
+    background-color: var(--bx-table-header);
+    border: 1.5px solid var(--bx-border);
+    border-radius: 9999px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+}
+
+.bx-switch-slider::before {
+    content: '';
+    position: absolute;
+    height: 1.05rem;
+    width: 1.05rem;
+    right: 2px;
+    top: 2px;
+    background-color: var(--bx-muted);
+    border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.bx-custom-switch:checked+.bx-switch-slider {
+    background-color: var(--bx-primary);
+    border-color: var(--bx-primary);
+    box-shadow: 0 0 12px rgba(91, 60, 230, 0.35);
+}
+
+.bx-custom-switch:checked+.bx-switch-slider::before {
+    transform: translateX(-1.25rem);
+    background-color: #FFFFFF;
+}
+
+.bx-custom-switch:disabled+.bx-switch-slider {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.bx-input-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    border-radius: 0.875rem;
+    border: 1.5px solid var(--bx-border);
+    background-color: transparent;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.bx-input-group:focus-within {
+    border-color: var(--bx-primary);
+}
+
+.bx-input-group input {
+    flex: 1;
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    padding: 0.625rem 1rem;
+    color: var(--bx-text);
+}
+
+.bx-input-addon {
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    background-color: var(--bx-table-header);
+    border-left: 1.5px solid var(--bx-border);
+    color: var(--bx-muted);
+    white-space: nowrap;
+}
+
+.bx-input-addon-end {
+    border-left: none;
+    border-right: 1.5px solid var(--bx-border);
+}
+
+/* ==================== FLOATING TOAST NOTIFICATIONS ==================== */
+.bx-toast-item {
+    background-color: var(--bx-canvas);
+    border: 1.5px solid var(--bx-border-strong);
+    border-radius: var(--radius-m, 0.875rem);
+    padding: 0.85rem 1.1rem;
+    box-shadow: 0 16px 36px -8px rgba(72, 52, 166, 0.16);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    position: relative;
+    overflow: hidden;
+    transform: translateY(-10px) scale(0.95);
+    opacity: 0;
+    animation: toastPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    transition: all 0.25s ease;
+}
+
+.bx-toast-progress {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    height: 3px;
+    width: 100%;
+    background-color: var(--bx-primary);
+    animation: toastProgress linear forwards;
+}
+
+@keyframes toastPop {
+    0% { transform: translateY(-15px) scale(0.9); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes toastProgress {
+    0% { width: 100%; }
+    100% { width: 0%; }
+}
+
+/* ==================== SMOOTH ACCORDIONS & COLLAPSIBLES TRANSITION ENGINE ==================== */
+.accordion-panel {
+    display: grid !important;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.35s ease;
+    overflow: hidden;
+}
+
+.accordion-panel > .accordion-panel-content {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.accordion-panel.is-collapsed {
+    grid-template-rows: 0fr !important;
+    opacity: 0;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-top-color: transparent !important;
+    pointer-events: none;
+}
+
+/* Collapse Block Smooth Transition */
+.collapse-block {
+    display: grid !important;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    overflow: hidden;
+}
+
+.collapse-block.is-open {
+    grid-template-rows: 1fr !important;
+    opacity: 1;
+}
+
+.collapse-block > .collapse-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Chevron & Toggle Rotation Transitions */
+.chevron-icon, .chevron-toggle {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+:root {
+            /* الوضع الفاتح (Light Mode) */
+            --bx-canvas: #EBEBFA;
+            --bx-surface-solid: #EBEBFA;
+            --bx-primary: #5B3CE6;
+            --bx-primary-hover: #482FD0;
+            --bx-primary-contrast: #FFFFFF;
+            --bx-title: #4834A6;
+            --bx-text: #2D2B3D;
+            --bx-muted: #6B658E;
+            --bx-border: #9D96D2;
+            /* إطارات الصناديق الخارجية */
+            --bx-border-strong: #7870B8;
+            --bx-divider: #B4AED8;
+            /* الفاصل الأفقي الواضح بين كل سطر وسطر في الجداول */
+            --bx-pill: rgba(91, 60, 230, 0.08);
+            --bx-table-header: rgba(91, 60, 230, 0.05);
+            --bx-row-hover: rgba(91, 60, 230, 0.06);
+            --bx-row-active: rgba(91, 60, 230, 0.12);
+
+            /* ألوان الوظائف والحالات (Functional Action Colors - Light) */
+            --bx-danger: #EF4444;
+            /* الحذف / الخطر */
+            --bx-danger-bg: rgba(239, 68, 68, 0.08);
+            --bx-success: #10B981;
+            /* النجاح / الاعتماد */
+            --bx-success-bg: rgba(16, 185, 129, 0.08);
+            --bx-warning: #F59E0B;
+            /* التعديل / التنبيه / الانتظار */
+            --bx-warning-bg: rgba(245, 158, 11, 0.08);
+            --bx-info: #3B82F6;
+            /* المعلومات / الإجراء المساعد */
+            --bx-info-bg: rgba(59, 130, 246, 0.08);
+
+            --bx-shadow-btn: 0 4px 14px rgba(91, 60, 230, 0.2);
+            --bx-shadow-btn-hover: 0 8px 22px rgba(91, 60, 230, 0.3);
+            --bx-shadow-modal: 0 25px 50px -12px rgba(72, 52, 166, 0.25);
+            --bx-shadow-dropdown: 0 15px 30px -5px rgba(72, 52, 166, 0.12);
+            --radius-s: 0.625rem;
+            /* 10px */
+            --radius-m: 0.875rem;
+            /* 14px */
+            --radius-l: 1.25rem;
+            /* 20px */
+            --anim-spring: cubic-bezier(0.23, 0.65, 0.74, 1.09);
+        }
+
+        /* الوضع الداكن المخفف والمريح للعين (Soft Lightened Dark Mode) */
+        .dark {
+            --bx-canvas: #28293D;
+            /* تفتيح وتخفيف نسبة العتامة إلى رمادي نيلي هادئ وفاتح */
+            --bx-surface-solid: #31324B;
+            /* أسطح القوائم والنوافذ المنبثقة المخففة */
+            --bx-primary: #8566FF;
+            /* بنفسجي نقي ومتوهج */
+            --bx-primary-hover: #987DFF;
+            --bx-primary-contrast: #FFFFFF;
+            --bx-title: #FFFFFF;
+            /* أبيض ناصع ومقروء للعناوين */
+            --bx-text: #DCD9EF;
+            /* نصوص رمادية لافندرية ناعمة وواضحة */
+            --bx-muted: #A5A0C8;
+            /* نصوص ثانوية مريحة للعين */
+            --bx-border: rgba(255, 255, 255, 0.18);
+            /* إطارات ناعمة متناسقة */
+            --bx-border-strong: rgba(255, 255, 255, 0.30);
+            --bx-divider: #ffffff3b;
+            /* الفاصل الدقيق بين الأسطر */
+            --bx-pill: rgba(133, 102, 255, 0.16);
+            --bx-table-header: rgba(255, 255, 255, 0.04);
+            --bx-row-hover: rgba(133, 102, 255, 0.14);
+            --bx-row-active: rgba(133, 102, 255, 0.24);
+
+            /* ألوان الوظائف والحالات (Functional Action Colors - Dark) */
+            --bx-danger: #F87171;
+            /* الحذف / الخطر الناصع */
+            --bx-danger-bg: rgba(248, 113, 113, 0.15);
+            --bx-success: #34D399;
+            /* النجاح / الاعتماد */
+            --bx-success-bg: rgba(52, 211, 153, 0.15);
+            --bx-warning: #FBBF24;
+            /* التعديل / التنبيه / الانتظار */
+            --bx-warning-bg: rgba(251, 191, 36, 0.15);
+            --bx-info: #60A5FA;
+            /* المعلومات / الإجراء المساعد */
+            --bx-info-bg: rgba(96, 165, 250, 0.15);
+
+            --bx-shadow-btn: 0 4px 14px rgba(133, 102, 255, 0.25);
+            --bx-shadow-btn-hover: 0 8px 22px rgba(133, 102, 255, 0.35);
+            --bx-shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+            --bx-shadow-dropdown: 0 15px 30px -5px rgba(0, 0, 0, 0.35);
+        }
+
+        html {
+            background-color: var(--bx-canvas);
+            color: var(--bx-text);
+            font-family: 'Tajawal', sans-serif;
+            direction: rtl;
+            scroll-behavior: smooth;
+            scroll-padding-top: 6.5rem;
+            /* مسافة أمان لمنع تغطية الهيدر للأقسام */
+        }
+
+        body {
+            background-color: var(--bx-canvas);
+            color: var(--bx-text);
+            font-family: 'Tajawal', sans-serif;
+            direction: rtl;
+            min-height: 100vh;
+            width: 100%;
+            overflow-x: clip;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* ================= SMOOTH SECTION NAVIGATION & HIGHLIGHT TRANSITION ================= */
+        @keyframes sectionTargetPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(91, 60, 230, 0.4);
+                transform: scale(1);
+            }
+
+            40% {
+                box-shadow: 0 0 0 8px rgba(91, 60, 230, 0.15);
+                transform: scale(1.004);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(91, 60, 230, 0);
+                transform: scale(1);
+            }
+        }
+
+        .section-target-highlight {
+            animation: sectionTargetPulse 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            border-color: var(--bx-primary) !important;
+        }
+
+        main {
+            min-width: 0 !important;
+            max-width: 100% !important;
+        }
+
+        /* ================= ACCORDION & COLLAPSE SMOOTH TRANSITIONS ================= */
+        .accordion-panel {
+            display: grid;
+            grid-template-rows: 1fr;
+            opacity: 1;
+            transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.35s ease;
+        }
+
+        .accordion-panel.is-collapsed {
+            grid-template-rows: 0fr;
+            opacity: 0;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            border-top-color: transparent !important;
+        }
+
+        .accordion-panel-content {
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .collapse-block {
+            display: grid;
+            grid-template-rows: 0fr;
+            opacity: 0;
+            transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, margin 0.35s ease;
+        }
+
+        .collapse-block.is-open {
+            grid-template-rows: 1fr;
+            opacity: 1;
+        }
+
+        .collapse-block.is-open,
+        .collapse-block.is-open .collapse-inner {
+            overflow: visible !important;
+        }
+
+        .collapse-inner {
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .accordion-panel:not(.is-collapsed),
+        .accordion-panel:not(.is-collapsed) .accordion-panel-content {
+            overflow: visible !important;
+        }
+
+        .chevron-toggle,
+        .chevron-icon {
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        /* عناوين النظام المتناسقة */
+        .bx-title {
+            color: var(--bx-title);
+            font-family: 'Tajawal', 'Inter', sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        /* خط العرض الهندسي الموحد (Syne للاتيني + Alexandria للعربي) */
+        .font-display {
+            font-family: 'Syne', 'Alexandria', 'Tajawal', sans-serif !important;
+        }
+
+        /* فئات الحدود والألوان الصريحة الموحدة (Strict Color & Border Utilities) */
+        .border-bx-border {
+            border-color: var(--bx-border) !important;
+        }
+
+        .border-bx-divider {
+            border-color: var(--bx-divider) !important;
+        }
+
+        .border-bx-primary {
+            border-color: var(--bx-primary) !important;
+        }
+
+        .text-bx-primary {
+            color: var(--bx-primary) !important;
+        }
+
+        .text-bx-title {
+            color: var(--bx-title) !important;
+        }
+
+        .text-bx-muted {
+            color: var(--bx-muted) !important;
+        }
+
+        .bg-bx-primary {
+            background-color: var(--bx-primary) !important;
+        }
+
+        .bg-bx-pill {
+            background-color: var(--bx-pill) !important;
+        }
+
+        /* بطاقات وحاويات نقية بفواصل ناعمة رقيقة */
+        .bx-card {
+            background-color: transparent;
+            border-radius: var(--radius-l);
+            border: 1px solid var(--bx-border);
+            box-shadow: none;
+            transition: all 0.25s var(--anim-spring);
+        }
+
+        .bx-card:hover {
+            border-color: var(--bx-primary);
+            transform: translateY(-2px);
+        }
+
+        /* أزرار الأيقونات الدائرية */
+        .bx-icon-circle-btn {
+            width: 2.75rem;
+            height: 2.75rem;
+            border-radius: 9999px;
+            border: 1px solid var(--bx-border);
+            background-color: transparent;
+            color: var(--bx-text);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s var(--anim-spring);
+        }
+
+        .bx-icon-circle-btn:hover {
+            border-color: var(--bx-primary);
+            color: var(--bx-primary);
+            transform: scale3d(1.06, 1.06, 1.06);
+        }
+
+        /* كبسولات الأوسمة (Pill Tags) */
+        .bx-tag {
+            background-color: transparent;
+            color: var(--bx-primary);
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            border: 1px solid var(--bx-border);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        /* أزرار الكبسولة */
+        .bx-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-family: 'Syne', 'Tajawal', sans-serif;
+            font-weight: 700;
+            border-radius: 9999px;
+            padding: 0.75rem 1.6rem;
+            cursor: pointer;
+            transition: all 0.25s var(--anim-spring);
+            border: none;
+            text-decoration: none;
+            user-select: none;
+        }
+
+        .bx-btn:hover {
+            transform: scale3d(1.03, 1.03, 1.03);
+        }
+
+        .bx-btn:active {
+            transform: scale3d(0.97, 0.97, 0.97);
+        }
+
+        .bx-btn-primary {
+            background-color: var(--bx-primary);
+            color: var(--bx-primary-contrast);
+            box-shadow: var(--bx-shadow-btn);
+        }
+
+        .bx-btn-primary:hover {
+            background-color: var(--bx-primary-hover);
+            box-shadow: var(--bx-shadow-btn-hover);
+        }
+
+        .bx-btn-outline {
+            background-color: transparent;
+            border: 1.5px solid var(--bx-border);
+            color: var(--bx-text);
+        }
+
+        .bx-btn-outline:hover {
+            border-color: var(--bx-primary);
+            color: var(--bx-primary);
+            background-color: var(--bx-pill);
+        }
+
+        .bx-btn-ghost {
+            background-color: transparent;
+            color: var(--bx-text);
+            border: 1.5px solid transparent;
+        }
+
+        .bx-btn-ghost:hover {
+            background-color: var(--bx-pill);
+            color: var(--bx-primary);
+            border-color: var(--bx-border);
+        }
+
+        .bx-btn-danger {
+            background-color: var(--bx-danger);
+            color: #FFFFFF;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+        }
+
+        .bx-btn-danger:hover {
+            background-color: #DC2626;
+            box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
+        }
+
+        .bx-btn-success {
+            background-color: var(--bx-success);
+            color: #FFFFFF;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+        }
+
+        .bx-btn-success:hover {
+            background-color: #059669;
+            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+        }
+
+        .bx-btn-warning {
+            background-color: var(--bx-warning);
+            color: #FFFFFF;
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
+        }
+
+        .bx-btn-warning:hover {
+            background-color: #D97706;
+            box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35);
+        }
+
+        /* أحجام الأزرار (Button Sizes) */
+        .bx-btn-sm {
+            padding: 0.4rem 1rem;
+            font-size: 0.75rem;
+        }
+
+        .bx-btn-md {
+            padding: 0.7rem 1.6rem;
+            font-size: 0.85rem;
+        }
+
+        .bx-btn-lg {
+            padding: 0.95rem 2.2rem;
+            font-size: 1rem;
+        }
+
+        /* حالات الأزرار (Button States) */
+        .bx-btn:disabled,
+        .bx-btn.is-disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            pointer-events: none;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* مجموعات الأزرار الملتصقة (Segmented Button Groups) */
+        .bx-btn-group {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 9999px;
+            border: 1.5px solid var(--bx-border);
+            padding: 0.2rem;
+            background-color: var(--bx-table-header);
+            gap: 0.2rem;
+        }
+
+        .bx-btn-group .bx-group-item {
+            padding: 0.45rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--bx-muted);
+            background-color: transparent;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            user-select: none;
+        }
+
+        .bx-btn-group .bx-group-item:hover {
+            color: var(--bx-title);
+            background-color: var(--bx-pill);
+        }
+
+        .bx-btn-group .bx-group-item.active {
+            background-color: var(--bx-primary);
+            color: var(--bx-primary-contrast);
+            box-shadow: var(--bx-shadow-btn);
+        }
+
+        /* شريط الأدوات (Button Toolbar) */
+        .bx-toolbar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius-m);
+            border: 1.5px solid var(--bx-border);
+            background-color: var(--bx-table-header);
+        }
+
+        .bx-toolbar-btn {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--bx-border);
+            background-color: var(--bx-surface-solid);
+            color: var(--bx-text);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .bx-toolbar-btn:hover {
+            border-color: var(--bx-primary);
+            color: var(--bx-primary);
+            background-color: var(--bx-pill);
+        }
+
+        .bx-toolbar-btn.active {
+            background-color: var(--bx-primary);
+            color: #FFFFFF;
+            border-color: var(--bx-primary);
+        }
+
+        .bx-toolbar-divider {
+            width: 1px;
+            height: 1.5rem;
+            background-color: var(--bx-divider);
+            margin: 0 0.25rem;
+        }
+
+        /* حقول الإدخال الشفافة */
+        .bx-input {
+            width: 100%;
+            height: 3.5rem;
+            background-color: transparent;
+            border: 1.5px solid var(--bx-border);
+            border-radius: var(--radius-m);
+            padding: 0 1.25rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--bx-text);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .bx-input:focus {
+            border-color: var(--bx-primary);
+            background-color: transparent;
+            box-shadow: 0 0 0 3px var(--bx-pill);
+        }
+
+        /* صفوف الجداول والتفاعل بالمتغيرات بدون أي خطوط عمودية جانبية */
+        .bx-table-row {
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+
+        .bx-table-row:hover {
+            background-color: var(--bx-row-hover) !important;
+        }
+
+        .bx-table-row.row-selected {
+            background-color: var(--bx-row-active) !important;
+        }
+
+        .bx-table-row.row-selected td:first-child {
+            position: relative;
+        }
+
+        .bx-table-row.row-selected td:first-child::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background-color: var(--bx-primary);
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* مربعات الاختيار الفاخرة الموحدة (Taqniya Custom Checkbox) */
+        .bx-custom-check {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 1.5px solid var(--bx-border);
+            border-radius: 6px;
+            background-color: transparent;
+            cursor: pointer;
+            display: inline-grid;
+            place-content: center;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            outline: none;
+            margin: 0 auto;
+        }
+
+        .bx-custom-check:hover {
+            border-color: var(--bx-primary);
+            background-color: var(--bx-pill);
+            transform: scale(1.08);
+        }
+
+        .bx-custom-check:checked {
+            background-color: var(--bx-primary);
+            border-color: var(--bx-primary);
+            box-shadow: 0 0 0 3px var(--bx-pill);
+            transform: scale(1.05);
+        }
+
+        .bx-custom-check:checked::after {
+            content: '';
+            width: 5px;
+            height: 9px;
+            border: solid #FFFFFF;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg) translate(-0.5px, -1px);
+            display: block;
+        }
+
+        .bx-custom-check:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            border-color: var(--bx-border);
+        }
+
+        /* أزرار الراديو المخصصة الفاخرة (Taqniya Custom Radio) */
+        .bx-custom-radio {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 1.5px solid var(--bx-border);
+            border-radius: 50%;
+            background-color: transparent;
+            cursor: pointer;
+            display: inline-grid;
+            place-content: center;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            outline: none;
+            margin: 0;
+        }
+
+        .bx-custom-radio:hover {
+            border-color: var(--bx-primary);
+            background-color: var(--bx-pill);
+            transform: scale(1.08);
+        }
+
+        .bx-custom-radio:checked {
+            border-color: var(--bx-primary);
+            background-color: transparent;
+            box-shadow: 0 0 0 3px var(--bx-pill);
+        }
+
+        .bx-custom-radio:checked::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--bx-primary);
+            display: block;
+            animation: radioPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .bx-custom-radio:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        @keyframes radioPop {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* مفاتيح التبديل السلسة (Taqniya Toggle Switch) */
+        .bx-switch-label {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .bx-custom-switch {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .bx-switch-slider {
+            position: relative;
+            width: 2.75rem;
+            height: 1.5rem;
+            background-color: var(--bx-table-header);
+            border: 1.5px solid var(--bx-border);
+            border-radius: 9999px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-block;
+        }
+
+        .bx-switch-slider::before {
+            content: '';
+            position: absolute;
+            height: 1.05rem;
+            width: 1.05rem;
+            right: 2px;
+            top: 2px;
+            background-color: var(--bx-muted);
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .bx-custom-switch:checked+.bx-switch-slider {
+            background-color: var(--bx-primary);
+            border-color: var(--bx-primary);
+            box-shadow: 0 0 12px rgba(91, 60, 230, 0.35);
+        }
+
+        .bx-custom-switch:checked+.bx-switch-slider::before {
+            transform: translateX(-1.25rem);
+            background-color: #FFFFFF;
+        }
+
+        .bx-custom-switch:disabled+.bx-switch-slider {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        /* مجموعات الإدخال المركبة (Input Groups) */
+        .bx-input-group {
+            display: flex;
+            align-items: stretch;
+            width: 100%;
+            border-radius: var(--radius-m);
+            border: 1.5px solid var(--bx-border);
+            background-color: transparent;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .bx-input-group:focus-within {
+            border-color: var(--bx-primary);
+            box-shadow: 0 0 0 3px var(--bx-pill);
+        }
+
+        .bx-input-group.is-valid {
+            border-color: var(--bx-success) !important;
+        }
+
+        .bx-input-group.is-invalid {
+            border-color: var(--bx-danger) !important;
+        }
+
+        .bx-input-group .bx-input-addon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 1rem;
+            background-color: var(--bx-table-header);
+            color: var(--bx-muted);
+            font-size: 0.85rem;
+            font-weight: 700;
+            border-inline-end: 1.5px solid var(--bx-border);
+            user-select: none;
+        }
+
+        .bx-input-group .bx-input-addon-end {
+            border-inline-end: none;
+            border-inline-start: 1.5px solid var(--bx-border);
+        }
+
+        .bx-input-group input {
+            flex: 1;
+            border: none !important;
+            outline: none !important;
+            background: transparent !important;
+            padding: 0 1rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--bx-text);
+            height: 3.25rem;
+        }
+
+        /* شارات الاختيار المتعدد (Multi-Select Chips) */
+        .multi-tag-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.65rem;
+            border-radius: 9999px;
+            background-color: var(--bx-pill);
+            border: 1px solid var(--bx-border);
+            color: var(--bx-primary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            animation: tagPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes tagPop {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* تمييز خلفية العنصر النشط في القوائم المنسدلة (Active Dropdown / Single Select Row) */
+        .single-select-row.active,
+        .bx-dropdown-item.active {
+            background-color: var(--bx-row-active) !important;
+        }
+
+        .single-select-row.active .text-bx-title,
+        .single-select-row.active span {
+            color: var(--bx-primary) !important;
+        }
+
+        /* أزرار التبديل التفاعلية والمفاتيح المقسمة (Segmented Control Buttons) */
+        .grid-gap-btn {
+            padding: 0.35rem 0.85rem;
+            border-radius: var(--radius-s);
+            border: 1px solid var(--bx-border);
+            background-color: var(--bx-table-header);
+            color: var(--bx-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .grid-gap-btn:hover {
+            border-color: var(--bx-primary);
+            color: var(--bx-title);
+            background-color: var(--bx-pill);
+        }
+
+        .grid-gap-btn.active {
+            border-color: var(--bx-primary);
+            background-color: var(--bx-primary);
+            color: var(--bx-primary-contrast);
+            box-shadow: var(--bx-shadow-btn);
+        }
+
+        /* صفوف وقوائم السجلات المستمرة مثل الجداول تماماً */
+        .bx-list-row {
+            padding: 0.9rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            border-bottom: 1px solid var(--bx-divider);
+            background-color: transparent;
+            transition: background-color 0.2s ease;
+            cursor: default;
+        }
+
+        .bx-list-row:last-child {
+            border-bottom: none;
+        }
+
+        .bx-list-row:hover {
+            background-color: var(--bx-row-hover);
+        }
+
+        /* تمييز شريط الرأس والبطاقة الثابتة بلون مميز مصمت وبارز */
+        .bx-sticky-bar {
+            background-color: #DDD8F5 !important;
+            border-bottom: 2px solid var(--bx-primary) !important;
+        }
+
+        .dark .bx-sticky-bar {
+            background-color: #383A58 !important;
+            border-bottom: 2px solid var(--bx-primary) !important;
+        }
+
+        /* طي وتوسيع القائمة الجانبية بحركة انسيابية فائقة (Smooth 60fps Sidebar Transitions) */
+        #mainSidebar {
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                min-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                padding 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                margin 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                border-width 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            will-change: width, opacity, transform;
+            transform-origin: right top;
+        }
+
+        #mainSidebar.sidebar-collapsed {
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border-width: 0 !important;
+            border: none !important;
+            opacity: 0 !important;
+            transform: scaleX(0.85) translateX(30px);
+            pointer-events: none !important;
+            overflow: hidden !important;
+        }
+
+        .accordion-content {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 3000px;
+            opacity: 1;
+            overflow: visible;
+        }
+
+        .accordion-content.is-collapsed {
+            max-height: 0 !important;
+            opacity: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            overflow: hidden !important;
+            pointer-events: none;
+        }
+
+        /* تصنيفات وأقسام القائمة الجانبية (Sidebar Categories & Nav Items) */
+        .bx-cat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius-s);
+            background-color: var(--bx-table-header);
+            border: 1px solid var(--bx-border);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            margin-bottom: 0.35rem;
+        }
+
+        .bx-cat-header:hover {
+            border-color: var(--bx-primary);
+            background-color: var(--bx-pill);
+        }
+
+        .bx-cat-header .cat-title {
+            font-size: 0.72rem;
+            font-weight: 900;
+            font-family: 'Tajawal', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        /* خط الشجرة الرابط لعناصر التصنيف (Category Tree Guide Line) */
+        .bx-cat-tree {
+            border-right: 2px dashed var(--bx-border);
+            margin-right: 0.65rem;
+            padding-right: 0.45rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        /* روابط التنقل في القائمة الجانبية (Navigation Item Links) */
+        .bx-nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.45rem 0.65rem;
+            border-radius: var(--radius-s);
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--bx-text);
+            text-decoration: none;
+            border: 1px solid transparent;
+            background-color: transparent;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .bx-nav-item .nav-icon-box {
+            width: 1.65rem;
+            height: 1.65rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--bx-border);
+            background-color: var(--bx-surface-solid);
+            color: var(--bx-muted);
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .bx-nav-item .nav-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.1rem 0.4rem;
+            border-radius: 6px;
+            border: 1px solid var(--bx-border);
+            color: var(--bx-muted);
+            transition: all 0.2s ease;
+        }
+
+        .bx-nav-item:hover {
+            background-color: var(--bx-row-hover);
+            color: var(--bx-title);
+            border-color: var(--bx-border);
+            transform: translateX(-3px);
+        }
+
+        .bx-nav-item:hover .nav-icon-box {
+            border-color: var(--bx-primary);
+            color: var(--bx-primary);
+        }
+
+        .bx-nav-item.active {
+            background-color: var(--bx-pill);
+            color: var(--bx-primary);
+            border-color: var(--bx-primary);
+            font-weight: 800;
+        }
+
+        .bx-nav-item.active .nav-icon-box {
+            background-color: var(--bx-primary);
+            color: var(--bx-primary-contrast);
+            border-color: var(--bx-primary);
+            box-shadow: var(--bx-shadow-btn);
+        }
+
+        .bx-nav-item.active .nav-badge {
+            background-color: var(--bx-primary);
+            color: var(--bx-primary-contrast);
+            border-color: var(--bx-primary);
+            font-weight: 900;
+        }
+
+        /* عناصر تفاعلية أخرى */
+
+        /* القوائم المنسدلة */
+        .bx-dropdown-trigger {
+            height: 3.5rem;
+            border-radius: var(--radius-m);
+            padding: 0 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: transparent;
+            border: 1.5px solid var(--bx-border);
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+
+        .bx-dropdown-trigger:hover {
+            border-color: var(--bx-primary);
+        }
+
+        .bx-dropdown-menu {
+            position: absolute;
+            z-index: 100 !important;
+            width: 100%;
+            margin-top: 0.5rem;
+            background-color: var(--bx-surface-solid);
+            border-radius: var(--radius-m);
+            border: 1.5px solid var(--bx-border-strong);
+            box-shadow: var(--bx-shadow-dropdown);
+            overflow: hidden;
+            padding: 0.5rem;
+        }
+
+        .bx-dropdown-item {
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-s);
+            font-weight: 700;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.15s ease;
+        }
+
+        .bx-dropdown-item:hover {
+            background-color: var(--bx-primary);
+            color: var(--bx-primary-contrast);
+        }
+
+        /* بطاقات الخيارات */
+        .bx-choice-card {
+            border: 1.5px solid var(--bx-border);
+            border-radius: var(--radius-m);
+            padding: 1.25rem;
+            cursor: pointer;
+            background-color: transparent;
+            transition: all 0.25s var(--anim-spring);
+        }
+
+        .bx-choice-card:hover {
+            border-color: var(--bx-primary);
+            transform: translateY(-2px);
+        }
+
+        .bx-choice-card.active {
+            border-color: var(--bx-primary);
+            border-width: 2px;
+            color: var(--bx-primary);
+        }
+
+        .bx-choice-card.active h4 {
+            color: var(--bx-primary);
+        }
+
+        /* النوافذ المنبثقة واللوحة الجانبية بالمتغيرات الصافية */
+        .bx-modal-card {
+            background-color: var(--bx-surface-solid);
+            border-radius: var(--radius-l);
+            border: 2px solid var(--bx-border-strong);
+            box-shadow: var(--bx-shadow-modal);
+        }
+
+        #drawerContent {
+            background-color: var(--bx-surface-solid);
+            border-color: var(--bx-border);
+        }
+
+        /* نظام الإشعارات الإطاري مع أيقونات فيكتور نقية */
+        .bx-toast-item {
+            background-color: var(--bx-canvas);
+            border: 1.5px solid var(--bx-border-strong);
+            border-radius: var(--radius-m);
+            padding: 0.85rem 1.1rem;
+            box-shadow: 0 16px 36px -8px rgba(72, 52, 166, 0.16);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            position: relative;
+            overflow: hidden;
+            transform: translateY(-10px) scale(0.95);
+            opacity: 0;
+            animation: toastPop 0.35s var(--anim-spring) forwards;
+            transition: all 0.25s ease;
+        }
+
+        @keyframes toastPop {
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .bx-toast-progress {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            height: 3px;
+            width: 100%;
+            background-color: var(--bx-primary);
+            animation: toastProgress linear forwards;
+        }
+
+        @keyframes toastProgress {
+            from {
+                width: 100%;
+            }
+
+            to {
+                width: 0%;
+            }
+        }
+
+        /* شريط العمليات المجمعة العائم */
+        #bulkBarFloating {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(140px);
+            opacity: 0;
+            transition: all 0.35s var(--anim-spring);
+            z-index: 999;
+            pointer-events: none;
+            background-color: var(--bx-canvas);
+        }
+
+        #bulkBarFloating.active {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* روابط القائمة الجانبية (Sidebar Items) */
+        .bx-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.1rem;
+            border-radius: var(--radius-m);
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--bx-muted);
+            border: 1.5px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .bx-nav-item:hover {
+            color: var(--bx-primary);
+            border-color: var(--bx-border);
+            transform: translateX(-3px);
+        }
+
+        .bx-nav-item.active {
+            color: var(--bx-primary);
+            border-color: var(--bx-primary);
+            font-weight: 900;
+        }
+
+        /* شريط التمرير المستقل للقائمة الجانبية */
+        .sidebar-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: var(--bx-border-strong) transparent;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: var(--bx-border-strong);
+            border-radius: 9999px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            background: var(--bx-primary);
+        }
+
+        /* ==========================================================================
+           22. TAQNIYA OFFCANVAS & SLIDE DRAWERS SYSTEM (bx-offcanvas)
+           ========================================================================== */
+        .bx-offcanvas {
+            position: fixed;
+            z-index: 9999;
+            background-color: var(--bx-surface-solid);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            overflow-y: auto;
+        }
+
+        .bx-offcanvas-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 9998;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Direction: Right (اللوحة المنزلقة من اليمين) */
+        .bx-offcanvas-right {
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 460px;
+            max-width: 92vw;
+            border-left: 2px solid var(--bx-border);
+            transform: translateX(100%);
+        }
+
+        /* Direction: Left (اللوحة المنزلقة من اليسار) */
+        .bx-offcanvas-left {
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 460px;
+            max-width: 92vw;
+            border-right: 2px solid var(--bx-border);
+            transform: translateX(-100%);
+        }
+
+        /* Direction: Top (اللوحة المنزلقة من الأعلى) */
+        .bx-offcanvas-top {
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            max-height: 85vh;
+            border-bottom: 2px solid var(--bx-border);
+            transform: translateY(-100%);
+        }
+
+        /* Direction: Bottom (اللوحة المنزلقة من الأسفل) */
+        .bx-offcanvas-bottom {
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            max-height: 85vh;
+            border-top: 2px solid var(--bx-border);
+            border-top-left-radius: 1.5rem;
+            border-top-right-radius: 1.5rem;
+            transform: translateY(100%);
+        }
+
+        /* Active Open State for all directions (الحالة النشطة المفتوحة) */
+        .bx-offcanvas.bx-offcanvas-open,
+        .bx-offcanvas-right.bx-offcanvas-open,
+        .bx-offcanvas-left.bx-offcanvas-open,
+        .bx-offcanvas-top.bx-offcanvas-open,
+        .bx-offcanvas-bottom.bx-offcanvas-open {
+            transform: translate(0, 0) !important;
+        }
+
+        /* ==========================================================================
+           21. TABS SYSTEM & SEGMENTED CONTROLS (منظومة التبويبات التفاعلية)
+           ========================================================================== */
+
+        /* Base Tabs Container */
+        .bx-tabs {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            gap: 1.25rem;
+        }
+
+        /* Nav Triggers Wrapper */
+        .bx-tab-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .bx-tab-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Base Tab Button */
+        .bx-tab-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.125rem;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: var(--bx-text-muted);
+            border-radius: 0.75rem;
+            border: 1px solid transparent;
+            background: transparent;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            user-select: none;
+        }
+        .bx-tab-btn:hover {
+            color: var(--bx-text-title);
+            background: var(--bx-pill);
+        }
+        .bx-tab-btn:disabled,
+        .bx-tab-btn.disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Tab Sizes */
+        .bx-tab-btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            border-radius: 0.5rem;
+            gap: 0.375rem;
+        }
+        .bx-tab-btn-lg {
+            padding: 0.875rem 1.5rem;
+            font-size: 0.9375rem;
+            border-radius: 1rem;
+            gap: 0.625rem;
+        }
+
+        /* VARIATION 1: Line / Underline Tabs (.bx-tabs-line) */
+        .bx-tab-nav-line {
+            border-bottom: 2px solid var(--bx-divider);
+            gap: 1.5rem;
+            padding-bottom: 0;
+        }
+        .bx-tab-btn-line {
+            border-radius: 0;
+            padding: 0.75rem 0.25rem 0.875rem 0.25rem;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            color: var(--bx-text-muted);
+        }
+        .bx-tab-btn-line:hover {
+            color: var(--bx-primary);
+            background: transparent;
+        }
+        .bx-tab-btn-line.active {
+            color: var(--bx-primary);
+            border-bottom-color: var(--bx-primary);
+            font-weight: 800;
+        }
+
+        /* VARIATION 2: Pill / Segmented Capsule Tabs (.bx-tabs-pill) */
+        .bx-tab-nav-pill {
+            padding: 0.375rem;
+            background: var(--bx-table-header);
+            border: 1px solid var(--bx-border);
+            border-radius: 1rem;
+            width: fit-content;
+            max-width: 100%;
+        }
+        .bx-tab-btn-pill {
+            border-radius: 0.75rem;
+            color: var(--bx-text-muted);
+        }
+        .bx-tab-btn-pill:hover {
+            color: var(--bx-text-title);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .bx-tab-btn-pill.active {
+            background: var(--bx-surface-solid);
+            color: var(--bx-primary);
+            border-color: var(--bx-border);
+            box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+            font-weight: 800;
+        }
+
+        /* VARIATION 3: Card / Boxed Tabs (.bx-tabs-card) */
+        .bx-tab-nav-card {
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .bx-tab-btn-card {
+            background: var(--bx-table-header);
+            border: 1px solid var(--bx-border);
+            border-radius: 1.25rem;
+            padding: 1rem 1.25rem;
+            flex: 1 1 200px;
+            min-width: 180px;
+            text-align: right;
+            justify-content: flex-start;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bx-tab-btn-card:hover {
+            border-color: var(--bx-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.06);
+        }
+        .bx-tab-btn-card.active {
+            background: var(--bx-surface-solid);
+            border-color: var(--bx-primary);
+            border-width: 1.5px;
+            color: var(--bx-text-title);
+            box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.12);
+        }
+        .bx-tab-btn-card.active .bx-tab-card-icon {
+            background: var(--bx-pill);
+            color: var(--bx-primary);
+            border-color: var(--bx-primary);
+        }
+
+        /* VARIATION 4: Vertical Tabs (.bx-tabs-vertical) */
+        .bx-tabs-vertical {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+        @media (max-width: 768px) {
+            .bx-tabs-vertical {
+                grid-template-columns: 1fr;
+            }
+        }
+        .bx-tab-nav-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: var(--bx-table-header);
+            border: 1px solid var(--bx-border);
+            border-radius: 1.25rem;
+        }
+        .bx-tab-btn-vertical {
+            width: 100%;
+            justify-content: flex-start;
+            padding: 0.75rem 1rem;
+            border-radius: 0.875rem;
+            color: var(--bx-text-muted);
+        }
+        .bx-tab-btn-vertical:hover {
+            color: var(--bx-text-title);
+            background: var(--bx-pill);
+        }
+        .bx-tab-btn-vertical.active {
+            background: var(--bx-surface-solid);
+            color: var(--bx-primary);
+            border: 1px solid var(--bx-border);
+            font-weight: 800;
+            box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Tab Panes & Transitions */
+        .bx-tab-content {
+            position: relative;
+            width: 100%;
+        }
+        .bx-tab-pane {
+            display: none;
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .bx-tab-pane.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @keyframes tabFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .bx-tab-pane.active {
+            animation: tabFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        /* Tab Badges & Extra Elements */
+        .bx-tab-badge {
+            font-size: 0.6875rem;
+            font-weight: 800;
+            padding: 0.125rem 0.4375rem;
+            border-radius: 9999px;
+            background: var(--bx-pill);
+            color: var(--bx-primary);
+            border: 1px solid var(--bx-border);
+        }
+        .bx-tab-btn.active .bx-tab-badge {
+            background: var(--bx-primary);
+            color: #ffffff;
+            border-color: var(--bx-primary);
+        }

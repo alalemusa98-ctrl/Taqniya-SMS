@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { X, ShieldAlert, Laptop, Globe, Clock } from 'lucide-vue-next';
+import { formatDateTime } from '../../utils/formatters';
 
 defineProps<{
   isOpen: boolean;
@@ -65,7 +66,7 @@ const emit = defineEmits<{
               </p>
               <p class="flex items-center gap-1.5">
                 <Clock class="w-3.5 h-3.5 text-slate-400" />
-                <span>التوقيت الدقيق:</span> <span class="font-mono">{{ new Date(log.created_at).toLocaleString('ar-EG') }}</span>
+                <span>التوقيت الدقيق:</span> <span class="font-mono font-bold">{{ formatDateTime(log.created_at) }}</span>
               </p>
             </div>
           </div>

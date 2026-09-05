@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import { usersApi } from '../../api/users.api';
 import { X, User, Calendar, Clock, KeyRound, UserX, UserCheck } from 'lucide-vue-next';
+import { formatDateTime } from '../../utils/formatters';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -108,16 +109,16 @@ watch(
                   <span class="text-slate-400 flex items-center gap-1.5">
                     <Calendar class="w-3.5 h-3.5" /> تاريخ الإنشاء:
                   </span>
-                  <span class="font-mono text-slate-700 dark:text-slate-300">
-                    {{ new Date(userDetails.created_at).toLocaleString('ar-EG') }}
+                  <span class="font-mono text-slate-700 dark:text-slate-300 font-bold">
+                    {{ formatDateTime(userDetails.created_at) }}
                   </span>
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-slate-400 flex items-center gap-1.5">
                     <Clock class="w-3.5 h-3.5" /> آخر تسجيل دخول:
                   </span>
-                  <span class="font-mono text-slate-700 dark:text-slate-300">
-                    {{ userDetails.last_login_at ? new Date(userDetails.last_login_at).toLocaleString('ar-EG') : 'لم يسجل دخول بعد' }}
+                  <span class="font-mono text-slate-700 dark:text-slate-300 font-bold">
+                    {{ userDetails.last_login_at ? formatDateTime(userDetails.last_login_at) : 'لم يسجل دخول بعد' }}
                   </span>
                 </div>
               </div>
