@@ -29,8 +29,8 @@ const authStore = useAuthStore();
           <nav v-if="authStore.isAdmin" class="hidden md:flex items-center gap-2">
             <RouterLink
               to="/users"
-              active-class="bg-bx-primary text-white shadow-md shadow-bx-primary/20"
-              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] transition-all cursor-pointer"
+              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
+              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
               <Users class="w-4 h-4" />
               <span>إدارة المستخدمين</span>
@@ -38,8 +38,8 @@ const authStore = useAuthStore();
 
             <RouterLink
               to="/audit-logs"
-              active-class="bg-bx-primary text-white shadow-md shadow-bx-primary/20"
-              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] transition-all cursor-pointer"
+              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
+              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
               <ShieldCheck class="w-4 h-4" />
               <span>سجلات التدقيق الأمني</span>

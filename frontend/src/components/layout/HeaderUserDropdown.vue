@@ -85,9 +85,9 @@ const getRoleBadge = (role?: string) => {
 
         <div
           @click="showLogoutModal = true; isOpen = false"
-          class="bx-dropdown-item flex items-center gap-2.5 text-xs font-bold text-bx-danger rounded-xl hover:bg-rose-500/10"
+          class="bx-dropdown-item flex items-center gap-2.5 text-xs font-black text-bx-danger !bg-rose-500/10 dark:!bg-rose-500/20 border border-rose-500/25 rounded-xl hover:!bg-rose-500/25 dark:hover:!bg-rose-500/35 transition-all shadow-sm mt-1.5 cursor-pointer"
         >
-          <LogOut class="w-4 h-4" />
+          <LogOut class="w-4 h-4 text-bx-danger" />
           <span>تسجيل الخروج</span>
         </div>
       </div>

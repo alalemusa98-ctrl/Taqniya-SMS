@@ -568,15 +568,15 @@
         }
 
         .text-bx-primary {
-            color: var(--bx-primary) !important;
+            color: var(--bx-primary);
         }
 
         .text-bx-title {
-            color: var(--bx-title) !important;
+            color: var(--bx-title);
         }
 
         .text-bx-muted {
-            color: var(--bx-muted) !important;
+            color: var(--bx-muted);
         }
 
         .bg-bx-primary {

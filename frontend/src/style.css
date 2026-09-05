@@ -19,3 +19,150 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+/* ==================== TAQNIYA BUTTONS & HOVER ENHANCEMENTS ==================== */
+.bx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: 'Syne', 'Alexandria', 'Tajawal', sans-serif;
+  font-weight: 700;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.23, 0.65, 0.74, 1.09);
+  user-select: none;
+  text-decoration: none;
+}
+
+.bx-btn:hover {
+  transform: translateY(-2px) scale3d(1.02, 1.02, 1.02);
+}
+
+.bx-btn:active {
+  transform: translateY(0) scale3d(0.98, 0.98, 0.98);
+}
+
+.bx-btn-primary {
+  background-color: var(--bx-primary) !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid transparent !important;
+  box-shadow: 0 4px 14px rgba(91, 60, 230, 0.25);
+}
+
+.bx-btn-primary,
+.bx-btn-primary *,
+.bx-btn-primary span,
+.bx-btn-primary svg {
+  color: #FFFFFF !important;
+  fill: none;
+}
+
+.bx-btn-primary:hover {
+  background-color: var(--bx-primary-hover) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 22px rgba(91, 60, 230, 0.4) !important;
+  transform: translateY(-2px) scale3d(1.025, 1.025, 1.025);
+}
+
+.bx-btn-danger {
+  background-color: var(--bx-danger) !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid transparent !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+}
+
+.bx-btn-danger,
+.bx-btn-danger *,
+.bx-btn-danger span,
+.bx-btn-danger svg {
+  color: #FFFFFF !important;
+}
+
+.bx-btn-danger:hover {
+  background-color: #DC2626 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 22px rgba(239, 68, 68, 0.4) !important;
+  transform: translateY(-2px) scale3d(1.025, 1.025, 1.025);
+}
+
+.bx-btn-success {
+  background-color: var(--bx-success) !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid transparent !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.bx-btn-success,
+.bx-btn-success *,
+.bx-btn-success span,
+.bx-btn-success svg {
+  color: #FFFFFF !important;
+}
+
+.bx-btn-success:hover {
+  background-color: #059669 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.4) !important;
+  transform: translateY(-2px) scale3d(1.025, 1.025, 1.025);
+}
+
+.bx-btn-outline {
+  background-color: transparent !important;
+  border: 1.5px solid var(--bx-border) !important;
+  color: var(--bx-text) !important;
+}
+
+.bx-btn-outline:hover {
+  border-color: var(--bx-primary) !important;
+  color: var(--bx-primary) !important;
+  background-color: var(--bx-pill) !important;
+  box-shadow: 0 4px 12px rgba(91, 60, 230, 0.12);
+  transform: translateY(-2px) scale3d(1.02, 1.02, 1.02);
+}
+
+/* Icon button hover micro-interactions */
+.bx-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.23, 0.65, 0.74, 1.09);
+  cursor: pointer;
+}
+
+.bx-icon-btn:hover {
+  transform: translateY(-2px) scale(1.1);
+  background-color: var(--bx-pill);
+  box-shadow: 0 4px 12px rgba(91, 60, 230, 0.15);
+}
+
+.bx-icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* ==================== VUE DRAWER RIGHT TRANSITIONS ==================== */
+.drawer-right-enter-active,
+.drawer-right-leave-active {
+  transition: opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer-right-enter-active .drawer-right-panel,
+.drawer-right-leave-active .drawer-right-panel {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer-right-enter-from,
+.drawer-right-leave-to {
+  opacity: 0;
+}
+
+.drawer-right-enter-from .drawer-right-panel,
+.drawer-right-leave-to .drawer-right-panel {
+  transform: translateX(100%) !important;
+}
+
+.drawer-right-enter-to .drawer-right-panel,
+.drawer-right-leave-from .drawer-right-panel {
+  transform: translateX(0) !important;
+}
+

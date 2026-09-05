@@ -147,7 +147,7 @@ const handleLogin = async () => {
           <button
             type="submit"
             :disabled="authStore.isLoading || isRateLimited"
-            class="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-all shadow-md shadow-indigo-600/20 hover:shadow-lg hover:shadow-indigo-600/30 flex items-center justify-center gap-2"
+            class="bx-btn bx-btn-primary bx-btn-lg w-full text-sm font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <span v-if="authStore.isLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             <span>{{ isRateLimited ? `محظور مؤقتاً (${countdown}s)` : 'دخول إلى المنظومة' }}</span>

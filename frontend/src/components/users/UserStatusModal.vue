@@ -111,21 +111,22 @@ const handleToggle = async () => {
             ></textarea>
           </div>
 
-          <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div class="flex items-center justify-end gap-3 pt-4 border-t border-bx-border">
             <button
               type="button"
               @click="emit('close')"
-              class="px-4 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+              class="bx-btn bx-btn-outline bx-btn-md text-xs font-bold"
             >
               إلغاء
             </button>
             <button
               type="submit"
               :disabled="isLoading"
-              class="px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-md disabled:opacity-50"
-              :class="newStatus === 0 ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'"
+              class="bx-btn bx-btn-md text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              :class="newStatus === 0 ? 'bx-btn-danger' : 'bx-btn-success'"
             >
-              {{ isLoading ? 'جاري المعالجة...' : (newStatus === 0 ? 'تأكيد الإيقاف' : 'تأكيد التفعيل') }}
+              <span v-if="isLoading" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              <span>{{ isLoading ? 'جاري المعالجة...' : (newStatus === 0 ? 'تأكيد الإيقاف' : 'تأكيد التفعيل') }}</span>
             </button>
           </div>
         </form>
