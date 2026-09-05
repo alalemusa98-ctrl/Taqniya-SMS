@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { watch, onUnmounted } from 'vue';
 import { X, ShieldAlert, Laptop, Globe, Clock } from 'lucide-vue-next';
 import { formatDateTime } from '../../utils/formatters';
 
-defineProps<{
+const props = defineProps<{
   isOpen: boolean;
   log?: any;
 }>();
@@ -10,6 +11,22 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void;
 }>();
+
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  document.body.style.overflow = '';
+});
 </script>
 
 <template>
@@ -28,29 +45,30 @@ const emit = defineEmits<{
           style="right: 0 !important; left: auto !important;"
         >
           <div
-            class="w-screen max-w-[620px] bg-[var(--bx-surface-solid)] border-s-2 border-bx-border shadow-2xl flex flex-col justify-between p-6 sm:p-8 overflow-y-auto"
+            class="w-screen max-w-[620px] h-full bg-[var(--bx-surface-solid)] border-s-2 border-bx-border shadow-2xl flex flex-col justify-between overflow-hidden"
           >
-            <div class="space-y-6">
-              <!-- Top Bar -->
-              <div class="flex items-center justify-between border-b border-bx-border pb-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-black text-lg border border-bx-primary/20">
-                    <ShieldAlert class="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 class="font-display font-black text-lg text-bx-title">تفاصيل حركة التدقيق الأمني</h3>
-                    <p class="text-xs text-bx-muted font-bold">فحص التعديلات ومقارنة القيم قبل وبعد</p>
-                  </div>
+            <!-- Fixed Header (Compact) -->
+            <div class="px-5 py-3.5 sm:px-6 sm:py-4 border-b border-bx-border shrink-0 flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-black border border-bx-primary/20">
+                  <ShieldAlert class="w-4.5 h-4.5" />
                 </div>
-                <button
-                  @click="emit('close')"
-                  class="bx-icon-btn p-2 rounded-xl border border-bx-border hover:border-bx-primary text-bx-muted hover:text-bx-primary transition-all cursor-pointer"
-                  title="إغلاق"
-                >
-                  <X class="w-5 h-5" />
-                </button>
+                <div>
+                  <h3 class="font-display font-black text-sm text-bx-title leading-snug">تفاصيل حركة التدقيق الأمني</h3>
+                  <p class="text-[11px] text-bx-muted font-medium">فحص التعديلات ومقارنة القيم قبل وبعد</p>
+                </div>
               </div>
+              <button
+                @click="emit('close')"
+                class="bx-icon-btn p-1.5 rounded-lg border border-bx-border hover:border-bx-primary text-bx-muted hover:text-bx-primary transition-all cursor-pointer"
+                title="إغلاق"
+              >
+                <X class="w-4 h-4" />
+              </button>
+            </div>
 
+            <!-- Scrollable Content Body with Custom Scrollbar -->
+            <div class="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 bx-drawer-scroll">
               <!-- Metadata Grid -->
               <div v-if="log" class="p-4 rounded-2xl bg-[var(--bx-table-header)] border border-bx-border grid grid-cols-2 gap-4 text-xs">
                 <div>
@@ -113,8 +131,8 @@ const emit = defineEmits<{
               </div>
             </div>
 
-            <!-- Footer -->
-            <div class="pt-6 border-t border-bx-border">
+            <!-- Fixed Footer -->
+            <div class="p-6 sm:p-8 pt-4 border-t border-bx-border bg-[var(--bx-surface-solid)] shrink-0">
               <button
                 @click="emit('close')"
                 class="bx-btn bx-btn-outline bx-btn-md w-full text-xs font-bold"

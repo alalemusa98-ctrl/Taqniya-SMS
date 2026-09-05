@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onUnmounted } from 'vue';
 import { usersApi } from '../../api/users.api';
 import { X, User, Calendar, Clock, KeyRound, UserX, UserCheck } from 'lucide-vue-next';
 import { formatDateTime } from '../../utils/formatters';
@@ -34,6 +34,21 @@ const fetchDetails = async () => {
 };
 
 watch(
+  () => props.isOpen,
+  (open) => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+      if (props.userId) {
+        fetchDetails();
+      }
+    } else {
+      document.body.style.overflow = '';
+    }
+  },
+  { immediate: true },
+);
+
+watch(
   () => props.userId,
   () => {
     if (props.isOpen && props.userId) {
@@ -41,6 +56,10 @@ watch(
     }
   },
 );
+
+onUnmounted(() => {
+  document.body.style.overflow = '';
+});
 </script>
 
 <template>
@@ -59,29 +78,30 @@ watch(
           style="right: 0 !important; left: auto !important;"
         >
           <div
-            class="w-screen max-w-[500px] bg-[var(--bx-surface-solid)] border-s-2 border-bx-border shadow-2xl flex flex-col justify-between p-6 sm:p-8 overflow-y-auto"
+            class="w-screen max-w-[500px] h-full bg-[var(--bx-surface-solid)] border-s-2 border-bx-border shadow-2xl flex flex-col justify-between overflow-hidden"
           >
-            <!-- Top Bar -->
-            <div class="space-y-6">
-              <div class="flex items-center justify-between border-b border-bx-border pb-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-black text-lg border border-bx-primary/20">
-                    <User class="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 class="font-display font-black text-lg text-bx-title">تفاصيل حساب المستخدم</h3>
-                    <p class="text-xs text-bx-muted font-bold">سجل النشاط وحالة المصادقة</p>
-                  </div>
+            <!-- Fixed Header (Compact) -->
+            <div class="px-5 py-3.5 sm:px-6 sm:py-4 border-b border-bx-border shrink-0 flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-black border border-bx-primary/20">
+                  <User class="w-4.5 h-4.5" />
                 </div>
-                <button
-                  @click="emit('close')"
-                  class="bx-icon-btn p-2 rounded-xl border border-bx-border hover:border-bx-primary text-bx-muted hover:text-bx-primary transition-all cursor-pointer"
-                  title="إغلاق"
-                >
-                  <X class="w-5 h-5" />
-                </button>
+                <div>
+                  <h3 class="font-display font-black text-sm text-bx-title leading-snug">تفاصيل حساب المستخدم</h3>
+                  <p class="text-[11px] text-bx-muted font-medium">سجل النشاط وحالة المصادقة</p>
+                </div>
               </div>
+              <button
+                @click="emit('close')"
+                class="bx-icon-btn p-1.5 rounded-lg border border-bx-border hover:border-bx-primary text-bx-muted hover:text-bx-primary transition-all cursor-pointer"
+                title="إغلاق"
+              >
+                <X class="w-4 h-4" />
+              </button>
+            </div>
 
+            <!-- Scrollable Content Body with Custom Scrollbar -->
+            <div class="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 bx-drawer-scroll">
               <!-- Loading -->
               <div v-if="isLoading" class="space-y-4 py-8">
                 <div class="h-10 bg-[var(--bx-table-header)] rounded-xl animate-pulse"></div>
@@ -140,8 +160,8 @@ watch(
               </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="pt-6 border-t border-bx-border space-y-3">
+            <!-- Fixed Action Buttons Footer -->
+            <div class="p-6 sm:p-8 pt-4 border-t border-bx-border bg-[var(--bx-surface-solid)] shrink-0 space-y-3">
               <button
                 @click="emit('toggle-status')"
                 class="bx-btn bx-btn-outline bx-btn-md w-full text-xs font-bold"
