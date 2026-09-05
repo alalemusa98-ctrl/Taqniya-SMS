@@ -93,32 +93,44 @@ const getRoleTheme = (role: string) => {
             @input="loadUsers"
             type="text"
             placeholder="بحث بالرمز المؤسسي..."
-            class="w-full ps-9 pe-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:ring-2 focus:ring-indigo-500/40 outline-none"
+            class="w-full ps-9 pe-4 py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 outline-none transition-all shadow-sm"
           />
-          <Search class="w-4 h-4 text-slate-400 absolute start-3 top-2.5" />
+          <Search class="w-4 h-4 text-slate-400 absolute start-3 top-3" />
         </div>
 
-        <select
-          v-model="selectedRole"
-          @change="loadUsers"
-          class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-300 outline-none"
-        >
-          <option value="">جميع الأدوار</option>
-          <option value="admin">مديرو النظام</option>
-          <option value="teacher">المعلمون</option>
-          <option value="student">الطلاب</option>
-          <option value="parent">أولياء الأمور</option>
-        </select>
+        <!-- Role Filter Dropdown -->
+        <div class="relative">
+          <select
+            v-model="selectedRole"
+            @change="loadUsers"
+            class="appearance-none ps-3.5 pe-8 py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 text-xs font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 outline-none transition-all shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/70"
+          >
+            <option value="">جميع الأدوار</option>
+            <option value="admin">مديرو النظام</option>
+            <option value="teacher">المعلمون</option>
+            <option value="student">الطلاب</option>
+            <option value="parent">أولياء الأمور</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-slate-400">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </div>
 
-        <select
-          v-model="selectedStatus"
-          @change="loadUsers"
-          class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-300 outline-none"
-        >
-          <option value="">كافة الحالات</option>
-          <option value="1">نشط</option>
-          <option value="0">معطل</option>
-        </select>
+        <!-- Status Filter Dropdown -->
+        <div class="relative">
+          <select
+            v-model="selectedStatus"
+            @change="loadUsers"
+            class="appearance-none ps-3.5 pe-8 py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 text-xs font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 outline-none transition-all shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/70"
+          >
+            <option value="">كافة الحالات</option>
+            <option value="1">حسابات نشطة</option>
+            <option value="0">حسابات معطلة</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-slate-400">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </div>
       </div>
     </div>
 

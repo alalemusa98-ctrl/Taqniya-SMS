@@ -79,29 +79,39 @@ const getActionBadge = (action: string) => {
 
       <!-- Filters -->
       <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-        <select
-          v-model="filterAction"
-          @change="loadLogs(1)"
-          class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs outline-none"
-        >
-          <option value="">كافة العمليات</option>
-          <option value="login">تسجيل دخول</option>
-          <option value="logout">تسجيل خروج</option>
-          <option value="user_activated">تفعيل حساب</option>
-          <option value="user_deactivated">تعطيل حساب</option>
-          <option value="password_change">تغيير كلمة مرور</option>
-          <option value="admin_reset_password">إعادة تعيين من الإدارة</option>
-        </select>
+        <div class="relative">
+          <select
+            v-model="filterAction"
+            @change="loadLogs(1)"
+            class="appearance-none ps-3.5 pe-8 py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 text-xs font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 outline-none transition-all shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/70"
+          >
+            <option value="">كافة العمليات</option>
+            <option value="login">تسجيل دخول</option>
+            <option value="logout">تسجيل خروج</option>
+            <option value="user_activated">تفعيل حساب</option>
+            <option value="user_deactivated">تعطيل حساب</option>
+            <option value="password_change">تغيير كلمة مرور</option>
+            <option value="admin_reset_password">إعادة تعيين من الإدارة</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-slate-400">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </div>
 
-        <select
-          v-model="filterEntity"
-          @change="loadLogs(1)"
-          class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs outline-none"
-        >
-          <option value="">كافة الكيانات</option>
-          <option value="User">المستخدمون (User)</option>
-          <option value="PersonalAccessToken">الجلسات (Token)</option>
-        </select>
+        <div class="relative">
+          <select
+            v-model="filterEntity"
+            @change="loadLogs(1)"
+            class="appearance-none ps-3.5 pe-8 py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 text-xs font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 outline-none transition-all shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/70"
+          >
+            <option value="">كافة الكيانات</option>
+            <option value="User">المستخدمون (User)</option>
+            <option value="PersonalAccessToken">الجلسات (Token)</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-slate-400">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+        </div>
       </div>
     </div>
 

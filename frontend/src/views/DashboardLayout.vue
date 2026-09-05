@@ -2,6 +2,7 @@
 import { RouterLink } from 'vue-router';
 import { useAuthStore } from '../stores/auth.store';
 import HeaderUserDropdown from '../components/layout/HeaderUserDropdown.vue';
+import ThemeToggle from '../components/layout/ThemeToggle.vue';
 import { Users, ShieldCheck } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
@@ -48,6 +49,7 @@ const authStore = useAuthStore();
 
         <!-- User Controls -->
         <div class="flex items-center gap-3">
+          <ThemeToggle />
           <HeaderUserDropdown />
         </div>
       </div>

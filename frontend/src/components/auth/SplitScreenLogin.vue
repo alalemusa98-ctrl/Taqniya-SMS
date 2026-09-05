@@ -2,6 +2,7 @@
 import { ref, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth.store';
+import ThemeToggle from '../layout/ThemeToggle.vue';
 import { Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -67,14 +68,17 @@ const handleLogin = async () => {
     <!-- Right Panel: Form Area -->
     <div class="w-full lg:w-1/2 flex flex-col justify-between p-8 sm:p-14 md:p-20 z-10">
       <!-- Top Branding -->
-      <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-          <ShieldCheck class="w-6 h-6" />
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+            <ShieldCheck class="w-6 h-6" />
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-slate-900 dark:text-white">بوابة تقنية SMS</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">منظومة الإدارة المدرسية الموحدة</p>
+          </div>
         </div>
-        <div>
-          <h1 class="text-xl font-bold text-slate-900 dark:text-white">بوابة تقنية SMS</h1>
-          <p class="text-xs text-slate-500 dark:text-slate-400">منظومة الإدارة المدرسية الموحدة</p>
-        </div>
+        <ThemeToggle />
       </div>
 
       <!-- Center Form -->
