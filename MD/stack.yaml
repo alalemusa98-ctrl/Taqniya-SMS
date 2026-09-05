@@ -43,9 +43,9 @@ state:
   version: "2.1.x"
 
 backend:
-  name: "Express.js"
-  version: "4.19.x"
-  language: "Node.js (JavaScript / TypeScript)"
+  name: "NestJS"
+  version: "10.x"
+  language: "TypeScript"
   package_manager: "npm"
 
 database:
