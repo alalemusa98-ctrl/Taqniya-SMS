@@ -2,7 +2,7 @@
 
 > **Execution Role:** Independent Quality Gatekeeper & Phase Verification Auditor
 >
-> **Target Specification:** `PROJECT/MD/phases/<phase_name>/` & Implemented Project Codebase
+> **Target Specification:** `PROJECT/MD/phases/phase_01_auth_identity` & Implemented Project Codebase
 >
 > **Core Principle:** Independent Verification over Self-Certification.
 >
