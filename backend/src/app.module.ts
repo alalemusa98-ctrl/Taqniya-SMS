@@ -6,6 +6,7 @@ import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { AcademicModule } from './modules/academic/academic.module.js';
+import { TeachersModule } from './modules/teachers/teachers.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -24,6 +25,7 @@ import { AppService } from './app.service.js';
     AuthModule,
     UsersModule,
     AcademicModule,
+    TeachersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
