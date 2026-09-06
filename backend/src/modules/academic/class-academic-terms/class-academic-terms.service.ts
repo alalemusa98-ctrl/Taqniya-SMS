@@ -193,32 +193,48 @@ export class ClassAcademicTermsService {
       });
     }
 
-    // 3. Check uniqueness (uq_class_term)
+    // 3. Check uniqueness (uq_class_term) & handle soft-delete restoration
     const existing = await this.prisma.classAcademicTerm.findFirst({
       where: {
         class_id: BigInt(dto.class_id),
         academic_term_id: BigInt(dto.academic_term_id),
-        deleted_at: null,
       },
     });
 
-    if (existing) {
+    if (existing && !existing.deleted_at) {
       throw new ConflictException('هذه الفترة مخصصة مسبقاً لهذا الصف الدراسي (uq_class_term).');
     }
 
-    // 4. Create record
-    const created = await this.prisma.classAcademicTerm.create({
-      data: {
-        class_id: BigInt(dto.class_id),
-        academic_term_id: BigInt(dto.academic_term_id),
-        is_active: 0,
-        is_closed: 0,
-      },
-      include: {
-        class: true,
-        academic_term: true,
-      },
-    });
+    // 4. Create or Restore record
+    let created: any;
+    if (existing && existing.deleted_at) {
+      created = await this.prisma.classAcademicTerm.update({
+        where: { id: existing.id },
+        data: {
+          deleted_at: null,
+          is_active: 0,
+          is_closed: 0,
+          updated_at: new Date(),
+        },
+        include: {
+          class: true,
+          academic_term: true,
+        },
+      });
+    } else {
+      created = await this.prisma.classAcademicTerm.create({
+        data: {
+          class_id: BigInt(dto.class_id),
+          academic_term_id: BigInt(dto.academic_term_id),
+          is_active: 0,
+          is_closed: 0,
+        },
+        include: {
+          class: true,
+          academic_term: true,
+        },
+      });
+    }
 
     const serialized = this.serializeClassTerm(created);
 

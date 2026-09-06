@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import {
   academicApi,
   type ClassAcademicTermsGroupItem,
@@ -234,10 +234,15 @@ function openDetails(row: UnifiedTermRow) {
 function openCreateDrawer(classId?: number) {
   drawerMode.value = 'create';
   activeTermToEdit.value = null;
+  const targetClassId = classId || classes.value[0]?.id || 0;
   form.value = {
-    class_id: classId || classes.value[0]?.id || 0,
-    academic_term_id: terms.value[0]?.id || 0,
+    class_id: targetClassId,
+    academic_term_id: 0,
   };
+  // Pre-select first available unassigned term
+  const assigned = rawGroups.value.find((g) => g.class_id === targetClassId)?.terms.map((t) => t.academic_term_id) || [];
+  const firstAvailable = terms.value.find((t) => !assigned.includes(t.id));
+  selectedTermIds.value = firstAvailable ? [firstAvailable.id] : [];
   showDrawer.value = true;
 }
 
@@ -248,7 +253,64 @@ function openEditFromDetails(row: UnifiedTermRow) {
     class_id: row.class_id,
     academic_term_id: row.term_id,
   };
+  selectedTermIds.value = [row.term_id];
+  showDrawer.value = true;
 }
+
+// Checkbox Multi-Term Selection State (Taqniya Checks Matrix)
+const selectedTermIds = ref<number[]>([]);
+
+// Determine terms already assigned to the chosen class
+const currentAssignedTermIds = computed<number[]>(() => {
+  if (!form.value.class_id) return [];
+  const grp = rawGroups.value.find((g) => g.class_id === form.value.class_id);
+  if (!grp) return [];
+  return grp.terms
+    .filter((t) => (drawerMode.value === 'edit' ? t.id !== activeTermToEdit.value?.id : true))
+    .map((t) => t.academic_term_id);
+});
+
+// Term options with assigned/disabled state for custom checks
+const termOptionsWithState = computed(() => {
+  return terms.value.map((t) => {
+    const isAlreadyAssigned = currentAssignedTermIds.value.includes(t.id);
+    return {
+      id: t.id,
+      name: t.name,
+      term_number: (t as any).term_number || t.id,
+      disabled: isAlreadyAssigned,
+    };
+  });
+});
+
+function toggleTerm(termId: number) {
+  if (drawerMode.value === 'edit') {
+    selectedTermIds.value = [termId];
+    form.value.academic_term_id = termId;
+    return;
+  }
+
+  if (selectedTermIds.value.includes(termId)) {
+    selectedTermIds.value = selectedTermIds.value.filter((id) => id !== termId);
+  } else {
+    selectedTermIds.value.push(termId);
+  }
+}
+
+// Reset selected terms when changing target class
+watch(
+  () => form.value.class_id,
+  (newClassId) => {
+    if (drawerMode.value === 'create' && newClassId) {
+      const assigned = rawGroups.value.find((g) => g.class_id === newClassId)?.terms.map((t) => t.academic_term_id) || [];
+      selectedTermIds.value = selectedTermIds.value.filter((id) => !assigned.includes(id));
+      if (selectedTermIds.value.length === 0) {
+        const firstAvailable = terms.value.find((t) => !assigned.includes(t.id));
+        if (firstAvailable) selectedTermIds.value = [firstAvailable.id];
+      }
+    }
+  },
+);
 
 function confirmDelete(row: UnifiedTermRow | ClassTermItem) {
   const isAct = 'is_active' in row ? row.is_active === 1 : false;
@@ -282,33 +344,58 @@ async function handleDelete() {
 }
 
 async function handleSave() {
-  if (!form.value.class_id || !form.value.academic_term_id) {
-    toast.warning('يرجى اختيار الصف الدراسي والفترة المرجعية.');
+  if (!form.value.class_id) {
+    toast.warning('يرجى اختيار الصف الدراسي المستهدف.');
     return;
   }
 
-  isSubmitting.value = true;
-  try {
-    if (drawerMode.value === 'create') {
-      const res = await academicApi.createClassAcademicTerm({
-        class_id: form.value.class_id,
-        academic_term_id: form.value.academic_term_id,
-      });
-      toast.success(res.data?.message || 'تم تخصيص الفترة للصف بنجاح.');
-    } else if (activeTermToEdit.value) {
+  if (drawerMode.value === 'create') {
+    if (selectedTermIds.value.length === 0) {
+      toast.warning('يرجى تحديد فترة دراسية واحدة على الأقل بواسطة مربعات الاختيار.');
+      return;
+    }
+
+    isSubmitting.value = true;
+    try {
+      let count = 0;
+      for (const termId of selectedTermIds.value) {
+        await academicApi.createClassAcademicTerm({
+          class_id: form.value.class_id,
+          academic_term_id: termId,
+        });
+        count++;
+      }
+      toast.success(count > 1 ? `تم تخصيص ${count} فترات دراسية للصف بنجاح.` : 'تم تخصيص الفترة للصف بنجاح.');
+      showDrawer.value = false;
+      await fetchClassTerms();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'حدث خطأ أثناء تخصيص الفترات للصف.';
+      toast.error(msg);
+    } finally {
+      isSubmitting.value = false;
+    }
+  } else if (activeTermToEdit.value) {
+    const termId = selectedTermIds.value[0] || form.value.academic_term_id;
+    if (!termId) {
+      toast.warning('يرجى اختيار الفترة الدراسية.');
+      return;
+    }
+
+    isSubmitting.value = true;
+    try {
       const res = await academicApi.updateClassAcademicTerm(activeTermToEdit.value.id, {
         class_id: form.value.class_id,
-        academic_term_id: form.value.academic_term_id,
+        academic_term_id: termId,
       });
       toast.success(res.data?.message || 'تم تحديث فترة الصف بنجاح.');
+      showDrawer.value = false;
+      await fetchClassTerms();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'حدث خطأ أثناء حفظ فترة الصف.';
+      toast.error(msg);
+    } finally {
+      isSubmitting.value = false;
     }
-    showDrawer.value = false;
-    fetchClassTerms();
-  } catch (err: any) {
-    const msg = err.response?.data?.message || 'حدث خطأ أثناء حفظ فترة الصف.';
-    toast.error(msg);
-  } finally {
-    isSubmitting.value = false;
   }
 }
 
@@ -345,13 +432,6 @@ const classFormOptions = computed(() =>
   })),
 );
 
-const termFormOptions = computed(() =>
-  terms.value.map((t) => ({
-    value: t.id,
-    label: t.name,
-    code: (t as any).code || `TRM-${t.id}`,
-  })),
-);
 
 onMounted(async () => {
   await fetchPredecessors();
@@ -768,19 +848,79 @@ onMounted(async () => {
           <p class="text-[11px] text-bx-muted">حدد الصف الذي ترغب في تخصيص الفصل الدراسي له</p>
         </div>
 
-        <!-- Academic Term Field -->
-        <div class="space-y-1.5">
-          <div class="flex items-center gap-2 text-bx-title">
-            <CalendarDays class="w-4 h-4 text-bx-primary shrink-0" />
-            <label class="text-xs font-bold">الفترة الدراسية (الفصل)</label>
+        <!-- Academic Terms Field (Checks Matrix - Taqniya Framework Specification) -->
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between text-bx-title">
+            <div class="flex items-center gap-2">
+              <CalendarDays class="w-4 h-4 text-bx-primary shrink-0" />
+              <label class="text-xs font-bold">
+                {{ drawerMode === 'create' ? 'الفترات الدراسية (مربعات الاختيار)' : 'الفترة الدراسية (الفصل)' }}
+              </label>
+            </div>
+            <span v-if="drawerMode === 'create'" class="text-[11px] font-bold text-bx-primary">
+              {{ selectedTermIds.length }} فترات محددة
+            </span>
           </div>
-          <TaqniyaSelect
-            v-model="form.academic_term_id"
-            :options="termFormOptions"
-            :full-width="true"
-            placeholder="اختر الفترة الدراسية..."
-          />
-          <p class="text-[11px] text-bx-muted">الفصل الأكاديمي المعتمد من التقويم السنوي للمدرسة</p>
+
+          <!-- Checks Matrix -->
+          <div class="space-y-2">
+            <div
+              v-for="t in termOptionsWithState"
+              :key="t.id"
+              @click="!t.disabled && toggleTerm(t.id)"
+              class="p-3.5 rounded-2xl border transition-all flex items-center justify-between select-none"
+              :class="[
+                t.disabled
+                  ? 'border-[#B4AED8]/30 dark:border-white/5 bg-slate-500/[0.04] opacity-55 cursor-not-allowed'
+                  : selectedTermIds.includes(t.id)
+                  ? 'border-bx-primary bg-purple-500/[0.06] dark:bg-purple-500/10 shadow-xs cursor-pointer'
+                  : 'border-[#B4AED8]/60 dark:border-white/10 hover:border-bx-primary/50 bg-[var(--bx-surface-solid)] cursor-pointer'
+              ]"
+            >
+              <div class="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  :checked="selectedTermIds.includes(t.id)"
+                  :disabled="t.disabled"
+                  @click.stop="!t.disabled && toggleTerm(t.id)"
+                  class="bx-custom-check shrink-0 !m-0"
+                />
+                <div>
+                  <span class="text-xs font-bold text-bx-title block leading-tight">{{ t.name }}</span>
+                  <span class="text-[10px] font-mono text-bx-muted">TERM-{{ String(t.id).padStart(2, '0') }}#</span>
+                </div>
+              </div>
+
+              <!-- Status Badge -->
+              <div>
+                <span
+                  v-if="t.disabled"
+                  class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-slate-500/20 text-bx-muted bg-slate-500/10"
+                >
+                  مخصص مسبقاً لهذا الصف
+                </span>
+                <span
+                  v-else-if="selectedTermIds.includes(t.id)"
+                  class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-purple-500/30 text-bx-primary bg-purple-500/10"
+                >
+                  محدد للتخصيص
+                </span>
+                <span
+                  v-else
+                  class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#B4AED8]/40 dark:border-white/10 text-bx-muted bg-transparent"
+                >
+                  متاح للتخصيص
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-bx-muted">
+            {{ drawerMode === 'create'
+              ? 'يمكنك تحديد فترة واحدة أو أكثر لربطها وتخصيصها دفعة واحدة للصف الدراسي'
+              : 'الفصل الأكاديمي المعتمد من التقويم السنوي للمدرسة'
+            }}
+          </p>
         </div>
 
         <!-- Tip Box -->
@@ -806,7 +946,15 @@ onMounted(async () => {
             class="px-6 py-2.5 rounded-full bg-bx-primary text-white text-xs font-bold shadow-md shadow-bx-primary/20 hover:bg-bx-primary-hover transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
           >
             <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
-            <span>{{ drawerMode === 'create' ? 'تخصيص الآن' : 'حفظ التعديل' }}</span>
+            <span>
+              {{
+                drawerMode === 'create'
+                  ? selectedTermIds.length > 1
+                    ? `تخصيص الفترات المحددة (${selectedTermIds.length})`
+                    : 'تخصيص الآن'
+                  : 'حفظ التعديل'
+              }}
+            </span>
           </button>
         </div>
       </form>

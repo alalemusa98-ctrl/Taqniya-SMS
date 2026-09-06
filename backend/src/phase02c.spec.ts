@@ -123,6 +123,36 @@ describe('Phase 02-C: Class Terms, Sections & Curriculum (TDD Verification)', ()
   });
 
   afterAll(async () => {
+    // Clean up test entities so they do not pollute the database
+    try {
+      if (testClassId) {
+        await prisma.classSubject.deleteMany({ where: { class_id: BigInt(testClassId) } });
+        await prisma.classSection.deleteMany({ where: { class_id: BigInt(testClassId) } });
+        await prisma.classAcademicTerm.deleteMany({ where: { class_id: BigInt(testClassId) } });
+        await prisma.class.deleteMany({ where: { id: BigInt(testClassId) } });
+      }
+      if (testSubjectId1 || testSubjectId2) {
+        const subIds = [testSubjectId1, testSubjectId2].filter(Boolean).map(BigInt);
+        await prisma.classSubject.deleteMany({ where: { subject_id: { in: subIds } } });
+        await prisma.subject.deleteMany({ where: { id: { in: subIds } } });
+      }
+      if (testSectionId1 || testSectionId2) {
+        const secIds = [testSectionId1, testSectionId2].filter(Boolean).map(BigInt);
+        await prisma.classSection.deleteMany({ where: { section_id: { in: secIds } } });
+        await prisma.section.deleteMany({ where: { id: { in: secIds } } });
+      }
+      if (testTermId1 || testTermId2) {
+        const termIds = [testTermId1, testTermId2].filter(Boolean).map(BigInt);
+        await prisma.classAcademicTerm.deleteMany({ where: { academic_term_id: { in: termIds } } });
+        await prisma.academicTerm.deleteMany({ where: { id: { in: termIds } } });
+      }
+      if (testStageId) {
+        await prisma.academicStage.deleteMany({ where: { id: BigInt(testStageId) } });
+      }
+    } catch (cleanupErr) {
+      console.error('Teardown cleanup error:', cleanupErr);
+    }
+
     await prisma.$disconnect();
     await moduleRef.close();
   });

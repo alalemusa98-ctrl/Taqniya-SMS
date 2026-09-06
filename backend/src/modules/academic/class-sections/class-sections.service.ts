@@ -179,30 +179,44 @@ export class ClassSectionsService {
       });
     }
 
-    // 3. Check uniqueness (uq_class_sections)
+    // 3. Check uniqueness (uq_class_sections) & handle soft-delete restoration
     const existing = await this.prisma.classSection.findFirst({
       where: {
         class_id: BigInt(dto.class_id),
         section_id: BigInt(dto.section_id),
-        deleted_at: null,
       },
     });
 
-    if (existing) {
+    if (existing && !existing.deleted_at) {
       throw new ConflictException('الشعبة مفتوحة ومسندة مسبقاً لهذا الصف (uq_class_sections).');
     }
 
-    // 4. Create record
-    const created = await this.prisma.classSection.create({
-      data: {
-        class_id: BigInt(dto.class_id),
-        section_id: BigInt(dto.section_id),
-      },
-      include: {
-        class: true,
-        section: true,
-      },
-    });
+    // 4. Create or Restore record
+    let created: any;
+    if (existing && existing.deleted_at) {
+      created = await this.prisma.classSection.update({
+        where: { id: existing.id },
+        data: {
+          deleted_at: null,
+          updated_at: new Date(),
+        },
+        include: {
+          class: true,
+          section: true,
+        },
+      });
+    } else {
+      created = await this.prisma.classSection.create({
+        data: {
+          class_id: BigInt(dto.class_id),
+          section_id: BigInt(dto.section_id),
+        },
+        include: {
+          class: true,
+          section: true,
+        },
+      });
+    }
 
     const serialized = this.serializeClassSection(created);
 
