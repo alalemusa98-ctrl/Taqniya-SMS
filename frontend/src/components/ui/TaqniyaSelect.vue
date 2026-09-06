@@ -49,7 +49,7 @@ const selectOption = (val: string | number) => {
       type="button"
       :disabled="disabled"
       @click="isOpen = !isOpen"
-      class="bx-dropdown-trigger !h-[42px] !min-h-[42px] !py-0 px-4 rounded-2xl w-full text-xs font-bold text-bx-title border border-bx-border bg-[var(--bx-surface-solid)] hover:border-bx-primary transition-all shadow-xs flex items-center justify-between gap-3 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      class="bx-dropdown-trigger !h-[42px] !min-h-[42px] !py-0 px-4 rounded-2xl w-full text-xs font-bold text-bx-title border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] hover:border-bx-primary transition-all shadow-xs flex items-center justify-between gap-3 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
     >
       <div class="flex items-center gap-2 truncate">
         <component :is="icon" v-if="icon" class="w-3.5 h-3.5 text-bx-muted shrink-0" />
@@ -71,7 +71,7 @@ const selectOption = (val: string | number) => {
     <!-- Dropdown Menu (Taqniya bx-dropdown-menu) -->
     <div
       v-if="isOpen"
-      class="bx-dropdown-menu z-50 p-1.5 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150 rounded-2xl shadow-xl border border-bx-border bg-[var(--bx-surface-solid)]"
+      class="bx-dropdown-menu z-50 p-1.5 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150 rounded-2xl shadow-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)]"
       :class="fullWidth ? 'w-full min-w-full' : '!min-w-full !w-max'"
     >
       <div

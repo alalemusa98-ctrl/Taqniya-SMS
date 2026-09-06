@@ -63,11 +63,11 @@ onUnmounted(() => {
           style="right: 0 !important; left: auto !important;"
         >
           <div
-            class="w-screen h-full bg-[var(--bx-surface-solid)] border-s-2 border-bx-border shadow-2xl flex flex-col justify-between overflow-hidden"
+            class="w-screen h-full bg-[var(--bx-surface-solid)] border-s border-[#B4AED8] dark:border-white/[0.08] shadow-2xl flex flex-col justify-between overflow-hidden"
             :class="maxWidth"
           >
             <!-- Fixed Header -->
-            <div class="px-6 py-4 border-b border-bx-border shrink-0 flex items-center justify-between">
+            <div class="px-6 py-4 border-b border-[#B4AED8] dark:border-white/[0.08] shrink-0 flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div
                   v-if="icon"
@@ -88,7 +88,7 @@ onUnmounted(() => {
               <button
                 type="button"
                 @click="emit('close')"
-                class="bx-icon-btn p-2 rounded-xl border border-bx-border hover:border-bx-primary text-bx-muted hover:text-bx-primary transition-all cursor-pointer"
+                class="p-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary transition-all cursor-pointer"
                 title="إغلاق (Esc)"
               >
                 <X class="w-4 h-4" />
@@ -103,7 +103,7 @@ onUnmounted(() => {
             <!-- Fixed Action Buttons Footer -->
             <div
               v-if="$slots.footer"
-              class="p-6 sm:p-8 pt-4 border-t border-bx-border bg-[var(--bx-surface-solid)] shrink-0 flex items-center justify-end gap-3"
+              class="p-6 sm:p-8 pt-4 border-t border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] shrink-0 flex items-center justify-end gap-3"
             >
               <slot name="footer"></slot>
             </div>

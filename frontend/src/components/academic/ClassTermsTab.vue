@@ -20,6 +20,9 @@ import {
   Loader2,
   AlertCircle,
   Eye,
+  GraduationCap,
+  CalendarDays,
+  Info,
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -33,9 +36,8 @@ const stages = ref<any[]>([]);
 const search = ref('');
 const statusPill = ref<'all' | 'active' | 'inactive' | 'closed'>('all');
 
-// Pagination state (matching screenshot: 10 items per page)
+// Pagination state
 const currentPage = ref(1);
-const itemsPerPage = ref(8);
 
 // Drawer state for Create / Edit / Details
 const showDrawer = ref(false);
@@ -109,9 +111,16 @@ export interface UnifiedTermRow {
   raw: ClassTermItem;
 }
 
-// Flat list of rows for the unified records table
-const allRows = computed<UnifiedTermRow[]>(() => {
-  const rows: UnifiedTermRow[] = [];
+export interface UnifiedClassGroup {
+  class_id: number;
+  class_name: string;
+  stage_name: string;
+  terms: UnifiedTermRow[];
+}
+
+// Grouped by Class for the unified records table
+const allGroups = computed<UnifiedClassGroup[]>(() => {
+  const result: UnifiedClassGroup[] = [];
   const letters = ['A', 'B', 'C', 'D'];
   const letterColors = [
     'border-purple-500 text-purple-400 bg-purple-500/10',
@@ -120,14 +129,13 @@ const allRows = computed<UnifiedTermRow[]>(() => {
     'border-emerald-500 text-emerald-400 bg-emerald-500/10',
   ];
 
-  let counter = 0;
   for (const grp of rawGroups.value) {
     const stageName = classStageMap.value[grp.class_id] || 'التعليم العام';
-    for (const t of grp.terms) {
-      counter++;
-      const letterIndex = (counter - 1) % letters.length;
-      const letter = letters[letterIndex];
-      const letterColor = letterColors[letterIndex];
+    const termRows: UnifiedTermRow[] = [];
+
+    grp.terms.forEach((t, index) => {
+      const letter = letters[index % letters.length];
+      const letterColor = letterColors[index % letterColors.length];
 
       // Determine status
       let statusLabel = 'معلق';
@@ -144,7 +152,7 @@ const allRows = computed<UnifiedTermRow[]>(() => {
         statusClass = 'border-amber-500/40 text-amber-500 bg-amber-500/10';
       }
 
-      rows.push({
+      termRows.push({
         id: t.id,
         code: `TQ-${String(t.id).padStart(3, '0')}#`,
         class_id: grp.class_id,
@@ -160,38 +168,59 @@ const allRows = computed<UnifiedTermRow[]>(() => {
         is_closed: t.is_closed,
         raw: t,
       });
-    }
+    });
+
+    result.push({
+      class_id: grp.class_id,
+      class_name: grp.class_name,
+      stage_name: stageName,
+      terms: termRows,
+    });
   }
-  return rows;
+
+  return result;
 });
 
-// Filtered rows based on status pill and search query
-const filteredRows = computed(() => {
-  return allRows.value.filter((row) => {
-    // Status filter pill
-    if (statusPill.value === 'active' && row.is_active !== 1) return false;
-    if (statusPill.value === 'inactive' && row.is_active !== 0) return false;
-    if (statusPill.value === 'closed' && row.is_closed !== 1) return false;
+// Filtered groups based on status pill and search query
+const filteredGroups = computed(() => {
+  return allGroups.value
+    .map((grp) => {
+      const matchingTerms = grp.terms.filter((row) => {
+        // Status filter pill
+        if (statusPill.value === 'active' && row.is_active !== 1) return false;
+        if (statusPill.value === 'inactive' && row.is_active !== 0) return false;
+        if (statusPill.value === 'closed' && row.is_closed !== 1) return false;
 
-    // Search query
-    if (search.value.trim()) {
-      const q = search.value.trim().toLowerCase();
-      const matchName = row.class_name.toLowerCase().includes(q);
-      const matchTerm = row.term_name.toLowerCase().includes(q);
-      const matchCode = row.code.toLowerCase().includes(q);
-      const matchStage = row.stage_name.toLowerCase().includes(q);
-      return matchName || matchTerm || matchCode || matchStage;
-    }
+        // Search query
+        if (search.value.trim()) {
+          const q = search.value.trim().toLowerCase();
+          const matchClass = grp.class_name.toLowerCase().includes(q);
+          const matchTerm = row.term_name.toLowerCase().includes(q);
+          const matchCode = row.code.toLowerCase().includes(q);
+          const matchStage = grp.stage_name.toLowerCase().includes(q);
+          return matchClass || matchTerm || matchCode || matchStage;
+        }
 
-    return true;
-  });
+        return true;
+      });
+
+      return {
+        ...grp,
+        terms: matchingTerms,
+      };
+    })
+    .filter((grp) => grp.terms.length > 0);
 });
 
-// Pagination computed
-const totalPages = computed(() => Math.ceil(filteredRows.value.length / itemsPerPage.value) || 1);
-const paginatedRows = computed(() => {
+// Pagination computed (by class group)
+const itemsPerPage = ref(4);
+const totalPages = computed(() => Math.ceil(filteredGroups.value.length / itemsPerPage.value) || 1);
+const paginatedGroups = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value;
-  return filteredRows.value.slice(start, start + itemsPerPage.value);
+  return filteredGroups.value.slice(start, start + itemsPerPage.value);
+});
+const totalTermsCount = computed(() => {
+  return filteredGroups.value.reduce((acc, g) => acc + g.terms.length, 0);
 });
 
 // Drawer & Actions
@@ -422,7 +451,7 @@ onMounted(async () => {
 
       <!-- Empty State -->
       <div
-        v-else-if="filteredRows.length === 0"
+        v-else-if="filteredGroups.length === 0"
         class="py-20 text-center border-t border-[#B4AED8] dark:border-white/[0.08] space-y-3"
       >
         <AlertCircle class="w-12 h-12 mx-auto text-bx-muted opacity-40" />
@@ -437,100 +466,118 @@ onMounted(async () => {
           <thead>
             <tr class="bg-[var(--bx-table-header)] border-y border-[#B4AED8] dark:border-white/[0.08] text-bx-muted">
               <th class="py-3.5 px-4 font-bold text-start">الرمز</th>
-              <th class="py-3.5 px-4 font-bold text-start">العنصر</th>
+              <th class="py-3.5 px-4 font-bold text-start">الفصل الدراسي</th>
               <th class="py-3.5 px-4 font-bold text-start">التصنيف</th>
               <th class="py-3.5 px-4 font-bold text-center">الحالة</th>
               <th class="py-3.5 px-4 font-bold text-center">إجراءات</th>
             </tr>
           </thead>
 
-          <!-- Table Body with Crisp Dividers -->
+          <!-- Table Body with Crisp Dividers & Class Group Headers -->
           <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.08]">
-            <tr
-              v-for="row in paginatedRows"
-              :key="row.id"
-              class="hover:bg-[var(--bx-row-hover)]/40 transition-colors"
-            >
-              <!-- Code (الرمز) -->
-              <td class="py-4 px-4 font-mono font-bold text-bx-muted text-xs whitespace-nowrap">
-                {{ row.code }}
-              </td>
-
-              <!-- Item with Circular Letter Badge (العنصر) -->
-              <td class="py-4 px-4 whitespace-nowrap">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="w-7 h-7 rounded-full border-2 font-black text-[11px] flex items-center justify-center shrink-0"
-                    :class="row.letterColor"
-                  >
-                    {{ row.letter }}
-                  </div>
-                  <div>
-                    <span class="font-black text-sm text-bx-title block">
-                      {{ row.class_name }}
-                    </span>
-                    <span class="text-[11px] text-bx-muted font-medium">
-                      {{ row.term_name }}
+            <template v-for="grp in paginatedGroups" :key="grp.class_id">
+              <!-- Class Group Header Row -->
+              <tr class="bg-purple-500/[0.05] dark:bg-white/[0.03]">
+                <td colspan="5" class="py-2.5 px-4">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
+                      <span class="font-black text-sm text-bx-title">{{ grp.class_name }}</span>
+                      <span class="text-[11px] font-semibold text-bx-muted px-2.5 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
+                        {{ grp.stage_name }}
+                      </span>
+                    </div>
+                    <span class="text-[11px] font-bold text-bx-muted">
+                      {{ grp.terms.length }} فصول دراسية
                     </span>
                   </div>
-                </div>
-              </td>
+                </td>
+              </tr>
 
-              <!-- Category (التصنيف) -->
-              <td class="py-4 px-4 text-xs font-semibold text-bx-muted whitespace-nowrap">
-                {{ row.stage_name }}
-              </td>
+              <!-- Term Rows for this Class -->
+              <tr
+                v-for="row in grp.terms"
+                :key="row.id"
+                class="hover:bg-[var(--bx-row-hover)]/40 transition-colors"
+              >
+                <!-- Code (الرمز) -->
+                <td class="py-3.5 px-4 font-mono font-bold text-bx-muted text-xs whitespace-nowrap">
+                  {{ row.code }}
+                </td>
 
-              <!-- Status Pill (الحالة) -->
-              <td class="py-4 px-4 text-center whitespace-nowrap">
-                <span
-                  class="inline-block px-4 py-1 rounded-full text-xs font-bold border"
-                  :class="row.statusClass"
-                >
-                  {{ row.statusLabel }}
-                </span>
-              </td>
+                <!-- Item with Circular Letter Badge (العنصر: الفصل الدراسي) -->
+                <td class="py-3.5 px-4 whitespace-nowrap">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-7 h-7 rounded-full border-2 font-black text-[11px] flex items-center justify-center shrink-0"
+                      :class="row.letterColor"
+                    >
+                      {{ row.letter }}
+                    </div>
+                    <div>
+                      <span class="font-bold text-xs text-bx-title block">
+                        {{ row.term_name }}
+                      </span>
+                    </div>
+                  </div>
+                </td>
 
-              <!-- Action: عرض Button (إجراءات) -->
-              <td class="py-4 px-4 text-center whitespace-nowrap">
-                <div class="flex items-center justify-center gap-1.5">
-                  <button
-                    @click="openDetails(row)"
-                    class="inline-flex items-center gap-1.5 px-4 py-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title hover:border-bx-primary hover:text-bx-primary transition-all cursor-pointer bg-transparent"
+                <!-- Category (المرحلة التعليمية) -->
+                <td class="py-3.5 px-4 text-xs font-semibold text-bx-muted whitespace-nowrap">
+                  {{ row.stage_name }}
+                </td>
+
+                <!-- Status Pill (الحالة) -->
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <span
+                    class="inline-block px-4 py-1 rounded-full text-xs font-bold border"
+                    :class="row.statusClass"
                   >
-                    <Eye class="w-3.5 h-3.5" />
-                    <span>عرض</span>
-                  </button>
+                    {{ row.statusLabel }}
+                  </span>
+                </td>
 
-                  <!-- Quick Action Icons -->
-                  <button
-                    v-if="row.is_active !== 1"
-                    @click="handleActivate(row.id)"
-                    title="تفعيل الفترة الحالية"
-                    class="p-1 rounded-full text-emerald-500 hover:bg-emerald-500/10 transition-all cursor-pointer"
-                  >
-                    <Zap class="w-3.5 h-3.5" />
-                  </button>
+                <!-- Action: عرض Button (إجراءات) -->
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center gap-1.5">
+                    <button
+                      @click="openDetails(row)"
+                      class="inline-flex items-center gap-1.5 px-4 py-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title hover:border-bx-primary hover:text-bx-primary transition-all cursor-pointer bg-transparent"
+                    >
+                      <Eye class="w-3.5 h-3.5" />
+                      <span>عرض</span>
+                    </button>
 
-                  <button
-                    @click="handleToggleClose(row.id)"
-                    :title="row.is_closed === 1 ? 'فتح رصد الدرجات' : 'إغلاق رصد الدرجات'"
-                    class="p-1 rounded-full text-amber-500 hover:bg-amber-500/10 transition-all cursor-pointer"
-                  >
-                    <component :is="row.is_closed === 1 ? Lock : Unlock" class="w-3.5 h-3.5" />
-                  </button>
+                    <!-- Quick Action Icons -->
+                    <button
+                      v-if="row.is_active !== 1"
+                      @click="handleActivate(row.id)"
+                      title="تفعيل الفترة الحالية"
+                      class="p-1 rounded-full text-emerald-500 hover:bg-emerald-500/10 transition-all cursor-pointer"
+                    >
+                      <Zap class="w-3.5 h-3.5" />
+                    </button>
 
-                  <button
-                    v-if="row.is_active !== 1"
-                    @click="confirmDelete(row)"
-                    title="فك الارتباط بالفترة"
-                    class="p-1 rounded-full text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-                  >
-                    <Trash2 class="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </td>
-            </tr>
+                    <button
+                      @click="handleToggleClose(row.id)"
+                      :title="row.is_closed === 1 ? 'فتح رصد الدرجات' : 'إغلاق رصد الدرجات'"
+                      class="p-1 rounded-full text-amber-500 hover:bg-amber-500/10 transition-all cursor-pointer"
+                    >
+                      <component :is="row.is_closed === 1 ? Lock : Unlock" class="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      v-if="row.is_active !== 1"
+                      @click="confirmDelete(row)"
+                      title="فك الارتباط بالفترة"
+                      class="p-1 rounded-full text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                    >
+                      <Trash2 class="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -540,8 +587,8 @@ onMounted(async () => {
         <!-- Records Info -->
         <span class="text-xs font-bold text-bx-muted order-2 sm:order-1">
           عرض {{ (currentPage - 1) * itemsPerPage + 1 }} إلى
-          {{ Math.min(currentPage * itemsPerPage, filteredRows.length) }} من
-          {{ filteredRows.length }} عناصر
+          {{ Math.min(currentPage * itemsPerPage, filteredGroups.length) }} من
+          {{ filteredGroups.length }} صفوف دراسية (مجموع {{ totalTermsCount }} فصول)
         </span>
 
         <!-- Pagination Controls -->
@@ -600,24 +647,24 @@ onMounted(async () => {
     >
       <!-- View Details Mode -->
       <div v-if="drawerMode === 'details' && activeRowDetails" class="space-y-6">
-        <div class="p-4 rounded-2xl border border-bx-border bg-[var(--bx-surface-solid)] space-y-3">
-          <div class="flex items-center justify-between border-b border-bx-border pb-3">
+        <div class="p-5 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-3 shadow-xs">
+          <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
             <span class="text-xs font-bold text-bx-muted">الرمز المرجعي</span>
             <span class="font-mono font-bold text-xs text-bx-primary">{{ activeRowDetails.code }}</span>
           </div>
-          <div class="flex items-center justify-between border-b border-bx-border pb-3">
+          <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
             <span class="text-xs font-bold text-bx-muted">الصف الدراسي</span>
             <span class="font-black text-xs text-bx-title">{{ activeRowDetails.class_name }}</span>
           </div>
-          <div class="flex items-center justify-between border-b border-bx-border pb-3">
+          <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
             <span class="text-xs font-bold text-bx-muted">المرحلة التعليمية</span>
             <span class="font-semibold text-xs text-bx-title">{{ activeRowDetails.stage_name }}</span>
           </div>
-          <div class="flex items-center justify-between border-b border-bx-border pb-3">
+          <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
             <span class="text-xs font-bold text-bx-muted">الفترة الرسمية</span>
             <span class="font-black text-xs text-bx-title">{{ activeRowDetails.term_name }}</span>
           </div>
-          <div class="flex items-center justify-between border-b border-bx-border pb-3">
+          <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
             <span class="text-xs font-bold text-bx-muted">حالة التفعيل</span>
             <span
               class="px-3 py-0.5 rounded-full text-[11px] font-bold border"
@@ -638,11 +685,11 @@ onMounted(async () => {
         </div>
 
         <!-- Management Actions -->
-        <div class="space-y-2 pt-2">
+        <div class="space-y-2.5 pt-2">
           <button
             v-if="activeRowDetails.is_active !== 1"
             @click="handleActivate(activeRowDetails.id)"
-            class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all cursor-pointer"
+            class="w-full py-2.5 px-4 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all cursor-pointer shadow-sm"
           >
             <Zap class="w-4 h-4" />
             <span>تفعيل هذه الفترة للصف</span>
@@ -650,7 +697,7 @@ onMounted(async () => {
 
           <button
             @click="handleToggleClose(activeRowDetails.id)"
-            class="w-full py-2.5 px-4 rounded-xl border border-bx-border text-bx-title font-bold text-xs flex items-center justify-center gap-2 hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+            class="w-full py-2.5 px-4 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-title font-bold text-xs flex items-center justify-center gap-2 hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
           >
             <component :is="activeRowDetails.is_closed === 1 ? Unlock : Lock" class="w-4 h-4" />
             <span>{{ activeRowDetails.is_closed === 1 ? 'إعادة فتح رصد الدرجات' : 'إغلاق رصد الدرجات' }}</span>
@@ -658,7 +705,7 @@ onMounted(async () => {
 
           <button
             @click="openEditFromDetails(activeRowDetails)"
-            class="w-full py-2.5 px-4 rounded-xl border border-bx-border text-bx-title font-bold text-xs flex items-center justify-center gap-2 hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+            class="w-full py-2.5 px-4 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-title font-bold text-xs flex items-center justify-center gap-2 hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
           >
             <Edit2 class="w-4 h-4" />
             <span>تعديل ربط الفترة</span>
@@ -667,7 +714,7 @@ onMounted(async () => {
           <button
             @click="confirmDelete(activeRowDetails)"
             :disabled="activeRowDetails.is_active === 1"
-            class="w-full py-2.5 px-4 rounded-xl border border-rose-500/30 text-rose-500 font-bold text-xs flex items-center justify-center gap-2 hover:bg-rose-500/10 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            class="w-full py-2.5 px-4 rounded-full border border-rose-500/30 text-rose-500 font-bold text-xs flex items-center justify-center gap-2 hover:bg-rose-500/10 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Trash2 class="w-4 h-4" />
             <span>فك الارتباط بالصف الدراسي</span>
@@ -675,38 +722,59 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Create / Edit Mode -->
-      <form v-else @submit.prevent="handleSave" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-bx-title mb-1.5">الصف الدراسي</label>
+      <!-- Create / Edit Mode with Enhanced Layout & Full-Width Fields -->
+      <form v-else @submit.prevent="handleSave" class="space-y-5">
+        <!-- Target Class Field -->
+        <div class="space-y-1.5">
+          <div class="flex items-center gap-2 text-bx-title">
+            <GraduationCap class="w-4 h-4 text-bx-primary shrink-0" />
+            <label class="text-xs font-bold">الصف الدراسي المستهدف</label>
+          </div>
           <TaqniyaSelect
             v-model="form.class_id"
             :options="classFormOptions"
+            :full-width="true"
             placeholder="اختر الصف الدراسي..."
           />
+          <p class="text-[11px] text-bx-muted">حدد الصف الذي ترغب في تخصيص الفصل الدراسي له</p>
         </div>
 
-        <div>
-          <label class="block text-xs font-bold text-bx-title mb-1.5">الفترة المرجعية</label>
+        <!-- Academic Term Field -->
+        <div class="space-y-1.5">
+          <div class="flex items-center gap-2 text-bx-title">
+            <CalendarDays class="w-4 h-4 text-bx-primary shrink-0" />
+            <label class="text-xs font-bold">الفترة الدراسية (الفصل)</label>
+          </div>
           <TaqniyaSelect
             v-model="form.academic_term_id"
             :options="termFormOptions"
+            :full-width="true"
             placeholder="اختر الفترة الدراسية..."
           />
+          <p class="text-[11px] text-bx-muted">الفصل الأكاديمي المعتمد من التقويم السنوي للمدرسة</p>
         </div>
 
-        <div class="pt-4 flex items-center justify-end gap-2 border-t border-bx-border">
+        <!-- Tip Box -->
+        <div class="p-4 rounded-2xl bg-purple-500/5 border border-[#B4AED8]/50 dark:border-white/10 text-xs text-bx-muted leading-relaxed flex items-start gap-2.5">
+          <Info class="w-4 h-4 text-bx-primary shrink-0 mt-0.5" />
+          <p class="text-[11px] leading-relaxed">
+            سيتم إنشاء التخصيص كفترة غير نشطة افتراضياً، ويمكنك تفعيل الفصل الدراسي للصف في أي وقت من جدول السجلات.
+          </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="pt-5 flex items-center justify-end gap-3 border-t border-[#B4AED8] dark:border-white/[0.08]">
           <button
             type="button"
             @click="showDrawer = false"
-            class="px-4 py-2 rounded-xl text-xs font-bold text-bx-muted hover:text-bx-title transition-colors"
+            class="px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
           >
             إلغاء
           </button>
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="px-5 py-2 rounded-xl bg-bx-primary text-white text-xs font-bold shadow-md shadow-bx-primary/20 hover:bg-bx-primary-hover transition-all cursor-pointer flex items-center gap-2"
+            class="px-6 py-2.5 rounded-full bg-bx-primary text-white text-xs font-bold shadow-md shadow-bx-primary/20 hover:bg-bx-primary-hover transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
           >
             <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
             <span>{{ drawerMode === 'create' ? 'تخصيص الآن' : 'حفظ التعديل' }}</span>
@@ -720,7 +788,7 @@ onMounted(async () => {
       v-if="showDeleteModal"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in"
     >
-      <div class="w-full max-w-md bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl p-6 space-y-4 shadow-xl">
+      <div class="w-full max-w-md bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-6 space-y-4 shadow-xl">
         <div class="flex items-center gap-3 text-rose-500">
           <div class="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center">
             <Trash2 class="w-5 h-5" />
@@ -741,12 +809,12 @@ onMounted(async () => {
           </p>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2">
+        <div class="flex items-center justify-end gap-2.5 pt-2">
           <button
             type="button"
             @click="showDeleteModal = false"
             :disabled="isDeleting"
-            class="px-4 py-2 rounded-xl border border-bx-border text-xs font-bold text-bx-muted hover:text-bx-title"
+            class="px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all"
           >
             إلغاء التراجع
           </button>
@@ -754,7 +822,7 @@ onMounted(async () => {
             type="button"
             @click="handleDelete"
             :disabled="isDeleting"
-            class="px-5 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold shadow-md shadow-rose-600/20 hover:bg-rose-700 flex items-center gap-2 cursor-pointer"
+            class="px-6 py-2.5 rounded-full bg-rose-600 text-white text-xs font-bold shadow-md shadow-rose-600/20 hover:bg-rose-700 flex items-center gap-2 cursor-pointer transition-all"
           >
             <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
             <span>تأكيد فك الارتباط</span>
