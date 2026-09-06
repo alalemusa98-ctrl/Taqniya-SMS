@@ -230,11 +230,11 @@ function openDetails(row: UnifiedTermRow) {
   showDrawer.value = true;
 }
 
-function openCreateDrawer() {
+function openCreateDrawer(classId?: number) {
   drawerMode.value = 'create';
   activeTermToEdit.value = null;
   form.value = {
-    class_id: classes.value[0]?.id || 0,
+    class_id: classId || classes.value[0]?.id || 0,
     academic_term_id: terms.value[0]?.id || 0,
   };
   showDrawer.value = true;
@@ -487,10 +487,33 @@ onMounted(async () => {
                         {{ grp.stage_name }}
                       </span>
                     </div>
-                    <span class="text-[11px] font-bold text-bx-muted">
-                      {{ grp.terms.length }} فصول دراسية
-                    </span>
+                    <div class="flex items-center gap-2">
+                      <span class="text-[11px] font-bold text-bx-muted">
+                        {{ grp.terms.length }} فصول دراسية
+                      </span>
+                      <button
+                        @click="openCreateDrawer(grp.class_id)"
+                        class="w-8 h-8 rounded-xl border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                        title="تخصيص فترة دراسية لهذا الصف"
+                      >
+                        <Plus class="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
+                </td>
+              </tr>
+
+              <!-- Empty terms for this class -->
+              <tr v-if="grp.terms.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
+                <td colspan="5" class="py-4 px-4 text-center text-bx-muted text-xs">
+                  <span>لا توجد فترات مخصصة لهذا الصف بعد.</span>
+                  <button
+                    @click="openCreateDrawer(grp.class_id)"
+                    class="text-bx-primary font-bold hover:underline me-2 cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <Plus class="w-3 h-3" />
+                    <span>تخصيص أول فترة الآن</span>
+                  </button>
                 </td>
               </tr>
 
@@ -537,42 +560,43 @@ onMounted(async () => {
                   </span>
                 </td>
 
-                <!-- Action: عرض Button (إجراءات) -->
+                <!-- Action: عرض Button & Quick Actions (إجراءات) -->
                 <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center gap-1.5">
+                  <div class="flex items-center justify-center gap-2">
+                    <!-- View Details Button with Text + Icon -->
                     <button
                       @click="openDetails(row)"
-                      class="inline-flex items-center gap-1.5 px-4 py-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title hover:border-bx-primary hover:text-bx-primary transition-all cursor-pointer bg-transparent"
+                      class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-primary dark:text-purple-300 bg-white dark:bg-white/[0.05] hover:bg-bx-primary hover:text-white hover:border-bx-primary transition-all cursor-pointer shadow-xs"
                     >
                       <Eye class="w-3.5 h-3.5" />
                       <span>عرض</span>
                     </button>
 
-                    <!-- Quick Action Icons -->
+                    <!-- Quick Action Icons Matching Reference Squircle -->
                     <button
                       v-if="row.is_active !== 1"
                       @click="handleActivate(row.id)"
                       title="تفعيل الفترة الحالية"
-                      class="p-1 rounded-full text-emerald-500 hover:bg-emerald-500/10 transition-all cursor-pointer"
+                      class="w-8 h-8 rounded-xl border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                     >
-                      <Zap class="w-3.5 h-3.5" />
+                      <Zap class="w-4 h-4" />
                     </button>
 
                     <button
                       @click="handleToggleClose(row.id)"
                       :title="row.is_closed === 1 ? 'فتح رصد الدرجات' : 'إغلاق رصد الدرجات'"
-                      class="p-1 rounded-full text-amber-500 hover:bg-amber-500/10 transition-all cursor-pointer"
+                      class="w-8 h-8 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-600 hover:text-white hover:border-amber-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                     >
-                      <component :is="row.is_closed === 1 ? Lock : Unlock" class="w-3.5 h-3.5" />
+                      <component :is="row.is_closed === 1 ? Lock : Unlock" class="w-4 h-4" />
                     </button>
 
                     <button
                       v-if="row.is_active !== 1"
                       @click="confirmDelete(row)"
                       title="فك الارتباط بالفترة"
-                      class="p-1 rounded-full text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                      class="w-8 h-8 rounded-xl border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                     >
-                      <Trash2 class="w-3.5 h-3.5" />
+                      <Trash2 class="w-4 h-4" />
                     </button>
                   </div>
                 </td>
