@@ -1367,9 +1367,10 @@
 
         /* القوائم المنسدلة */
         .bx-dropdown-trigger {
-            height: 3.5rem;
+            min-height: 2.625rem;
+            height: 2.625rem;
             border-radius: var(--radius-m);
-            padding: 0 1.25rem;
+            padding: 0 1rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
