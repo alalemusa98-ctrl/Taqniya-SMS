@@ -5,6 +5,7 @@ import {
   type AcademicSubjectItem,
 } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
+import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
 import {
   BookOpenCheck,
   Plus,
@@ -14,6 +15,7 @@ import {
   Loader2,
   AlertCircle,
   Code,
+  Sparkles,
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -26,9 +28,9 @@ const pagination = ref({
   total: 0,
 });
 
-// Modal state
-const showModal = ref(false);
-const modalMode = ref<'create' | 'edit'>('create');
+// Drawer state
+const showDrawer = ref(false);
+const drawerMode = ref<'create' | 'edit'>('create');
 const activeSubjectToEdit = ref<AcademicSubjectItem | null>(null);
 const isSubmitting = ref(false);
 
@@ -65,24 +67,24 @@ const fetchSubjects = async () => {
   }
 };
 
-const openCreateModal = () => {
-  modalMode.value = 'create';
+const openCreateDrawer = () => {
+  drawerMode.value = 'create';
   activeSubjectToEdit.value = null;
   form.value = {
     name: '',
     code: '',
   };
-  showModal.value = true;
+  showDrawer.value = true;
 };
 
-const openEditModal = (subject: AcademicSubjectItem) => {
-  modalMode.value = 'edit';
+const openEditDrawer = (subject: AcademicSubjectItem) => {
+  drawerMode.value = 'edit';
   activeSubjectToEdit.value = subject;
   form.value = {
     name: subject.name,
     code: subject.code || '',
   };
-  showModal.value = true;
+  showDrawer.value = true;
 };
 
 const handleSubmit = async () => {
@@ -98,18 +100,18 @@ const handleSubmit = async () => {
       code: form.value.code.trim() ? form.value.code.trim().toUpperCase() : undefined,
     };
 
-    if (modalMode.value === 'create') {
+    if (drawerMode.value === 'create') {
       const res = await academicApi.createSubject(payload);
       if (res.data.success) {
         toast.success('تمت الإضافة بنجاح', `تمت إضافة المادة (${form.value.name}) إلى بنك المواد`);
-        showModal.value = false;
+        showDrawer.value = false;
         fetchSubjects();
       }
     } else if (activeSubjectToEdit.value) {
       const res = await academicApi.updateSubject(activeSubjectToEdit.value.id, payload);
       if (res.data.success) {
         toast.success('تم التحديث بنجاح', `تم تحديث بيانات المادة التعليمية بنجاح`);
-        showModal.value = false;
+        showDrawer.value = false;
         fetchSubjects();
       }
     }
@@ -131,12 +133,12 @@ const handleDelete = async () => {
   try {
     const res = await academicApi.deleteSubject(subjectToDelete.value.id);
     if (res.data.success) {
-      toast.success('تم الحذف بنجاح', `تم حذف المادة (${subjectToDelete.value.name}) من بنك المواد`);
+      toast.success('تم الحذف بنجاح', `تم حذف المادة (${subjectToDelete.value.name})`);
       showDeleteModal.value = false;
       fetchSubjects();
     }
   } catch (err: any) {
-    toast.error('تعذر الحذف', err.response?.data?.message || 'لا يمكن حذف المادة لإسنادها في مناهج ومقررات صفوف دراسية (RESTRICT).');
+    toast.error('تعذر الحذف', err.response?.data?.message || 'لا يمكن حذف المادة لوجود ارتباطات بالمقررات والامتحانات.');
   } finally {
     isDeleting.value = false;
   }
@@ -149,22 +151,26 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <!-- Action & Search Toolbar -->
+    <!-- Header & Action Toolbar -->
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[var(--bx-surface)] p-4 rounded-2xl border border-bx-border shadow-xs">
-      <div class="relative flex-1 max-w-md">
-        <Search class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-bx-muted" />
-        <input
-          v-model="search"
-          @keyup.enter="fetchSubjects"
-          type="text"
-          placeholder="بحث باسم المادة أو الكود الرمزي..."
-          class="w-full pr-10 pl-4 py-2 bg-[var(--bx-surface-solid)] border border-bx-border rounded-xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
-        />
+      <div class="flex flex-1 items-center gap-3">
+        <!-- Search Input -->
+        <div class="relative flex-1 max-w-md">
+          <Search class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-bx-muted pointer-events-none" />
+          <input
+            v-model="search"
+            @keyup.enter="fetchSubjects"
+            type="text"
+            placeholder="بحث باسم أو رمز المادة التعليمية..."
+            class="w-full pr-10 pl-4 h-[42px] bg-[var(--bx-surface-solid)] border border-bx-border rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
+          />
+        </div>
       </div>
 
+      <!-- Add Subject Button -->
       <button
-        @click="openCreateModal"
-        class="flex items-center justify-center gap-2 px-5 py-2.5 bg-bx-primary text-white text-xs font-bold rounded-xl shadow-md shadow-bx-primary/20 hover:bg-opacity-95 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+        @click="openCreateDrawer"
+        class="bx-btn bx-btn-primary h-[42px] px-5 text-xs font-bold shrink-0"
       >
         <Plus class="w-4 h-4" />
         <span>إضافة مادة تعليمية</span>
@@ -174,7 +180,7 @@ onMounted(() => {
     <!-- Loading State -->
     <div v-if="loading" class="flex flex-col items-center justify-center py-16 text-bx-muted space-y-3">
       <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
-      <span class="text-xs font-bold">جاري تحميل بنك المواد التعليمية...</span>
+      <span class="text-xs font-bold">جاري تحميل بنك المواد والمناهج...</span>
     </div>
 
     <!-- Empty State -->
@@ -182,132 +188,150 @@ onMounted(() => {
       v-else-if="subjects.length === 0"
       class="flex flex-col items-center justify-center py-16 bg-[var(--bx-surface)] border border-bx-border border-dashed rounded-3xl text-center p-6 space-y-4"
     >
-      <div class="w-14 h-14 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center">
+      <div class="w-14 h-14 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center shadow-xs">
         <BookOpenCheck class="w-7 h-7" />
       </div>
       <div>
         <h3 class="text-base font-bold text-bx-title">لا توجد مواد تعليمية مسجلة</h3>
-        <p class="text-xs text-bx-muted mt-1">أنشئ بنك المواد والمناهج المعتمدة بالمدرسة (مثل: الرياضيات، اللغة العربية، العلوم).</p>
+        <p class="text-xs text-bx-muted mt-1">ابدأ بإنشاء المواد الدراسية ورموزها المرجعية لربطها بالصفوف لاحقاً.</p>
       </div>
       <button
-        @click="openCreateModal"
-        class="flex items-center gap-2 px-4 py-2 bg-bx-primary text-white text-xs font-bold rounded-xl hover:bg-opacity-95 cursor-pointer"
+        @click="openCreateDrawer"
+        class="bx-btn bx-btn-primary h-[40px] px-5 text-xs font-bold"
       >
         <Plus class="w-4 h-4" />
-        <span>إضافة أول مادة الآن</span>
+        <span>إضافة مادة جديدة</span>
       </button>
     </div>
 
-    <!-- Subjects Grid Cards -->
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      <div
-        v-for="subject in subjects"
-        :key="subject.id"
-        class="bg-[var(--bx-surface)] border border-bx-border hover:border-bx-primary/40 rounded-2xl p-5 shadow-xs transition-all space-y-4 relative group"
-      >
-        <div class="flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black">
-              <BookOpenCheck class="w-5 h-5" />
-            </div>
-            <div>
-              <h4 class="text-sm font-black text-bx-title">{{ subject.name }}</h4>
-              <span v-if="subject.code" class="inline-flex items-center gap-1 font-mono font-bold text-[10px] text-amber-600 bg-amber-500/10 px-1.5 py-0.2 rounded mt-0.5">
-                <Code class="w-2.5 h-2.5" />
-                {{ subject.code }}
-              </span>
-              <span v-else class="text-[10px] text-bx-muted block mt-0.5">بدون كود رمزي</span>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-            <button
-              @click="openEditModal(subject)"
-              class="p-1.5 text-bx-muted hover:text-bx-primary hover:bg-bx-primary/10 rounded-lg transition-colors cursor-pointer"
-              title="تعديل"
+    <!-- Subjects Table -->
+    <div v-else class="bg-[var(--bx-surface)] border border-bx-border rounded-2xl overflow-hidden shadow-xs">
+      <div class="overflow-x-auto">
+        <table class="w-full text-right text-xs">
+          <thead>
+            <tr class="border-b border-bx-border bg-[var(--bx-surface-solid)]/70 text-bx-muted font-bold">
+              <th class="py-3.5 px-4">#</th>
+              <th class="py-3.5 px-4">اسم المادة التعليمية</th>
+              <th class="py-3.5 px-4 text-center">الرمز المختصر (Code)</th>
+              <th class="py-3.5 px-4 text-center">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bx-border font-medium text-bx-text">
+            <tr
+              v-for="(sub, idx) in subjects"
+              :key="sub.id"
+              class="hover:bg-[var(--bx-surface-solid)]/50 transition-colors"
             >
-              <Edit2 class="w-4 h-4" />
-            </button>
-            <button
-              @click="confirmDelete(subject)"
-              class="p-1.5 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-              title="حذف"
-            >
-              <Trash2 class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <div class="pt-3 border-t border-bx-border flex items-center justify-between text-[11px] text-bx-muted">
-          <span>معرف البنك: #{{ subject.id }}</span>
-          <span class="font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-md">منهج معتمد</span>
-        </div>
+              <td class="py-3.5 px-4 text-bx-muted font-mono font-bold">{{ idx + 1 }}</td>
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold">
+                    <BookOpenCheck class="w-4 h-4" />
+                  </div>
+                  <span class="font-bold text-bx-title text-sm">{{ sub.name }}</span>
+                </div>
+              </td>
+              <td class="py-3.5 px-4 text-center">
+                <span
+                  v-if="sub.code"
+                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-black bg-indigo-500/10 text-indigo-600 border border-indigo-500/20"
+                >
+                  <Code class="w-3.5 h-3.5" />
+                  {{ sub.code }}
+                </span>
+                <span v-else class="text-bx-muted text-xs">غير محدد</span>
+              </td>
+              <td class="py-3.5 px-4">
+                <div class="flex items-center justify-center gap-2">
+                  <button
+                    @click="openEditDrawer(sub)"
+                    title="تعديل المادة في القائمة الجانبية (Drawer)"
+                    class="bx-icon-btn p-2 text-bx-muted hover:text-bx-primary hover:bg-bx-primary/10 rounded-xl transition-all cursor-pointer"
+                  >
+                    <Edit2 class="w-4 h-4" />
+                  </button>
+                  <button
+                    @click="confirmDelete(sub)"
+                    title="حذف المادة"
+                    class="bx-icon-btn p-2 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer"
+                  >
+                    <Trash2 class="w-4 h-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Create/Edit Modal -->
-    <div
-      v-if="showModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+    <!-- Create/Edit Side Drawer (Taqniya Spatial Drawer) -->
+    <TaqniyaDrawer
+      :is-open="showDrawer"
+      :title="drawerMode === 'create' ? 'إضافة مادة تعليمية جديدة' : 'تعديل بيانات المادة التعليمية'"
+      :subtitle="drawerMode === 'create' ? 'تسجيل مادة جديدة في بنك المناهج والمقررات المدرسية' : `تحديث بيانات (${activeSubjectToEdit?.name})`"
+      :icon="BookOpenCheck"
+      @close="showDrawer = false"
     >
-      <div class="bg-[var(--bx-surface-solid)] w-full max-w-md rounded-3xl border border-bx-border shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-        <div class="flex items-center justify-between pb-3 border-b border-bx-border">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-bold">
-              <BookOpenCheck class="w-4 h-4" />
-            </div>
-            <h3 class="text-sm font-bold text-bx-title">
-              {{ modalMode === 'create' ? 'إضافة مادة تعليمية جديدة' : 'تعديل بيانات المادة' }}
-            </h3>
-          </div>
-          <button @click="showModal = false" class="text-bx-muted hover:text-bx-text text-lg cursor-pointer">&times;</button>
+      <form id="subjectDrawerForm" @submit.prevent="handleSubmit" class="space-y-5">
+        <!-- Subject Name -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-bx-title">
+            اسم المادة التعليمية <span class="text-rose-500">*</span>
+          </label>
+          <input
+            v-model="form.name"
+            type="text"
+            required
+            placeholder="مثال: الرياضيات ، العلوم ، التربية الإسلامية"
+            class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
+          />
         </div>
 
-        <form @submit.prevent="handleSubmit" class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-bx-text mb-1.5">اسم المادة التعليمية *</label>
-            <input
-              v-model="form.name"
-              type="text"
-              required
-              placeholder="مثال: الرياضيات العامة أو اللغة الإنجليزية"
-              class="w-full px-3.5 py-2.5 bg-[var(--bx-surface)] border border-bx-border rounded-xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
-            />
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-bx-text mb-1.5">الكود الرمزي للمادة (اختياري)</label>
+        <!-- Subject Code -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-bx-title">
+            الرمز المرجعي المختصر (Code)
+          </label>
+          <div class="relative">
+            <Code class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-bx-muted pointer-events-none" />
             <input
               v-model="form.code"
               type="text"
-              placeholder="مثال: MATH, ENG, ARAB"
-              class="w-full px-3.5 py-2.5 bg-[var(--bx-surface)] border border-bx-border rounded-xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-mono font-bold uppercase"
+              placeholder="مثال: MATH, SCI, ISLAM"
+              class="w-full h-[42px] pr-10 pl-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text uppercase placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-mono font-bold"
             />
-            <p class="text-[10px] text-bx-muted mt-1">يُستخدم للاختصار في جداول الحصص والشهادات. يمنع تكراره إن وجد.</p>
           </div>
+          <p class="text-[11px] text-bx-muted">رمز إنجليزي فريد لتسهيل استيراد الدرجات والتقارير الأكاديمية.</p>
+        </div>
 
-          <div class="flex items-center justify-end gap-2 pt-3 border-t border-bx-border">
-            <button
-              type="button"
-              @click="showModal = false"
-              class="px-4 py-2 text-xs font-bold text-bx-muted hover:text-bx-text rounded-xl transition-colors cursor-pointer"
-            >
-              إلغاء
-            </button>
-            <button
-              type="submit"
-              :disabled="isSubmitting"
-              class="flex items-center gap-2 px-5 py-2.5 bg-bx-primary text-white text-xs font-bold rounded-xl shadow-md shadow-bx-primary/20 hover:bg-opacity-95 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
-              <span>{{ modalMode === 'create' ? 'حفظ المادة' : 'تحديث' }}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="p-4 bg-indigo-500/5 border border-indigo-500/15 rounded-2xl text-[11px] text-bx-muted leading-relaxed flex items-start gap-2.5">
+          <Sparkles class="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+          <span>المواد في هذا البنك تعد أصلاً رئيسياً يتم ربطه لاحقاً بالصفوف في المرحلة (02-C) مع تحديد درجات النجاح والصغرى والعظمى.</span>
+        </div>
+      </form>
 
-    <!-- Delete Confirmation Modal -->
+      <template #footer>
+        <button
+          type="button"
+          @click="showDrawer = false"
+          class="bx-btn bx-btn-outline h-[42px] px-6 text-xs font-bold"
+        >
+          إلغاء
+        </button>
+        <button
+          type="submit"
+          form="subjectDrawerForm"
+          :disabled="isSubmitting"
+          class="bx-btn bx-btn-primary h-[42px] px-6 text-xs font-bold disabled:opacity-50"
+        >
+          <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
+          <span>{{ drawerMode === 'create' ? 'حفظ المادة' : 'تحديث البيانات' }}</span>
+        </button>
+      </template>
+    </TaqniyaDrawer>
+
+    <!-- Delete Confirmation Modal (Taqniya Dialog) -->
     <div
       v-if="showDeleteModal && subjectToDelete"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
@@ -319,26 +343,26 @@ onMounted(() => {
           </div>
           <div>
             <h3 class="text-sm font-black text-bx-title">تأكيد حذف المادة التعليمية</h3>
-            <p class="text-[11px] text-bx-muted">الحماية من الحذف المرجعي (RESTRICT)</p>
+            <p class="text-[11px] text-bx-muted">حماية العلاقات الأكاديمية (RESTRICT)</p>
           </div>
         </div>
 
         <p class="text-xs text-bx-text leading-relaxed">
-          هل تريد حذف المادة التعليمية <strong class="text-bx-title font-black">{{ subjectToDelete.name }}</strong> من بنك المواد؟
-          سيتم رفض الحذف إذا كانت مسندة في مقررات صفوف دراسية أو امتحانات.
+          هل تريد حذف مادة <strong class="text-bx-title font-black">({{ subjectToDelete.name }})</strong> من بنك المواد؟
+          سيتم رفض العملية إذا تم إسناد هذه المادة لأي صفوف أو خطط دراسية.
         </p>
 
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-bx-border">
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-bx-border">
           <button
             @click="showDeleteModal = false"
-            class="px-4 py-2 text-xs font-bold text-bx-muted hover:text-bx-text rounded-xl transition-colors cursor-pointer"
+            class="bx-btn bx-btn-outline h-[38px] px-5 text-xs font-bold"
           >
             إلغاء
           </button>
           <button
             @click="handleDelete"
             :disabled="isDeleting"
-            class="flex items-center gap-2 px-5 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-600/20 hover:bg-rose-700 transition-all cursor-pointer disabled:opacity-50"
+            class="bx-btn bx-btn-danger h-[38px] px-5 text-xs font-bold disabled:opacity-50"
           >
             <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
             <span>حذف نهائي</span>

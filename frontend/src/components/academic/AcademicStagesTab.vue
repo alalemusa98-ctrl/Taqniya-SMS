@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { academicApi, type AcademicStageItem } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
+import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
 import {
   GraduationCap,
   Plus,
@@ -10,15 +11,16 @@ import {
   Loader2,
   AlertCircle,
   ArrowDownUp,
+  Sparkles,
 } from 'lucide-vue-next';
 
 const toast = useToast();
 const loading = ref(false);
 const stages = ref<AcademicStageItem[]>([]);
 
-// Modal state
-const showModal = ref(false);
-const modalMode = ref<'create' | 'edit'>('create');
+// Drawer state
+const showDrawer = ref(false);
+const drawerMode = ref<'create' | 'edit'>('create');
 const activeStageToEdit = ref<AcademicStageItem | null>(null);
 const isSubmitting = ref(false);
 
@@ -46,24 +48,24 @@ const fetchStages = async () => {
   }
 };
 
-const openCreateModal = () => {
-  modalMode.value = 'create';
+const openCreateDrawer = () => {
+  drawerMode.value = 'create';
   activeStageToEdit.value = null;
   form.value = {
     name: '',
     order_index: stages.value.length + 1,
   };
-  showModal.value = true;
+  showDrawer.value = true;
 };
 
-const openEditModal = (stage: AcademicStageItem) => {
-  modalMode.value = 'edit';
+const openEditDrawer = (stage: AcademicStageItem) => {
+  drawerMode.value = 'edit';
   activeStageToEdit.value = stage;
   form.value = {
     name: stage.name,
     order_index: stage.order_index,
   };
-  showModal.value = true;
+  showDrawer.value = true;
 };
 
 const handleSubmit = async () => {
@@ -74,18 +76,18 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true;
   try {
-    if (modalMode.value === 'create') {
+    if (drawerMode.value === 'create') {
       const res = await academicApi.createStage(form.value);
       if (res.data.success) {
         toast.success('تمت الإضافة بنجاح', `تمت إضافة المرحلة (${form.value.name}) بنجاح`);
-        showModal.value = false;
+        showDrawer.value = false;
         fetchStages();
       }
     } else if (activeStageToEdit.value) {
       const res = await academicApi.updateStage(activeStageToEdit.value.id, form.value);
       if (res.data.success) {
         toast.success('تم التحديث بنجاح', `تم تحديث بيانات المرحلة بنجاح`);
-        showModal.value = false;
+        showDrawer.value = false;
         fetchStages();
       }
     }
@@ -126,18 +128,19 @@ onMounted(() => {
 <template>
   <div class="space-y-6">
     <!-- Header & Action Toolbar -->
-    <div class="flex items-center justify-between gap-4 bg-[var(--bx-surface)] p-4 rounded-2xl border border-bx-border shadow-xs">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[var(--bx-surface)] p-4 rounded-2xl border border-bx-border shadow-xs">
       <div>
-        <h3 class="text-xs font-bold text-bx-title">الهيكل التنظيمي للمراحل التعليمية</h3>
-        <p class="text-[11px] text-bx-muted">المراحل الأساسية (مثل: رياض الأطفال، الابتدائية، الإعدادية، الثانوية)</p>
+        <h3 class="text-sm font-bold text-bx-title">الهيكل الهرمي للمراحل التعليمية</h3>
+        <p class="text-[11px] text-bx-muted">المراحل الأساسية الحاضنة للصفوف (الروضة، الابتدائية، الإعدادية، الثانوية)</p>
       </div>
 
+      <!-- Add Stage Button -->
       <button
-        @click="openCreateModal"
-        class="flex items-center justify-center gap-2 px-5 py-2.5 bg-bx-primary text-white text-xs font-bold rounded-xl shadow-md shadow-bx-primary/20 hover:bg-opacity-95 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+        @click="openCreateDrawer"
+        class="bx-btn bx-btn-primary h-[42px] px-5 text-xs font-bold shrink-0"
       >
         <Plus class="w-4 h-4" />
-        <span>إضافة مرحلة دراسية</span>
+        <span>إضافة مرحلة تعليمية</span>
       </button>
     </div>
 
@@ -152,128 +155,147 @@ onMounted(() => {
       v-else-if="stages.length === 0"
       class="flex flex-col items-center justify-center py-16 bg-[var(--bx-surface)] border border-bx-border border-dashed rounded-3xl text-center p-6 space-y-4"
     >
-      <div class="w-14 h-14 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center">
+      <div class="w-14 h-14 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center shadow-xs">
         <GraduationCap class="w-7 h-7" />
       </div>
       <div>
-        <h3 class="text-base font-bold text-bx-title">لا توجد مراحل دراسية مسجلة</h3>
-        <p class="text-xs text-bx-muted mt-1">المراحل التعليمية هي الركيزة الأساسية لتعريف الصفوف والمستويات الدراسية.</p>
+        <h3 class="text-base font-bold text-bx-title">لا توجد مراحل تعليمية مسجلة</h3>
+        <p class="text-xs text-bx-muted mt-1">ابدأ بإنشاء أول مرحلة تعليمية (مثال: المرحلة الابتدائية).</p>
       </div>
       <button
-        @click="openCreateModal"
-        class="flex items-center gap-2 px-4 py-2 bg-bx-primary text-white text-xs font-bold rounded-xl hover:bg-opacity-95 cursor-pointer"
+        @click="openCreateDrawer"
+        class="bx-btn bx-btn-primary h-[40px] px-5 text-xs font-bold"
       >
         <Plus class="w-4 h-4" />
-        <span>إضافة مرحلة جديدة</span>
+        <span>إضافة مرحلة الآن</span>
       </button>
     </div>
 
-    <!-- Stages List -->
-    <div v-else class="space-y-3">
-      <div
-        v-for="stage in stages"
-        :key="stage.id"
-        class="flex items-center justify-between p-4 bg-[var(--bx-surface)] border border-bx-border hover:border-bx-primary/40 rounded-2xl shadow-xs transition-all"
-      >
-        <div class="flex items-center gap-4">
-          <!-- Order Badge -->
-          <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-mono font-black text-sm">
-            #{{ stage.order_index }}
-          </div>
-
-          <div>
-            <h4 class="text-sm font-black text-bx-title">{{ stage.name }}</h4>
-            <span class="text-[11px] text-bx-muted flex items-center gap-1.5 mt-0.5">
-              <ArrowDownUp class="w-3 h-3 text-bx-muted" />
-              الترتيب الهرمي: المستوى {{ stage.order_index }}
-            </span>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-1.5">
-          <button
-            @click="openEditModal(stage)"
-            class="p-2 text-bx-muted hover:text-bx-primary hover:bg-bx-primary/10 rounded-xl transition-colors cursor-pointer"
-            title="تعديل"
-          >
-            <Edit2 class="w-4 h-4" />
-          </button>
-          <button
-            @click="confirmDelete(stage)"
-            class="p-2 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors cursor-pointer"
-            title="حذف"
-          >
-            <Trash2 class="w-4 h-4" />
-          </button>
-        </div>
+    <!-- Stages Table -->
+    <div v-else class="bg-[var(--bx-surface)] border border-bx-border rounded-2xl overflow-hidden shadow-xs">
+      <div class="overflow-x-auto">
+        <table class="w-full text-right text-xs">
+          <thead>
+            <tr class="border-b border-bx-border bg-[var(--bx-surface-solid)]/70 text-bx-muted font-bold">
+              <th class="py-3.5 px-4">#</th>
+              <th class="py-3.5 px-4">اسم المرحلة التعليمية</th>
+              <th class="py-3.5 px-4 text-center">الترتيب الهرمي</th>
+              <th class="py-3.5 px-4 text-center">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bx-border font-medium text-bx-text">
+            <tr
+              v-for="(stage, idx) in stages"
+              :key="stage.id"
+              class="hover:bg-[var(--bx-surface-solid)]/50 transition-colors"
+            >
+              <td class="py-3.5 px-4 text-bx-muted font-mono font-bold">{{ idx + 1 }}</td>
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
+                    <GraduationCap class="w-4 h-4" />
+                  </div>
+                  <span class="font-bold text-bx-title text-sm">{{ stage.name }}</span>
+                </div>
+              </td>
+              <td class="py-3.5 px-4 text-center">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20">
+                  <ArrowDownUp class="w-3.5 h-3.5" />
+                  الترتيب: {{ stage.order_index }}
+                </span>
+              </td>
+              <td class="py-3.5 px-4">
+                <div class="flex items-center justify-center gap-2">
+                  <button
+                    @click="openEditDrawer(stage)"
+                    title="تعديل المرحلة في القائمة الجانبية (Drawer)"
+                    class="bx-icon-btn p-2 text-bx-muted hover:text-bx-primary hover:bg-bx-primary/10 rounded-xl transition-all cursor-pointer"
+                  >
+                    <Edit2 class="w-4 h-4" />
+                  </button>
+                  <button
+                    @click="confirmDelete(stage)"
+                    title="حذف المرحلة"
+                    class="bx-icon-btn p-2 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer"
+                  >
+                    <Trash2 class="w-4 h-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Create/Edit Modal -->
-    <div
-      v-if="showModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+    <!-- Create/Edit Side Drawer (Taqniya Spatial Drawer) -->
+    <TaqniyaDrawer
+      :is-open="showDrawer"
+      :title="drawerMode === 'create' ? 'إضافة مرحلة تعليمية جديدة' : 'تعديل بيانات المرحلة التعليمية'"
+      :subtitle="drawerMode === 'create' ? 'تسجيل مرحلة دراسية في التسلسل الهرمي للمدرسة' : `تحديث بيانات (${activeStageToEdit?.name})`"
+      :icon="GraduationCap"
+      @close="showDrawer = false"
     >
-      <div class="bg-[var(--bx-surface-solid)] w-full max-w-md rounded-3xl border border-bx-border shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-        <div class="flex items-center justify-between pb-3 border-b border-bx-border">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-bold">
-              <GraduationCap class="w-4 h-4" />
-            </div>
-            <h3 class="text-sm font-bold text-bx-title">
-              {{ modalMode === 'create' ? 'إضافة مرحلة دراسية جديدة' : 'تعديل المرحلة الدراسية' }}
-            </h3>
-          </div>
-          <button @click="showModal = false" class="text-bx-muted hover:text-bx-text text-lg cursor-pointer">&times;</button>
+      <form id="stageDrawerForm" @submit.prevent="handleSubmit" class="space-y-5">
+        <!-- Stage Name -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-bx-title">
+            اسم المرحلة التعليمية <span class="text-rose-500">*</span>
+          </label>
+          <input
+            v-model="form.name"
+            type="text"
+            required
+            placeholder="مثال: المرحلة الابتدائية"
+            class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
+          />
         </div>
 
-        <form @submit.prevent="handleSubmit" class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-bx-text mb-1.5">اسم المرحلة الدراسية *</label>
-            <input
-              v-model="form.name"
-              type="text"
-              required
-              placeholder="مثال: المرحلة الابتدائية"
-              class="w-full px-3.5 py-2.5 bg-[var(--bx-surface)] border border-bx-border rounded-xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
-            />
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-bx-text mb-1.5">الترتيب الهرمي (Order Index) *</label>
+        <!-- Order Index -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-bx-title">
+            ترتيب الظهور الهرمي (Order Index) <span class="text-rose-500">*</span>
+          </label>
+          <div class="relative">
+            <ArrowDownUp class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-bx-muted pointer-events-none" />
             <input
               v-model.number="form.order_index"
               type="number"
               min="1"
-              max="99"
               required
-              class="w-full px-3.5 py-2.5 bg-[var(--bx-surface)] border border-bx-border rounded-xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-mono font-bold"
+              class="w-full h-[42px] pr-10 pl-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-mono font-bold"
             />
-            <p class="text-[10px] text-bx-muted mt-1">يحدد الترتيب التصاعدي للمراحل في القوائم وسجلات الانتقال والترقية.</p>
           </div>
+          <p class="text-[11px] text-bx-muted">يحدد ترتيب ظهور المرحلة وتدرجها التعليمي في التقارير والقوائم.</p>
+        </div>
 
-          <div class="flex items-center justify-end gap-2 pt-3 border-t border-bx-border">
-            <button
-              type="button"
-              @click="showModal = false"
-              class="px-4 py-2 text-xs font-bold text-bx-muted hover:text-bx-text rounded-xl transition-colors cursor-pointer"
-            >
-              إلغاء
-            </button>
-            <button
-              type="submit"
-              :disabled="isSubmitting"
-              class="flex items-center gap-2 px-5 py-2.5 bg-bx-primary text-white text-xs font-bold rounded-xl shadow-md shadow-bx-primary/20 hover:bg-opacity-95 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
-              <span>{{ modalMode === 'create' ? 'حفظ المرحلة' : 'تحديث' }}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="p-4 bg-purple-500/5 border border-purple-500/15 rounded-2xl text-[11px] text-bx-muted leading-relaxed flex items-start gap-2.5">
+          <Sparkles class="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+          <span>المراحل التعليمية هي الحاضنة العليا التي تحتضن الصفوف الدراسية والمناهج، وتمنح الهيكل التعليمي تسلسلاً نظامياً دقيقاً.</span>
+        </div>
+      </form>
 
-    <!-- Delete Confirmation Modal -->
+      <template #footer>
+        <button
+          type="button"
+          @click="showDrawer = false"
+          class="bx-btn bx-btn-outline h-[42px] px-6 text-xs font-bold"
+        >
+          إلغاء
+        </button>
+        <button
+          type="submit"
+          form="stageDrawerForm"
+          :disabled="isSubmitting"
+          class="bx-btn bx-btn-primary h-[42px] px-6 text-xs font-bold disabled:opacity-50"
+        >
+          <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
+          <span>{{ drawerMode === 'create' ? 'حفظ المرحلة' : 'تحديث البيانات' }}</span>
+        </button>
+      </template>
+    </TaqniyaDrawer>
+
+    <!-- Delete Confirmation Modal (Taqniya Dialog) -->
     <div
       v-if="showDeleteModal && stageToDelete"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
@@ -285,26 +307,26 @@ onMounted(() => {
           </div>
           <div>
             <h3 class="text-sm font-black text-bx-title">تأكيد حذف المرحلة التعليمية</h3>
-            <p class="text-[11px] text-bx-muted">حماية العلاقات الصفية (RESTRICT)</p>
+            <p class="text-[11px] text-bx-muted">حماية العلاقات الهرمية (RESTRICT)</p>
           </div>
         </div>
 
         <p class="text-xs text-bx-text leading-relaxed">
           هل تريد حذف المرحلة <strong class="text-bx-title font-black">{{ stageToDelete.name }}</strong>؟
-          سيتم رفض الحذف إذا كانت تحتوي على صفوف دراسية تابعة لها.
+          سيتم رفض الحذف فوراً في حال وجود صفوف دراسية مسجلة تحت هذه المرحلة.
         </p>
 
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-bx-border">
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-bx-border">
           <button
             @click="showDeleteModal = false"
-            class="px-4 py-2 text-xs font-bold text-bx-muted hover:text-bx-text rounded-xl transition-colors cursor-pointer"
+            class="bx-btn bx-btn-outline h-[38px] px-5 text-xs font-bold"
           >
             إلغاء
           </button>
           <button
             @click="handleDelete"
             :disabled="isDeleting"
-            class="flex items-center gap-2 px-5 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-600/20 hover:bg-rose-700 transition-all cursor-pointer disabled:opacity-50"
+            class="bx-btn bx-btn-danger h-[38px] px-5 text-xs font-bold disabled:opacity-50"
           >
             <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
             <span>حذف نهائي</span>
