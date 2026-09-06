@@ -17,7 +17,6 @@ import {
   Loader2,
   AlertCircle,
   GraduationCap,
-  Sparkles,
   Hash,
 } from 'lucide-vue-next';
 
@@ -99,6 +98,11 @@ const fetchClasses = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const changePage = (newPage: number) => {
+  pagination.value.page = newPage;
+  fetchClasses();
 };
 
 const openCreateDrawer = () => {
@@ -324,14 +328,29 @@ onMounted(async () => {
         </table>
       </div>
 
-      <!-- Table Bottom Stats Bar -->
-      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex items-center justify-between text-xs text-bx-muted font-bold">
+      <!-- Table Bottom Stats & Pagination Bar -->
+      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-bx-muted font-bold">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-bx-primary"></span>
-          <span>إجمالي الصفوف المعروضة: <strong class="text-bx-title font-black">{{ classes.length }}</strong></span>
+          <span>إجمالي الصفوف: <strong class="text-bx-title font-black">{{ pagination.total || classes.length }}</strong></span>
         </div>
-        <div class="text-[11px] text-bx-muted font-mono">
-          Phase 02-B • Academic Classes
+
+        <div v-if="pagination.total > pagination.per_page" class="flex items-center gap-2">
+          <button
+            :disabled="pagination.page <= 1"
+            @click="changePage(pagination.page - 1)"
+            class="px-2.5 py-1 rounded-lg border border-bx-border bg-[var(--bx-surface-solid)] hover:bg-[var(--bx-row-hover)] text-bx-title disabled:opacity-40 cursor-pointer"
+          >
+            السابق
+          </button>
+          <span class="text-[11px] px-1">صفحة {{ pagination.page }} من {{ Math.ceil(pagination.total / pagination.per_page) || 1 }}</span>
+          <button
+            :disabled="pagination.page >= Math.ceil(pagination.total / pagination.per_page)"
+            @click="changePage(pagination.page + 1)"
+            class="px-2.5 py-1 rounded-lg border border-bx-border bg-[var(--bx-surface-solid)] hover:bg-[var(--bx-row-hover)] text-bx-title disabled:opacity-40 cursor-pointer"
+          >
+            التالي
+          </button>
         </div>
       </div>
     </div>
@@ -390,10 +409,6 @@ onMounted(async () => {
               placeholder="1 - 12"
               class="w-full h-[42px] pr-10 pl-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-mono font-bold"
             />
-          </div>
-          <div class="p-3 bg-bx-primary/5 border border-bx-primary/15 rounded-2xl text-[11px] text-bx-muted leading-relaxed flex items-start gap-2 mt-2">
-            <Sparkles class="w-4 h-4 text-bx-primary shrink-0 mt-0.5" />
-            <span>الرقم من 1 إلى 12 يُعتمد آلياً لترقية وترحيل الطلاب بين الصفوف ويمنع تكراره لنفس المرحلة التعليمية.</span>
           </div>
         </div>
       </form>

@@ -11,7 +11,6 @@ import {
   Loader2,
   AlertCircle,
   ArrowDownUp,
-  Sparkles,
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -245,8 +244,8 @@ onMounted(() => {
           <span class="w-2 h-2 rounded-full bg-purple-600"></span>
           <span>إجمالي المراحل المعتمدة: <strong class="text-bx-title font-black">{{ stages.length }}</strong></span>
         </div>
-        <div class="text-[11px] text-bx-muted font-mono">
-          Phase 02-A • Academic Stages
+        <div class="text-[11px] text-bx-muted">
+          المراحل التعليمية الرسمية
         </div>
       </div>
     </div>
@@ -290,11 +289,6 @@ onMounted(() => {
             />
           </div>
           <p class="text-[11px] text-bx-muted">يحدد ترتيب ظهور المرحلة وتدرجها التعليمي في التقارير والقوائم.</p>
-        </div>
-
-        <div class="p-4 bg-purple-500/5 border border-purple-500/15 rounded-2xl text-[11px] text-bx-muted leading-relaxed flex items-start gap-2.5">
-          <Sparkles class="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
-          <span>المراحل التعليمية هي الحاضنة العليا التي تحتضن الصفوف الدراسية والمناهج، وتمنح الهيكل التعليمي تسلسلاً نظامياً دقيقاً.</span>
         </div>
       </form>
 

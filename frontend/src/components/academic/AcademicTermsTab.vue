@@ -11,7 +11,6 @@ import {
   Loader2,
   AlertCircle,
   Hash,
-  Sparkles,
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -245,8 +244,8 @@ onMounted(() => {
           <span class="w-2 h-2 rounded-full bg-blue-600"></span>
           <span>إجمالي الفصول المعتمدة: <strong class="text-bx-title font-black">{{ terms.length }}</strong></span>
         </div>
-        <div class="text-[11px] text-bx-muted font-mono">
-          Phase 02-A • Standard Terms Catalog
+        <div class="text-[11px] text-bx-muted">
+          فترات التقويم الدراسي
         </div>
       </div>
     </div>
@@ -291,11 +290,6 @@ onMounted(() => {
             />
           </div>
           <p class="text-[11px] text-bx-muted">يحدد تسلسل الفصل زمنياً خلال العام الدراسي (1 للأول، 2 للثاني...)</p>
-        </div>
-
-        <div class="p-4 bg-indigo-500/5 border border-indigo-500/15 rounded-2xl text-[11px] text-bx-muted leading-relaxed flex items-start gap-2.5">
-          <Sparkles class="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-          <span>الفصول المرجعية تُستخدم لتحديد فترات التقييم ورصد الدرجات والامتحانات النصفية والنهائية خلال السنة.</span>
         </div>
       </form>
 

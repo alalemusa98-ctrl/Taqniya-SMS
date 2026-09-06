@@ -14,7 +14,6 @@ import {
   Edit2,
   Loader2,
   AlertCircle,
-  Sparkles,
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -26,6 +25,11 @@ const pagination = ref({
   per_page: 15,
   total: 0,
 });
+
+const changePage = (newPage: number) => {
+  pagination.value.page = newPage;
+  fetchSections();
+};
 
 // Drawer state
 const showDrawer = ref(false);
@@ -260,14 +264,29 @@ onMounted(() => {
         </table>
       </div>
 
-      <!-- Table Bottom Stats Bar -->
-      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex items-center justify-between text-xs text-bx-muted font-bold">
+      <!-- Table Bottom Stats & Pagination Bar -->
+      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-bx-muted font-bold">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-teal-500"></span>
-          <span>إجمالي الشُعب المعتمدة: <strong class="text-bx-title font-black">{{ sections.length }}</strong></span>
+          <span>إجمالي الشُعب: <strong class="text-bx-title font-black">{{ pagination.total || sections.length }}</strong></span>
         </div>
-        <div class="text-[11px] text-bx-muted font-mono">
-          Phase 02-B • Standard Sections Catalog
+
+        <div v-if="pagination.total > pagination.per_page" class="flex items-center gap-2">
+          <button
+            :disabled="pagination.page <= 1"
+            @click="changePage(pagination.page - 1)"
+            class="px-2.5 py-1 rounded-lg border border-bx-border bg-[var(--bx-surface-solid)] hover:bg-[var(--bx-row-hover)] text-bx-title disabled:opacity-40 cursor-pointer"
+          >
+            السابق
+          </button>
+          <span class="text-[11px] px-1">صفحة {{ pagination.page }} من {{ Math.ceil(pagination.total / pagination.per_page) || 1 }}</span>
+          <button
+            :disabled="pagination.page >= Math.ceil(pagination.total / pagination.per_page)"
+            @click="changePage(pagination.page + 1)"
+            class="px-2.5 py-1 rounded-lg border border-bx-border bg-[var(--bx-surface-solid)] hover:bg-[var(--bx-row-hover)] text-bx-title disabled:opacity-40 cursor-pointer"
+          >
+            التالي
+          </button>
         </div>
       </div>
     </div>
@@ -290,14 +309,9 @@ onMounted(() => {
             v-model="form.name"
             type="text"
             required
-            placeholder="مثال: أ ، ب ، ج ، د أو 1 ، 2"
+            placeholder="مثال: أ ، ب ، ج ، د"
             class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold text-center text-base"
           />
-        </div>
-
-        <div class="p-4 bg-teal-500/5 border border-teal-500/15 rounded-2xl text-[11px] text-bx-muted leading-relaxed flex items-start gap-2.5">
-          <Sparkles class="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-          <span>هذا الكتالوج يمثل بنك الشعب المعتمد، وسيتم ربطه لاحقاً بالفصول الدراسية لتوزيع الطلاب في فصول فرعية.</span>
         </div>
       </form>
 

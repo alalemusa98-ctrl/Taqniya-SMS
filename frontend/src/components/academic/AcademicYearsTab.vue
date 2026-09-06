@@ -364,8 +364,8 @@ onMounted(() => {
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>إجمالي السنوات الدراسية: <strong class="text-bx-title font-black">{{ years.length }}</strong></span>
         </div>
-        <div class="text-[11px] text-bx-muted font-mono">
-          Phase 02-A • Academic Years & Calendar
+        <div class="text-[11px] text-bx-muted">
+          التقويم الأكاديمي المعتمد
         </div>
       </div>
     </div>
@@ -457,13 +457,13 @@ onMounted(() => {
           </div>
           <div>
             <h3 class="text-sm font-black text-bx-title">تأكيد تفعيل السنة الدراسية</h3>
-            <p class="text-[11px] text-bx-muted">القاعدة الحاكمة: سنة نشطة واحدة فقط</p>
+            <p class="text-[11px] text-bx-muted">اعتماد السنة الدراسية الحالية للمدرسة</p>
           </div>
         </div>
 
         <p class="text-xs text-bx-text leading-relaxed">
           هل أنت متأكد من تفعيل السنة الدراسية <strong class="text-bx-title font-black">{{ yearToActivate.name }}</strong>؟
-          سيتم تلقائياً وبشكل ذري تحويل أي سنة نشطة أخرى إلى حالة الأرشفة.
+          سيتم اعتماد هذه السنة كسنة دراسية حالية وإلغاء تفعيل أي سنة سابقة.
         </p>
 
         <div class="flex items-center justify-end gap-3 pt-4 border-t border-bx-border">

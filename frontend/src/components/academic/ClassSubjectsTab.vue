@@ -141,6 +141,11 @@ async function fetchClassSubjects() {
   }
 }
 
+function changePage(newPage: number) {
+  pagination.value.page = newPage;
+  fetchClassSubjects();
+}
+
 function onClassChange() {
   const matchingTerms = availableTerms.value.filter((t) => t.class_id === form.value.class_id);
   form.value.class_academic_term_id = matchingTerms[0]?.id || 0;
@@ -374,6 +379,34 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Pagination Bar -->
+    <div
+      v-if="groups.length > 0 && pagination.total > pagination.per_page"
+      class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-[var(--bx-surface-solid)] border border-bx-border rounded-2xl text-xs font-bold text-bx-muted"
+    >
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-bx-primary"></span>
+        <span>إجمالي الصفوف: <strong class="text-bx-title font-black">{{ pagination.total }}</strong></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          :disabled="pagination.page <= 1"
+          @click="changePage(pagination.page - 1)"
+          class="px-2.5 py-1 rounded-lg border border-bx-border bg-[var(--bx-surface-solid)] hover:bg-bx-row-hover text-bx-title disabled:opacity-40 cursor-pointer"
+        >
+          السابق
+        </button>
+        <span class="text-[11px] px-1">صفحة {{ pagination.page }} من {{ Math.ceil(pagination.total / pagination.per_page) || 1 }}</span>
+        <button
+          :disabled="pagination.page >= Math.ceil(pagination.total / pagination.per_page)"
+          @click="changePage(pagination.page + 1)"
+          class="px-2.5 py-1 rounded-lg border border-bx-border bg-[var(--bx-surface-solid)] hover:bg-bx-row-hover text-bx-title disabled:opacity-40 cursor-pointer"
+        >
+          التالي
+        </button>
       </div>
     </div>
 

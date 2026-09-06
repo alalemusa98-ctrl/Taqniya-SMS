@@ -25,6 +25,7 @@ describe('Phase 02-C: Class Terms, Sections & Curriculum (TDD Verification)', ()
   let prisma: PrismaService;
 
   const testAdminId = 1;
+  let testStageId: number;
   let testClassId: number;
   let testTermId1: number;
   let testTermId2: number;
@@ -56,6 +57,7 @@ describe('Phase 02-C: Class Terms, Sections & Curriculum (TDD Verification)', ()
       },
       testAdminId,
     );
+    testStageId = stageRes.data.id;
 
     const classRes = await classesService.create(
       {
@@ -418,5 +420,10 @@ describe('Phase 02-C: Class Terms, Sections & Curriculum (TDD Verification)', ()
       const res = await classSubjectsService.remove(createdClassSubjectId1, testAdminId);
       expect(res.success).toBe(true);
     });
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+    await moduleRef.close();
   });
 });

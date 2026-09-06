@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting Comprehensive Seeder for Taqniya-SMS...');
+  console.log('🌱 Starting Clean & Professional Seeder for Taqniya-SMS...');
 
   // ===========================================================================
   // 1. Users & Identity (Phase 01)
@@ -58,91 +58,35 @@ async function main() {
   console.log('✅ Phase 01: Core users seeded.');
 
   // ===========================================================================
-  // 2. Clean temporary/automated test artifact records
+  // 2. Full Clean-up of Academic Tables (Cascading delete of test & extra data)
   // ===========================================================================
-  console.log('🧹 Cleaning transient automated test artifacts...');
+  console.log('🧹 Purging old & transient records for a fresh clean state...');
 
-  await prisma.class.deleteMany({
-    where: {
-      OR: [
-        { name: { startsWith: 'Class-' } },
-        { name: { startsWith: 'UpdatedClass-' } },
-        { name: { startsWith: 'DuplicateLevelClass-' } },
-        { name: { startsWith: 'ClassToDel-' } },
-      ],
-    },
-  });
+  // 2.1 Delete Phase 02-C child relations
+  await prisma.classSubject.deleteMany({});
+  await prisma.classSection.deleteMany({});
+  await prisma.classAcademicTerm.deleteMany({});
 
-  await prisma.section.deleteMany({
-    where: {
-      OR: [
-        { name: { startsWith: 'شعبة-' } },
-        { name: { startsWith: 'شعبة-محدثة-' } },
-        { name: { startsWith: 'شعبة-للحذف-' } },
-      ],
-    },
-  });
+  // 2.2 Delete Phase 02-B entities
+  await prisma.class.deleteMany({});
+  await prisma.section.deleteMany({});
+  await prisma.subject.deleteMany({});
 
-  await prisma.subject.deleteMany({
-    where: {
-      OR: [
-        { name: { startsWith: 'مادة-' } },
-        { name: { startsWith: 'مادة-معدلة-' } },
-        { name: { startsWith: 'مادة-للحذف-' } },
-        { name: { startsWith: 'اسم-مختلف-' } },
-      ],
-    },
-  });
+  // 2.3 Delete Phase 02-A entities
+  await prisma.academicTerm.deleteMany({});
+  await prisma.academicStage.deleteMany({});
+  await prisma.academicYear.deleteMany({});
 
-  await prisma.academicStage.deleteMany({
-    where: {
-      OR: [
-        { name: { startsWith: 'Stage-Phase02B-' } },
-        { name: { startsWith: 'Stage-' } },
-        { name: { startsWith: 'UpdatedStage-' } },
-        { name: { startsWith: 'DelStage-' } },
-      ],
-    },
-  });
-
-  await prisma.academicTerm.deleteMany({
-    where: {
-      OR: [
-        { name: { startsWith: 'Term-' } },
-        { name: { startsWith: 'UpdatedTerm-' } },
-        { name: { startsWith: 'DelTerm-' } },
-      ],
-    },
-  });
-
-  await prisma.academicYear.deleteMany({
-    where: {
-      OR: [
-        { name: { startsWith: 'TestYear-' } },
-        { name: { startsWith: 'SecondYear-' } },
-        { name: { startsWith: 'Updated-' } },
-        { name: { startsWith: 'ToDelete-' } },
-      ],
-    },
-  });
+  console.log('✅ Database reset complete.');
 
   // ===========================================================================
-  // 3. Phase 02-A: Academic Years, Terms & Stages (Real Educational Data)
+  // 3. Phase 02-A: Academic Years, Stages & Terms
   // ===========================================================================
-  console.log('📚 Seeding Phase 02-A Real Educational Foundation...');
+  console.log('📚 Seeding Phase 02-A Academic Foundation...');
 
-  // 3.1 Academic Years
-  await prisma.academicYear.updateMany({ data: { is_active: 0 } });
-
-  const year2526 = await prisma.academicYear.upsert({
-    where: { name: '2025-2026' },
-    update: {
-      start_date: new Date('2025-09-01'),
-      end_date: new Date('2026-06-30'),
-      is_active: 1,
-      deleted_at: null,
-    },
-    create: {
+  // 3.1 Academic Years (2025-2026 Active, 2026-2027 Upcoming, 2024-2025 Previous)
+  const activeYear = await prisma.academicYear.create({
+    data: {
       name: '2025-2026',
       start_date: new Date('2025-09-01'),
       end_date: new Date('2026-06-30'),
@@ -150,112 +94,64 @@ async function main() {
     },
   });
 
-  await prisma.academicYear.upsert({
-    where: { name: '2024-2025' },
-    update: {
-      start_date: new Date('2024-09-01'),
-      end_date: new Date('2025-06-30'),
+  await prisma.academicYear.create({
+    data: {
+      name: '2026-2027',
+      start_date: new Date('2026-09-01'),
+      end_date: new Date('2027-06-30'),
       is_active: 0,
-      deleted_at: null,
     },
-    create: {
+  });
+
+  await prisma.academicYear.create({
+    data: {
       name: '2024-2025',
       start_date: new Date('2024-09-01'),
       end_date: new Date('2025-06-30'),
       is_active: 0,
     },
   });
-  console.log(`✅ Academic Years seeded. Active: ${year2526.name}`);
+  console.log(`✅ Academic Years seeded. Active Year: ${activeYear.name}`);
 
-  // 3.2 Master Terms Catalog
-  const termsData = [
-    { term_number: 1, name: 'الفصل الدراسي الأول' },
-    { term_number: 2, name: 'الفصل الدراسي الثاني' },
-    { term_number: 3, name: 'الفصل الدراسي الثالث / الصيفي' },
-  ];
-
-  for (const term of termsData) {
-    await prisma.academicTerm.upsert({
-      where: { term_number: term.term_number },
-      update: { name: term.name, deleted_at: null },
-      create: { term_number: term.term_number, name: term.name },
-    });
-  }
-  console.log('✅ Academic Terms Master Catalog seeded.');
-
-  // 3.3 Academic Stages
-  const stagesData = [
-    { name: 'مرحلة الروضة والتعليم المبكر', order_index: 1 },
+  // 3.2 Academic Stages (Exactly 4 stages as requested)
+  const stageData = [
+    { name: 'مرحلة الروضة', order_index: 1 },
     { name: 'المرحلة الابتدائية', order_index: 2 },
     { name: 'المرحلة الإعدادية', order_index: 3 },
     { name: 'المرحلة الثانوية', order_index: 4 },
   ];
 
-  const createdStages: Record<string, bigint> = {};
-  for (const stage of stagesData) {
-    const s = await prisma.academicStage.upsert({
-      where: { name: stage.name },
-      update: { order_index: stage.order_index, deleted_at: null },
-      create: { name: stage.name, order_index: stage.order_index },
+  const stagesMap: Record<string, bigint> = {};
+  for (const s of stageData) {
+    const created = await prisma.academicStage.create({
+      data: s,
     });
-    createdStages[stage.name] = s.id;
+    stagesMap[s.name] = created.id;
   }
-  console.log('✅ Academic Stages seeded.');
+  console.log('✅ Academic Stages seeded (4 stages: روضة، ابتدائي، إعدادي، ثانوي).');
+
+  // 3.3 Academic Terms (Exactly 3 terms as requested)
+  const termsData = [
+    { name: 'الفصل الدراسي الأول', term_number: 1 },
+    { name: 'الفصل الدراسي الثاني', term_number: 2 },
+    { name: 'الفصل الدراسي الثالث', term_number: 3 },
+  ];
+
+  const termsMap: Record<number, bigint> = {};
+  for (const t of termsData) {
+    const created = await prisma.academicTerm.create({
+      data: t,
+    });
+    termsMap[t.term_number] = created.id;
+  }
+  console.log('✅ Academic Terms seeded (3 terms: الأول، الثاني، الثالث).');
 
   // ===========================================================================
-  // 4. Phase 02-B: Classes, Master Sections & Master Subjects
+  // 4. Phase 02-B: Classes (10 only), Sections (4 only) & Subjects
   // ===========================================================================
   console.log('🏫 Seeding Phase 02-B Classes, Sections & Subjects...');
 
-  // 4.1 Classes Definition
-  const classesDefinitions = [
-    // Kindergarten
-    { stage_name: 'مرحلة الروضة والتعليم المبكر', name: 'الصف التمهيدي', grade_level: 1 },
-
-    // Primary
-    { stage_name: 'المرحلة الابتدائية', name: 'الصف الأول الابتدائي', grade_level: 1 },
-    { stage_name: 'المرحلة الابتدائية', name: 'الصف الثاني الابتدائي', grade_level: 2 },
-    { stage_name: 'المرحلة الابتدائية', name: 'الصف الثالث الابتدائي', grade_level: 3 },
-    { stage_name: 'المرحلة الابتدائية', name: 'الصف الرابع الابتدائي', grade_level: 4 },
-    { stage_name: 'المرحلة الابتدائية', name: 'الصف الخامس الابتدائي', grade_level: 5 },
-    { stage_name: 'المرحلة الابتدائية', name: 'الصف السادس الابتدائي', grade_level: 6 },
-
-    // Preparatory (Middle School)
-    { stage_name: 'المرحلة الإعدادية', name: 'الصف الأول الإعدادي (السابع)', grade_level: 7 },
-    { stage_name: 'المرحلة الإعدادية', name: 'الصف الثاني الإعدادي (الثامن)', grade_level: 8 },
-    { stage_name: 'المرحلة الإعدادية', name: 'الصف الثالث الإعدادي (التاسع)', grade_level: 9 },
-
-    // Secondary (High School)
-    { stage_name: 'المرحلة الثانوية', name: 'الصف الأول الثانوي (العاشر)', grade_level: 10 },
-    { stage_name: 'المرحلة الثانوية', name: 'الصف الثاني الثانوي (الحادي عشر)', grade_level: 11 },
-    { stage_name: 'المرحلة الثانوية', name: 'الصف الثالث الثانوي (الشهادة الثانوية)', grade_level: 12 },
-  ];
-
-  for (const c of classesDefinitions) {
-    const stageId = createdStages[c.stage_name];
-    if (stageId) {
-      await prisma.class.upsert({
-        where: {
-          stage_id_grade_level: {
-            stage_id: stageId,
-            grade_level: c.grade_level,
-          },
-        },
-        update: {
-          name: c.name,
-          deleted_at: null,
-        },
-        create: {
-          stage_id: stageId,
-          name: c.name,
-          grade_level: c.grade_level,
-        },
-      });
-    }
-  }
-  console.log('✅ Academic Classes seeded across all educational stages.');
-
-  // 4.2 Master Sections Catalog
+  // 4.1 Master Sections Catalog (Exactly 4 sections: أ، ب، ج، د)
   const sectionsData = [
     { name: 'شعبة (أ)' },
     { name: 'شعبة (ب)' },
@@ -263,42 +159,147 @@ async function main() {
     { name: 'شعبة (د)' },
   ];
 
+  const sectionsList: { id: bigint; name: string }[] = [];
   for (const sec of sectionsData) {
-    await prisma.section.upsert({
-      where: { name: sec.name },
-      update: { deleted_at: null },
-      create: { name: sec.name },
+    const created = await prisma.section.create({
+      data: sec,
     });
+    sectionsList.push({ id: created.id, name: created.name });
   }
-  console.log('✅ Master Sections Catalog seeded (أ، ب، ج، د).');
+  console.log('✅ Master Sections Catalog seeded (4 sections: أ، ب، ج، د).');
 
-  // 4.3 Master Subjects Catalog (Official Curriculum)
+  // 4.2 Academic Classes (Exactly 10 classes as requested: تمهيدي + 1 إلى 9)
+  const classesData = [
+    // Kindergarten
+    { stage_name: 'مرحلة الروضة', name: 'الصف التمهيدي', grade_level: 1 },
+
+    // Primary (1 to 6)
+    { stage_name: 'المرحلة الابتدائية', name: 'الصف الأول الابتدائي', grade_level: 1 },
+    { stage_name: 'المرحلة الابتدائية', name: 'الصف الثاني الابتدائي', grade_level: 2 },
+    { stage_name: 'المرحلة الابتدائية', name: 'الصف الثالث الابتدائي', grade_level: 3 },
+    { stage_name: 'المرحلة الابتدائية', name: 'الصف الرابع الابتدائي', grade_level: 4 },
+    { stage_name: 'المرحلة الابتدائية', name: 'الصف الخامس الابتدائي', grade_level: 5 },
+    { stage_name: 'المرحلة الابتدائية', name: 'الصف السادس الابتدائي', grade_level: 6 },
+
+    // Preparatory (7 to 9)
+    { stage_name: 'المرحلة الإعدادية', name: 'الصف السابع', grade_level: 7 },
+    { stage_name: 'المرحلة الإعدادية', name: 'الصف الثامن', grade_level: 8 },
+    { stage_name: 'المرحلة الإعدادية', name: 'الصف التاسع', grade_level: 9 },
+  ];
+
+  const classesList: { id: bigint; name: string }[] = [];
+  for (const c of classesData) {
+    const stageId = stagesMap[c.stage_name];
+    const created = await prisma.class.create({
+      data: {
+        stage_id: stageId,
+        name: c.name,
+        grade_level: c.grade_level,
+      },
+    });
+    classesList.push({ id: created.id, name: created.name });
+  }
+  console.log('✅ Academic Classes seeded (10 classes: التمهيدي ومن 1 إلى 9).');
+
+  // 4.3 Master Subjects Catalog (Standard School Curriculum)
   const subjectsData = [
     { name: 'القرآن الكريم والتربية الإسلامية', code: 'ISLAM' },
-    { name: 'اللغة العربية وفروعها', code: 'ARAB' },
+    { name: 'اللغة العربية', code: 'ARAB' },
     { name: 'الرياضيات', code: 'MATH' },
     { name: 'العلوم العامة', code: 'SCI' },
     { name: 'اللغة الإنجليزية', code: 'ENG' },
-    { name: 'الدراسات الاجتماعية (تاريخ وجغرافيا)', code: 'SOC' },
+    { name: 'الدراسات الاجتماعية', code: 'SOC' },
     { name: 'تقنية المعلومات والحاسوب', code: 'IT' },
-    { name: 'التربية البدنية والرياضية', code: 'PE' },
+    { name: 'التربية البدنية', code: 'PE' },
     { name: 'التربية الفنية', code: 'ART' },
-    { name: 'الإحصاء', code: 'STAT' },
-    { name: 'الفيزياء', code: 'PHYS' },
-    { name: 'الكيمياء', code: 'CHEM' },
-    { name: 'الأحياء', code: 'BIO' },
   ];
 
+  const subjectsList: { id: bigint; name: string }[] = [];
   for (const sub of subjectsData) {
-    await prisma.subject.upsert({
-      where: { name: sub.name },
-      update: { code: sub.code, deleted_at: null },
-      create: { name: sub.name, code: sub.code },
+    const created = await prisma.subject.create({
+      data: sub,
     });
+    subjectsList.push({ id: created.id, name: created.name });
   }
-  console.log('✅ Master Subjects Catalog seeded with Libyan & standard school curriculum.');
+  console.log('✅ Master Subjects Catalog seeded (9 official subjects).');
 
-  console.log('🎉 All educational seed data generated with clean, professional values!');
+  // ===========================================================================
+  // 5. Phase 02-C: Class Terms, Sections Assignment & Curriculum Subjects
+  // ===========================================================================
+  console.log('🔗 Seeding Phase 02-C Assignments & Structure...');
+
+  for (const cls of classesList) {
+    // 5.1 Assign Terms: Term 1 (Active), Term 2, Term 3
+    const term1 = await prisma.classAcademicTerm.create({
+      data: {
+        class_id: cls.id,
+        academic_term_id: termsMap[1],
+        is_active: 1,
+        is_closed: 0,
+      },
+    });
+
+    await prisma.classAcademicTerm.create({
+      data: {
+        class_id: cls.id,
+        academic_term_id: termsMap[2],
+        is_active: 0,
+        is_closed: 0,
+      },
+    });
+
+    await prisma.classAcademicTerm.create({
+      data: {
+        class_id: cls.id,
+        academic_term_id: termsMap[3],
+        is_active: 0,
+        is_closed: 0,
+      },
+    });
+
+    // 5.2 Assign Sections: Assign شعبة (أ) and شعبة (ب) to each class
+    await prisma.classSection.create({
+      data: {
+        class_id: cls.id,
+        section_id: sectionsList[0].id, // شعبة (أ)
+      },
+    });
+
+    await prisma.classSection.create({
+      data: {
+        class_id: cls.id,
+        section_id: sectionsList[1].id, // شعبة (ب)
+      },
+    });
+
+    // For some classes (like 1st and 2nd primary), also assign شعبة (ج)
+    if (cls.name.includes('الأول') || cls.name.includes('الثاني')) {
+      await prisma.classSection.create({
+        data: {
+          class_id: cls.id,
+          section_id: sectionsList[2].id, // شعبة (ج)
+        },
+      });
+    }
+
+    // 5.3 Assign Core Subjects for Term 1
+    // Primary & Prep subjects
+    const subjectsToAssign = subjectsList.slice(0, 7); // First 7 subjects (Islam, Arabic, Math, Science, English, Social, IT)
+    for (const sub of subjectsToAssign) {
+      await prisma.classSubject.create({
+        data: {
+          class_id: cls.id,
+          class_academic_term_id: term1.id,
+          subject_id: sub.id,
+          passing_score: 50.0,
+          max_score: 100.0,
+        },
+      });
+    }
+  }
+
+  console.log('✅ Phase 02-C: Class terms, sections & curriculum subjects seeded realistically.');
+  console.log('🎉 Database is now completely clean, structured, and compliant!');
 }
 
 main()

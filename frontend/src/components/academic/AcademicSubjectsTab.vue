@@ -15,7 +15,6 @@ import {
   Loader2,
   AlertCircle,
   Code,
-  Sparkles,
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -27,6 +26,11 @@ const pagination = ref({
   per_page: 15,
   total: 0,
 });
+
+const changePage = (newPage: number) => {
+  pagination.value.page = newPage;
+  fetchSubjects();
+};
 
 // Drawer state
 const showDrawer = ref(false);
@@ -276,14 +280,29 @@ onMounted(() => {
         </table>
       </div>
 
-      <!-- Table Bottom Stats Bar -->
-      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex items-center justify-between text-xs text-bx-muted font-bold">
+      <!-- Table Bottom Stats & Pagination Bar -->
+      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-bx-muted font-bold">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-bx-primary"></span>
-          <span>إجمالي المواد التعليمية: <strong class="text-bx-title font-black">{{ subjects.length }}</strong></span>
+          <span>إجمالي المواد: <strong class="text-bx-title font-black">{{ pagination.total || subjects.length }}</strong></span>
         </div>
-        <div class="text-[11px] text-bx-muted font-mono">
-          Phase 02-B • Curriculum & Subjects Bank
+
+        <div v-if="pagination.total > pagination.per_page" class="flex items-center gap-2">
+          <button
+            :disabled="pagination.page <= 1"
+            @click="changePage(pagination.page - 1)"
+            class="px-2.5 py-1 rounded-lg border border-bx-border bg-[var(--bx-surface-solid)] hover:bg-[var(--bx-row-hover)] text-bx-title disabled:opacity-40 cursor-pointer"
+          >
+            السابق
+          </button>
+          <span class="text-[11px] px-1">صفحة {{ pagination.page }} من {{ Math.ceil(pagination.total / pagination.per_page) || 1 }}</span>
+          <button
+            :disabled="pagination.page >= Math.ceil(pagination.total / pagination.per_page)"
+            @click="changePage(pagination.page + 1)"
+            class="px-2.5 py-1 rounded-lg border border-bx-border bg-[var(--bx-surface-solid)] hover:bg-[var(--bx-row-hover)] text-bx-title disabled:opacity-40 cursor-pointer"
+          >
+            التالي
+          </button>
         </div>
       </div>
     </div>
@@ -326,11 +345,6 @@ onMounted(() => {
             />
           </div>
           <p class="text-[11px] text-bx-muted">رمز إنجليزي فريد لتسهيل استيراد الدرجات والتقارير الأكاديمية.</p>
-        </div>
-
-        <div class="p-4 bg-indigo-500/5 border border-indigo-500/15 rounded-2xl text-[11px] text-bx-muted leading-relaxed flex items-start gap-2.5">
-          <Sparkles class="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-          <span>المواد في هذا البنك تعد أصلاً رئيسياً يتم ربطه لاحقاً بالصفوف في المرحلة (02-C) مع تحديد درجات النجاح والصغرى والعظمى.</span>
         </div>
       </form>
 

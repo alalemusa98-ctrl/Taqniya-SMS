@@ -7,7 +7,6 @@ import {
   Layers,
   Users2,
   BookOpenCheck,
-  Sparkles,
   CalendarDays,
   Grid,
   Award,
@@ -38,75 +37,62 @@ const activeTab = ref<TabKey>('class_terms');
 const tabs = [
   {
     key: 'class_terms' as TabKey,
-    label: 'فترات الصفوف ⚡',
-    sublabel: 'تخصيص الفصول، التفعيل الذري، وقفل الأرشفة',
+    label: 'فترات الصفوف',
     icon: CalendarDays,
   },
   {
     key: 'class_sections' as TabKey,
-    label: 'تسكين الشُعب 🧩',
-    sublabel: 'فتح وتسكين الشعب لكل صف دراسي',
+    label: 'تسكين الشُعب',
     icon: Grid,
   },
   {
     key: 'class_subjects' as TabKey,
-    label: 'مناهج ودرجات الفصول 📚',
-    sublabel: 'إسناد المقررات وضبط درجات النجاح والعظمى',
+    label: 'مناهج الصفوف',
     icon: Award,
   },
   {
     key: 'classes' as TabKey,
     label: 'الصفوف الدراسية',
-    sublabel: 'الصفوف والمستويات الرقمية بالمراحل',
     icon: Layers,
   },
   {
     key: 'sections' as TabKey,
-    label: 'بنك الشُعب العامة',
-    sublabel: 'كتالوج الشعب المعتمدة بالمدرسة',
+    label: 'بنك الشُعب',
     icon: Users2,
   },
   {
     key: 'subjects' as TabKey,
-    label: 'بنك المواد والمناهج',
-    sublabel: 'المواد العامة والأكواد الرمزية',
+    label: 'بنك المواد',
     icon: BookOpenCheck,
   },
   {
     key: 'stages' as TabKey,
     label: 'المراحل التعليمية',
-    sublabel: 'التسلسل الهرمي للمراحل الدراسية',
     icon: GraduationCap,
   },
   {
     key: 'years' as TabKey,
     label: 'السنوات الدراسية',
-    sublabel: 'التقويم، والتواريخ، وتفعيل السنة',
     icon: Calendar,
   },
   {
     key: 'terms' as TabKey,
-    label: 'كتالوج الفصول',
-    sublabel: 'الفصول والأنصاف المعتمدة للنظام',
+    label: 'الفصول الدراسية',
     icon: BookOpen,
   },
 ];
 </script>
 
 <template>
-  <div class="space-y-8 animate-in fade-in duration-300">
+  <div class="space-y-6 animate-in fade-in duration-300">
     <!-- Page Header Banner -->
-    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-bx-primary via-indigo-600 to-purple-600 p-8 text-white shadow-xl shadow-bx-primary/10">
-      <div class="relative z-10 max-w-3xl space-y-3">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-black tracking-wide border border-white/20">
-          <Sparkles class="w-3.5 h-3.5" />
-          <span>المرحلة 02: الهيكل الأكاديمي والصفوف والمناهج المدرسية</span>
-        </div>
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-bx-primary via-indigo-600 to-purple-600 p-7 text-white shadow-lg shadow-bx-primary/10">
+      <div class="relative z-10 max-w-3xl space-y-2">
         <h2 class="text-2xl sm:text-3xl font-black font-display tracking-tight">
-          إدارة البنية التعليمية والمقررات
+          الهيكل الأكاديمي والتعليمي
         </h2>
         <p class="text-xs sm:text-sm text-white/80 leading-relaxed font-medium">
-          المنظومة المركزية المتكاملة لضبط التقويم السنوي، الفصول والأنصاف، المراحل، الصفوف المدرسية، كتالوج الشُعب العامة، وبنك المواد التعليمية المعتمدة.
+          إدارة المراحل والصفوف الدراسية، الفصول والتقويم السنوي، وتوزيع الشُعب والمناهج التعليمية.
         </p>
       </div>
 
@@ -115,34 +101,21 @@ const tabs = [
       <div class="absolute right-1/3 -top-12 w-48 h-48 bg-purple-400/20 rounded-full blur-xl pointer-events-none"></div>
     </div>
 
-    <!-- Navigation Tabs Bar (Grid on Large Screens, Responsive Flow) -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 p-2 bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl shadow-xs">
+    <!-- Navigation Tabs Bar -->
+    <div class="flex flex-wrap gap-2 p-2 bg-[var(--bx-surface-solid)] border border-bx-border rounded-2xl shadow-xs">
       <button
         v-for="tab in tabs"
         :key="tab.key"
         @click="activeTab = tab.key"
-        class="flex flex-col items-start gap-2.5 p-3.5 rounded-2xl transition-all text-right cursor-pointer group"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all text-xs font-bold cursor-pointer"
         :class="
           activeTab === tab.key
-            ? 'bg-bx-primary text-white shadow-lg shadow-bx-primary/25 border border-bx-primary/40 scale-[1.01]'
-            : 'text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] border border-transparent hover:border-bx-border/80'
+            ? 'bg-bx-primary text-white shadow-sm'
+            : 'text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)]'
         "
       >
-        <div
-          class="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-          :class="activeTab === tab.key ? 'bg-white/20 text-white shadow-xs' : 'bg-bx-primary/10 text-bx-primary border border-bx-primary/15'"
-        >
-          <component :is="tab.icon" class="w-5 h-5" />
-        </div>
-        <div>
-          <div class="text-xs font-black leading-tight">{{ tab.label }}</div>
-          <div
-            class="text-[10px] mt-1 line-clamp-1 font-medium"
-            :class="activeTab === tab.key ? 'text-white/80' : 'text-bx-muted'"
-          >
-            {{ tab.sublabel }}
-          </div>
-        </div>
+        <component :is="tab.icon" class="w-4 h-4 shrink-0" />
+        <span>{{ tab.label }}</span>
       </button>
     </div>
 
