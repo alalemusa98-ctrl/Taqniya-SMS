@@ -5,6 +5,7 @@ import LoginView from '../views/LoginView.vue';
 import DashboardLayout from '../views/DashboardLayout.vue';
 import UsersManagementView from '../views/UsersManagementView.vue';
 import AuditLogsView from '../views/AuditLogsView.vue';
+import AcademicStructureView from '../views/AcademicStructureView.vue';
 
 const routes = [
   {
@@ -26,6 +27,12 @@ const routes = [
         path: 'users',
         name: 'users',
         component: UsersManagementView,
+        meta: { roles: ['admin'] },
+      },
+      {
+        path: 'academic-structure',
+        name: 'academic-structure',
+        component: AcademicStructureView,
         meta: { roles: ['admin'] },
       },
       {

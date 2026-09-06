@@ -5,6 +5,7 @@ import { PrismaModule } from './common/prisma/prisma.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
+import { AcademicModule } from './modules/academic/academic.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -22,6 +23,7 @@ import { AppService } from './app.service.js';
     AuditModule,
     AuthModule,
     UsersModule,
+    AcademicModule,
   ],
   controllers: [AppController],
   providers: [AppService],

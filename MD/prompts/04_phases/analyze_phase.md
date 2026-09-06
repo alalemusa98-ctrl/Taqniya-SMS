@@ -2,7 +2,7 @@
 
 > **Execution Role:** `Functional Phase Analyst & Scope Decomposer`
 >
-> **Target Specification:** `PROJECT/MD/phases/phase_01_auth_identity` + Global Project Specifications
+> **Target Specification:** `PROJECT/MD/phases/phase_02_academic_structure_a` + Global Project Specifications
 >
 > **Core Principle:** **Scope isolation, cross-phase consistency, and pre-implementation verification.**
 >
