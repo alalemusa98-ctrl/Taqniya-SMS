@@ -18,6 +18,7 @@ import {
   Lock,
   Unlock,
   Edit2,
+  Trash2,
   Loader2,
   AlertCircle,
 } from 'lucide-vue-next';
@@ -41,6 +42,37 @@ const showDrawer = ref(false);
 const drawerMode = ref<'create' | 'edit'>('create');
 const activeTermToEdit = ref<ClassTermItem | null>(null);
 const isSubmitting = ref(false);
+
+// Delete / Unassign Modal
+const showDeleteModal = ref(false);
+const itemToDelete = ref<{ id: number; name: string } | null>(null);
+const isDeleting = ref(false);
+
+function confirmDelete(t: ClassTermItem) {
+  if (t.is_active === 1) {
+    toast.warning('لا يمكن فك ارتباط الفترة النشطة حالياً للصف الدراسي.');
+    return;
+  }
+  itemToDelete.value = { id: t.id, name: t.term_name };
+  showDeleteModal.value = true;
+}
+
+async function handleDelete() {
+  if (!itemToDelete.value) return;
+  isDeleting.value = true;
+  try {
+    await academicApi.deleteClassAcademicTerm(itemToDelete.value.id);
+    toast.success('تم فك ارتباط الفترة بالصف الدراسي بنجاح.');
+    showDeleteModal.value = false;
+    itemToDelete.value = null;
+    await fetchClassTerms();
+  } catch (err: any) {
+    const msg = err.response?.data?.message || 'تعذر فك ارتباط الفترة لوجود مواد مسندة بها.';
+    toast.error(msg);
+  } finally {
+    isDeleting.value = false;
+  }
+}
 
 const form = ref({
   class_id: 0,
@@ -324,6 +356,16 @@ onMounted(async () => {
               >
                 <Edit2 class="w-3.5 h-3.5" />
               </button>
+
+              <!-- Delete / Unassign button (disabled if active) -->
+              <button
+                v-if="t.is_active !== 1"
+                @click="confirmDelete(t)"
+                title="فك ارتباط الفترة من الصف الدراسي"
+                class="p-1.5 rounded-lg text-bx-muted hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all cursor-pointer"
+              >
+                <Trash2 class="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </div>
@@ -393,5 +435,38 @@ onMounted(async () => {
         </div>
       </div>
     </TaqniyaDrawer>
+
+    <!-- Delete Confirmation Modal -->
+    <div
+      v-if="showDeleteModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4"
+    >
+      <div class="bg-[var(--bx-surface-solid)] border border-bx-border rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <h3 class="text-sm font-bold text-bx-title flex items-center gap-2 text-rose-600">
+          <AlertCircle class="w-4 h-4" />
+          <span>تأكيد فك ارتباط الفترة الدراسية</span>
+        </h3>
+        <p class="text-xs text-bx-muted leading-relaxed">
+          هل أنت متأكد من فك ارتباط "{{ itemToDelete?.name }}" من هذا الصف الدراسي؟
+          يُشترط عدم وجود أي مواد مسندة بها، وألا تكون هي الفترة النشطة حالياً.
+        </p>
+        <div class="flex justify-end gap-2 pt-2">
+          <button
+            @click="showDeleteModal = false"
+            class="px-4 py-2 rounded-xl text-xs font-bold border border-bx-border text-bx-muted hover:bg-bx-row-hover"
+          >
+            إلغاء
+          </button>
+          <button
+            @click="handleDelete"
+            :disabled="isDeleting"
+            class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 flex items-center gap-1.5"
+          >
+            <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
+            <span>تأكيد فك الارتباط</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

@@ -425,4 +425,61 @@ export class ClassAcademicTermsService {
       },
     };
   }
+
+  async remove(
+    id: number,
+    adminId?: number,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const existing = await this.prisma.classAcademicTerm.findFirst({
+      where: {
+        id: BigInt(id),
+        deleted_at: null,
+      },
+      include: {
+        class_subjects: {
+          where: { deleted_at: null },
+        },
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('تخصيص فترة الصف غير موجود.');
+    }
+
+    if (existing.is_active === 1) {
+      throw new ConflictException('لا يمكن فك ارتباط الفترة النشطة حالياً للصف الدراسي.');
+    }
+
+    if (existing.class_subjects && existing.class_subjects.length > 0) {
+      throw new ConflictException(
+        'لا يمكن فك ارتباط الفترة لوجود مواد مسندة بها، يرجى إزالة المواد المسندة أولاً (RESTRICT).',
+      );
+    }
+
+    const now = new Date();
+    await this.prisma.classAcademicTerm.update({
+      where: { id: BigInt(id) },
+      data: {
+        deleted_at: now,
+      },
+    });
+
+    await this.auditService.log({
+      userId: adminId ? BigInt(adminId) : null,
+      action: 'delete',
+      entityType: 'class_academic_terms',
+      entityId: BigInt(id),
+      oldValues: this.serializeClassTerm(existing),
+      newValues: { deleted_at: now },
+      ipAddress: ipAddress,
+      userAgent: userAgent,
+    });
+
+    return {
+      success: true,
+      message: 'تم فك ارتباط الفترة بالصف الدراسي بنجاح.',
+    };
+  }
 }

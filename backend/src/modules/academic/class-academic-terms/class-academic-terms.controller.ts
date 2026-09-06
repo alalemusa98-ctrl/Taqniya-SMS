@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Param,
   Body,
   Query,
@@ -70,5 +71,13 @@ export class ClassAcademicTermsController {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
     return this.termsService.close(id, adminId, ipAddress, userAgent);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    const adminId = (req as any).user?.id ? Number((req as any).user.id) : undefined;
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.termsService.remove(id, adminId, ipAddress, userAgent);
   }
 }

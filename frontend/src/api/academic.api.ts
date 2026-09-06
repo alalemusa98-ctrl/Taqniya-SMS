@@ -274,6 +274,7 @@ export const academicApi = {
   updateClassAcademicTerm: (id: number, payload: UpdateClassAcademicTermPayload) => apiClient.put(`/academic/class-academic-terms/${id}`, payload),
   activateClassAcademicTerm: (id: number) => apiClient.post(`/academic/class-academic-terms/${id}/activate`),
   closeClassAcademicTerm: (id: number) => apiClient.post(`/academic/class-academic-terms/${id}/close`),
+  deleteClassAcademicTerm: (id: number) => apiClient.delete(`/academic/class-academic-terms/${id}`),
 
   // Class Sections (02-C)
   getClassSections: (params?: any) => apiClient.get('/academic/class-sections', { params }),
