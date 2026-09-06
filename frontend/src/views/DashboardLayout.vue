@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { useAuthStore } from '../stores/auth.store';
 import HeaderUserDropdown from '../components/layout/HeaderUserDropdown.vue';
@@ -6,12 +7,54 @@ import ThemeToggle from '../components/layout/ThemeToggle.vue';
 import { Users, ShieldCheck, Layers, GraduationCap } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
+
+// Smart Header: Hide on scroll down, reveal on scroll up
+const isHeaderVisible = ref(true);
+let lastScrollY = 0;
+const scrollThreshold = 8;
+
+const handleScroll = () => {
+  const currentScrollY = window.scrollY;
+
+  // Always show header near the top of the page
+  if (currentScrollY < 60) {
+    isHeaderVisible.value = true;
+    lastScrollY = currentScrollY;
+    return;
+  }
+
+  // Scroll Down -> Hide
+  if (currentScrollY > lastScrollY + scrollThreshold) {
+    isHeaderVisible.value = false;
+  }
+  // Scroll Up -> Show
+  else if (currentScrollY < lastScrollY - scrollThreshold) {
+    isHeaderVisible.value = true;
+  }
+
+  lastScrollY = currentScrollY;
+};
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll, { passive: true });
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
+});
 </script>
 
 <template>
-  <div class="min-h-screen bg-[var(--bx-canvas)] text-bx-text flex flex-col font-sans antialiased selection:bg-bx-primary selection:text-white" dir="rtl">
-    <!-- Main Navigation Header Bar (Taqniya Framework Specification) -->
-    <header class="sticky top-0 z-40 bg-[var(--bx-surface-solid)]/90 backdrop-blur-xl border-b border-bx-border">
+  <div
+    class="min-h-screen bg-[var(--bx-canvas)] text-bx-text flex flex-col font-sans antialiased selection:bg-bx-primary selection:text-white"
+    :style="{ '--header-offset': isHeaderVisible ? '65px' : '0px' }"
+    dir="rtl"
+  >
+    <!-- Main Navigation Header Bar (Auto-hiding Smart Header) -->
+    <header
+      class="sticky top-0 z-40 bg-[var(--bx-surface-solid)]/90 backdrop-blur-xl border-b border-bx-border transition-transform duration-300 ease-in-out"
+      :class="isHeaderVisible ? 'translate-y-0' : '-translate-y-full shadow-none'"
+    >
       <div class="max-w-[1600px] mx-auto px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
         <!-- Logo & Brand -->
         <div class="flex items-center gap-8">

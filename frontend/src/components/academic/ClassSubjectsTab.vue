@@ -529,10 +529,10 @@ onMounted(async () => {
         <div
           v-for="grp in paginatedGroups"
           :key="grp.class_id"
-          class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs"
+          class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] shadow-xs"
         >
           <!-- Class Header Bar -->
-          <div class="bg-purple-500/[0.05] dark:bg-white/[0.03] py-3 px-5 border-b border-[#B4AED8] dark:border-white/[0.12] flex items-center justify-between">
+          <div class="bg-purple-500/[0.05] dark:bg-white/[0.03] py-3 px-5 border-b border-[#B4AED8] dark:border-white/[0.12] flex items-center justify-between rounded-t-2xl">
             <div class="flex items-center gap-2.5">
               <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
               <span class="font-black text-sm text-bx-title">{{ grp.class_name }}</span>
@@ -555,21 +555,21 @@ onMounted(async () => {
           </div>
 
           <!-- Table with Dynamic Columns matching THIS class's exact semesters directly above the subjects -->
-          <div class="overflow-x-auto">
+          <div class="rounded-b-2xl">
             <table class="w-full text-start border-collapse text-xs">
-              <thead>
-                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
-                  <th class="py-3 px-4 font-bold text-start w-28">الرمز</th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[180px]">المادة الدراسية</th>
+              <thead class="sticky top-[var(--header-offset,65px)] z-20 transition-[top] duration-300">
+                <tr class="bg-[var(--bx-surface-solid)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted shadow-xs">
+                  <th class="sticky top-[var(--header-offset,65px)] z-20 py-3 px-4 font-bold text-start w-28 bg-[var(--bx-surface-solid)] bg-purple-500/[0.04] transition-[top] duration-300">الرمز</th>
+                  <th class="sticky top-[var(--header-offset,65px)] z-20 py-3 px-4 font-bold text-start min-w-[180px] bg-[var(--bx-surface-solid)] bg-purple-500/[0.04] transition-[top] duration-300">المادة الدراسية</th>
                   <!-- Dynamic headers for THIS class's terms only -->
                   <th
                     v-for="t in grp.terms"
                     :key="t.id"
-                    class="py-3 px-4 font-bold text-center min-w-[150px]"
+                    class="sticky top-[var(--header-offset,65px)] z-20 py-3 px-4 font-bold text-center min-w-[150px] bg-[var(--bx-surface-solid)] bg-purple-500/[0.04] transition-[top] duration-300"
                   >
                     {{ t.term_name }}
                   </th>
-                  <th class="py-3 px-4 font-bold text-center w-36">إجراءات</th>
+                  <th class="sticky top-[var(--header-offset,65px)] z-20 py-3 px-4 font-bold text-center w-36 bg-[var(--bx-surface-solid)] bg-purple-500/[0.04] transition-[top] duration-300">إجراءات</th>
                 </tr>
               </thead>
 
