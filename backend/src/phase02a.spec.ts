@@ -172,7 +172,8 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
     let termNumber: number;
 
     it('TC-AT-01: Create an academic term in master catalog', async () => {
-      termNumber = Math.floor(Math.random() * 80) + 10;
+      const lastTerm = await prisma.academicTerm.findFirst({ orderBy: { term_number: 'desc' } });
+      termNumber = ((lastTerm?.term_number || 0) + 1) % 120 + 1;
       const termName = `Term-${Date.now()}`;
       const result = await termsService.create(
         {

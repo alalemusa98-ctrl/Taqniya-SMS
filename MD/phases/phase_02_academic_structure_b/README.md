@@ -50,10 +50,10 @@
 
 ## 🏁 4. معايير القبول والاكتمال (Definition of Done)
 
-- [ ] مطابقة أسماء الأعمدة والفهارس في `data.md` بنسبة 100% مع المرجع الأساسي [`MD/database.md`](../../database.md) (`stage_id`, `grade_level`, `uq_classes_stage_level`).
-- [ ] استيفاء حقول الـ Request والـ Response JSON الصريحة لجميع الـ 12 مساراً بكافة حالات الـ Status Codes في `routes.md`.
-- [ ] خلو كافة الملفات من أي تسريب تقني خاص بـ Frameworks معينة (Zero Laravel / ORM Leakage).
-- [ ] توثيق قيود التدرج الأكاديمي وحظر الحذف المرجعي (RESTRICT) في `backend.md`.
-- [ ] توثيق حالات الشاشات الأربع واللوحات الجانبية ونوافذ التأكيد في `frontend.md`.
-- [ ] اكتمال مصفوفة الاختبارات لكافة مسارات النجاح والفشل والحدود في `testing.md`.
-- [ ] استيفاء كافة بنود قائمة التحقق في `checklist.md`.
+- [x] مطابقة أسماء الأعمدة والفهارس في `data.md` بنسبة 100% مع المرجع الأساسي [`MD/database.md`](../../database.md) (`stage_id`, `grade_level`, `uq_classes_stage_level`).
+- [x] استيفاء حقول الـ Request والـ Response JSON الصريحة لجميع الـ 12 مساراً بكافة حالات الـ Status Codes في `routes.md`.
+- [x] خلو كافة الملفات من أي تسريب تقني خاص بـ Frameworks معينة (Zero Laravel / ORM Leakage).
+- [x] توثيق قيود التدرج الأكاديمي وحظر الحذف المرجعي (RESTRICT) في `backend.md`.
+- [x] توثيق حالات الشاشات الأربع واللوحات الجانبية ونوافذ التأكيد في `frontend.md`.
+- [x] اكتمال مصفوفة الاختبارات لكافة مسارات النجاح والفشل والحدود في `testing.md`.
+- [x] استيفاء كافة بنود قائمة التحقق في `checklist.md`.

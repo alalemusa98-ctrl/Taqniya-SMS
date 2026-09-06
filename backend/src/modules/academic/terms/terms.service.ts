@@ -60,7 +60,6 @@ export class TermsService {
     const existingName = await this.prisma.academicTerm.findFirst({
       where: {
         name: dto.name,
-        deleted_at: null,
       },
     });
 
@@ -74,7 +73,6 @@ export class TermsService {
     const existingNumber = await this.prisma.academicTerm.findFirst({
       where: {
         term_number: dto.term_number,
-        deleted_at: null,
       },
     });
 
@@ -85,12 +83,23 @@ export class TermsService {
       });
     }
 
-    const created = await this.prisma.academicTerm.create({
-      data: {
-        name: dto.name,
-        term_number: dto.term_number,
-      },
-    });
+    let created;
+    try {
+      created = await this.prisma.academicTerm.create({
+        data: {
+          name: dto.name,
+          term_number: dto.term_number,
+        },
+      });
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        throw new ConflictException({
+          success: false,
+          message: 'اسم الفصل أو رقم الترتيب موجود مسبقاً.',
+        });
+      }
+      throw err;
+    }
 
     if (adminId) {
       await this.auditService.log({

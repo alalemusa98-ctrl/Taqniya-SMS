@@ -1,0 +1,21 @@
+import { IsNotEmpty, IsString, MaxLength, IsInt, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class CreateClassDto {
+  @IsNotEmpty({ message: 'معرف المرحلة الدراسية مطلوب' })
+  @Type(() => Number)
+  @IsInt({ message: 'معرف المرحلة الدراسية يجب أن يكون رقماً صحيحاً' })
+  stage_id: number;
+
+  @IsNotEmpty({ message: 'اسم الصف الدراسي مطلوب' })
+  @IsString({ message: 'اسم الصف يجب أن يكون نصاً' })
+  @MaxLength(50, { message: 'اسم الصف يجب ألا يتجاوز 50 حرفاً' })
+  name: string;
+
+  @IsNotEmpty({ message: 'المستوى الأكاديمي الرقمي مطلوب' })
+  @Type(() => Number)
+  @IsInt({ message: 'المستوى الأكاديمي يجب أن يكون رقماً صحيحاً' })
+  @Min(1, { message: 'المستوى الأكاديمي يجب أن يكون 1 على الأقل' })
+  @Max(12, { message: 'المستوى الأكاديمي يجب ألا يتجاوز 12' })
+  grade_level: number;
+}
