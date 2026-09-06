@@ -226,20 +226,15 @@ onMounted(() => {
                 </span>
               </td>
               <td class="py-4 px-5">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500/15 to-emerald-500/15 text-teal-600 border border-teal-500/30 flex items-center justify-center font-black text-lg shadow-xs group-hover:scale-105 transition-transform">
-                    {{ sec.name }}
-                  </div>
-                  <div>
-                    <span class="font-black text-bx-title text-sm block leading-tight">شعبة ({{ sec.name }})</span>
-                    <span class="text-[10px] text-bx-muted font-mono">معرف الشعبة: #{{ sec.id }}</span>
-                  </div>
+                <div>
+                  <span class="font-black text-bx-title text-sm block leading-tight">شعبة ({{ sec.name }})</span>
+                  <span class="text-[10px] text-bx-muted font-mono">معرف الشعبة: #{{ sec.id }}</span>
                 </div>
               </td>
               <td class="py-4 px-5 text-center">
-                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-teal-500/10 text-teal-600 border border-teal-500/20 shadow-xs">
-                  <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-                  شعبة معتمدة بالكتالوج العام
+                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bx-badge-teal shadow-xs">
+                  <span class="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0"></span>
+                  <span>شعبة معتمدة بالكتالوج العام</span>
                 </span>
               </td>
               <td class="py-4 px-5">

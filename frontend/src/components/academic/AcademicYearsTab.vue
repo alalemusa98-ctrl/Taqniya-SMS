@@ -293,22 +293,14 @@ onMounted(() => {
                 </span>
               </td>
               <td class="py-4 px-5">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform"
-                    :class="yr.is_active === 1 ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/30' : 'bg-bx-primary/10 text-bx-primary border border-bx-primary/20'"
-                  >
-                    <Calendar class="w-5 h-5" />
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-black text-bx-title text-sm block leading-tight">{{ yr.name }}</span>
+                    <span v-if="yr.is_active === 1" class="text-[10px] font-black bx-badge-emerald px-2 py-0.5 rounded-full">
+                      السنة النشطة
+                    </span>
                   </div>
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <span class="font-black text-bx-title text-sm block leading-tight">{{ yr.name }}</span>
-                      <span v-if="yr.is_active === 1" class="text-[10px] font-black text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                        السنة النشطة
-                      </span>
-                    </div>
-                    <span class="text-[10px] text-bx-muted font-mono">المعرف: #{{ yr.id }}</span>
-                  </div>
+                  <span class="text-[10px] text-bx-muted font-mono">المعرف: #{{ yr.id }}</span>
                 </div>
               </td>
               <td class="py-4 px-5 font-mono font-bold text-bx-text">
@@ -325,11 +317,11 @@ onMounted(() => {
                 <span
                   class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xs"
                   :class="yr.is_active === 1
-                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                    : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'"
+                    ? 'bx-badge-emerald'
+                    : 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/25 dark:bg-slate-500/25'"
                 >
                   <span class="w-1.5 h-1.5 rounded-full" :class="yr.is_active === 1 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>
-                  {{ yr.is_active === 1 ? 'نشطة (السنة الحالية)' : 'مؤرشفة' }}
+                  <span>{{ yr.is_active === 1 ? 'نشطة (السنة الحالية)' : 'مؤرشفة' }}</span>
                 </span>
               </td>
               <td class="py-4 px-5">

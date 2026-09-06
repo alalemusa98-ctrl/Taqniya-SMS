@@ -205,18 +205,13 @@ onMounted(() => {
                 </span>
               </td>
               <td class="py-4 px-5">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500/15 to-indigo-500/15 text-blue-600 border border-blue-500/25 flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform">
-                    <BookOpen class="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span class="font-black text-bx-title text-sm block leading-tight">{{ term.name }}</span>
-                    <span class="text-[10px] text-bx-muted font-mono">معرف الفصل: #{{ term.id }}</span>
-                  </div>
+                <div>
+                  <span class="font-black text-bx-title text-sm block leading-tight">{{ term.name }}</span>
+                  <span class="text-[10px] text-bx-muted font-mono">معرف الفصل: #{{ term.id }}</span>
                 </div>
               </td>
               <td class="py-4 px-5 text-center">
-                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-mono font-black bg-blue-500/10 text-blue-600 border border-blue-500/20 shadow-xs">
+                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-mono font-black bx-badge-blue shadow-xs">
                   <Hash class="w-3.5 h-3.5" />
                   الفصل رقم: {{ term.term_number }}
                 </span>

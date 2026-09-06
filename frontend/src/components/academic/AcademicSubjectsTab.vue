@@ -238,20 +238,15 @@ onMounted(() => {
                 </span>
               </td>
               <td class="py-4 px-5">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500/15 to-purple-500/15 text-bx-primary border border-bx-primary/25 flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform">
-                    <BookOpenCheck class="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span class="font-black text-bx-title text-sm block leading-tight">{{ sub.name }}</span>
-                    <span class="text-[10px] text-bx-muted font-mono">معرف المادة: #{{ sub.id }}</span>
-                  </div>
+                <div>
+                  <span class="font-black text-bx-title text-sm block leading-tight">{{ sub.name }}</span>
+                  <span class="text-[10px] text-bx-muted font-mono">معرف المادة: #{{ sub.id }}</span>
                 </div>
               </td>
               <td class="py-4 px-5 text-center">
                 <span
                   v-if="sub.code"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-black bg-[var(--bx-pill)] text-bx-primary border border-bx-primary/20 shadow-xs"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-mono font-black bx-badge-indigo shadow-xs"
                 >
                   <Code class="w-3.5 h-3.5" />
                   {{ sub.code }}

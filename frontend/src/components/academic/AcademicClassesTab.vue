@@ -284,26 +284,21 @@ onMounted(async () => {
                 </span>
               </td>
               <td class="py-4 px-5">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-2xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
-                    <Layers class="w-4.5 h-4.5" />
-                  </div>
-                  <div>
-                    <span class="font-black text-bx-title text-sm block leading-tight">{{ cls.name }}</span>
-                    <span class="text-[10px] text-bx-muted font-mono">معرف الصف: #{{ cls.id }}</span>
-                  </div>
+                <div>
+                  <span class="font-black text-bx-title text-sm block leading-tight">{{ cls.name }}</span>
+                  <span class="text-[10px] text-bx-muted font-mono">معرف الصف: #{{ cls.id }}</span>
                 </div>
               </td>
               <td class="py-4 px-5">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20 shadow-xs">
-                  <GraduationCap class="w-3.5 h-3.5" />
-                  {{ cls.stage_name || 'غير محدد' }}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bx-badge-purple shadow-xs">
+                  <GraduationCap class="w-3.5 h-3.5 shrink-0" />
+                  <span>{{ cls.stage_name || 'غير محدد' }}</span>
                 </span>
               </td>
               <td class="py-4 px-5 text-center">
-                <span class="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-xs">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  المستوى {{ cls.grade_level }}
+                <span class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-mono font-black bx-badge-emerald shadow-xs">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                  <span>المستوى {{ cls.grade_level }}</span>
                 </span>
               </td>
               <td class="py-4 px-5">
