@@ -1,0 +1,428 @@
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import { PrismaService } from '../../../common/prisma/prisma.service.js';
+import { AuditService } from '../../audit/audit.service.js';
+import { CreateClassAcademicTermDto } from './dto/create-class-academic-term.dto.js';
+import { UpdateClassAcademicTermDto } from './dto/update-class-academic-term.dto.js';
+import { QueryClassAcademicTermsDto } from './dto/query-class-academic-terms.dto.js';
+
+@Injectable()
+export class ClassAcademicTermsService {
+  constructor(
+    private prisma: PrismaService,
+    private auditService: AuditService,
+  ) {}
+
+  private serializeClassTerm(item: any) {
+    return {
+      id: Number(item.id),
+      class_id: Number(item.class_id),
+      class_name: item.class ? item.class.name : undefined,
+      academic_term_id: Number(item.academic_term_id),
+      term_name: item.academic_term ? item.academic_term.name : undefined,
+      is_active: Number(item.is_active),
+      is_closed: Number(item.is_closed),
+    };
+  }
+
+  async findAll(query: QueryClassAcademicTermsDto = {}) {
+    const page = Number(query.page) || 1;
+    const perPage = Number(query.per_page) || 15;
+    const skip = (page - 1) * perPage;
+
+    const classWhere: any = {
+      deleted_at: null,
+    };
+
+    if (query.class_id) {
+      classWhere.id = BigInt(query.class_id);
+    }
+
+    if (query.search) {
+      classWhere.name = {
+        contains: query.search,
+      };
+    }
+
+    const termWhere: any = {
+      deleted_at: null,
+    };
+
+    if (query.academic_term_id) {
+      termWhere.academic_term_id = BigInt(query.academic_term_id);
+    }
+
+    if (query.is_active !== undefined) {
+      termWhere.is_active = Number(query.is_active);
+    }
+
+    if (query.is_closed !== undefined) {
+      termWhere.is_closed = Number(query.is_closed);
+    }
+
+    // Only get classes that have matching terms (or all classes if no term filter)
+    const [totalClasses, classes] = await Promise.all([
+      this.prisma.class.count({
+        where: {
+          ...classWhere,
+          class_academic_terms: {
+            some: termWhere,
+          },
+        },
+      }),
+      this.prisma.class.findMany({
+        where: {
+          ...classWhere,
+          class_academic_terms: {
+            some: termWhere,
+          },
+        },
+        include: {
+          class_academic_terms: {
+            where: termWhere,
+            include: {
+              academic_term: true,
+            },
+            orderBy: {
+              academic_term_id: 'asc',
+            },
+          },
+        },
+        skip,
+        take: perPage,
+        orderBy: {
+          grade_level: 'asc',
+        },
+      }),
+    ]);
+
+    const formattedClasses = classes.map((c) => ({
+      class_id: Number(c.id),
+      class_name: c.name,
+      terms: c.class_academic_terms.map((t) => ({
+        id: Number(t.id),
+        academic_term_id: Number(t.academic_term_id),
+        term_name: t.academic_term?.name,
+        is_active: Number(t.is_active),
+        is_closed: Number(t.is_closed),
+      })),
+    }));
+
+    const message =
+      formattedClasses.length === 0
+        ? 'لا توجد فترات مسجلة تطابق محددات البحث.'
+        : 'تم جلب فترات وحالات صفوف المدرسة بنجاح.';
+
+    return {
+      success: true,
+      message,
+      data: {
+        classes: formattedClasses,
+      },
+      meta: {
+        current_page: page,
+        per_page: perPage,
+        total: totalClasses,
+        last_page: Math.ceil(totalClasses / perPage) || 1,
+      },
+    };
+  }
+
+  async findOne(id: number) {
+    const record = await this.prisma.classAcademicTerm.findFirst({
+      where: {
+        id: BigInt(id),
+        deleted_at: null,
+      },
+      include: {
+        class: true,
+        academic_term: true,
+      },
+    });
+
+    if (!record) {
+      throw new NotFoundException('تخصيص فترة الصف غير موجود.');
+    }
+
+    return {
+      success: true,
+      message: 'تم جلب تفاصيل فترة الصف بنجاح.',
+      data: this.serializeClassTerm(record),
+    };
+  }
+
+  async create(
+    dto: CreateClassAcademicTermDto,
+    adminId?: number,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    // 1. Verify class exists
+    const classRecord = await this.prisma.class.findFirst({
+      where: {
+        id: BigInt(dto.class_id),
+        deleted_at: null,
+      },
+    });
+
+    if (!classRecord) {
+      throw new UnprocessableEntityException({
+        success: false,
+        message: 'بيانات التخصيص غير صالحة.',
+        errors: { class_id: ['الصف الدراسي المحدد غير موجود.'] },
+      });
+    }
+
+    // 2. Verify academic term exists
+    const termRecord = await this.prisma.academicTerm.findFirst({
+      where: {
+        id: BigInt(dto.academic_term_id),
+        deleted_at: null,
+      },
+    });
+
+    if (!termRecord) {
+      throw new UnprocessableEntityException({
+        success: false,
+        message: 'بيانات التخصيص غير صالحة.',
+        errors: { academic_term_id: ['الفترة المحددة غير صالحة.'] },
+      });
+    }
+
+    // 3. Check uniqueness (uq_class_term)
+    const existing = await this.prisma.classAcademicTerm.findFirst({
+      where: {
+        class_id: BigInt(dto.class_id),
+        academic_term_id: BigInt(dto.academic_term_id),
+        deleted_at: null,
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException('هذه الفترة مخصصة مسبقاً لهذا الصف الدراسي (uq_class_term).');
+    }
+
+    // 4. Create record
+    const created = await this.prisma.classAcademicTerm.create({
+      data: {
+        class_id: BigInt(dto.class_id),
+        academic_term_id: BigInt(dto.academic_term_id),
+        is_active: 0,
+        is_closed: 0,
+      },
+      include: {
+        class: true,
+        academic_term: true,
+      },
+    });
+
+    const serialized = this.serializeClassTerm(created);
+
+    await this.auditService.log({
+      userId: adminId ? BigInt(adminId) : null,
+      action: 'create',
+      entityType: 'class_academic_terms',
+      entityId: BigInt(serialized.id),
+      newValues: serialized,
+      ipAddress: ipAddress,
+      userAgent: userAgent,
+    });
+
+    return {
+      success: true,
+      message: 'تم تخصيص الفترة للصف بنجاح.',
+      data: serialized,
+    };
+  }
+
+  async update(
+    id: number,
+    dto: UpdateClassAcademicTermDto,
+    adminId?: number,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const existing = await this.prisma.classAcademicTerm.findFirst({
+      where: {
+        id: BigInt(id),
+        deleted_at: null,
+      },
+      include: {
+        class: true,
+        academic_term: true,
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('تخصيص فترة الصف غير موجود.');
+    }
+
+    // Check lock
+    if (existing.is_closed === 1) {
+      throw new ConflictException(
+        'لا يمكن تعديل الفترة لأنها مغلقة نهائياً للأرشفة (is_closed = 1).',
+      );
+    }
+
+    const classId = dto.class_id ? BigInt(dto.class_id) : existing.class_id;
+    const termId = dto.academic_term_id ? BigInt(dto.academic_term_id) : existing.academic_term_id;
+
+    // Check uniqueness if changed
+    if (termId !== existing.academic_term_id || classId !== existing.class_id) {
+      const conflict = await this.prisma.classAcademicTerm.findFirst({
+        where: {
+          class_id: classId,
+          academic_term_id: termId,
+          deleted_at: null,
+          NOT: { id: BigInt(id) },
+        },
+      });
+
+      if (conflict) {
+        throw new ConflictException('هذه الفترة مخصصة مسبقاً لهذا الصف الدراسي (uq_class_term).');
+      }
+    }
+
+    const updated = await this.prisma.classAcademicTerm.update({
+      where: { id: BigInt(id) },
+      data: {
+        class_id: classId,
+        academic_term_id: termId,
+      },
+      include: {
+        class: true,
+        academic_term: true,
+      },
+    });
+
+    const serialized = this.serializeClassTerm(updated);
+
+    await this.auditService.log({
+      userId: adminId ? BigInt(adminId) : null,
+      action: 'update',
+      entityType: 'class_academic_terms',
+      entityId: BigInt(id),
+      oldValues: this.serializeClassTerm(existing),
+      newValues: serialized,
+      ipAddress: ipAddress,
+      userAgent: userAgent,
+    });
+
+    return {
+      success: true,
+      message: 'تم تحديث فترة الصف بنجاح.',
+      data: serialized,
+    };
+  }
+
+  async activate(
+    id: number,
+    adminId?: number,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const existing = await this.prisma.classAcademicTerm.findFirst({
+      where: {
+        id: BigInt(id),
+        deleted_at: null,
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('تخصيص فترة الصف غير موجود.');
+    }
+
+    // Atomic transaction: deactivate all other terms for this class, activate this one
+    await this.prisma.$transaction([
+      this.prisma.classAcademicTerm.updateMany({
+        where: {
+          class_id: existing.class_id,
+          deleted_at: null,
+        },
+        data: {
+          is_active: 0,
+        },
+      }),
+      this.prisma.classAcademicTerm.update({
+        where: {
+          id: BigInt(id),
+        },
+        data: {
+          is_active: 1,
+        },
+      }),
+    ]);
+
+    await this.auditService.log({
+      userId: adminId ? BigInt(adminId) : null,
+      action: 'activate',
+      entityType: 'class_academic_terms',
+      entityId: BigInt(id),
+      newValues: { is_active: 1 },
+      ipAddress: ipAddress,
+      userAgent: userAgent,
+    });
+
+    return {
+      success: true,
+      message: 'تم تفعيل الفترة النشطة للصف بنجاح.',
+      data: {
+        id: Number(existing.id),
+        class_id: Number(existing.class_id),
+        academic_term_id: Number(existing.academic_term_id),
+        is_active: 1,
+      },
+    };
+  }
+
+  async close(
+    id: number,
+    adminId?: number,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const existing = await this.prisma.classAcademicTerm.findFirst({
+      where: {
+        id: BigInt(id),
+        deleted_at: null,
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('تخصيص فترة الصف غير موجود.');
+    }
+
+    const newClosedStatus = existing.is_closed === 1 ? 0 : 1;
+
+    await this.prisma.classAcademicTerm.update({
+      where: { id: BigInt(id) },
+      data: {
+        is_closed: newClosedStatus,
+      },
+    });
+
+    await this.auditService.log({
+      userId: adminId ? BigInt(adminId) : null,
+      action: newClosedStatus === 1 ? 'close' : 'open',
+      entityType: 'class_academic_terms',
+      entityId: BigInt(id),
+      oldValues: { is_closed: existing.is_closed },
+      newValues: { is_closed: newClosedStatus },
+      ipAddress: ipAddress,
+      userAgent: userAgent,
+    });
+
+    return {
+      success: true,
+      message: 'تم تغيير حالة إغلاق درجات الفترة للصف بنجاح.',
+      data: {
+        id: Number(existing.id),
+        is_closed: newClosedStatus,
+      },
+    };
+  }
+}

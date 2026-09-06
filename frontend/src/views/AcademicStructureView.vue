@@ -8,6 +8,9 @@ import {
   Users2,
   BookOpenCheck,
   Sparkles,
+  CalendarDays,
+  Grid,
+  Award,
 } from 'lucide-vue-next';
 import AcademicYearsTab from '../components/academic/AcademicYearsTab.vue';
 import AcademicTermsTab from '../components/academic/AcademicTermsTab.vue';
@@ -15,12 +18,42 @@ import AcademicStagesTab from '../components/academic/AcademicStagesTab.vue';
 import AcademicClassesTab from '../components/academic/AcademicClassesTab.vue';
 import AcademicSectionsTab from '../components/academic/AcademicSectionsTab.vue';
 import AcademicSubjectsTab from '../components/academic/AcademicSubjectsTab.vue';
+import ClassTermsTab from '../components/academic/ClassTermsTab.vue';
+import ClassSectionsTab from '../components/academic/ClassSectionsTab.vue';
+import ClassSubjectsTab from '../components/academic/ClassSubjectsTab.vue';
 
-type TabKey = 'years' | 'terms' | 'stages' | 'classes' | 'sections' | 'subjects';
+type TabKey =
+  | 'classes'
+  | 'sections'
+  | 'subjects'
+  | 'class_terms'
+  | 'class_sections'
+  | 'class_subjects'
+  | 'stages'
+  | 'years'
+  | 'terms';
 
-const activeTab = ref<TabKey>('classes');
+const activeTab = ref<TabKey>('class_terms');
 
 const tabs = [
+  {
+    key: 'class_terms' as TabKey,
+    label: 'فترات الصفوف ⚡',
+    sublabel: 'تخصيص الفصول، التفعيل الذري، وقفل الأرشفة',
+    icon: CalendarDays,
+  },
+  {
+    key: 'class_sections' as TabKey,
+    label: 'تسكين الشُعب 🧩',
+    sublabel: 'فتح وتسكين الشعب لكل صف دراسي',
+    icon: Grid,
+  },
+  {
+    key: 'class_subjects' as TabKey,
+    label: 'مناهج ودرجات الفصول 📚',
+    sublabel: 'إسناد المقررات وضبط درجات النجاح والعظمى',
+    icon: Award,
+  },
   {
     key: 'classes' as TabKey,
     label: 'الصفوف الدراسية',
@@ -83,7 +116,7 @@ const tabs = [
     </div>
 
     <!-- Navigation Tabs Bar (Grid on Large Screens, Responsive Flow) -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 p-2 bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl shadow-xs">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 p-2 bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl shadow-xs">
       <button
         v-for="tab in tabs"
         :key="tab.key"
@@ -115,7 +148,10 @@ const tabs = [
 
     <!-- Tab View Content -->
     <div class="min-h-[450px]">
-      <AcademicClassesTab v-if="activeTab === 'classes'" />
+      <ClassTermsTab v-if="activeTab === 'class_terms'" />
+      <ClassSectionsTab v-else-if="activeTab === 'class_sections'" />
+      <ClassSubjectsTab v-else-if="activeTab === 'class_subjects'" />
+      <AcademicClassesTab v-else-if="activeTab === 'classes'" />
       <AcademicSectionsTab v-else-if="activeTab === 'sections'" />
       <AcademicSubjectsTab v-else-if="activeTab === 'subjects'" />
       <AcademicStagesTab v-else-if="activeTab === 'stages'" />

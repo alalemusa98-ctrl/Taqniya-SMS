@@ -143,6 +143,86 @@ export interface UpdateSubjectPayload {
   code?: string;
 }
 
+// Phase 02-C Interfaces
+export interface ClassTermItem {
+  id: number;
+  academic_term_id: number;
+  term_name: string;
+  is_active: number;
+  is_closed: number;
+}
+
+export interface ClassAcademicTermsGroupItem {
+  class_id: number;
+  class_name: string;
+  terms: ClassTermItem[];
+}
+
+export interface ClassSectionItem {
+  id: number;
+  section_id: number;
+  name: string;
+}
+
+export interface ClassSectionsGroupItem {
+  class_id: number;
+  class_name: string;
+  sections_count: number;
+  sections: ClassSectionItem[];
+}
+
+export interface ClassSubjectItem {
+  id: number;
+  subject_id: number;
+  name: string;
+  code?: string | null;
+  passing_score: string;
+  max_score: string;
+}
+
+export interface ClassSubjectsTermGroup {
+  class_academic_term_id: number;
+  term_name: string;
+  is_active: number;
+  is_closed: number;
+  subjects: ClassSubjectItem[];
+}
+
+export interface ClassSubjectsGroupItem {
+  class_id: number;
+  class_name: string;
+  terms: ClassSubjectsTermGroup[];
+}
+
+export interface CreateClassAcademicTermPayload {
+  class_id: number;
+  academic_term_id: number;
+}
+
+export interface UpdateClassAcademicTermPayload {
+  class_id?: number;
+  academic_term_id?: number;
+}
+
+export interface CreateClassSectionPayload {
+  class_id: number;
+  section_id: number;
+}
+
+export interface CreateClassSubjectPayload {
+  class_academic_term_id: number;
+  subject_id: number;
+  passing_score: number;
+  max_score: number;
+}
+
+export interface UpdateClassSubjectPayload {
+  class_academic_term_id?: number;
+  subject_id?: number;
+  passing_score?: number;
+  max_score?: number;
+}
+
 export const academicApi = {
   // Years (02-A)
   getYears: (params?: QueryYearsParams) => apiClient.get('/academic/years', { params }),
@@ -186,4 +266,26 @@ export const academicApi = {
   createSubject: (payload: CreateSubjectPayload) => apiClient.post('/academic/subjects', payload),
   updateSubject: (id: number, payload: UpdateSubjectPayload) => apiClient.put(`/academic/subjects/${id}`, payload),
   deleteSubject: (id: number) => apiClient.delete(`/academic/subjects/${id}`),
+
+  // Class Academic Terms (02-C)
+  getClassAcademicTerms: (params?: any) => apiClient.get('/academic/class-academic-terms', { params }),
+  getClassAcademicTermById: (id: number) => apiClient.get(`/academic/class-academic-terms/${id}`),
+  createClassAcademicTerm: (payload: CreateClassAcademicTermPayload) => apiClient.post('/academic/class-academic-terms', payload),
+  updateClassAcademicTerm: (id: number, payload: UpdateClassAcademicTermPayload) => apiClient.put(`/academic/class-academic-terms/${id}`, payload),
+  activateClassAcademicTerm: (id: number) => apiClient.post(`/academic/class-academic-terms/${id}/activate`),
+  closeClassAcademicTerm: (id: number) => apiClient.post(`/academic/class-academic-terms/${id}/close`),
+
+  // Class Sections (02-C)
+  getClassSections: (params?: any) => apiClient.get('/academic/class-sections', { params }),
+  getClassSectionById: (id: number) => apiClient.get(`/academic/class-sections/${id}`),
+  createClassSection: (payload: CreateClassSectionPayload) => apiClient.post('/academic/class-sections', payload),
+  deleteClassSection: (id: number) => apiClient.delete(`/academic/class-sections/${id}`),
+
+  // Class Subjects (02-C)
+  getClassSubjects: (params?: any) => apiClient.get('/academic/class-subjects', { params }),
+  getClassSubjectById: (id: number) => apiClient.get(`/academic/class-subjects/${id}`),
+  createClassSubject: (payload: CreateClassSubjectPayload) => apiClient.post('/academic/class-subjects', payload),
+  updateClassSubject: (id: number, payload: UpdateClassSubjectPayload) => apiClient.put(`/academic/class-subjects/${id}`, payload),
+  deleteClassSubject: (id: number) => apiClient.delete(`/academic/class-subjects/${id}`),
 };
+

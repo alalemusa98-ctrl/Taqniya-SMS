@@ -12,6 +12,12 @@ import { SectionsController } from './sections/sections.controller.js';
 import { SectionsService } from './sections/sections.service.js';
 import { SubjectsController } from './subjects/subjects.controller.js';
 import { SubjectsService } from './subjects/subjects.service.js';
+import { ClassAcademicTermsController } from './class-academic-terms/class-academic-terms.controller.js';
+import { ClassAcademicTermsService } from './class-academic-terms/class-academic-terms.service.js';
+import { ClassSectionsController } from './class-sections/class-sections.controller.js';
+import { ClassSectionsService } from './class-sections/class-sections.service.js';
+import { ClassSubjectsController } from './class-subjects/class-subjects.controller.js';
+import { ClassSubjectsService } from './class-subjects/class-subjects.service.js';
 
 @Module({
   imports: [AuthModule],
@@ -22,6 +28,9 @@ import { SubjectsService } from './subjects/subjects.service.js';
     ClassesController,
     SectionsController,
     SubjectsController,
+    ClassAcademicTermsController,
+    ClassSectionsController,
+    ClassSubjectsController,
   ],
   providers: [
     YearsService,
@@ -30,6 +39,9 @@ import { SubjectsService } from './subjects/subjects.service.js';
     ClassesService,
     SectionsService,
     SubjectsService,
+    ClassAcademicTermsService,
+    ClassSectionsService,
+    ClassSubjectsService,
   ],
   exports: [
     YearsService,
@@ -38,6 +50,10 @@ import { SubjectsService } from './subjects/subjects.service.js';
     ClassesService,
     SectionsService,
     SubjectsService,
+    ClassAcademicTermsService,
+    ClassSectionsService,
+    ClassSubjectsService,
   ],
 })
 export class AcademicModule {}
+
