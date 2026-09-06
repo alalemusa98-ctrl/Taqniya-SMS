@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { AcademicModule } from './modules/academic/academic.module.js';
 import { TeachersModule } from './modules/teachers/teachers.module.js';
+import { TeachingAssignmentsModule } from './modules/teaching-assignments/teaching-assignments.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -26,6 +27,7 @@ import { AppService } from './app.service.js';
     UsersModule,
     AcademicModule,
     TeachersModule,
+    TeachingAssignmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
