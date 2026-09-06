@@ -7,6 +7,7 @@ import { AuditService } from './modules/audit/audit.service.js';
 import { PrismaService } from './common/prisma/prisma.service.js';
 import { RoleType } from '@prisma/client';
 import { UnauthorizedException, ForbiddenException, UnprocessableEntityException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 
 describe('Phase 01: Authentication, Identity & Audit (TDD Verification)', () => {
   let moduleRef: TestingModule;
@@ -24,6 +25,20 @@ describe('Phase 01: Authentication, Identity & Audit (TDD Verification)', () => 
     usersService = moduleRef.get<UsersService>(UsersService);
     auditService = moduleRef.get<AuditService>(AuditService);
     prisma = moduleRef.get<PrismaService>(PrismaService);
+
+    // Ensure fixture users are reset to expected state for test determinism
+    const defaultPassword = 'SecretPassword@123';
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+    await prisma.user.upsert({
+      where: { user_code: 'PAR-4001' },
+      update: { is_active: 0, password: hashedPassword },
+      create: { user_code: 'PAR-4001', role_type: RoleType.parent, is_active: 0, password: hashedPassword },
+    });
+    await prisma.user.upsert({
+      where: { user_code: 'ADM-1001' },
+      update: { is_active: 1, password: hashedPassword },
+      create: { user_code: 'ADM-1001', role_type: RoleType.admin, is_active: 1, password: hashedPassword },
+    });
   });
 
   afterAll(async () => {

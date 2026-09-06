@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth.store';
+import { useToast } from '../../composables/useToast';
 import { LogOut } from 'lucide-vue-next';
 
 defineProps<{
@@ -14,6 +15,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const router = useRouter();
+const toast = useToast();
 const isLoading = ref(false);
 
 const handleLogout = async () => {
@@ -21,6 +23,7 @@ const handleLogout = async () => {
   await authStore.logout();
   isLoading.value = false;
   emit('close');
+  toast.info('تم تسجيل الخروج من المنظومة بنجاح.');
   router.push('/login');
 };
 </script>

@@ -2,11 +2,13 @@
 import { ref, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth.store';
+import { useToast } from '../../composables/useToast';
 import ThemeToggle from '../layout/ThemeToggle.vue';
 import { Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-vue-next';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const toast = useToast();
 
 const userCode = ref('ADM-1001');
 const password = ref('SecretPassword@123');
@@ -48,16 +50,22 @@ const handleLogin = async () => {
   });
 
   if (result.success) {
-    successMessage.value = 'تم تسجيل الدخول بنجاح! جاري توجيهك...';
+    const msg = 'تم تسجيل الدخول بنجاح! مرحباً بك.';
+    successMessage.value = msg;
+    toast.success(msg, 'تسجيل الدخول');
     setTimeout(() => {
       router.push('/users');
     }, 600);
   } else {
     if (result.status === 429) {
-      errorMessage.value = result.message || 'تم تجاوز الحد الأقصى للطلبات المسموحة. يرجى الانتظار 60 ثانية.';
+      const msg = result.message || 'تم تجاوز الحد الأقصى للطلبات المسموحة. يرجى الانتظار 60 ثانية.';
+      errorMessage.value = msg;
+      toast.warning(msg, 'حد الطلبات (429)');
       startCountdown();
     } else {
-      errorMessage.value = result.message || 'فشل تسجيل الدخول. تحقق من بياناتك.';
+      const msg = result.message || 'فشل تسجيل الدخول. تحقق من بياناتك.';
+      errorMessage.value = msg;
+      toast.danger(msg, 'خطأ في الدخول');
     }
   }
 };

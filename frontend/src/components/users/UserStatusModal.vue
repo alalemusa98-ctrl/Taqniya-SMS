@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { usersApi } from '../../api/users.api';
+import { useToast } from '../../composables/useToast';
 import { X, AlertTriangle, UserX, UserCheck } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -12,6 +13,8 @@ const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'updated'): void;
 }>();
+
+const toast = useToast();
 
 const newStatus = ref(1);
 const reason = ref('');
@@ -44,15 +47,19 @@ const handleToggle = async () => {
     });
 
     if (res.data.success) {
-      successMessage.value = res.data.message;
+      const msg = res.data.message || (newStatus.value === 1 ? 'تم تفعيل حساب المستخدم بنجاح.' : 'تم إيقاف حساب المستخدم وإلغاء كافة جلساته بنجاح.');
+      successMessage.value = msg;
+      toast.success(msg, newStatus.value === 1 ? 'تفعيل الحساب' : 'إيقاف الحساب');
       emit('updated');
       setTimeout(() => {
         emit('close');
         successMessage.value = '';
-      }, 1000);
+      }, 500);
     }
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.message || 'فشل تحديث حالة الحساب.';
+    const errorMsg = err.response?.data?.message || 'فشل تحديث حالة الحساب.';
+    errorMessage.value = errorMsg;
+    toast.danger(errorMsg, 'خطأ في التحديث');
   } finally {
     isLoading.value = false;
   }

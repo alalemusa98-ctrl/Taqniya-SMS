@@ -71,6 +71,11 @@ const openResetPassword = (user: any) => {
   isResetPasswordModalOpen.value = true;
 };
 
+const handleUserUpdated = () => {
+  loadUsers();
+  isDrawerOpen.value = false;
+};
+
 const getRoleIcon = (role: string) => {
   switch (role) {
     case 'admin': return Shield;
@@ -246,14 +251,14 @@ const getRoleTheme = (role: string) => {
       :is-open="isStatusModalOpen"
       :user="selectedUser"
       @close="isStatusModalOpen = false"
-      @updated="loadUsers"
+      @updated="handleUserUpdated"
     />
 
     <ResetPasswordModal
       :is-open="isResetPasswordModalOpen"
       :user="selectedUser"
       @close="isResetPasswordModalOpen = false"
-      @updated="loadUsers"
+      @updated="handleUserUpdated"
     />
   </div>
 </template>

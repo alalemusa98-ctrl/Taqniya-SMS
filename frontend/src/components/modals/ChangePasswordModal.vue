@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { authApi } from '../../api/auth.api';
+import { useToast } from '../../composables/useToast';
 import { X, Lock, CheckCircle2, AlertCircle } from 'lucide-vue-next';
 
 defineProps<{
@@ -10,6 +11,8 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void;
 }>();
+
+const toast = useToast();
 
 const currentPassword = ref('');
 const newPassword = ref('');
@@ -24,7 +27,9 @@ const handleSubmit = async () => {
   successMessage.value = '';
 
   if (newPassword.value !== newPasswordConfirmation.value) {
-    errorMessage.value = 'تأكيد كلمة المرور غير مطابق.';
+    const errorMsg = 'تأكيد كلمة المرور غير مطابق.';
+    errorMessage.value = errorMsg;
+    toast.warning(errorMsg, 'تنبيه إدخال');
     return;
   }
 
@@ -37,17 +42,21 @@ const handleSubmit = async () => {
     });
 
     if (res.data.success) {
-      successMessage.value = 'تم تحديث كلمة المرور بنجاح!';
+      const msg = res.data.message || 'تم تحديث كلمة المرور بنجاح!';
+      successMessage.value = msg;
+      toast.success(msg, 'تغيير كلمة المرور');
       currentPassword.value = '';
       newPassword.value = '';
       newPasswordConfirmation.value = '';
       setTimeout(() => {
         emit('close');
         successMessage.value = '';
-      }, 1200);
+      }, 600);
     }
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.message || 'فشل تحديث كلمة المرور.';
+    const errorMsg = err.response?.data?.message || 'فشل تحديث كلمة المرور.';
+    errorMessage.value = errorMsg;
+    toast.danger(errorMsg, 'خطأ في التحديث');
   } finally {
     isLoading.value = false;
   }

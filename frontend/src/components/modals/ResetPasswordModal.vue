@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { usersApi } from '../../api/users.api';
+import { useToast } from '../../composables/useToast';
 import { X, KeyRound, Sparkles, Copy, Check } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -12,6 +13,8 @@ const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'updated'): void;
 }>();
+
+const toast = useToast();
 
 const newPassword = ref('');
 const isLoading = ref(false);
@@ -47,16 +50,20 @@ const handleSubmit = async () => {
     });
 
     if (res.data.success) {
-      successMessage.value = res.data.message;
+      const msg = res.data.message || 'تم إعادة تعيين كلمة المرور بنجاح وإلغاء جلسات المستخدم السابقة.';
+      successMessage.value = msg;
+      toast.success(msg, 'إعادة تعيين كلمة المرور');
       emit('updated');
       setTimeout(() => {
         emit('close');
         newPassword.value = '';
         successMessage.value = '';
-      }, 1200);
+      }, 600);
     }
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.message || 'فشل إعادة تعيين كلمة المرور.';
+    const errorMsg = err.response?.data?.message || 'فشل إعادة تعيين كلمة المرور.';
+    errorMessage.value = errorMsg;
+    toast.danger(errorMsg, 'خطأ في التعيين');
   } finally {
     isLoading.value = false;
   }
