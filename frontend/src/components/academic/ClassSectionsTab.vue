@@ -271,6 +271,7 @@ const classFormOptions = computed(() =>
   classes.value.map((c) => ({
     value: c.id,
     label: c.name,
+    code: (c as any).code || `CLS-${c.id}`,
   })),
 );
 
@@ -278,6 +279,7 @@ const sectionFormOptions = computed(() =>
   sections.value.map((s) => ({
     value: s.id,
     label: s.name,
+    code: (s as any).code || `SEC-${s.id}`,
   })),
 );
 

@@ -340,6 +340,7 @@ const classFormOptions = computed(() =>
   classes.value.map((c) => ({
     value: c.id,
     label: c.name,
+    code: (c as any).code || `CLS-${c.id}`,
   })),
 );
 
@@ -347,6 +348,7 @@ const termFormOptions = computed(() =>
   terms.value.map((t) => ({
     value: t.id,
     label: t.name,
+    code: (t as any).code || `TRM-${t.id}`,
   })),
 );
 
