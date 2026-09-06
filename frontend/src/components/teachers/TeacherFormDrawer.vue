@@ -206,7 +206,9 @@ async function handleSubmit() {
             <input
               v-model="form.hire_date"
               type="date"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-bx-border bg-[var(--bx-canvas)] text-xs text-bx-title focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+              dir="ltr"
+              lang="en-GB"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-bx-border bg-[var(--bx-canvas)] text-xs text-bx-title focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-['Alexandria',sans-serif] font-medium"
             />
             <p v-if="fieldErrors.hire_date" class="text-[11px] text-red-500 font-medium">
               {{ fieldErrors.hire_date[0] }}

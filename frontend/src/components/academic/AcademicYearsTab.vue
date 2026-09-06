@@ -402,8 +402,10 @@ onMounted(() => {
             <input
               v-model="form.start_date"
               type="date"
+              dir="ltr"
+              lang="en-GB"
               required
-              class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-mono font-bold"
+              class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-bold"
             />
           </div>
           <div class="space-y-1.5">
@@ -413,8 +415,10 @@ onMounted(() => {
             <input
               v-model="form.end_date"
               type="date"
+              dir="ltr"
+              lang="en-GB"
               required
-              class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-mono font-bold"
+              class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-bold"
             />
           </div>
         </div>

@@ -1883,3 +1883,12 @@
             color: #ffffff;
             border-color: var(--bx-primary);
         }
+
+        /* Unified Latin Digits & LTR for Date and Time Pickers */
+        input[type="date"],
+        input[type="time"],
+        input[type="datetime-local"] {
+            direction: ltr !important;
+            font-family: 'Alexandria', 'Tajawal', sans-serif !important;
+        }
+

@@ -73,4 +73,10 @@ export const teachersApi = {
 
   deleteTeacher: (id: number) =>
     apiClient.delete<{ success: boolean; message: string }>(`/teachers/${id}`),
+
+  updateStatus: (userId: number, isActive: number, reason?: string) =>
+    apiClient.put<{ success: boolean; message: string }>(`/users/${userId}/status`, {
+      is_active: isActive,
+      reason,
+    }),
 };

@@ -442,7 +442,7 @@ onMounted(async () => {
               <tr
                 v-for="row in grp.sections"
                 :key="row.id"
-                class="hover:bg-[var(--bx-row-hover)]/40 transition-colors"
+                class="hover:bg-purple-500/[0.08] dark:hover:bg-white/[0.06] transition-colors duration-150"
               >
                 <!-- Code (الرمز) -->
                 <td class="py-3.5 px-4 font-mono font-bold text-bx-muted text-xs whitespace-nowrap">
