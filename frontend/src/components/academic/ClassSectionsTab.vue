@@ -381,17 +381,18 @@ onMounted(async () => {
         <p class="text-xs text-bx-muted">جرب تغيير محددات التصفية أو تسكين شعبة دراسية لصف جديد.</p>
       </div>
 
-      <!-- Unified Table Content (Matching Screenshot Columns & Rows) -->
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-start border-collapse text-xs">
-          <!-- Table Header with Distinct Background and Crisp Dividers -->
-          <thead>
-            <tr class="bg-[var(--bx-table-header)] border-y border-[#B4AED8] dark:border-white/[0.08] text-bx-muted">
-              <th class="py-3.5 px-4 font-bold text-start">الرمز</th>
-              <th class="py-3.5 px-4 font-bold text-start">الشعبة الدراسية</th>
-              <th class="py-3.5 px-4 font-bold text-center">إجراءات</th>
-            </tr>
-          </thead>
+      <!-- Unified Table Content: Enclosed in a Bordered Card (Right, Left, Top, Bottom) -->
+      <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)]">
+        <div class="overflow-x-auto">
+          <table class="w-full text-start border-collapse text-xs">
+            <!-- Table Header with Distinct Background and Crisp Dividers -->
+            <thead>
+              <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
+                <th class="py-3.5 px-4 font-bold text-start">الرمز</th>
+                <th class="py-3.5 px-4 font-bold text-start">الشعبة الدراسية</th>
+                <th class="py-3.5 px-4 font-bold text-center">إجراءات</th>
+              </tr>
+            </thead>
 
           <!-- Table Body with Crisp Dividers & Class Group Headers -->
           <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.08]">
@@ -492,9 +493,10 @@ onMounted(async () => {
           </tbody>
         </table>
       </div>
+    </div>
 
       <!-- Table Footer: Records Count on Right, Pagination on Left -->
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-[#B4AED8] dark:border-white/[0.08]">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5">
         <!-- Records Info -->
         <span class="text-xs font-bold text-bx-muted order-2 sm:order-1">
           عرض {{ (currentPage - 1) * itemsPerPage + 1 }} إلى

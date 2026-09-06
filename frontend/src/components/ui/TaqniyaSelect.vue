@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue';
-import { ChevronDown, Check, Search, X } from 'lucide-vue-next';
+import { ChevronDown, Search, X } from 'lucide-vue-next';
 
 export interface TaqniyaSelectOption {
   value: string | number;

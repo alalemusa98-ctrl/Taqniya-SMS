@@ -223,6 +223,7 @@ const totalTermsCount = computed(() => {
   return filteredGroups.value.reduce((acc, g) => acc + g.terms.length, 0);
 });
 
+
 // Drawer & Actions
 function openDetails(row: UnifiedTermRow) {
   activeRowDetails.value = row;
@@ -378,7 +379,7 @@ onMounted(async () => {
         <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
           <!-- Add Button -->
           <button
-            @click="openCreateDrawer"
+            @click="openCreateDrawer()"
             class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer"
           >
             <Plus class="w-3.5 h-3.5" />
@@ -461,155 +462,157 @@ onMounted(async () => {
         <p class="text-xs text-bx-muted">جرب تغيير محددات التصفية أو تخصيص فترة لصف دراسي جديد.</p>
       </div>
 
-      <!-- Unified Table Content (Matching Screenshot Columns & Rows) -->
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-start border-collapse text-xs">
-          <!-- Table Header with Distinct Background and Crisp Dividers -->
-          <thead>
-            <tr class="bg-[var(--bx-table-header)] border-y border-[#B4AED8] dark:border-white/[0.08] text-bx-muted">
-              <th class="py-3.5 px-4 font-bold text-start">الرمز</th>
-              <th class="py-3.5 px-4 font-bold text-start">الفصل الدراسي</th>
-              <th class="py-3.5 px-4 font-bold text-start">التصنيف</th>
-              <th class="py-3.5 px-4 font-bold text-center">الحالة</th>
-              <th class="py-3.5 px-4 font-bold text-center">إجراءات</th>
-            </tr>
-          </thead>
+      <!-- Unified Table Content: Enclosed in a Bordered Card (Right, Left, Top, Bottom) -->
+      <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)]">
+        <div class="overflow-x-auto">
+          <table class="w-full text-start border-collapse text-xs">
+            <!-- Table Header with Distinct Background and Crisp Dividers -->
+            <thead>
+              <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
+                <th class="py-3.5 px-4 font-bold text-start">الرمز</th>
+                <th class="py-3.5 px-4 font-bold text-start">الفصل الدراسي</th>
+                <th class="py-3.5 px-4 font-bold text-start">التصنيف</th>
+                <th class="py-3.5 px-4 font-bold text-center">الحالة</th>
+                <th class="py-3.5 px-4 font-bold text-center">إجراءات</th>
+              </tr>
+            </thead>
 
-          <!-- Table Body with Crisp Dividers & Class Group Headers -->
-          <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.08]">
-            <template v-for="grp in paginatedGroups" :key="grp.class_id">
-              <!-- Class Group Header Row -->
-              <tr class="bg-purple-500/[0.05] dark:bg-white/[0.03]">
-                <td colspan="5" class="py-2.5 px-4">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                      <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
-                      <span class="font-black text-sm text-bx-title">{{ grp.class_name }}</span>
-                      <span class="text-[11px] font-semibold text-bx-muted px-2.5 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
-                        {{ grp.stage_name }}
-                      </span>
+            <!-- Table Body with Crisp Dividers & Class Group Headers -->
+            <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12]">
+              <template v-for="grp in paginatedGroups" :key="grp.class_id">
+                <!-- Class Group Header Row -->
+                <tr class="bg-purple-500/[0.05] dark:bg-white/[0.03]">
+                  <td colspan="5" class="py-2.5 px-4">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
+                        <span class="font-black text-sm text-bx-title">{{ grp.class_name }}</span>
+                        <span class="text-[11px] font-semibold text-bx-muted px-2.5 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
+                          {{ grp.stage_name }}
+                        </span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-[11px] font-bold text-bx-muted">
+                          {{ grp.terms.length }} فصول دراسية
+                        </span>
+                        <button
+                          @click="openCreateDrawer(grp.class_id)"
+                          class="w-8 h-8 rounded-xl border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                          title="تخصيص فترة دراسية لهذا الصف"
+                        >
+                          <Plus class="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-[11px] font-bold text-bx-muted">
-                        {{ grp.terms.length }} فصول دراسية
-                      </span>
-                      <button
-                        @click="openCreateDrawer(grp.class_id)"
-                        class="w-8 h-8 rounded-xl border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                        title="تخصيص فترة دراسية لهذا الصف"
+                  </td>
+                </tr>
+
+                <!-- Empty terms for this class -->
+                <tr v-if="grp.terms.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
+                  <td colspan="5" class="py-4 px-4 text-center text-bx-muted text-xs">
+                    <span>لا توجد فترات مخصصة لهذا الصف بعد.</span>
+                    <button
+                      @click="openCreateDrawer(grp.class_id)"
+                      class="text-bx-primary font-bold hover:underline me-2 cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Plus class="w-3 h-3" />
+                      <span>تخصيص أول فترة الآن</span>
+                    </button>
+                  </td>
+                </tr>
+
+                <!-- Term Rows for this Class -->
+                <tr
+                  v-for="row in grp.terms"
+                  :key="row.id"
+                  class="hover:bg-[var(--bx-row-hover)]/40 transition-colors"
+                >
+                  <!-- Code (الرمز) -->
+                  <td class="py-3.5 px-4 font-mono font-bold text-bx-muted text-xs whitespace-nowrap">
+                    {{ row.code }}
+                  </td>
+
+                  <!-- Item with Circular Letter Badge (العنصر: الفصل الدراسي) -->
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-7 h-7 rounded-full border-2 font-black text-[11px] flex items-center justify-center shrink-0"
+                        :class="row.letterColor"
                       >
-                        <Plus class="w-4 h-4" />
+                        {{ row.letter }}
+                      </div>
+                      <div>
+                        <span class="font-bold text-xs text-bx-title block">
+                          {{ row.term_name }}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Category (المرحلة التعليمية) -->
+                  <td class="py-3.5 px-4 text-xs font-semibold text-bx-muted whitespace-nowrap">
+                    {{ row.stage_name }}
+                  </td>
+
+                  <!-- Status Pill (الحالة) -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span
+                      class="inline-block px-4 py-1 rounded-full text-xs font-bold border"
+                      :class="row.statusClass"
+                    >
+                      {{ row.statusLabel }}
+                    </span>
+                  </td>
+
+                  <!-- Action: عرض Button & Quick Actions (إجراءات) -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    <div class="flex items-center justify-center gap-2">
+                      <!-- View Details Button with Text + Icon -->
+                      <button
+                        @click="openDetails(row)"
+                        class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-primary dark:text-purple-300 bg-white dark:bg-white/[0.05] hover:bg-bx-primary hover:text-white hover:border-bx-primary transition-all cursor-pointer shadow-xs"
+                      >
+                        <Eye class="w-3.5 h-3.5" />
+                        <span>عرض</span>
+                      </button>
+
+                      <!-- Quick Action Icons Matching Reference Squircle -->
+                      <button
+                        v-if="row.is_active !== 1"
+                        @click="handleActivate(row.id)"
+                        title="تفعيل الفترة الحالية"
+                        class="w-8 h-8 rounded-xl border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                      >
+                        <Zap class="w-4 h-4" />
+                      </button>
+
+                      <button
+                        @click="handleToggleClose(row.id)"
+                        :title="row.is_closed === 1 ? 'فتح رصد الدرجات' : 'إغلاق رصد الدرجات'"
+                        class="w-8 h-8 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-600 hover:text-white hover:border-amber-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                      >
+                        <component :is="row.is_closed === 1 ? Lock : Unlock" class="w-4 h-4" />
+                      </button>
+
+                      <button
+                        v-if="row.is_active !== 1"
+                        @click="confirmDelete(row)"
+                        title="فك الارتباط بالفترة"
+                        class="w-8 h-8 rounded-xl border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                      >
+                        <Trash2 class="w-4 h-4" />
                       </button>
                     </div>
-                  </div>
-                </td>
-              </tr>
-
-              <!-- Empty terms for this class -->
-              <tr v-if="grp.terms.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
-                <td colspan="5" class="py-4 px-4 text-center text-bx-muted text-xs">
-                  <span>لا توجد فترات مخصصة لهذا الصف بعد.</span>
-                  <button
-                    @click="openCreateDrawer(grp.class_id)"
-                    class="text-bx-primary font-bold hover:underline me-2 cursor-pointer inline-flex items-center gap-1"
-                  >
-                    <Plus class="w-3 h-3" />
-                    <span>تخصيص أول فترة الآن</span>
-                  </button>
-                </td>
-              </tr>
-
-              <!-- Term Rows for this Class -->
-              <tr
-                v-for="row in grp.terms"
-                :key="row.id"
-                class="hover:bg-[var(--bx-row-hover)]/40 transition-colors"
-              >
-                <!-- Code (الرمز) -->
-                <td class="py-3.5 px-4 font-mono font-bold text-bx-muted text-xs whitespace-nowrap">
-                  {{ row.code }}
-                </td>
-
-                <!-- Item with Circular Letter Badge (العنصر: الفصل الدراسي) -->
-                <td class="py-3.5 px-4 whitespace-nowrap">
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="w-7 h-7 rounded-full border-2 font-black text-[11px] flex items-center justify-center shrink-0"
-                      :class="row.letterColor"
-                    >
-                      {{ row.letter }}
-                    </div>
-                    <div>
-                      <span class="font-bold text-xs text-bx-title block">
-                        {{ row.term_name }}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-
-                <!-- Category (المرحلة التعليمية) -->
-                <td class="py-3.5 px-4 text-xs font-semibold text-bx-muted whitespace-nowrap">
-                  {{ row.stage_name }}
-                </td>
-
-                <!-- Status Pill (الحالة) -->
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <span
-                    class="inline-block px-4 py-1 rounded-full text-xs font-bold border"
-                    :class="row.statusClass"
-                  >
-                    {{ row.statusLabel }}
-                  </span>
-                </td>
-
-                <!-- Action: عرض Button & Quick Actions (إجراءات) -->
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center gap-2">
-                    <!-- View Details Button with Text + Icon -->
-                    <button
-                      @click="openDetails(row)"
-                      class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-primary dark:text-purple-300 bg-white dark:bg-white/[0.05] hover:bg-bx-primary hover:text-white hover:border-bx-primary transition-all cursor-pointer shadow-xs"
-                    >
-                      <Eye class="w-3.5 h-3.5" />
-                      <span>عرض</span>
-                    </button>
-
-                    <!-- Quick Action Icons Matching Reference Squircle -->
-                    <button
-                      v-if="row.is_active !== 1"
-                      @click="handleActivate(row.id)"
-                      title="تفعيل الفترة الحالية"
-                      class="w-8 h-8 rounded-xl border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                    >
-                      <Zap class="w-4 h-4" />
-                    </button>
-
-                    <button
-                      @click="handleToggleClose(row.id)"
-                      :title="row.is_closed === 1 ? 'فتح رصد الدرجات' : 'إغلاق رصد الدرجات'"
-                      class="w-8 h-8 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-600 hover:text-white hover:border-amber-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                    >
-                      <component :is="row.is_closed === 1 ? Lock : Unlock" class="w-4 h-4" />
-                    </button>
-
-                    <button
-                      v-if="row.is_active !== 1"
-                      @click="confirmDelete(row)"
-                      title="فك الارتباط بالفترة"
-                      class="w-8 h-8 rounded-xl border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                    >
-                      <Trash2 class="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Table Footer: Records Count on Right, Pagination on Left -->
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-[#B4AED8] dark:border-white/[0.08]">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5">
         <!-- Records Info -->
         <span class="text-xs font-bold text-bx-muted order-2 sm:order-1">
           عرض {{ (currentPage - 1) * itemsPerPage + 1 }} إلى
