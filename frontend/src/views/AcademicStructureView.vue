@@ -83,28 +83,28 @@ const tabs = [
     </div>
 
     <!-- Navigation Tabs Bar (Grid on Large Screens, Responsive Flow) -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 p-1.5 bg-[var(--bx-surface)] border border-bx-border rounded-2xl">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 p-2 bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl shadow-xs">
       <button
         v-for="tab in tabs"
         :key="tab.key"
         @click="activeTab = tab.key"
-        class="flex flex-col items-start gap-2 p-3 rounded-xl transition-all text-right cursor-pointer"
+        class="flex flex-col items-start gap-2.5 p-3.5 rounded-2xl transition-all text-right cursor-pointer group"
         :class="
           activeTab === tab.key
-            ? 'bg-bx-primary text-white shadow-lg shadow-bx-primary/20 scale-[1.01]'
-            : 'text-bx-muted hover:text-bx-title hover:bg-[var(--bx-surface-solid)]/60'
+            ? 'bg-bx-primary text-white shadow-lg shadow-bx-primary/25 border border-bx-primary/40 scale-[1.01]'
+            : 'text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] border border-transparent hover:border-bx-border/80'
         "
       >
         <div
-          class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors"
-          :class="activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-bx-primary/10 text-bx-primary'"
+          class="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+          :class="activeTab === tab.key ? 'bg-white/20 text-white shadow-xs' : 'bg-bx-primary/10 text-bx-primary border border-bx-primary/15'"
         >
-          <component :is="tab.icon" class="w-4 h-4" />
+          <component :is="tab.icon" class="w-5 h-5" />
         </div>
         <div>
           <div class="text-xs font-black leading-tight">{{ tab.label }}</div>
           <div
-            class="text-[10px] mt-0.5 line-clamp-1"
+            class="text-[10px] mt-1 line-clamp-1 font-medium"
             :class="activeTab === tab.key ? 'text-white/80' : 'text-bx-muted'"
           >
             {{ tab.sublabel }}

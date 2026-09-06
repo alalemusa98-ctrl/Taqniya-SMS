@@ -204,64 +204,92 @@ onMounted(() => {
       </button>
     </div>
 
-    <!-- Subjects Table -->
-    <div v-else class="bg-[var(--bx-surface)] border border-bx-border rounded-2xl overflow-hidden shadow-xs">
+    <!-- Subjects Table Card (Taqniya Spatial Card) -->
+    <div v-else class="bx-card bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl overflow-hidden shadow-xs">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead>
-            <tr class="border-b border-bx-border bg-[var(--bx-surface-solid)]/70 text-bx-muted font-bold">
-              <th class="py-3.5 px-4">#</th>
-              <th class="py-3.5 px-4">اسم المادة التعليمية</th>
-              <th class="py-3.5 px-4 text-center">الرمز المختصر (Code)</th>
-              <th class="py-3.5 px-4 text-center">الإجراءات</th>
+            <tr class="border-b border-bx-border bg-[var(--bx-table-header)] text-bx-muted font-black">
+              <th class="py-4 px-5 text-start w-16">#</th>
+              <th class="py-4 px-5">
+                <div class="flex items-center gap-2">
+                  <BookOpenCheck class="w-3.5 h-3.5 text-bx-primary" />
+                  <span>اسم المادة التعليمية</span>
+                </div>
+              </th>
+              <th class="py-4 px-5 text-center">
+                <div class="inline-flex items-center justify-center gap-1.5">
+                  <Code class="w-3.5 h-3.5 text-bx-primary" />
+                  <span>الرمز المرجعي (Code)</span>
+                </div>
+              </th>
+              <th class="py-4 px-5 text-center w-28">الإجراءات</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-bx-border font-medium text-bx-text">
+          <tbody class="divide-y divide-bx-divider font-medium text-bx-text">
             <tr
               v-for="(sub, idx) in subjects"
               :key="sub.id"
-              class="hover:bg-[var(--bx-surface-solid)]/50 transition-colors"
+              class="hover:bg-[var(--bx-row-hover)] transition-all duration-150 group"
             >
-              <td class="py-3.5 px-4 text-bx-muted font-mono font-bold">{{ idx + 1 }}</td>
-              <td class="py-3.5 px-4">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold">
-                    <BookOpenCheck class="w-4 h-4" />
+              <td class="py-4 px-5">
+                <span class="w-7 h-7 rounded-xl bg-[var(--bx-pill)] border border-bx-border/80 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-bx-primary group-hover:border-bx-primary/30 transition-colors">
+                  {{ idx + 1 }}
+                </span>
+              </td>
+              <td class="py-4 px-5">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500/15 to-purple-500/15 text-bx-primary border border-bx-primary/25 flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform">
+                    <BookOpenCheck class="w-5 h-5" />
                   </div>
-                  <span class="font-bold text-bx-title text-sm">{{ sub.name }}</span>
+                  <div>
+                    <span class="font-black text-bx-title text-sm block leading-tight">{{ sub.name }}</span>
+                    <span class="text-[10px] text-bx-muted font-mono">معرف المادة: #{{ sub.id }}</span>
+                  </div>
                 </div>
               </td>
-              <td class="py-3.5 px-4 text-center">
+              <td class="py-4 px-5 text-center">
                 <span
                   v-if="sub.code"
-                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-black bg-indigo-500/10 text-indigo-600 border border-indigo-500/20"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-black bg-[var(--bx-pill)] text-bx-primary border border-bx-primary/20 shadow-xs"
                 >
                   <Code class="w-3.5 h-3.5" />
                   {{ sub.code }}
                 </span>
-                <span v-else class="text-bx-muted text-xs">غير محدد</span>
+                <span v-else class="text-bx-muted text-xs font-bold">غير محدد</span>
               </td>
-              <td class="py-3.5 px-4">
+              <td class="py-4 px-5">
                 <div class="flex items-center justify-center gap-2">
                   <button
                     @click="openEditDrawer(sub)"
                     title="تعديل المادة في القائمة الجانبية (Drawer)"
-                    class="bx-icon-btn p-2 text-bx-muted hover:text-bx-primary hover:bg-bx-primary/10 rounded-xl transition-all cursor-pointer"
+                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 transition-all cursor-pointer"
                   >
-                    <Edit2 class="w-4 h-4" />
+                    <Edit2 class="w-3.5 h-3.5" />
                   </button>
                   <button
                     @click="confirmDelete(sub)"
                     title="حذف المادة"
-                    class="bx-icon-btn p-2 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer"
+                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-rose-500 hover:border-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
                   >
-                    <Trash2 class="w-4 h-4" />
+                    <Trash2 class="w-3.5 h-3.5" />
                   </button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Table Bottom Stats Bar -->
+      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex items-center justify-between text-xs text-bx-muted font-bold">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-bx-primary"></span>
+          <span>إجمالي المواد التعليمية: <strong class="text-bx-title font-black">{{ subjects.length }}</strong></span>
+        </div>
+        <div class="text-[11px] text-bx-muted font-mono">
+          Phase 02-B • Curriculum & Subjects Bank
+        </div>
       </div>
     </div>
 

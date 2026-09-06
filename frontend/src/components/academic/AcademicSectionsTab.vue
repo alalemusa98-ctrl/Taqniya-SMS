@@ -195,59 +195,85 @@ onMounted(() => {
       </button>
     </div>
 
-    <!-- Sections Table -->
-    <div v-else class="bg-[var(--bx-surface)] border border-bx-border rounded-2xl overflow-hidden shadow-xs">
+    <!-- Sections Table Card (Taqniya Spatial Card) -->
+    <div v-else class="bx-card bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl overflow-hidden shadow-xs">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead>
-            <tr class="border-b border-bx-border bg-[var(--bx-surface-solid)]/70 text-bx-muted font-bold">
-              <th class="py-3.5 px-4">#</th>
-              <th class="py-3.5 px-4">مسمى الشعبة العامة</th>
-              <th class="py-3.5 px-4 text-center">الترميز والشارة</th>
-              <th class="py-3.5 px-4 text-center">الإجراءات</th>
+            <tr class="border-b border-bx-border bg-[var(--bx-table-header)] text-bx-muted font-black">
+              <th class="py-4 px-5 text-start w-16">#</th>
+              <th class="py-4 px-5">
+                <div class="flex items-center gap-2">
+                  <Users2 class="w-3.5 h-3.5 text-teal-600" />
+                  <span>مسمى الشعبة العامة</span>
+                </div>
+              </th>
+              <th class="py-4 px-5 text-center">
+                <span>الحالة والاعتماد النظامي</span>
+              </th>
+              <th class="py-4 px-5 text-center w-28">الإجراءات</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-bx-border font-medium text-bx-text">
+          <tbody class="divide-y divide-bx-divider font-medium text-bx-text">
             <tr
               v-for="(sec, idx) in sections"
               :key="sec.id"
-              class="hover:bg-[var(--bx-surface-solid)]/50 transition-colors"
+              class="hover:bg-[var(--bx-row-hover)] transition-all duration-150 group"
             >
-              <td class="py-3.5 px-4 text-bx-muted font-mono font-bold">{{ idx + 1 }}</td>
-              <td class="py-3.5 px-4">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-8 h-8 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center font-black border border-teal-500/20">
-                    {{ sec.name }}
-                  </div>
-                  <span class="font-bold text-bx-title text-sm">شعبة ({{ sec.name }})</span>
-                </div>
-              </td>
-              <td class="py-3.5 px-4 text-center">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-500/10 text-teal-600 border border-teal-500/20">
-                  معتمدة في النظام
+              <td class="py-4 px-5">
+                <span class="w-7 h-7 rounded-xl bg-[var(--bx-pill)] border border-bx-border/80 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-teal-600 group-hover:border-teal-500/30 transition-colors">
+                  {{ idx + 1 }}
                 </span>
               </td>
-              <td class="py-3.5 px-4">
+              <td class="py-4 px-5">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500/15 to-emerald-500/15 text-teal-600 border border-teal-500/30 flex items-center justify-center font-black text-lg shadow-xs group-hover:scale-105 transition-transform">
+                    {{ sec.name }}
+                  </div>
+                  <div>
+                    <span class="font-black text-bx-title text-sm block leading-tight">شعبة ({{ sec.name }})</span>
+                    <span class="text-[10px] text-bx-muted font-mono">معرف الشعبة: #{{ sec.id }}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="py-4 px-5 text-center">
+                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-teal-500/10 text-teal-600 border border-teal-500/20 shadow-xs">
+                  <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                  شعبة معتمدة بالكتالوج العام
+                </span>
+              </td>
+              <td class="py-4 px-5">
                 <div class="flex items-center justify-center gap-2">
                   <button
                     @click="openEditDrawer(sec)"
                     title="تعديل مسمى الشعبة في القائمة الجانبية (Drawer)"
-                    class="bx-icon-btn p-2 text-bx-muted hover:text-bx-primary hover:bg-bx-primary/10 rounded-xl transition-all cursor-pointer"
+                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 transition-all cursor-pointer"
                   >
-                    <Edit2 class="w-4 h-4" />
+                    <Edit2 class="w-3.5 h-3.5" />
                   </button>
                   <button
                     @click="confirmDelete(sec)"
                     title="حذف الشعبة"
-                    class="bx-icon-btn p-2 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer"
+                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-rose-500 hover:border-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
                   >
-                    <Trash2 class="w-4 h-4" />
+                    <Trash2 class="w-3.5 h-3.5" />
                   </button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Table Bottom Stats Bar -->
+      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex items-center justify-between text-xs text-bx-muted font-bold">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+          <span>إجمالي الشُعب المعتمدة: <strong class="text-bx-title font-black">{{ sections.length }}</strong></span>
+        </div>
+        <div class="text-[11px] text-bx-muted font-mono">
+          Phase 02-B • Standard Sections Catalog
+        </div>
       </div>
     </div>
 

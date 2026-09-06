@@ -244,61 +244,100 @@ onMounted(async () => {
       </button>
     </div>
 
-    <!-- Classes Table -->
-    <div v-else class="bg-[var(--bx-surface)] border border-bx-border rounded-2xl overflow-hidden shadow-xs">
+    <!-- Classes Table Card (Taqniya Spatial Card) -->
+    <div v-else class="bx-card bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl overflow-hidden shadow-xs">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead>
-            <tr class="border-b border-bx-border bg-[var(--bx-surface-solid)]/70 text-bx-muted font-bold">
-              <th class="py-3.5 px-4">#</th>
-              <th class="py-3.5 px-4">اسم الصف الدراسي</th>
-              <th class="py-3.5 px-4">المرحلة التعليمية</th>
-              <th class="py-3.5 px-4 text-center">المستوى الأكاديمي الرقمي</th>
-              <th class="py-3.5 px-4 text-center">الإجراءات</th>
+            <tr class="border-b border-bx-border bg-[var(--bx-table-header)] text-bx-muted font-black">
+              <th class="py-4 px-5 text-start w-16">#</th>
+              <th class="py-4 px-5">
+                <div class="flex items-center gap-2">
+                  <Layers class="w-3.5 h-3.5 text-bx-primary" />
+                  <span>اسم الصف الدراسي</span>
+                </div>
+              </th>
+              <th class="py-4 px-5">
+                <div class="flex items-center gap-2">
+                  <GraduationCap class="w-3.5 h-3.5 text-purple-600" />
+                  <span>المرحلة التعليمية</span>
+                </div>
+              </th>
+              <th class="py-4 px-5 text-center">
+                <div class="inline-flex items-center justify-center gap-1.5">
+                  <Hash class="w-3.5 h-3.5 text-emerald-600" />
+                  <span>المستوى الأكاديمي</span>
+                </div>
+              </th>
+              <th class="py-4 px-5 text-center w-28">الإجراءات</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-bx-border font-medium text-bx-text">
+          <tbody class="divide-y divide-bx-divider font-medium text-bx-text">
             <tr
               v-for="(cls, idx) in classes"
               :key="cls.id"
-              class="hover:bg-[var(--bx-surface-solid)]/50 transition-colors"
+              class="hover:bg-[var(--bx-row-hover)] transition-all duration-150 group"
             >
-              <td class="py-3.5 px-4 text-bx-muted font-mono font-bold">{{ idx + 1 }}</td>
-              <td class="py-3.5 px-4">
-                <span class="font-bold text-bx-title text-sm">{{ cls.name }}</span>
+              <td class="py-4 px-5">
+                <span class="w-7 h-7 rounded-xl bg-[var(--bx-pill)] border border-bx-border/80 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-bx-primary group-hover:border-bx-primary/30 transition-colors">
+                  {{ idx + 1 }}
+                </span>
               </td>
-              <td class="py-3.5 px-4">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20">
+              <td class="py-4 px-5">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-2xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                    <Layers class="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <span class="font-black text-bx-title text-sm block leading-tight">{{ cls.name }}</span>
+                    <span class="text-[10px] text-bx-muted font-mono">معرف الصف: #{{ cls.id }}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="py-4 px-5">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20 shadow-xs">
                   <GraduationCap class="w-3.5 h-3.5" />
                   {{ cls.stage_name || 'غير محدد' }}
                 </span>
               </td>
-              <td class="py-3.5 px-4 text-center">
-                <span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-mono font-bold bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
+              <td class="py-4 px-5 text-center">
+                <span class="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-xs">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                   المستوى {{ cls.grade_level }}
                 </span>
               </td>
-              <td class="py-3.5 px-4">
+              <td class="py-4 px-5">
                 <div class="flex items-center justify-center gap-2">
                   <button
                     @click="openEditDrawer(cls)"
                     title="تعديل الصف في القائمة الجانبية (Drawer)"
-                    class="bx-icon-btn p-2 text-bx-muted hover:text-bx-primary hover:bg-bx-primary/10 rounded-xl transition-all cursor-pointer"
+                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 transition-all cursor-pointer"
                   >
-                    <Edit2 class="w-4 h-4" />
+                    <Edit2 class="w-3.5 h-3.5" />
                   </button>
                   <button
                     @click="confirmDelete(cls)"
                     title="حذف الصف"
-                    class="bx-icon-btn p-2 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer"
+                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-rose-500 hover:border-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
                   >
-                    <Trash2 class="w-4 h-4" />
+                    <Trash2 class="w-3.5 h-3.5" />
                   </button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Table Bottom Stats Bar -->
+      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex items-center justify-between text-xs text-bx-muted font-bold">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-bx-primary"></span>
+          <span>إجمالي الصفوف المعروضة: <strong class="text-bx-title font-black">{{ classes.length }}</strong></span>
+        </div>
+        <div class="text-[11px] text-bx-muted font-mono">
+          Phase 02-B • Academic Classes
+        </div>
       </div>
     </div>
 

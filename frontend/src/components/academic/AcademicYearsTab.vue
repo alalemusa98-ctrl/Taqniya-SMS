@@ -248,93 +248,133 @@ onMounted(() => {
       </button>
     </div>
 
-    <!-- Years Table -->
-    <div v-else class="bg-[var(--bx-surface)] border border-bx-border rounded-2xl overflow-hidden shadow-xs">
+    <!-- Years Table Card (Taqniya Spatial Card) -->
+    <div v-else class="bx-card bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl overflow-hidden shadow-xs">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead>
-            <tr class="border-b border-bx-border bg-[var(--bx-surface-solid)]/70 text-bx-muted font-bold">
-              <th class="py-3.5 px-4">#</th>
-              <th class="py-3.5 px-4">السنة الدراسية</th>
-              <th class="py-3.5 px-4">تاريخ البداية</th>
-              <th class="py-3.5 px-4">تاريخ النهاية</th>
-              <th class="py-3.5 px-4 text-center">الحالة التشغيلية</th>
-              <th class="py-3.5 px-4 text-center">الإجراءات</th>
+            <tr class="border-b border-bx-border bg-[var(--bx-table-header)] text-bx-muted font-black">
+              <th class="py-4 px-5 text-start w-16">#</th>
+              <th class="py-4 px-5">
+                <div class="flex items-center gap-2">
+                  <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+                  <span>السنة الدراسية</span>
+                </div>
+              </th>
+              <th class="py-4 px-5">
+                <div class="flex items-center gap-2">
+                  <span>تاريخ البداية</span>
+                </div>
+              </th>
+              <th class="py-4 px-5">
+                <div class="flex items-center gap-2">
+                  <span>تاريخ النهاية</span>
+                </div>
+              </th>
+              <th class="py-4 px-5 text-center">
+                <div class="inline-flex items-center justify-center gap-1.5">
+                  <Zap class="w-3.5 h-3.5 text-emerald-600" />
+                  <span>الحالة التشغيلية</span>
+                </div>
+              </th>
+              <th class="py-4 px-5 text-center w-32">الإجراءات</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-bx-border font-medium text-bx-text">
+          <tbody class="divide-y divide-bx-divider font-medium text-bx-text">
             <tr
               v-for="(yr, idx) in years"
               :key="yr.id"
-              class="hover:bg-[var(--bx-surface-solid)]/50 transition-colors"
+              class="hover:bg-[var(--bx-row-hover)] transition-all duration-150 group"
               :class="{ 'bg-emerald-500/5': yr.is_active === 1 }"
             >
-              <td class="py-3.5 px-4 text-bx-muted font-mono font-bold">{{ idx + 1 }}</td>
-              <td class="py-3.5 px-4">
-                <div class="flex items-center gap-2.5">
+              <td class="py-4 px-5">
+                <span class="w-7 h-7 rounded-xl bg-[var(--bx-pill)] border border-bx-border/80 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-bx-primary group-hover:border-bx-primary/30 transition-colors">
+                  {{ idx + 1 }}
+                </span>
+              </td>
+              <td class="py-4 px-5">
+                <div class="flex items-center gap-3">
                   <div
-                    class="w-8 h-8 rounded-xl flex items-center justify-center font-bold"
-                    :class="yr.is_active === 1 ? 'bg-emerald-500/10 text-emerald-600' : 'bg-bx-primary/10 text-bx-primary'"
+                    class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform"
+                    :class="yr.is_active === 1 ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/30' : 'bg-bx-primary/10 text-bx-primary border border-bx-primary/20'"
                   >
-                    <Calendar class="w-4 h-4" />
+                    <Calendar class="w-5 h-5" />
                   </div>
                   <div>
-                    <span class="font-bold text-bx-title text-sm">{{ yr.name }}</span>
-                    <span v-if="yr.is_active === 1" class="mr-2 text-[10px] font-black text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                      السنة الحالية النشطة
-                    </span>
+                    <div class="flex items-center gap-2">
+                      <span class="font-black text-bx-title text-sm block leading-tight">{{ yr.name }}</span>
+                      <span v-if="yr.is_active === 1" class="text-[10px] font-black text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        السنة النشطة
+                      </span>
+                    </div>
+                    <span class="text-[10px] text-bx-muted font-mono">المعرف: #{{ yr.id }}</span>
                   </div>
                 </div>
               </td>
-              <td class="py-3.5 px-4 font-mono font-bold text-bx-muted">
-                {{ yr.start_date }}
+              <td class="py-4 px-5 font-mono font-bold text-bx-text">
+                <span class="px-2.5 py-1 rounded-lg bg-[var(--bx-pill)] border border-bx-border/70 text-[11px]">
+                  {{ yr.start_date }}
+                </span>
               </td>
-              <td class="py-3.5 px-4 font-mono font-bold text-bx-muted">
-                {{ yr.end_date }}
+              <td class="py-4 px-5 font-mono font-bold text-bx-text">
+                <span class="px-2.5 py-1 rounded-lg bg-[var(--bx-pill)] border border-bx-border/70 text-[11px]">
+                  {{ yr.end_date }}
+                </span>
               </td>
-              <td class="py-3.5 px-4 text-center">
+              <td class="py-4 px-5 text-center">
                 <span
-                  class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xs"
                   :class="yr.is_active === 1
                     ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
                     : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'"
                 >
                   <span class="w-1.5 h-1.5 rounded-full" :class="yr.is_active === 1 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>
-                  {{ yr.is_active === 1 ? 'نشطة (جارية)' : 'مؤرشفة' }}
+                  {{ yr.is_active === 1 ? 'نشطة (السنة الحالية)' : 'مؤرشفة' }}
                 </span>
               </td>
-              <td class="py-3.5 px-4">
+              <td class="py-4 px-5">
                 <div class="flex items-center justify-center gap-2">
                   <!-- Activate Year -->
                   <button
                     v-if="yr.is_active !== 1"
                     @click="confirmActivate(yr)"
                     title="تفعيل هذه السنة (جعلها السنة النشطة)"
-                    class="bx-icon-btn p-2 text-bx-muted hover:text-emerald-600 hover:bg-emerald-500/10 rounded-xl transition-all cursor-pointer"
+                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-emerald-600 hover:border-emerald-400 hover:bg-emerald-500/10 transition-all cursor-pointer"
                   >
-                    <Zap class="w-4 h-4" />
+                    <Zap class="w-3.5 h-3.5" />
                   </button>
                   <button
                     @click="openEditDrawer(yr)"
                     title="تعديل السنة في القائمة الجانبية (Drawer)"
-                    class="bx-icon-btn p-2 text-bx-muted hover:text-bx-primary hover:bg-bx-primary/10 rounded-xl transition-all cursor-pointer"
+                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 transition-all cursor-pointer"
                   >
-                    <Edit2 class="w-4 h-4" />
+                    <Edit2 class="w-3.5 h-3.5" />
                   </button>
                   <button
                     @click="confirmDelete(yr)"
                     :disabled="yr.is_active === 1"
                     :title="yr.is_active === 1 ? 'لا يمكن حذف السنة النشطة' : 'حذف السنة'"
-                    class="bx-icon-btn p-2 rounded-xl transition-all cursor-pointer"
-                    :class="yr.is_active === 1 ? 'text-bx-muted/30 cursor-not-allowed' : 'text-bx-muted hover:text-rose-500 hover:bg-rose-500/10'"
+                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border transition-all cursor-pointer"
+                    :class="yr.is_active === 1 ? 'text-bx-muted/20 border-bx-border/30 cursor-not-allowed' : 'text-bx-muted hover:text-rose-500 hover:border-rose-400 hover:bg-rose-500/10'"
                   >
-                    <Trash2 class="w-4 h-4" />
+                    <Trash2 class="w-3.5 h-3.5" />
                   </button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Table Bottom Stats Bar -->
+      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex items-center justify-between text-xs text-bx-muted font-bold">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>إجمالي السنوات الدراسية: <strong class="text-bx-title font-black">{{ years.length }}</strong></span>
+        </div>
+        <div class="text-[11px] text-bx-muted font-mono">
+          Phase 02-A • Academic Years & Calendar
+        </div>
       </div>
     </div>
 
