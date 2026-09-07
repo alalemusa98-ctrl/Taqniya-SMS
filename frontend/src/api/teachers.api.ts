@@ -1,4 +1,5 @@
-import { apiClient } from './client';
+import { apiClient, deduplicatedGet } from './client';
+
 
 export interface Teacher {
   id: number;
@@ -59,11 +60,12 @@ export interface TeacherDetailResponse {
 }
 
 export const teachersApi = {
-  getTeachers: (params?: GetTeachersParams) =>
-    apiClient.get<TeachersResponse>('/teachers', { params }),
+  getTeachers: (params?: GetTeachersParams, signal?: AbortSignal) =>
+    deduplicatedGet<TeachersResponse>('/teachers', { params, signal }),
 
-  getTeacherById: (id: number) =>
-    apiClient.get<TeacherDetailResponse>(`/teachers/${id}`),
+  getTeacherById: (id: number, signal?: AbortSignal) =>
+    deduplicatedGet<TeacherDetailResponse>(`/teachers/${id}`, { signal }),
+
 
   createTeacher: (payload: CreateTeacherPayload) =>
     apiClient.post<TeacherDetailResponse>('/teachers', payload),

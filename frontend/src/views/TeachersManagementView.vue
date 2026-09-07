@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue';
 import {
   Plus,
   Search,
@@ -25,7 +25,10 @@ import {
 } from 'lucide-vue-next';
 import { teachersApi, type Teacher, type PaginationMeta } from '../api/teachers.api';
 import { useToast } from '../composables/useToast';
-import TaqniyaDrawer from '../components/ui/TaqniyaDrawer.vue';
+import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
+
+// Component Lazy Loading (component_lazy_loading)
+const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
 
 const toast = useToast();
 
@@ -46,6 +49,9 @@ const search = ref('');
 const statusPill = ref<'all' | 'active' | 'inactive'>('all');
 const activeSpecialization = ref<string>('all');
 const currentPage = ref(1);
+
+// Request Cancellation Controller (request_cancellation)
+let activeAbortController: AbortController | null = null;
 
 // Drawer State
 const showDrawer = ref(false);
@@ -87,28 +93,44 @@ const teacherToDelete = ref<Teacher | null>(null);
 const isDeleting = ref(false);
 const deleteErrorMessage = ref<string | null>(null);
 
-// Fetch teachers from backend
+// Fetch teachers from backend with Request Cancellation & Deduplication
 async function fetchTeachers() {
+  // Cancel any prior in-flight request
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+
   loading.value = true;
   try {
-    const res = await teachersApi.getTeachers({
-      search: search.value.trim() || undefined,
-      specialization: activeSpecialization.value !== 'all' ? activeSpecialization.value : undefined,
-      is_active: statusPill.value === 'active' ? 1 : statusPill.value === 'inactive' ? 0 : undefined,
-      page: currentPage.value,
-      per_page: 15,
-      sort_by: 'id',
-      sort_order: 'desc',
-    });
+    const res = await teachersApi.getTeachers(
+      {
+        search: search.value.trim() || undefined,
+        specialization: activeSpecialization.value !== 'all' ? activeSpecialization.value : undefined,
+        is_active: statusPill.value === 'active' ? 1 : statusPill.value === 'inactive' ? 0 : undefined,
+        page: currentPage.value,
+        per_page: 15,
+        sort_by: 'id',
+        sort_order: 'desc',
+      },
+      activeAbortController.signal,
+    );
     teachers.value = res.data.data;
     meta.value = res.data.meta;
   } catch (err: any) {
+    // If request was canceled by new search/filter, ignore error
+    if (err?.name === 'CanceledError' || err?.name === 'AbortError') {
+      return;
+    }
     const msg = err.response?.data?.message || 'تعذر تحميل سجلات الكادر التعليمي.';
     toast.error(msg);
   } finally {
-    loading.value = false;
+    if (!activeAbortController?.signal.aborted) {
+      loading.value = false;
+    }
   }
 }
+
 
 // Available specializations extracted dynamically from data
 const availableSpecializations = computed(() => {
@@ -338,7 +360,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-4 font-sans" dir="rtl">
+  <TaqniyaErrorBoundary>
+    <div class="space-y-4 font-sans" dir="rtl">
     <!-- Unified Container Card (Matching the Academic Structure Reference Design System) -->
     <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
       <!-- Card Header: Title on Right, Controls & Filters on Left -->
@@ -1000,5 +1023,6 @@ onMounted(() => {
         </div>
       </div>
     </Teleport>
-  </div>
+    </div>
+  </TaqniyaErrorBoundary>
 </template>

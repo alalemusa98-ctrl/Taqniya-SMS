@@ -1,13 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth.store';
+import { useRouteLoader } from '../composables/useRouteLoader';
 
-import LoginView from '../views/LoginView.vue';
-import DashboardLayout from '../views/DashboardLayout.vue';
-import UsersManagementView from '../views/UsersManagementView.vue';
-import AuditLogsView from '../views/AuditLogsView.vue';
-import AcademicStructureView from '../views/AcademicStructureView.vue';
-import TeachersManagementView from '../views/TeachersManagementView.vue';
-import TeachingAssignmentsView from '../views/TeachingAssignmentsView.vue';
+// Dynamic route-level code-splitting (code_splitting & lazy_loading)
+const LoginView = () => import('../views/LoginView.vue');
+const DashboardLayout = () => import('../views/DashboardLayout.vue');
+const UsersManagementView = () => import('../views/UsersManagementView.vue');
+const AuditLogsView = () => import('../views/AuditLogsView.vue');
+const AcademicStructureView = () => import('../views/AcademicStructureView.vue');
+const TeachersManagementView = () => import('../views/TeachersManagementView.vue');
+const TeachingAssignmentsView = () => import('../views/TeachingAssignmentsView.vue');
 
 const routes = [
   {
@@ -68,7 +70,11 @@ export const router = createRouter({
   routes,
 });
 
+// Route Navigation & Loading States (route_loading_states)
 router.beforeEach(async (to, _from, next) => {
+  const { start } = useRouteLoader();
+  start();
+
   const authStore = useAuthStore();
 
   // If page requires auth and not authenticated
@@ -98,3 +104,14 @@ router.beforeEach(async (to, _from, next) => {
 
   next();
 });
+
+router.afterEach(() => {
+  const { finish } = useRouteLoader();
+  finish();
+});
+
+router.onError(() => {
+  const { error } = useRouteLoader();
+  error();
+});
+
