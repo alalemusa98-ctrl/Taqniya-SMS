@@ -188,7 +188,7 @@ onMounted(() => {
 <template>
   <div class="space-y-6">
     <!-- Action & Filter Toolbar -->
-    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[var(--bx-surface)] p-4 rounded-2xl border border-bx-border shadow-xs">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[var(--bx-surface-solid)] p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] shadow-xs">
       <div class="flex flex-1 flex-wrap items-center gap-3">
         <!-- Search -->
         <div class="relative flex-1 min-w-[220px] max-w-md">
@@ -198,7 +198,7 @@ onMounted(() => {
             @keyup.enter="fetchYears"
             type="text"
             placeholder="بحث باسم السنة الدراسية..."
-            class="w-full pr-10 pl-4 h-[42px] bg-[var(--bx-surface-solid)] border border-bx-border rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
+            class="w-full pr-10 pl-4 h-[42px] bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
           />
         </div>
 
@@ -214,7 +214,7 @@ onMounted(() => {
       <!-- Add Year Button -->
       <button
         @click="openCreateDrawer"
-        class="bx-btn bx-btn-primary h-[42px] px-5 text-xs font-bold shrink-0"
+        class="bx-btn bx-btn-primary h-[42px] px-5 text-xs font-bold shrink-0 rounded-2xl cursor-pointer"
       >
         <Plus class="w-4 h-4" />
         <span>إضافة سنة دراسية</span>
@@ -230,7 +230,7 @@ onMounted(() => {
     <!-- Empty State -->
     <div
       v-else-if="years.length === 0"
-      class="flex flex-col items-center justify-center py-16 bg-[var(--bx-surface)] border border-bx-border border-dashed rounded-3xl text-center p-6 space-y-4"
+      class="flex flex-col items-center justify-center py-16 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] border-dashed rounded-2xl text-center p-6 space-y-4"
     >
       <div class="w-14 h-14 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center shadow-xs">
         <Calendar class="w-7 h-7" />
@@ -241,104 +241,104 @@ onMounted(() => {
       </div>
       <button
         @click="openCreateDrawer"
-        class="bx-btn bx-btn-primary h-[40px] px-5 text-xs font-bold"
+        class="bx-btn bx-btn-primary h-[40px] px-5 text-xs font-bold rounded-xl cursor-pointer"
       >
         <Plus class="w-4 h-4" />
         <span>إنشاء سنة الآن</span>
       </button>
     </div>
 
-    <!-- Years Table Card (Taqniya Spatial Card) -->
-    <div v-else class="bx-card bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl overflow-hidden shadow-xs">
+    <!-- Years Table Card (Taqniya Unified Bordered Card) -->
+    <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
       <div class="overflow-x-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start border-collapse text-xs">
           <thead>
-            <tr class="border-b border-bx-border bg-[var(--bx-table-header)] text-bx-muted font-black">
-              <th class="py-4 px-5 text-start w-16">#</th>
-              <th class="py-4 px-5">
+            <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
+              <th class="py-3.5 px-5 font-bold text-start w-16">#</th>
+              <th class="py-3.5 px-5 font-bold text-start">
                 <div class="flex items-center gap-2">
                   <Calendar class="w-3.5 h-3.5 text-bx-primary" />
                   <span>السنة الدراسية</span>
                 </div>
               </th>
-              <th class="py-4 px-5">
+              <th class="py-3.5 px-5 font-bold text-start">
                 <div class="flex items-center gap-2">
                   <span>تاريخ البداية</span>
                 </div>
               </th>
-              <th class="py-4 px-5">
+              <th class="py-3.5 px-5 font-bold text-start">
                 <div class="flex items-center gap-2">
                   <span>تاريخ النهاية</span>
                 </div>
               </th>
-              <th class="py-4 px-5 text-center">
+              <th class="py-3.5 px-5 font-bold text-center">
                 <div class="inline-flex items-center justify-center gap-1.5">
                   <Zap class="w-3.5 h-3.5 text-emerald-600" />
                   <span>الحالة التشغيلية</span>
                 </div>
               </th>
-              <th class="py-4 px-5 text-center w-32">الإجراءات</th>
+              <th class="py-3.5 px-5 font-bold text-center w-32">الإجراءات</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-bx-divider font-medium text-bx-text">
+          <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12] font-medium text-bx-text">
             <tr
               v-for="(yr, idx) in years"
               :key="yr.id"
-              class="hover:bg-[var(--bx-row-hover)] transition-all duration-150 group"
-              :class="{ 'bg-emerald-500/5': yr.is_active === 1 }"
+              class="hover:bg-emerald-500/[0.05] dark:hover:bg-white/[0.03] transition-colors duration-150 group"
+              :class="{ 'bg-emerald-500/[0.03]': yr.is_active === 1 }"
             >
-              <td class="py-4 px-5">
-                <span class="w-7 h-7 rounded-xl bg-[var(--bx-pill)] border border-bx-border/80 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-bx-primary group-hover:border-bx-primary/30 transition-colors">
-                  {{ idx + 1 }}
+              <td class="py-3.5 px-5">
+                <span class="w-7 h-7 rounded-xl bg-emerald-500/10 border border-[#B4AED8]/60 dark:border-white/10 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-emerald-600 group-hover:border-emerald-500/30 transition-colors">
+                  {{ (pagination.page - 1) * pagination.per_page + idx + 1 }}
                 </span>
               </td>
-              <td class="py-4 px-5">
+              <td class="py-3.5 px-5">
                 <div>
                   <div class="flex items-center gap-2">
                     <span class="font-black text-bx-title text-sm block leading-tight">{{ yr.name }}</span>
-                    <span v-if="yr.is_active === 1" class="text-[10px] font-black bx-badge-emerald px-2 py-0.5 rounded-full">
+                    <span v-if="yr.is_active === 1" class="text-[10px] font-black border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                       السنة النشطة
                     </span>
                   </div>
-                  <span class="text-[10px] text-bx-muted font-mono">المعرف: #{{ yr.id }}</span>
+                  <span class="text-[10px] text-bx-muted font-mono">YR-{{ String(yr.id).padStart(3, '0') }}#</span>
                 </div>
               </td>
-              <td class="py-4 px-5 font-mono font-bold text-bx-text">
-                <span class="px-2.5 py-1 rounded-lg bg-[var(--bx-pill)] border border-bx-border/70 text-[11px]">
+              <td class="py-3.5 px-5 font-mono font-bold text-bx-text">
+                <span class="px-2.5 py-1 rounded-lg bg-[var(--bx-surface-solid)] border border-[#B4AED8]/70 dark:border-white/10 text-[11px]">
                   {{ yr.start_date }}
                 </span>
               </td>
-              <td class="py-4 px-5 font-mono font-bold text-bx-text">
-                <span class="px-2.5 py-1 rounded-lg bg-[var(--bx-pill)] border border-bx-border/70 text-[11px]">
+              <td class="py-3.5 px-5 font-mono font-bold text-bx-text">
+                <span class="px-2.5 py-1 rounded-lg bg-[var(--bx-surface-solid)] border border-[#B4AED8]/70 dark:border-white/10 text-[11px]">
                   {{ yr.end_date }}
                 </span>
               </td>
-              <td class="py-4 px-5 text-center">
+              <td class="py-3.5 px-5 text-center">
                 <span
-                  class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xs"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border shadow-xs"
                   :class="yr.is_active === 1
-                    ? 'bx-badge-emerald'
-                    : 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/25 dark:bg-slate-500/25'"
+                    ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                    : 'border-slate-500/25 text-slate-700 dark:text-slate-300 bg-slate-500/10'"
                 >
                   <span class="w-1.5 h-1.5 rounded-full" :class="yr.is_active === 1 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>
                   <span>{{ yr.is_active === 1 ? 'نشطة (السنة الحالية)' : 'مؤرشفة' }}</span>
                 </span>
               </td>
-              <td class="py-4 px-5">
+              <td class="py-3.5 px-5">
                 <div class="flex items-center justify-center gap-2">
                   <!-- Activate Year -->
                   <button
                     v-if="yr.is_active !== 1"
                     @click="confirmActivate(yr)"
                     title="تفعيل هذه السنة (جعلها السنة النشطة)"
-                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-emerald-600 hover:border-emerald-400 hover:bg-emerald-500/10 transition-all cursor-pointer"
+                    class="w-8 h-8 rounded-xl border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                   >
                     <Zap class="w-3.5 h-3.5" />
                   </button>
                   <button
                     @click="openEditDrawer(yr)"
                     title="تعديل السنة في القائمة الجانبية (Drawer)"
-                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 transition-all cursor-pointer"
+                    class="w-8 h-8 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                   >
                     <Edit2 class="w-3.5 h-3.5" />
                   </button>
@@ -346,8 +346,10 @@ onMounted(() => {
                     @click="confirmDelete(yr)"
                     :disabled="yr.is_active === 1"
                     :title="yr.is_active === 1 ? 'لا يمكن حذف السنة النشطة' : 'حذف السنة'"
-                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border transition-all cursor-pointer"
-                    :class="yr.is_active === 1 ? 'text-bx-muted/20 border-bx-border/30 cursor-not-allowed' : 'text-bx-muted hover:text-rose-500 hover:border-rose-400 hover:bg-rose-500/10'"
+                    class="w-8 h-8 rounded-xl border transition-all shadow-xs flex items-center justify-center"
+                    :class="yr.is_active === 1
+                      ? 'text-bx-muted/30 border-[#B4AED8]/30 dark:border-white/5 cursor-not-allowed bg-slate-500/5'
+                      : 'border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 cursor-pointer'"
                   >
                     <Trash2 class="w-3.5 h-3.5" />
                   </button>
@@ -359,7 +361,7 @@ onMounted(() => {
       </div>
 
       <!-- Table Bottom Stats Bar -->
-      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex items-center justify-between text-xs text-bx-muted font-bold">
+      <div class="px-5 py-3.5 border-t border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] flex items-center justify-between text-xs text-bx-muted font-bold">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>إجمالي السنوات الدراسية: <strong class="text-bx-title font-black">{{ years.length }}</strong></span>
@@ -389,7 +391,7 @@ onMounted(() => {
             type="text"
             required
             placeholder="مثال: 2025-2026"
-            class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
+            class="w-full h-[42px] px-4 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
           />
         </div>
 
@@ -405,7 +407,7 @@ onMounted(() => {
               dir="ltr"
               lang="en-GB"
               required
-              class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-bold"
+              class="w-full h-[42px] px-4 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-bold"
             />
           </div>
           <div class="space-y-1.5">
@@ -418,7 +420,7 @@ onMounted(() => {
               dir="ltr"
               lang="en-GB"
               required
-              class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-bold"
+              class="w-full h-[42px] px-4 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-bold"
             />
           </div>
         </div>
@@ -433,7 +435,7 @@ onMounted(() => {
         <button
           type="button"
           @click="showDrawer = false"
-          class="bx-btn bx-btn-outline h-[42px] px-6 text-xs font-bold"
+          class="bx-btn bx-btn-outline h-[42px] px-6 text-xs font-bold rounded-2xl cursor-pointer"
         >
           إلغاء
         </button>
@@ -441,7 +443,7 @@ onMounted(() => {
           type="submit"
           form="yearDrawerForm"
           :disabled="isSubmitting"
-          class="bx-btn bx-btn-primary h-[42px] px-6 text-xs font-bold disabled:opacity-50"
+          class="bx-btn bx-btn-primary h-[42px] px-6 text-xs font-bold rounded-2xl cursor-pointer disabled:opacity-50"
         >
           <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
           <span>{{ drawerMode === 'create' ? 'حفظ السنة' : 'تحديث البيانات' }}</span>
@@ -454,7 +456,7 @@ onMounted(() => {
       v-if="showActivateModal && yearToActivate"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
     >
-      <div class="bg-[var(--bx-surface-solid)] w-full max-w-md rounded-3xl border border-bx-border shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-[var(--bx-surface-solid)] w-full max-w-md rounded-3xl border border-[#B4AED8] dark:border-white/[0.12] shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
         <div class="flex items-center gap-3 text-emerald-600">
           <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
             <Zap class="w-5 h-5" />
@@ -470,17 +472,17 @@ onMounted(() => {
           سيتم اعتماد هذه السنة كسنة دراسية حالية وإلغاء تفعيل أي سنة سابقة.
         </p>
 
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-bx-border">
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#B4AED8] dark:border-white/[0.12]">
           <button
             @click="showActivateModal = false"
-            class="bx-btn bx-btn-outline h-[38px] px-5 text-xs font-bold"
+            class="bx-btn bx-btn-outline h-[38px] px-5 text-xs font-bold rounded-xl cursor-pointer"
           >
             تراجع
           </button>
           <button
             @click="handleActivate"
             :disabled="isActivating"
-            class="bx-btn bx-btn-success h-[38px] px-5 text-xs font-bold disabled:opacity-50"
+            class="bx-btn bx-btn-success h-[38px] px-5 text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
           >
             <Loader2 v-if="isActivating" class="w-3.5 h-3.5 animate-spin" />
             <span>تأكيد التفعيل</span>
@@ -494,7 +496,7 @@ onMounted(() => {
       v-if="showDeleteModal && yearToDelete"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
     >
-      <div class="bg-[var(--bx-surface-solid)] w-full max-w-md rounded-3xl border border-bx-border shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-[var(--bx-surface-solid)] w-full max-w-md rounded-3xl border border-[#B4AED8] dark:border-white/[0.12] shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
         <div class="flex items-center gap-3 text-rose-500">
           <div class="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center">
             <AlertCircle class="w-5 h-5" />
@@ -510,17 +512,17 @@ onMounted(() => {
           سيتم رفض العملية فوراً في حال وجود طلاب أو فصول دراسية أو قيود مالية مسندة لهذه السنة.
         </p>
 
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-bx-border">
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#B4AED8] dark:border-white/[0.12]">
           <button
             @click="showDeleteModal = false"
-            class="bx-btn bx-btn-outline h-[38px] px-5 text-xs font-bold"
+            class="bx-btn bx-btn-outline h-[38px] px-5 text-xs font-bold rounded-xl cursor-pointer"
           >
             إلغاء
           </button>
           <button
             @click="handleDelete"
             :disabled="isDeleting"
-            class="bx-btn bx-btn-danger h-[38px] px-5 text-xs font-bold disabled:opacity-50"
+            class="bx-btn bx-btn-danger h-[38px] px-5 text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
           >
             <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
             <span>حذف نهائي</span>

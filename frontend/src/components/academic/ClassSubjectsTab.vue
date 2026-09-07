@@ -557,19 +557,19 @@ onMounted(async () => {
           <!-- Table with Dynamic Columns matching THIS class's exact semesters directly above the subjects -->
           <div class="rounded-b-2xl">
             <table class="w-full text-start border-collapse text-xs">
-              <thead class="sticky top-[var(--header-offset,65px)] z-20 transition-[top] duration-300">
-                <tr class="bg-[var(--bx-surface-solid)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted shadow-xs">
-                  <th class="sticky top-[var(--header-offset,65px)] z-20 py-3 px-4 font-bold text-start w-28 bg-[var(--bx-surface-solid)] bg-purple-500/[0.04] transition-[top] duration-300">الرمز</th>
-                  <th class="sticky top-[var(--header-offset,65px)] z-20 py-3 px-4 font-bold text-start min-w-[180px] bg-[var(--bx-surface-solid)] bg-purple-500/[0.04] transition-[top] duration-300">المادة الدراسية</th>
+              <thead>
+                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
+                  <th class="py-3 px-4 font-bold text-start w-28">الرمز</th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[180px]">المادة الدراسية</th>
                   <!-- Dynamic headers for THIS class's terms only -->
                   <th
                     v-for="t in grp.terms"
                     :key="t.id"
-                    class="sticky top-[var(--header-offset,65px)] z-20 py-3 px-4 font-bold text-center min-w-[150px] bg-[var(--bx-surface-solid)] bg-purple-500/[0.04] transition-[top] duration-300"
+                    class="py-3 px-4 font-bold text-center min-w-[150px]"
                   >
                     {{ t.term_name }}
                   </th>
-                  <th class="sticky top-[var(--header-offset,65px)] z-20 py-3 px-4 font-bold text-center w-36 bg-[var(--bx-surface-solid)] bg-purple-500/[0.04] transition-[top] duration-300">إجراءات</th>
+                  <th class="py-3 px-4 font-bold text-center w-36">إجراءات</th>
                 </tr>
               </thead>
 

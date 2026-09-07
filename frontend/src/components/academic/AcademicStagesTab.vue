@@ -127,7 +127,7 @@ onMounted(() => {
 <template>
   <div class="space-y-6">
     <!-- Header & Action Toolbar -->
-    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[var(--bx-surface)] p-4 rounded-2xl border border-bx-border shadow-xs">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[var(--bx-surface-solid)] p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] shadow-xs">
       <div>
         <h3 class="text-sm font-bold text-bx-title">الهيكل الهرمي للمراحل التعليمية</h3>
         <p class="text-[11px] text-bx-muted">المراحل الأساسية الحاضنة للصفوف (الروضة، الابتدائية، الإعدادية، الثانوية)</p>
@@ -136,7 +136,7 @@ onMounted(() => {
       <!-- Add Stage Button -->
       <button
         @click="openCreateDrawer"
-        class="bx-btn bx-btn-primary h-[42px] px-5 text-xs font-bold shrink-0"
+        class="bx-btn bx-btn-primary h-[42px] px-5 text-xs font-bold shrink-0 rounded-2xl cursor-pointer"
       >
         <Plus class="w-4 h-4" />
         <span>إضافة مرحلة تعليمية</span>
@@ -152,9 +152,9 @@ onMounted(() => {
     <!-- Empty State -->
     <div
       v-else-if="stages.length === 0"
-      class="flex flex-col items-center justify-center py-16 bg-[var(--bx-surface)] border border-bx-border border-dashed rounded-3xl text-center p-6 space-y-4"
+      class="flex flex-col items-center justify-center py-16 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] border-dashed rounded-2xl text-center p-6 space-y-4"
     >
-      <div class="w-14 h-14 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center shadow-xs">
+      <div class="w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center shadow-xs">
         <GraduationCap class="w-7 h-7" />
       </div>
       <div>
@@ -163,71 +163,71 @@ onMounted(() => {
       </div>
       <button
         @click="openCreateDrawer"
-        class="bx-btn bx-btn-primary h-[40px] px-5 text-xs font-bold"
+        class="bx-btn bx-btn-primary h-[40px] px-5 text-xs font-bold rounded-xl cursor-pointer"
       >
         <Plus class="w-4 h-4" />
         <span>إضافة مرحلة الآن</span>
       </button>
     </div>
 
-    <!-- Stages Table Card (Taqniya Spatial Card) -->
-    <div v-else class="bx-card bg-[var(--bx-surface-solid)] border border-bx-border rounded-3xl overflow-hidden shadow-xs">
+    <!-- Stages Table Card (Taqniya Unified Bordered Card) -->
+    <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
       <div class="overflow-x-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start border-collapse text-xs">
           <thead>
-            <tr class="border-b border-bx-border bg-[var(--bx-table-header)] text-bx-muted font-black">
-              <th class="py-4 px-5 text-start w-16">#</th>
-              <th class="py-4 px-5">
+            <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
+              <th class="py-3.5 px-5 font-bold text-start w-16">#</th>
+              <th class="py-3.5 px-5 font-bold text-start">
                 <div class="flex items-center gap-2">
                   <GraduationCap class="w-3.5 h-3.5 text-purple-600" />
                   <span>اسم المرحلة التعليمية</span>
                 </div>
               </th>
-              <th class="py-4 px-5 text-center">
+              <th class="py-3.5 px-5 font-bold text-center">
                 <div class="inline-flex items-center justify-center gap-1.5">
                   <ArrowDownUp class="w-3.5 h-3.5 text-purple-600" />
                   <span>الترتيب الهرمي النظامي</span>
                 </div>
               </th>
-              <th class="py-4 px-5 text-center w-28">الإجراءات</th>
+              <th class="py-3.5 px-5 font-bold text-center w-28">الإجراءات</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-bx-divider font-medium text-bx-text">
+          <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12] font-medium text-bx-text">
             <tr
               v-for="(stage, idx) in stages"
               :key="stage.id"
-              class="hover:bg-[var(--bx-row-hover)] transition-all duration-150 group"
+              class="hover:bg-purple-500/[0.05] dark:hover:bg-white/[0.03] transition-colors duration-150 group"
             >
-              <td class="py-4 px-5">
-                <span class="w-7 h-7 rounded-xl bg-[var(--bx-pill)] border border-bx-border/80 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-purple-600 group-hover:border-purple-500/30 transition-colors">
+              <td class="py-3.5 px-5">
+                <span class="w-7 h-7 rounded-xl bg-purple-500/10 border border-[#B4AED8]/60 dark:border-white/10 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-purple-600 group-hover:border-purple-500/30 transition-colors">
                   {{ idx + 1 }}
                 </span>
               </td>
-              <td class="py-4 px-5">
+              <td class="py-3.5 px-5">
                 <div>
                   <span class="font-black text-bx-title text-sm block leading-tight">{{ stage.name }}</span>
-                  <span class="text-[10px] text-bx-muted font-mono">معرف المرحلة: #{{ stage.id }}</span>
+                  <span class="text-[10px] text-bx-muted font-mono">STG-{{ String(stage.id).padStart(3, '0') }}#</span>
                 </div>
               </td>
-              <td class="py-4 px-5 text-center">
-                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-mono font-black bx-badge-purple shadow-xs">
+              <td class="py-3.5 px-5 text-center">
+                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-mono font-black border border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10 shadow-xs">
                   <ArrowDownUp class="w-3.5 h-3.5" />
                   المستوى رقم: {{ stage.order_index }}
                 </span>
               </td>
-              <td class="py-4 px-5">
+              <td class="py-3.5 px-5">
                 <div class="flex items-center justify-center gap-2">
                   <button
                     @click="openEditDrawer(stage)"
                     title="تعديل المرحلة في القائمة الجانبية (Drawer)"
-                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 transition-all cursor-pointer"
+                    class="w-8 h-8 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                   >
                     <Edit2 class="w-3.5 h-3.5" />
                   </button>
                   <button
                     @click="confirmDelete(stage)"
                     title="حذف المرحلة"
-                    class="bx-icon-btn w-8 h-8 rounded-xl border border-bx-border text-bx-muted hover:text-rose-500 hover:border-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                    class="w-8 h-8 rounded-xl border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                   >
                     <Trash2 class="w-3.5 h-3.5" />
                   </button>
@@ -239,7 +239,7 @@ onMounted(() => {
       </div>
 
       <!-- Table Bottom Stats Bar -->
-      <div class="px-5 py-3 border-t border-bx-border bg-[var(--bx-table-header)]/50 flex items-center justify-between text-xs text-bx-muted font-bold">
+      <div class="px-5 py-3.5 border-t border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] flex items-center justify-between text-xs text-bx-muted font-bold">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-purple-600"></span>
           <span>إجمالي المراحل المعتمدة: <strong class="text-bx-title font-black">{{ stages.length }}</strong></span>
@@ -269,7 +269,7 @@ onMounted(() => {
             type="text"
             required
             placeholder="مثال: المرحلة الابتدائية"
-            class="w-full h-[42px] px-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
+            class="w-full h-[42px] px-4 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
           />
         </div>
 
@@ -285,7 +285,7 @@ onMounted(() => {
               type="number"
               min="1"
               required
-              class="w-full h-[42px] pr-10 pl-4 bg-[var(--bx-surface)] border border-bx-border rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-mono font-bold"
+              class="w-full h-[42px] pr-10 pl-4 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-mono font-bold"
             />
           </div>
           <p class="text-[11px] text-bx-muted">يحدد ترتيب ظهور المرحلة وتدرجها التعليمي في التقارير والقوائم.</p>
@@ -296,7 +296,7 @@ onMounted(() => {
         <button
           type="button"
           @click="showDrawer = false"
-          class="bx-btn bx-btn-outline h-[42px] px-6 text-xs font-bold"
+          class="bx-btn bx-btn-outline h-[42px] px-6 text-xs font-bold rounded-2xl cursor-pointer"
         >
           إلغاء
         </button>
@@ -304,7 +304,7 @@ onMounted(() => {
           type="submit"
           form="stageDrawerForm"
           :disabled="isSubmitting"
-          class="bx-btn bx-btn-primary h-[42px] px-6 text-xs font-bold disabled:opacity-50"
+          class="bx-btn bx-btn-primary h-[42px] px-6 text-xs font-bold rounded-2xl cursor-pointer disabled:opacity-50"
         >
           <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
           <span>{{ drawerMode === 'create' ? 'حفظ المرحلة' : 'تحديث البيانات' }}</span>
@@ -317,7 +317,7 @@ onMounted(() => {
       v-if="showDeleteModal && stageToDelete"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
     >
-      <div class="bg-[var(--bx-surface-solid)] w-full max-w-md rounded-3xl border border-bx-border shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="bg-[var(--bx-surface-solid)] w-full max-w-md rounded-3xl border border-[#B4AED8] dark:border-white/[0.12] shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
         <div class="flex items-center gap-3 text-rose-500">
           <div class="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center">
             <AlertCircle class="w-5 h-5" />
@@ -333,17 +333,17 @@ onMounted(() => {
           سيتم رفض الحذف فوراً في حال وجود صفوف دراسية مسجلة تحت هذه المرحلة.
         </p>
 
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-bx-border">
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#B4AED8] dark:border-white/[0.12]">
           <button
             @click="showDeleteModal = false"
-            class="bx-btn bx-btn-outline h-[38px] px-5 text-xs font-bold"
+            class="bx-btn bx-btn-outline h-[38px] px-5 text-xs font-bold rounded-xl cursor-pointer"
           >
             إلغاء
           </button>
           <button
             @click="handleDelete"
             :disabled="isDeleting"
-            class="bx-btn bx-btn-danger h-[38px] px-5 text-xs font-bold disabled:opacity-50"
+            class="bx-btn bx-btn-danger h-[38px] px-5 text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
           >
             <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
             <span>حذف نهائي</span>
