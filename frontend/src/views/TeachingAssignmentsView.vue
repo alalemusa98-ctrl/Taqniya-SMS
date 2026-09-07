@@ -15,6 +15,7 @@ import {
   UserCheck,
   Filter,
   RotateCcw,
+  Calendar,
 } from 'lucide-vue-next';
 import {
   teachingAssignmentsApi,
@@ -205,10 +206,19 @@ async function fetchAssignments() {
   }
 }
 
+// Active Academic Year (Always prioritize active year)
+const activeAcademicYear = computed(() => {
+  return academicYears.value.find((y) => y.is_active === 1) || academicYears.value[0];
+});
+
 // Explicit Filter Execution (Non-immediate, triggered by filter button or Enter)
 function applyFilters() {
   appliedSearch.value = search.value.trim();
-  appliedYearId.value = selectedYearId.value;
+  const activeY = activeAcademicYear.value || academicYears.value[0];
+  if (activeY) {
+    selectedYearId.value = activeY.id;
+    appliedYearId.value = activeY.id;
+  }
   appliedClassFilter.value = selectedClassFilter.value;
   appliedTeacherFilter.value = selectedTeacherFilter.value;
   currentPage.value = 1;
@@ -222,6 +232,11 @@ function resetFilters() {
   appliedClassFilter.value = 'all';
   selectedTeacherFilter.value = 'all';
   appliedTeacherFilter.value = 'all';
+  const activeY = activeAcademicYear.value || academicYears.value[0];
+  if (activeY) {
+    selectedYearId.value = activeY.id;
+    appliedYearId.value = activeY.id;
+  }
   currentPage.value = 1;
   fetchAssignments();
 }
@@ -597,9 +612,18 @@ onMounted(async () => {
       <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
         <!-- Title -->
         <div>
-          <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
-            كشوفات إسناد التدريس والنصاب الأكاديمي
-          </h2>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+              كشوفات إسناد التدريس والنصاب الأكاديمي
+            </h2>
+            <span
+              v-if="activeAcademicYear"
+              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-xs"
+            >
+              <Calendar class="w-3.5 h-3.5" />
+              <span>العام الدراسي النشط: {{ activeAcademicYear.name }}</span>
+            </span>
+          </div>
           <p class="text-xs text-bx-muted font-medium mt-1">
             إدارة توزيع وتكليف المعلمين بالمواد المقررة لكل شعبة، وفحص النصاب والقيود الأكاديمية
           </p>
@@ -640,19 +664,9 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Filters Bar: Academic Year, Class, Teacher Filters + Action Buttons -->
+      <!-- Filters Bar: Class & Teacher Filters + Action Buttons -->
       <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6 space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label class="block text-[11px] font-bold text-bx-muted mb-1">العام الدراسي المستهدف</label>
-            <TaqniyaSelect
-              v-model="selectedYearId"
-              :options="yearOptions"
-              placeholder="اختر العام الدراسي..."
-              full-width
-            />
-          </div>
-
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب الصف الدراسي</label>
             <TaqniyaSelect
