@@ -54,6 +54,7 @@ const allClasses = ref<any[]>([]);
 const allSections = ref<any[]>([]);
 const allSubjects = ref<any[]>([]);
 const allTeachers = ref<Teacher[]>([]);
+const allClassSections = ref<any[]>([]);
 
 // Drawer State
 const showDrawer = ref(false);
@@ -86,12 +87,13 @@ const deleteErrorMessage = ref<string | null>(null);
 // Fetch Initial Meta Options
 async function fetchPrerequisites() {
   try {
-    const [yearsRes, classesRes, sectionsRes, subjectsRes, teachersRes] = await Promise.all([
+    const [yearsRes, classesRes, sectionsRes, subjectsRes, teachersRes, classSectionsRes] = await Promise.all([
       academicApi.getYears({ per_page: 50 }),
       academicApi.getClasses({ per_page: 100 }),
       academicApi.getSections({ per_page: 100 }),
       academicApi.getSubjects({ per_page: 100 }),
       teachersApi.getTeachers({ per_page: 200, is_active: 1 }),
+      academicApi.getClassSections({ per_page: 200 }),
     ]);
 
     academicYears.value = yearsRes.data?.data || [];
@@ -99,6 +101,24 @@ async function fetchPrerequisites() {
     allSections.value = sectionsRes.data?.data || [];
     allSubjects.value = subjectsRes.data?.data || [];
     allTeachers.value = teachersRes.data?.data || [];
+
+    // Extract class-sections list from grouped response (data.classes -> sections)
+    const groupedClasses = classSectionsRes.data?.data?.classes || [];
+    const flattened: any[] = [];
+    for (const gc of groupedClasses) {
+      if (gc.sections && Array.isArray(gc.sections)) {
+        for (const s of gc.sections) {
+          flattened.push({
+            id: s.id,
+            class_id: gc.class_id,
+            class_name: gc.class_name,
+            section_id: s.section_id,
+            name: s.name,
+          });
+        }
+      }
+    }
+    allClassSections.value = flattened;
 
     // Set default active academic year
     const activeY = academicYears.value.find((y) => y.is_active === 1) || academicYears.value[0];
@@ -180,15 +200,38 @@ const teacherFilterOptions = computed<TaqniyaSelectOption[]>(() => [
 ]);
 
 // Sections available for the chosen class in form
-const availableClassSections = computed(() => {
+const availableClassSections = computed<TaqniyaSelectOption[]>(() => {
   if (!form.value.class_id) return [];
-  const targetClass = allClasses.value.find((c) => c.id === form.value.class_id);
-  if (!targetClass || !targetClass.class_sections) return [];
-  return targetClass.class_sections.map((cs: any) => ({
+  const matches = allClassSections.value.filter(
+    (cs) => Number(cs.class_id) === Number(form.value.class_id),
+  );
+  return matches.map((cs) => ({
     value: cs.id,
-    label: cs.section ? cs.section.name : `شعبة #${cs.id}`,
+    label: cs.name || `شعبة #${cs.id}`,
   }));
 });
+
+// Watch class_id change in form: auto-select first available section or reset
+watch(
+  () => form.value.class_id,
+  (newClassId) => {
+    if (!newClassId) {
+      form.value.class_section_id = 0;
+      return;
+    }
+    const available = allClassSections.value.filter(
+      (cs) => Number(cs.class_id) === Number(newClassId),
+    );
+    if (available.length > 0) {
+      const stillValid = available.some((a) => a.id === form.value.class_section_id);
+      if (!stillValid) {
+        form.value.class_section_id = available[0].id;
+      }
+    } else {
+      form.value.class_section_id = 0;
+    }
+  },
+);
 
 const formSubjectOptions = computed<TaqniyaSelectOption[]>(() =>
   allSubjects.value.map((s) => ({
@@ -209,10 +252,17 @@ const formTeacherOptions = computed<TaqniyaSelectOption[]>(() =>
 function openCreateDrawer(classId?: number, sectionId?: number) {
   drawerMode.value = 'create';
   activeAssignmentId.value = null;
+
+  const targetClassId = classId || allClasses.value[0]?.id || 0;
+  const availableForClass = allClassSections.value.filter(
+    (cs) => Number(cs.class_id) === Number(targetClassId),
+  );
+  const targetSectionId = sectionId || availableForClass[0]?.id || 0;
+
   form.value = {
     academic_year_id: selectedYearId.value || academicYears.value[0]?.id || 0,
-    class_id: classId || allClasses.value[0]?.id || 0,
-    class_section_id: sectionId || 0,
+    class_id: targetClassId,
+    class_section_id: targetSectionId,
     subject_id: allSubjects.value[0]?.id || 0,
     teacher_id: allTeachers.value[0]?.id || 0,
   };
