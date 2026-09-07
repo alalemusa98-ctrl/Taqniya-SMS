@@ -20,6 +20,7 @@ import {
   Eye,
   GraduationCap,
   Info,
+  Check,
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -98,6 +99,23 @@ const classStageMap = computed(() => {
   return map;
 });
 
+// Stage badge style helper
+function getStageBadgeClass(stageName: string) {
+  if (stageName.includes('روضة') || stageName.includes('تمهيدي')) {
+    return 'border-pink-500/30 text-pink-600 dark:text-pink-400 bg-pink-500/10';
+  }
+  if (stageName.includes('ابتدائي')) {
+    return 'border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10';
+  }
+  if (stageName.includes('إعدادي')) {
+    return 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10';
+  }
+  if (stageName.includes('ثانوي')) {
+    return 'border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10';
+  }
+  return 'border-[#B4AED8]/60 dark:border-white/10 text-bx-muted bg-slate-500/10';
+}
+
 export interface UnifiedSectionRow {
   id: number;
   code: string;
@@ -112,101 +130,99 @@ export interface UnifiedSectionRow {
   statusClass: string;
 }
 
-export interface UnifiedClassSectionGroup {
+export interface ClassSectionMatrixCell {
+  section_id: number;
+  section_name: string;
+  isAssigned: boolean;
+  row?: UnifiedSectionRow;
+}
+
+export interface ClassSectionMatrixRow {
   class_id: number;
   class_name: string;
   stage_name: string;
-  sections_count: number;
-  sections: UnifiedSectionRow[];
+  stage_id: number;
+  cells: Record<number, ClassSectionMatrixCell>;
+  assignedCount: number;
 }
 
-// Grouped by Class for the unified records table
-const allGroups = computed<UnifiedClassSectionGroup[]>(() => {
-  const result: UnifiedClassSectionGroup[] = [];
-  const letters = ['A', 'B', 'C', 'D'];
-  const letterColors = [
-    'border-purple-500 text-purple-400 bg-purple-500/10',
-    'border-blue-500 text-blue-400 bg-blue-500/10',
-    'border-amber-500 text-amber-400 bg-amber-500/10',
-    'border-emerald-500 text-emerald-400 bg-emerald-500/10',
-  ];
-
-  for (const grp of rawGroups.value) {
-    const stageName = classStageMap.value[grp.class_id] || 'التعليم العام';
-    const sectionRows: UnifiedSectionRow[] = [];
-
-    (grp.sections || []).forEach((s, index) => {
-      const letter = letters[index % letters.length];
-      const letterColor = letterColors[index % letterColors.length];
-
-      sectionRows.push({
-        id: s.id,
-        code: `TQ-CS-${String(s.id).padStart(3, '0')}#`,
-        class_id: grp.class_id,
-        class_name: grp.class_name,
-        stage_name: stageName,
-        section_id: s.section_id,
-        section_name: s.name,
-        letter,
-        letterColor,
-        statusLabel: 'مسكنة ونشطة',
-        statusClass: 'border-emerald-500/40 text-emerald-500 bg-emerald-500/10',
-      });
-    });
-
-    result.push({
-      class_id: grp.class_id,
-      class_name: grp.class_name,
-      stage_name: stageName,
-      sections_count: sectionRows.length,
-      sections: sectionRows,
-    });
-  }
-
-  return result;
+// Master sections sorted by ID
+const sortedSections = computed<AcademicSectionItem[]>(() => {
+  return [...sections.value].sort((a, b) => Number(a.id) - Number(b.id));
 });
 
-// Filtered groups based on status pill and search query
-const filteredGroups = computed(() => {
-  return (allGroups.value || [])
-    .map((grp) => {
-      // Status pill filter
-      if (statusPill.value === 'assigned' && (grp.sections?.length || 0) === 0) return null;
-      if (statusPill.value === 'empty' && (grp.sections?.length || 0) > 0) return null;
+// Matrix Rows computed for all classes
+const matrixRows = computed<ClassSectionMatrixRow[]>(() => {
+  return classes.value.map((cls) => {
+    const stageName = classStageMap.value[cls.id] || 'التعليم العام';
+    const grp = (rawGroups.value || []).find((g) => g.class_id === cls.id);
+    const assignedList = grp?.sections || [];
 
-      // Filter child sections by search
-      const matchingSections = (grp.sections || []).filter((row) => {
-        if (search.value.trim()) {
-          const q = search.value.trim().toLowerCase();
-          const matchClass = (grp.class_name || '').toLowerCase().includes(q);
-          const matchSec = (row.section_name || '').toLowerCase().includes(q);
-          const matchCode = (row.code || '').toLowerCase().includes(q);
-          const matchStage = (grp.stage_name || '').toLowerCase().includes(q);
-          return matchClass || matchSec || matchCode || matchStage;
-        }
-        return true;
-      });
+    const cells: Record<number, ClassSectionMatrixCell> = {};
+    let count = 0;
 
-      // If search query matches class name, keep all sections
-      if (search.value.trim() && (grp.class_name || '').toLowerCase().includes(search.value.trim().toLowerCase())) {
-        return grp;
+    for (const sec of sortedSections.value) {
+      const assigned = assignedList.find((s) => s.section_id === sec.id);
+      if (assigned) {
+        count++;
+        const unifiedRow: UnifiedSectionRow = {
+          id: assigned.id,
+          code: `TQ-CS-${String(assigned.id).padStart(3, '0')}#`,
+          class_id: cls.id,
+          class_name: cls.name,
+          stage_name: stageName,
+          section_id: sec.id,
+          section_name: sec.name,
+          letter: sec.name.replace(/[^أ-يA-Za-z]/g, '') || 'ش',
+          letterColor: 'border-purple-500 text-purple-400 bg-purple-500/10',
+          statusLabel: 'شعبة نشطة',
+          statusClass: 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+        };
+
+        cells[sec.id] = {
+          section_id: sec.id,
+          section_name: sec.name,
+          isAssigned: true,
+          row: unifiedRow,
+        };
+      } else {
+        cells[sec.id] = {
+          section_id: sec.id,
+          section_name: sec.name,
+          isAssigned: false,
+        };
       }
+    }
 
-      // If filtering by search and no child sections matched, exclude group
-      if (search.value.trim() && (matchingSections?.length || 0) === 0) {
-        return null;
-      }
+    return {
+      class_id: cls.id,
+      class_name: cls.name,
+      stage_name: stageName,
+      stage_id: (cls as any).stage_id || 0,
+      cells,
+      assignedCount: count,
+    };
+  });
+});
 
-      return {
-        ...grp,
-        sections: matchingSections,
-      };
-    })
-    .filter((grp): grp is UnifiedClassSectionGroup => grp !== null);
+// Filtered matrix rows based on search and status filter
+const filteredMatrixRows = computed(() => {
+  return matrixRows.value.filter((row) => {
+    if (statusPill.value === 'assigned' && row.assignedCount === 0) return false;
+    if (statusPill.value === 'empty' && row.assignedCount > 0) return false;
+
+    if (search.value.trim()) {
+      const q = search.value.trim().toLowerCase();
+      const matchClass = row.class_name.toLowerCase().includes(q);
+      const matchStage = row.stage_name.toLowerCase().includes(q);
+      return matchClass || matchStage;
+    }
+    return true;
+  });
 });
 
 const totalSectionsCount = computed(() => {
-  return (filteredGroups.value || []).reduce((acc, g) => acc + (g.sections?.length || 0), 0);
+  return (filteredMatrixRows.value || []).reduce((acc, r) => acc + r.assignedCount, 0);
 });
 
 function openDetails(row: UnifiedSectionRow) {
@@ -215,11 +231,22 @@ function openDetails(row: UnifiedSectionRow) {
   showDrawer.value = true;
 }
 
-function openCreateDrawer(classId?: number) {
+function openCreateDrawer(classId?: number, sectionId?: number) {
   drawerMode.value = 'create';
+  const targetClassId = classId || classes.value[0]?.id || 0;
+
+  // Find unassigned section if sectionId not provided
+  let targetSectionId = sectionId || 0;
+  if (!targetSectionId) {
+    const grp = rawGroups.value.find((g) => g.class_id === targetClassId);
+    const assignedIds = (grp?.sections || []).map((s) => s.section_id);
+    const available = sortedSections.value.find((s) => !assignedIds.includes(s.id));
+    targetSectionId = available ? available.id : (sections.value[0]?.id || 0);
+  }
+
   form.value = {
-    class_id: classId || classes.value[0]?.id || 0,
-    section_id: sections.value[0]?.id || 0,
+    class_id: targetClassId,
+    section_id: targetSectionId,
   };
   showDrawer.value = true;
 }
@@ -301,10 +328,10 @@ onMounted(async () => {
         <!-- Title -->
         <div>
           <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
-            سجلات تسكين الشُعب الموحدة
+            مصفوفة تسكين الشُعب الموحدة
           </h2>
           <p class="text-xs text-bx-muted font-medium mt-1">
-            إدارة وتسكين الشُعب الدراسية لكل صف، والتحكم في إسناد وفك ربط الشُعب
+            جدول المصفوفة الشبكية لعرض وتسكين الشُعب الدراسية لكافة الصفوف في نظرة واحدة
           </p>
         </div>
 
@@ -316,7 +343,7 @@ onMounted(async () => {
             class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer"
           >
             <Plus class="w-3.5 h-3.5" />
-            <span>تسكين شعبة بصف</span>
+            <span>تسكين شعبة</span>
           </button>
 
           <!-- Search Input (Pill Shaped) -->
@@ -324,7 +351,7 @@ onMounted(async () => {
             <input
               v-model="search"
               type="text"
-              placeholder="بحث في الصفوف أو الشُعب..."
+              placeholder="بحث بالصف أو المرحلة..."
               class="w-full px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
             />
           </div>
@@ -351,7 +378,7 @@ onMounted(async () => {
                   : 'text-bx-muted hover:text-bx-title'
               "
             >
-              شُعب مسكنة
+              مسكنة
             </button>
             <button
               @click="statusPill = 'empty'"
@@ -362,7 +389,7 @@ onMounted(async () => {
                   : 'text-bx-muted hover:text-bx-title'
               "
             >
-              صفوف غير مسكنة
+              غير مسكنة
             </button>
           </div>
         </div>
@@ -371,141 +398,143 @@ onMounted(async () => {
       <!-- Loading State -->
       <div v-if="loading" class="py-24 text-center text-bx-muted">
         <Loader2 class="w-8 h-8 mx-auto animate-spin mb-2 text-bx-primary" />
-        <span class="text-xs font-bold">جاري تحميل سجلات تسكين الشُعب...</span>
+        <span class="text-xs font-bold">جاري تحميل مصفوفة تسكين الشُعب...</span>
       </div>
 
       <!-- Empty State -->
       <div
-        v-else-if="!filteredGroups || filteredGroups.length === 0"
+        v-else-if="!filteredMatrixRows || filteredMatrixRows.length === 0"
         class="py-20 text-center border-t border-[#B4AED8] dark:border-white/[0.08] space-y-3"
       >
         <AlertCircle class="w-12 h-12 mx-auto text-bx-muted opacity-40" />
-        <h3 class="text-sm font-bold text-bx-title">لا توجد شُعب مسندة تطابق محددات البحث</h3>
-        <p class="text-xs text-bx-muted">جرب تغيير محددات التصفية أو تسكين شعبة دراسية لصف جديد.</p>
+        <h3 class="text-sm font-bold text-bx-title">لا توجد صفوف تطابق محددات البحث والتصفية</h3>
+        <p class="text-xs text-bx-muted">جرب تغيير محددات التصفية أو فتح شعبة جديدة لصف دراسي.</p>
       </div>
 
-      <!-- Unified Table Content: Enclosed in a Bordered Card (Right, Left, Top, Bottom) -->
-      <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)]">
+      <!-- Matrix Table Content: Enclosed in a Bordered Card -->
+      <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
         <div class="overflow-x-auto">
           <table class="w-full text-start border-collapse text-xs">
-            <!-- Table Header with Distinct Background and Crisp Dividers -->
+            <!-- Table Header -->
             <thead>
-              <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
-                <th class="py-3.5 px-4 font-bold text-start">الرمز</th>
-                <th class="py-3.5 px-4 font-bold text-start">الشعبة الدراسية</th>
-                <th class="py-3.5 px-4 font-bold text-center">إجراءات</th>
+              <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/15 text-bx-muted">
+                <!-- Column 1: Sticky Class & Stage Column (Constrained Width to Prevent Empty Gaps) -->
+                <th class="py-3.5 px-5 font-bold text-start whitespace-nowrap w-72 min-w-[240px] max-w-[280px] sticky start-0 bg-[var(--bx-table-header)] z-20 border-e border-[#B4AED8]/60 dark:border-white/15">
+                  <div class="flex items-center gap-2">
+                    <GraduationCap class="w-4 h-4 text-bx-primary" />
+                    <span>الصف الدراسي والمرحلة</span>
+                  </div>
+                </th>
+
+                <!-- Dynamic Master Section Columns (Evenly Distributed) -->
+                <th
+                  v-for="sec in sortedSections"
+                  :key="sec.id"
+                  class="py-3 px-3 font-bold text-center whitespace-nowrap border-e border-[#B4AED8]/60 dark:border-white/15 last:border-e-0"
+                >
+                  <div class="flex flex-col items-center justify-center gap-1">
+                    <div class="flex items-center gap-1.5 text-bx-title font-black text-xs sm:text-sm">
+                      <Users2 class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>{{ sec.name }}</span>
+                    </div>
+                    <span class="text-[10px] font-mono text-bx-muted">SEC-{{ String(sec.id).padStart(2, '0') }}#</span>
+                  </div>
+                </th>
               </tr>
             </thead>
 
-          <!-- Table Body with Crisp Dividers & Class Group Headers -->
-          <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12]">
-            <template v-for="grp in filteredGroups" :key="grp.class_id">
-              <!-- Class Group Header Row -->
-              <tr class="bg-purple-500/[0.05] dark:bg-white/[0.03]">
-                <td colspan="3" class="py-2.5 px-4">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                      <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
-                      <span class="font-black text-sm text-bx-title">{{ grp.class_name }}</span>
-                      <span class="text-[11px] font-semibold text-bx-muted px-2.5 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
-                        {{ grp.stage_name }}
+            <!-- Table Body with Crisp Dividers -->
+            <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/15">
+              <tr
+                v-for="row in filteredMatrixRows"
+                :key="row.class_id"
+                class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors"
+              >
+                <!-- Fixed First Column (Class Info) -->
+                <td class="py-3 px-5 whitespace-nowrap sticky start-0 bg-[var(--bx-surface-solid)] z-10 border-e border-[#B4AED8]/60 dark:border-white/15">
+                  <div class="space-y-1">
+                    <span class="font-black text-sm text-bx-title block leading-tight">{{ row.class_name }}</span>
+                    <div class="flex items-center gap-2">
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border" :class="getStageBadgeClass(row.stage_name)">
+                        {{ row.stage_name }}
+                      </span>
+                      <span class="text-[10px] font-semibold text-bx-muted">
+                        {{ row.assignedCount }} شُعب مسكنة
                       </span>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-[11px] font-bold text-bx-muted">
-                        {{ grp.sections?.length || 0 }} شُعب مفتوحة
-                      </span>
+                  </div>
+                </td>
+
+                <!-- Section Matrix Cells (Centered & Compact Element with High Contrast) -->
+                <td
+                  v-for="sec in sortedSections"
+                  :key="sec.id"
+                  class="py-2.5 px-3 text-center align-middle border-e border-[#B4AED8]/60 dark:border-white/15 last:border-e-0"
+                >
+                  <!-- CASE 1: Section Assigned to this Class (Tight Width, Clear High Contrast Dark Mode Borders) -->
+                  <div
+                    v-if="row.cells[sec.id]?.isAssigned && row.cells[sec.id]?.row"
+                    class="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-xl border border-emerald-500/50 bg-emerald-500/[0.06] dark:border-emerald-500/60 dark:bg-emerald-950/40 dark:ring-1 dark:ring-emerald-400/30 shadow-2xs transition-all duration-200 group hover:shadow-xs"
+                  >
+                    <!-- Active Assignment Check Badge -->
+                    <span class="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-600 dark:bg-emerald-500/30 dark:border-emerald-400 dark:text-emerald-300 flex items-center justify-center shrink-0 shadow-2xs">
+                      <Check class="w-4 h-4 stroke-[2.5]" />
+                    </span>
+
+                    <!-- Subtle Vertical Divider -->
+                    <span class="w-[1px] h-4 bg-emerald-500/25 dark:bg-emerald-400/35"></span>
+
+                    <!-- Circular Action Buttons (High Contrast & Clear in Dark Mode) -->
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <!-- Details Button -->
                       <button
-                        @click="openCreateDrawer(grp.class_id)"
-                        class="w-8 h-8 rounded-full border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                        title="تسكين شعبة إضافية لهذا الصف"
+                        @click="openDetails(row.cells[sec.id].row)"
+                        class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                        title="عرض تفاصيل تسكين الشعبة"
                       >
-                        <Plus class="w-4 h-4" />
+                        <Eye class="w-3.5 h-3.5" />
+                      </button>
+
+                      <!-- Unassign / Delete Button -->
+                      <button
+                        @click="confirmDelete({ id: row.cells[sec.id].row.id, name: row.cells[sec.id].row.section_name })"
+                        class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                        title="فك ربط الشعبة من هذا الصف"
+                      >
+                        <Trash2 class="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
-                </td>
-              </tr>
 
-              <!-- Empty sections for this class -->
-              <tr v-if="!grp.sections || grp.sections.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
-                <td colspan="3" class="py-4 px-4 text-center text-bx-muted text-xs">
-                  <span>لا توجد شُعب مسكنة لهذا الصف بعد.</span>
-                  <button
-                    @click="openCreateDrawer(grp.class_id)"
-                    class="text-bx-primary font-bold hover:underline me-2 cursor-pointer inline-flex items-center gap-1"
+                  <!-- CASE 2: Section Unassigned to this Class (Centered Compact Pill) -->
+                  <div
+                    v-else
+                    class="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl border border-dashed border-[#B4AED8]/70 dark:border-slate-600 bg-slate-500/[0.03] dark:bg-slate-800/30 transition-all duration-200 group hover:border-bx-primary/50 hover:bg-purple-500/[0.04]"
                   >
-                    <Plus class="w-3 h-3" />
-                    <span>تسكين أول شعبة الآن</span>
-                  </button>
-                </td>
-              </tr>
-
-              <!-- Section Rows for this Class -->
-              <tr
-                v-for="row in grp.sections"
-                :key="row.id"
-                class="hover:bg-purple-500/[0.08] dark:hover:bg-white/[0.06] transition-colors duration-150"
-              >
-                <!-- Code (الرمز) -->
-                <td class="py-3.5 px-4 font-mono font-bold text-bx-muted text-xs whitespace-nowrap">
-                  {{ row.code }}
-                </td>
-
-                <!-- Item with Circular Letter Badge (العنصر: اسم الشعبة) -->
-                <td class="py-3.5 px-4 whitespace-nowrap">
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="w-7 h-7 rounded-full border-2 font-black text-[11px] flex items-center justify-center shrink-0"
-                      :class="row.letterColor"
-                    >
-                      {{ row.letter }}
-                    </div>
-                    <div>
-                      <span class="font-bold text-xs text-bx-title block">
-                        {{ row.section_name }}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-
-                <!-- Action: عرض & فك الارتباط (إجراءات) -->
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center gap-2.5">
-                    <!-- View Details Button with Text + Icon -->
+                    <span class="text-xs font-bold text-slate-400 dark:text-slate-300">—</span>
                     <button
-                      @click="openDetails(row)"
-                      class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-primary dark:text-purple-300 bg-white dark:bg-white/[0.05] hover:bg-bx-primary hover:text-white hover:border-bx-primary transition-all cursor-pointer shadow-xs"
+                      @click="openCreateDrawer(row.class_id, sec.id)"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border border-purple-500/30 bg-purple-500/10 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/60 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white cursor-pointer transition-all duration-150 active:scale-95 shadow-2xs"
                     >
-                      <Eye class="w-3.5 h-3.5" />
-                      <span>عرض</span>
-                    </button>
-
-                    <!-- Quick Delete / Unlink Button (Matching reference squircle icon button) -->
-                    <button
-                      @click="confirmDelete({ id: row.id, name: row.section_name })"
-                      title="فك ربط الشعبة من الصف"
-                      class="w-8 h-8 rounded-full border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                    >
-                      <Trash2 class="w-4 h-4" />
+                      <Plus class="w-3 h-3" />
+                      <span>تسكين</span>
                     </button>
                   </div>
                 </td>
               </tr>
-            </template>
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
       <!-- Table Footer: Records Info (Non-paginated full catalogue) -->
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 text-xs font-bold text-bx-muted">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
-          <span>إجمالي الصفوف المعروضة: <strong class="text-bx-title font-black">{{ filteredGroups?.length || 0 }}</strong> صفوف (مجموع <strong class="text-bx-title font-black">{{ totalSectionsCount }}</strong> شُعب مسكنة)</span>
+          <span>إجمالي الصفوف في المصفوفة: <strong class="text-bx-title font-black">{{ filteredMatrixRows?.length || 0 }}</strong> صفوف (مجموع <strong class="text-bx-title font-black">{{ totalSectionsCount }}</strong> شُعب مسكنة)</span>
         </div>
         <div class="text-[11px] text-bx-muted">
-          تسكين الشُعب الدراسية (عرض كامل بدون تجزئة صفحات)
+          عرض شبكي شامل بدون تجزئة صفحات (Academic Matrix View)
         </div>
       </div>
     </div>
