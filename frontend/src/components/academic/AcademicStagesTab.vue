@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, defineAsyncComponent } from 'vue';
 import { academicApi, type AcademicStageItem } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
-import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
+
+// Component Lazy Loading (component_lazy_loading)
+const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
+
 import {
   GraduationCap,
   Plus,
@@ -16,6 +19,9 @@ import {
 const toast = useToast();
 const loading = ref(false);
 const stages = ref<AcademicStageItem[]>([]);
+
+// Request Cancellation Controller (request_cancellation)
+let activeAbortController: AbortController | null = null;
 
 // Drawer state
 const showDrawer = ref(false);
@@ -34,16 +40,24 @@ const stageToDelete = ref<AcademicStageItem | null>(null);
 const isDeleting = ref(false);
 
 const fetchStages = async () => {
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+
   loading.value = true;
   try {
-    const res = await academicApi.getStages();
+    const res = await academicApi.getStages(activeAbortController.signal);
     if (res.data.success) {
       stages.value = res.data.data;
     }
   } catch (err: any) {
+    if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     toast.error('تعذر جلب المراحل الدراسية', err.response?.data?.message);
   } finally {
-    loading.value = false;
+    if (!activeAbortController?.signal.aborted) {
+      loading.value = false;
+    }
   }
 };
 

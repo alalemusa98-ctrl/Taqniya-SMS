@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, deduplicatedGet } from './client';
 
 export interface AcademicYearItem {
   id: number;
@@ -225,44 +225,56 @@ export interface UpdateClassSubjectPayload {
 
 export const academicApi = {
   // Years (02-A)
-  getYears: (params?: QueryYearsParams) => apiClient.get('/academic/years', { params }),
-  getYearById: (id: number) => apiClient.get(`/academic/years/${id}`),
+  getYears: (params?: QueryYearsParams, signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/years', { params, signal }),
+  getYearById: (id: number, signal?: AbortSignal) =>
+    deduplicatedGet<any>(`/academic/years/${id}`, { signal }),
   createYear: (payload: CreateYearPayload) => apiClient.post('/academic/years', payload),
   updateYear: (id: number, payload: UpdateYearPayload) => apiClient.put(`/academic/years/${id}`, payload),
   activateYear: (id: number) => apiClient.patch(`/academic/years/${id}/activate`),
   deleteYear: (id: number) => apiClient.delete(`/academic/years/${id}`),
 
   // Terms (02-A)
-  getTerms: () => apiClient.get('/academic/terms'),
-  getTermById: (id: number) => apiClient.get(`/academic/terms/${id}`),
+  getTerms: (signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/terms', { signal }),
+  getTermById: (id: number, signal?: AbortSignal) =>
+    deduplicatedGet<any>(`/academic/terms/${id}`, { signal }),
   createTerm: (payload: CreateTermPayload) => apiClient.post('/academic/terms', payload),
   updateTerm: (id: number, payload: UpdateTermPayload) => apiClient.put(`/academic/terms/${id}`, payload),
   deleteTerm: (id: number) => apiClient.delete(`/academic/terms/${id}`),
 
   // Stages (02-A)
-  getStages: () => apiClient.get('/academic/stages'),
-  getStageById: (id: number) => apiClient.get(`/academic/stages/${id}`),
+  getStages: (signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/stages', { signal }),
+  getStageById: (id: number, signal?: AbortSignal) =>
+    deduplicatedGet<any>(`/academic/stages/${id}`, { signal }),
   createStage: (payload: CreateStagePayload) => apiClient.post('/academic/stages', payload),
   updateStage: (id: number, payload: UpdateStagePayload) => apiClient.put(`/academic/stages/${id}`, payload),
   deleteStage: (id: number) => apiClient.delete(`/academic/stages/${id}`),
 
   // Classes (02-B)
-  getClasses: (params?: QueryClassesParams) => apiClient.get('/academic/classes', { params }),
-  getClassById: (id: number) => apiClient.get(`/academic/classes/${id}`),
+  getClasses: (params?: QueryClassesParams, signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/classes', { params, signal }),
+  getClassById: (id: number, signal?: AbortSignal) =>
+    deduplicatedGet<any>(`/academic/classes/${id}`, { signal }),
   createClass: (payload: CreateClassPayload) => apiClient.post('/academic/classes', payload),
   updateClass: (id: number, payload: UpdateClassPayload) => apiClient.put(`/academic/classes/${id}`, payload),
   deleteClass: (id: number) => apiClient.delete(`/academic/classes/${id}`),
 
   // Sections (02-B)
-  getSections: (params?: QuerySectionsParams) => apiClient.get('/academic/sections', { params }),
-  getSectionById: (id: number) => apiClient.get(`/academic/sections/${id}`),
+  getSections: (params?: QuerySectionsParams, signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/sections', { params, signal }),
+  getSectionById: (id: number, signal?: AbortSignal) =>
+    deduplicatedGet<any>(`/academic/sections/${id}`, { signal }),
   createSection: (payload: CreateSectionPayload) => apiClient.post('/academic/sections', payload),
   updateSection: (id: number, payload: UpdateSectionPayload) => apiClient.put(`/academic/sections/${id}`, payload),
   deleteSection: (id: number) => apiClient.delete(`/academic/sections/${id}`),
 
   // Subjects (02-B)
-  getSubjects: (params?: QuerySubjectsParams) => apiClient.get('/academic/subjects', { params }),
-  getSubjectById: (id: number) => apiClient.get(`/academic/subjects/${id}`),
+  getSubjects: (params?: QuerySubjectsParams, signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/subjects', { params, signal }),
+  getSubjectById: (id: number, signal?: AbortSignal) =>
+    deduplicatedGet<any>(`/academic/subjects/${id}`, { signal }),
   createSubject: (payload: CreateSubjectPayload) => apiClient.post('/academic/subjects', payload),
   updateSubject: (id: number, payload: UpdateSubjectPayload) => apiClient.put(`/academic/subjects/${id}`, payload),
   deleteSubject: (id: number) => apiClient.delete(`/academic/subjects/${id}`),

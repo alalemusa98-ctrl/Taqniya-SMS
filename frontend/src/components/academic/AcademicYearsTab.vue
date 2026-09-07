@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, defineAsyncComponent } from 'vue';
 import { academicApi, type AcademicYearItem } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
 import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
-import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
+import TaqniyaErrorBoundary from '../ui/TaqniyaErrorBoundary.vue';
+
+// Component Lazy Loading (component_lazy_loading)
+const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
+
 import {
   Calendar,
   Plus,
@@ -21,11 +25,9 @@ const loading = ref(false);
 const years = ref<AcademicYearItem[]>([]);
 const search = ref('');
 const statusFilter = ref<string | number>('all');
-const pagination = ref({
-  page: 1,
-  per_page: 10,
-  total: 0,
-});
+
+// Request Cancellation Controller (request_cancellation)
+let activeAbortController: AbortController | null = null;
 
 const statusOptions = [
   { value: 'all', label: 'كافة الحالات' },
@@ -56,26 +58,30 @@ const yearToActivate = ref<AcademicYearItem | null>(null);
 const isActivating = ref(false);
 
 const fetchYears = async () => {
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+
   loading.value = true;
   try {
     const params: any = {
-      page: pagination.value.page,
-      per_page: pagination.value.per_page,
+      per_page: 100, // Non-paginated complete view of academic years
     };
     if (search.value.trim()) params.search = search.value.trim();
     if (statusFilter.value !== 'all') params.is_active = Number(statusFilter.value);
 
-    const res = await academicApi.getYears(params);
+    const res = await academicApi.getYears(params, activeAbortController.signal);
     if (res.data.success) {
       years.value = res.data.data;
-      if (res.data.meta) {
-        pagination.value.total = res.data.meta.total;
-      }
     }
   } catch (err: any) {
+    if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     toast.error('تعذر جلب قائمة السنوات الدراسية', err.response?.data?.message);
   } finally {
-    loading.value = false;
+    if (!activeAbortController?.signal.aborted) {
+      loading.value = false;
+    }
   }
 };
 
@@ -190,16 +196,26 @@ onMounted(() => {
     <!-- Action & Filter Toolbar -->
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[var(--bx-surface-solid)] p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] shadow-xs">
       <div class="flex flex-1 flex-wrap items-center gap-3">
-        <!-- Search -->
-        <div class="relative flex-1 min-w-[220px] max-w-md">
-          <Search class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-bx-muted pointer-events-none" />
-          <input
-            v-model="search"
-            @keyup.enter="fetchYears"
-            type="text"
-            placeholder="بحث باسم السنة الدراسية..."
-            class="w-full pr-10 pl-4 h-[42px] bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
-          />
+        <!-- Search with Action Trigger Button -->
+        <div class="relative flex-1 min-w-[220px] max-w-md flex items-center gap-1.5">
+          <div class="relative flex-1">
+            <Search class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-bx-muted pointer-events-none" />
+            <input
+              v-model="search"
+              @keyup.enter="fetchYears"
+              type="text"
+              placeholder="بحث باسم السنة الدراسية..."
+              class="w-full pr-10 pl-4 h-[42px] bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold text-start"
+            />
+          </div>
+          <button
+            @click="fetchYears"
+            :disabled="loading"
+            class="h-[42px] px-3.5 rounded-2xl bg-bx-primary/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-bx-primary/20 text-xs font-bold transition-all cursor-pointer flex items-center justify-center shrink-0"
+            title="بحث فوري (أو اضغط Enter)"
+          >
+            <Search class="w-4 h-4" />
+          </button>
         </div>
 
         <!-- Filter Active (Taqniya Select) -->
@@ -289,7 +305,7 @@ onMounted(() => {
             >
               <td class="py-3.5 px-5">
                 <span class="w-7 h-7 rounded-xl bg-emerald-500/10 border border-[#B4AED8]/60 dark:border-white/10 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-emerald-600 group-hover:border-emerald-500/30 transition-colors">
-                  {{ (pagination.page - 1) * pagination.per_page + idx + 1 }}
+                  {{ idx + 1 }}
                 </span>
               </td>
               <td class="py-3.5 px-5">
@@ -360,14 +376,14 @@ onMounted(() => {
         </table>
       </div>
 
-      <!-- Table Bottom Stats Bar -->
+      <!-- Table Bottom Stats Bar (Non-paginated full catalogue) -->
       <div class="px-5 py-3.5 border-t border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] flex items-center justify-between text-xs text-bx-muted font-bold">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>إجمالي السنوات الدراسية: <strong class="text-bx-title font-black">{{ years.length }}</strong></span>
         </div>
         <div class="text-[11px] text-bx-muted">
-          التقويم الأكاديمي المعتمد
+          التقويم الأكاديمي المعتمد (عرض كامل بدون تجزئة صفحات)
         </div>
       </div>
     </div>
