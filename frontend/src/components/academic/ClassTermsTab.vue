@@ -34,7 +34,7 @@ const classes = ref<AcademicClassItem[]>([]);
 const terms = ref<AcademicTermItem[]>([]);
 const stages = ref<any[]>([]);
 
-// Search & Status Pill Filter (matching screenshot: الكل / نشط / معلق)
+// Search & Status Pill Filter (matching design system: الكل / نشط / معلق / مكتمل)
 const search = ref('');
 const statusPill = ref<'all' | 'active' | 'inactive' | 'closed'>('all');
 
@@ -104,6 +104,23 @@ const classStageMap = computed(() => {
   return map;
 });
 
+// Stage badge style helper
+function getStageBadgeClass(stageName: string) {
+  if (stageName.includes('روضة') || stageName.includes('تمهيدي')) {
+    return 'border-pink-500/30 text-pink-600 dark:text-pink-400 bg-pink-500/10';
+  }
+  if (stageName.includes('ابتدائي')) {
+    return 'border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10';
+  }
+  if (stageName.includes('إعدادي')) {
+    return 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10';
+  }
+  if (stageName.includes('ثانوي')) {
+    return 'border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10';
+  }
+  return 'border-[#B4AED8]/60 dark:border-white/10 text-bx-muted bg-slate-500/10';
+}
+
 export interface UnifiedTermRow {
   id: number;
   code: string;
@@ -121,111 +138,138 @@ export interface UnifiedTermRow {
   raw: ClassTermItem;
 }
 
-export interface UnifiedClassGroup {
+export interface ClassMatrixCell {
+  term_id: number;
+  term_name: string;
+  isAssigned: boolean;
+  row?: UnifiedTermRow;
+}
+
+export interface ClassMatrixRow {
   class_id: number;
   class_name: string;
   stage_name: string;
-  terms: UnifiedTermRow[];
+  stage_id: number;
+  grade_level: number;
+  cells: Record<number, ClassMatrixCell>;
+  assignedTermsCount: number;
+  activeTermsCount: number;
 }
 
-// Grouped by Class for the unified records table
-const allGroups = computed<UnifiedClassGroup[]>(() => {
-  const result: UnifiedClassGroup[] = [];
-  const letters = ['A', 'B', 'C', 'D'];
-  const letterColors = [
-    'border-purple-500 text-purple-400 bg-purple-500/10',
-    'border-blue-500 text-blue-400 bg-blue-500/10',
-    'border-amber-500 text-amber-400 bg-amber-500/10',
-    'border-emerald-500 text-emerald-400 bg-emerald-500/10',
-  ];
-
-  for (const grp of rawGroups.value || []) {
-    const stageName = classStageMap.value[grp.class_id] || 'التعليم العام';
-    const termRows: UnifiedTermRow[] = [];
-
-    (grp.terms || []).forEach((t, index) => {
-      const letter = letters[index % letters.length];
-      const letterColor = letterColors[index % letterColors.length];
-
-      // Determine status
-      let statusLabel = 'معلق';
-      let statusClass = 'border-slate-500/30 text-bx-muted bg-slate-500/10';
-
-      if (t.is_closed === 1) {
-        statusLabel = 'مكتمل';
-        statusClass = 'border-emerald-500/40 text-emerald-500 bg-emerald-500/10';
-      } else if (t.is_active === 1) {
-        statusLabel = 'نشط';
-        statusClass = 'border-purple-500/40 text-purple-500 bg-purple-500/10';
-      } else {
-        statusLabel = 'معلق';
-        statusClass = 'border-amber-500/40 text-amber-500 bg-amber-500/10';
-      }
-
-      termRows.push({
-        id: t.id,
-        code: `TQ-${String(t.id).padStart(3, '0')}#`,
-        class_id: grp.class_id,
-        class_name: grp.class_name,
-        stage_name: stageName,
-        term_id: t.academic_term_id,
-        term_name: t.term_name || '',
-        letter,
-        letterColor,
-        statusLabel,
-        statusClass,
-        is_active: t.is_active,
-        is_closed: t.is_closed,
-        raw: t,
-      });
-    });
-
-    result.push({
-      class_id: grp.class_id,
-      class_name: grp.class_name,
-      stage_name: stageName,
-      terms: termRows,
-    });
-  }
-
-  return result;
+// Sorted official terms (e.g. Term 1, Term 2, Term 3)
+const sortedTerms = computed<AcademicTermItem[]>(() => {
+  return [...terms.value].sort((a, b) => {
+    const numA = (a as any).term_number ?? Number(a.id);
+    const numB = (b as any).term_number ?? Number(b.id);
+    return numA - numB;
+  });
 });
 
-// Filtered groups based on status pill and search query
-const filteredGroups = computed(() => {
-  return (allGroups.value || [])
-    .map((grp) => {
-      const matchingTerms = (grp.terms || []).filter((row) => {
-        // Status filter pill
-        if (statusPill.value === 'active' && row.is_active !== 1) return false;
-        if (statusPill.value === 'inactive' && row.is_active !== 0) return false;
-        if (statusPill.value === 'closed' && row.is_closed !== 1) return false;
+// Matrix Rows computed for all classes
+const matrixRows = computed<ClassMatrixRow[]>(() => {
+  return classes.value.map((cls) => {
+    const stageName = classStageMap.value[cls.id] || 'التعليم العام';
+    const grp = (rawGroups.value || []).find((g) => g.class_id === cls.id);
+    const assignedTermsList = grp?.terms || [];
 
-        // Search query
-        if (search.value.trim()) {
-          const q = search.value.trim().toLowerCase();
-          const matchClass = (grp.class_name || '').toLowerCase().includes(q);
-          const matchTerm = (row.term_name || '').toLowerCase().includes(q);
-          const matchCode = (row.code || '').toLowerCase().includes(q);
-          const matchStage = (grp.stage_name || '').toLowerCase().includes(q);
-          return matchClass || matchTerm || matchCode || matchStage;
+    const cells: Record<number, ClassMatrixCell> = {};
+    let assignedCount = 0;
+    let activeCount = 0;
+
+    for (const term of sortedTerms.value) {
+      const assigned = assignedTermsList.find((t) => t.academic_term_id === term.id);
+      if (assigned) {
+        assignedCount++;
+        if (assigned.is_active === 1) activeCount++;
+
+        let statusLabel = 'معلق';
+        let statusClass = 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10';
+
+        if (assigned.is_closed === 1) {
+          statusLabel = 'مكتمل';
+          statusClass = 'border-slate-500/30 text-slate-500 dark:text-slate-400 bg-slate-500/10';
+        } else if (assigned.is_active === 1) {
+          statusLabel = 'نشط';
+          statusClass = 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10';
         }
 
-        return true;
-      });
+        const unifiedRow: UnifiedTermRow = {
+          id: assigned.id,
+          code: `TQ-${String(assigned.id).padStart(3, '0')}#`,
+          class_id: cls.id,
+          class_name: cls.name,
+          stage_name: stageName,
+          term_id: term.id,
+          term_name: term.name,
+          letter: (term as any).term_number ? `ف${(term as any).term_number}` : 'ف',
+          letterColor: 'border-purple-500 text-purple-400 bg-purple-500/10',
+          statusLabel,
+          statusClass,
+          is_active: assigned.is_active,
+          is_closed: assigned.is_closed,
+          raw: assigned,
+        };
 
-      return {
-        ...grp,
-        terms: matchingTerms,
-      };
-    })
-    .filter((grp) => (grp.terms?.length || 0) > 0);
+        cells[term.id] = {
+          term_id: term.id,
+          term_name: term.name,
+          isAssigned: true,
+          row: unifiedRow,
+        };
+      } else {
+        cells[term.id] = {
+          term_id: term.id,
+          term_name: term.name,
+          isAssigned: false,
+        };
+      }
+    }
+
+    return {
+      class_id: cls.id,
+      class_name: cls.name,
+      stage_name: stageName,
+      stage_id: (cls as any).stage_id || 0,
+      grade_level: (cls as any).grade_level || 0,
+      cells,
+      assignedTermsCount: assignedCount,
+      activeTermsCount: activeCount,
+    };
+  });
 });
 
-const totalTermsCount = computed(() => {
-  return (filteredGroups.value || []).reduce((acc, g) => acc + (g.terms?.length || 0), 0);
+// Filtered matrix rows based on search and status pill filter
+const filteredMatrixRows = computed(() => {
+  return matrixRows.value.filter((row) => {
+    // Status filter
+    if (statusPill.value === 'active' && row.activeTermsCount === 0) return false;
+    if (statusPill.value === 'inactive') {
+      const hasInactive = Object.values(row.cells).some(
+        (c) => c.isAssigned && c.row?.is_active === 0 && c.row?.is_closed === 0,
+      );
+      if (!hasInactive) return false;
+    }
+    if (statusPill.value === 'closed') {
+      const hasClosed = Object.values(row.cells).some((c) => c.isAssigned && c.row?.is_closed === 1);
+      if (!hasClosed) return false;
+    }
+
+    // Search query
+    if (search.value.trim()) {
+      const q = search.value.trim().toLowerCase();
+      const matchClass = row.class_name.toLowerCase().includes(q);
+      const matchStage = row.stage_name.toLowerCase().includes(q);
+      return matchClass || matchStage;
+    }
+
+    return true;
+  });
 });
 
+// Total assigned terms count
+const totalAssignedTermsCount = computed(() => {
+  return (filteredMatrixRows.value || []).reduce((acc, r) => acc + r.assignedTermsCount, 0);
+});
 
 // Drawer & Actions
 function openDetails(row: UnifiedTermRow) {
@@ -234,18 +278,25 @@ function openDetails(row: UnifiedTermRow) {
   showDrawer.value = true;
 }
 
-function openCreateDrawer(classId?: number) {
+function openCreateDrawer(classId?: number, termId?: number) {
   drawerMode.value = 'create';
   activeTermToEdit.value = null;
   const targetClassId = classId || classes.value[0]?.id || 0;
   form.value = {
     class_id: targetClassId,
-    academic_term_id: 0,
+    academic_term_id: termId || 0,
   };
-  // Pre-select first available unassigned term
-  const assigned = (rawGroups.value.find((g) => g.class_id === targetClassId)?.terms || []).map((t) => t.academic_term_id);
-  const firstAvailable = terms.value.find((t) => !assigned.includes(t.id));
-  selectedTermIds.value = firstAvailable ? [firstAvailable.id] : [];
+
+  if (termId) {
+    selectedTermIds.value = [termId];
+  } else {
+    // Pre-select first available unassigned term
+    const assigned = (rawGroups.value.find((g) => g.class_id === targetClassId)?.terms || []).map(
+      (t) => t.academic_term_id,
+    );
+    const firstAvailable = terms.value.find((t) => !assigned.includes(t.id));
+    selectedTermIds.value = firstAvailable ? [firstAvailable.id] : [];
+  }
   showDrawer.value = true;
 }
 
@@ -305,7 +356,9 @@ watch(
   () => form.value.class_id,
   (newClassId) => {
     if (drawerMode.value === 'create' && newClassId) {
-      const assigned = (rawGroups.value.find((g) => g.class_id === newClassId)?.terms || []).map((t) => t.academic_term_id);
+      const assigned = (rawGroups.value.find((g) => g.class_id === newClassId)?.terms || []).map(
+        (t) => t.academic_term_id,
+      );
       selectedTermIds.value = selectedTermIds.value.filter((id) => !assigned.includes(id));
       if (selectedTermIds.value.length === 0) {
         const firstAvailable = terms.value.find((t) => !assigned.includes(t.id));
@@ -435,7 +488,6 @@ const classFormOptions = computed(() =>
   })),
 );
 
-
 onMounted(async () => {
   await fetchPredecessors();
   await fetchClassTerms();
@@ -451,10 +503,10 @@ onMounted(async () => {
         <!-- Title -->
         <div>
           <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
-            سجلات فترات الصفوف الموحدة
+            مصفوفة فترات الصفوف الموحدة
           </h2>
           <p class="text-xs text-bx-muted font-medium mt-1">
-            إدارة فترات الصفوف الدراسية، حالات التفعيل، والتحكم في إغلاق درجات التقييم
+            جدول المصفوفة الشبكية لعرض حالات تفعيل الفترات الدراسية وإغلاق الرصد لكافة الصفوف في نظرة واحدة
           </p>
         </div>
 
@@ -474,7 +526,7 @@ onMounted(async () => {
             <input
               v-model="search"
               type="text"
-              placeholder="بحث في السجلات..."
+              placeholder="بحث بالصف أو المرحلة..."
               class="w-full px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
             />
           </div>
@@ -532,163 +584,171 @@ onMounted(async () => {
       <!-- Loading State -->
       <div v-if="loading" class="py-24 text-center text-bx-muted">
         <Loader2 class="w-8 h-8 mx-auto animate-spin mb-2 text-bx-primary" />
-        <span class="text-xs font-bold">جاري تحميل سجلات الفترات...</span>
+        <span class="text-xs font-bold">جاري تحميل مصفوفة فترات الصفوف...</span>
       </div>
 
       <!-- Empty State -->
       <div
-        v-else-if="!filteredGroups || filteredGroups.length === 0"
+        v-else-if="!filteredMatrixRows || filteredMatrixRows.length === 0"
         class="py-20 text-center border-t border-[#B4AED8] dark:border-white/[0.08] space-y-3"
       >
         <AlertCircle class="w-12 h-12 mx-auto text-bx-muted opacity-40" />
-        <h3 class="text-sm font-bold text-bx-title">لا توجد سجلات تطابق محددات البحث</h3>
+        <h3 class="text-sm font-bold text-bx-title">لا توجد صفوف تطابق محددات البحث والتصفية</h3>
         <p class="text-xs text-bx-muted">جرب تغيير محددات التصفية أو تخصيص فترة لصف دراسي جديد.</p>
       </div>
 
-      <!-- Unified Table Content: Enclosed in a Bordered Card (Right, Left, Top, Bottom) -->
-      <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)]">
+      <!-- Matrix Table Content: Enclosed in a Bordered Card (Right, Left, Top, Bottom) -->
+      <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
         <div class="overflow-x-auto">
           <table class="w-full text-start border-collapse text-xs">
-            <!-- Table Header with Distinct Background and Crisp Dividers -->
+            <!-- Table Header -->
             <thead>
               <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
-                <th class="py-3.5 px-4 font-bold text-start">الرمز</th>
-                <th class="py-3.5 px-4 font-bold text-start">الفصل الدراسي</th>
-                <th class="py-3.5 px-4 font-bold text-start">التصنيف</th>
-                <th class="py-3.5 px-4 font-bold text-center">الحالة</th>
-                <th class="py-3.5 px-4 font-bold text-center">إجراءات</th>
+                <!-- Column 1: Sticky Class & Stage Column -->
+                <th class="py-4 px-5 font-bold text-start whitespace-nowrap min-w-[240px] sticky start-0 bg-[var(--bx-table-header)] z-20 border-e border-[#B4AED8]/50 dark:border-white/[0.08]">
+                  <div class="flex items-center gap-2">
+                    <GraduationCap class="w-4 h-4 text-bx-primary" />
+                    <span>الصف الدراسي والمرحلة</span>
+                  </div>
+                </th>
+
+                <!-- Columns 2..N: Dynamic Official Academic Terms -->
+                <th
+                  v-for="term in sortedTerms"
+                  :key="term.id"
+                  class="py-4 px-5 font-bold text-center whitespace-nowrap min-w-[230px] border-e border-[#B4AED8]/50 dark:border-white/[0.08] last:border-e-0"
+                >
+                  <div class="flex flex-col items-center justify-center gap-0.5">
+                    <div class="flex items-center gap-1.5 text-bx-title font-black text-sm">
+                      <CalendarDays class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>{{ term.name }}</span>
+                    </div>
+                    <span class="text-[10px] font-mono text-bx-muted">TERM-{{ String(term.id).padStart(2, '0') }}#</span>
+                  </div>
+                </th>
               </tr>
             </thead>
 
-            <!-- Table Body with Crisp Dividers & Class Group Headers -->
-            <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12]">
-              <template v-for="grp in filteredGroups" :key="grp.class_id">
-                <!-- Class Group Header Row -->
-                <tr class="bg-purple-500/[0.05] dark:bg-white/[0.03]">
-                  <td colspan="5" class="py-2.5 px-4">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2.5">
-                        <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
-                        <span class="font-black text-sm text-bx-title">{{ grp.class_name }}</span>
-                        <span class="text-[11px] font-semibold text-bx-muted px-2.5 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
-                          {{ grp.stage_name }}
-                        </span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-[11px] font-bold text-bx-muted">
-                          {{ grp.terms?.length || 0 }} فصول دراسية
-                        </span>
-                        <button
-                          @click="openCreateDrawer(grp.class_id)"
-                          class="w-8 h-8 rounded-xl border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                          title="تخصيص فترة دراسية لهذا الصف"
-                        >
-                          <Plus class="w-4 h-4" />
-                        </button>
-                      </div>
+            <!-- Table Body with Crisp Dividers -->
+            <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/[0.08]">
+              <tr
+                v-for="row in filteredMatrixRows"
+                :key="row.class_id"
+                class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors"
+              >
+                <!-- Fixed First Column (Class Info) -->
+                <td class="py-4 px-5 whitespace-nowrap sticky start-0 bg-[var(--bx-surface-solid)] z-10 border-e border-[#B4AED8]/50 dark:border-white/[0.08]">
+                  <div class="space-y-1.5">
+                    <span class="font-black text-sm text-bx-title block leading-tight">{{ row.class_name }}</span>
+                    <div class="flex items-center gap-2">
+                      <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border" :class="getStageBadgeClass(row.stage_name)">
+                        {{ row.stage_name }}
+                      </span>
+                      <span class="text-[10px] font-semibold text-bx-muted">
+                        {{ row.assignedTermsCount }} فصول مخصصة
+                      </span>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </td>
 
-                <!-- Empty terms for this class -->
-                <tr v-if="!grp.terms || grp.terms.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
-                  <td colspan="5" class="py-4 px-4 text-center text-bx-muted text-xs">
-                    <span>لا توجد فترات مخصصة لهذا الصف بعد.</span>
-                    <button
-                      @click="openCreateDrawer(grp.class_id)"
-                      class="text-bx-primary font-bold hover:underline me-2 cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <Plus class="w-3 h-3" />
-                      <span>تخصيص أول فترة الآن</span>
-                    </button>
-                  </td>
-                </tr>
-
-                <!-- Term Rows for this Class -->
-                <tr
-                  v-for="row in grp.terms"
-                  :key="row.id"
-                  class="hover:bg-purple-500/[0.08] dark:hover:bg-white/[0.06] transition-colors duration-150"
+                <!-- Term Matrix Cells -->
+                <td
+                  v-for="term in sortedTerms"
+                  :key="term.id"
+                  class="py-3 px-4 text-center align-middle border-e border-[#B4AED8]/50 dark:border-white/[0.08] last:border-e-0"
                 >
-                  <!-- Code (الرمز) -->
-                  <td class="py-3.5 px-4 font-mono font-bold text-bx-muted text-xs whitespace-nowrap">
-                    {{ row.code }}
-                  </td>
-
-                  <!-- Item with Circular Letter Badge (العنصر: الفصل الدراسي) -->
-                  <td class="py-3.5 px-4 whitespace-nowrap">
-                    <div class="flex items-center gap-3">
-                      <div
-                        class="w-7 h-7 rounded-full border-2 font-black text-[11px] flex items-center justify-center shrink-0"
-                        :class="row.letterColor"
+                  <!-- CASE 1: Term Assigned to this Class -->
+                  <div
+                    v-if="row.cells[term.id]?.isAssigned && row.cells[term.id]?.row"
+                    class="p-3.5 rounded-2xl border transition-all duration-200 text-start space-y-2.5 group"
+                    :class="[
+                      row.cells[term.id].row.is_active === 1
+                        ? 'border-emerald-500/40 bg-emerald-500/[0.06] dark:bg-emerald-500/10 shadow-xs ring-1 ring-emerald-500/20'
+                        : row.cells[term.id].row.is_closed === 1
+                        ? 'border-slate-400/30 dark:border-white/10 bg-slate-500/[0.04]'
+                        : 'border-[#B4AED8]/70 dark:border-white/10 bg-white/70 dark:bg-white/[0.03] hover:border-bx-primary/40'
+                    ]"
+                  >
+                    <!-- Header: Status Pill & Code -->
+                    <div class="flex items-center justify-between gap-2">
+                      <span
+                        class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1.5"
+                        :class="row.cells[term.id].row.statusClass"
                       >
-                        {{ row.letter }}
-                      </div>
-                      <div>
-                        <span class="font-bold text-xs text-bx-title block">
-                          {{ row.term_name }}
-                        </span>
-                      </div>
+                        <span
+                          v-if="row.cells[term.id].row.is_active === 1"
+                          class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"
+                        ></span>
+                        <Lock v-else-if="row.cells[term.id].row.is_closed === 1" class="w-3 h-3" />
+                        <span>{{ row.cells[term.id].row.statusLabel }}</span>
+                      </span>
+
+                      <span class="font-mono text-[10px] font-bold text-bx-muted">
+                        {{ row.cells[term.id].row.code }}
+                      </span>
                     </div>
-                  </td>
 
-                  <!-- Category (المرحلة التعليمية) -->
-                  <td class="py-3.5 px-4 text-xs font-semibold text-bx-muted whitespace-nowrap">
-                    {{ row.stage_name }}
-                  </td>
-
-                  <!-- Status Pill (الحالة) -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                    <span
-                      class="inline-block px-4 py-1 rounded-full text-xs font-bold border"
-                      :class="row.statusClass"
-                    >
-                      {{ row.statusLabel }}
-                    </span>
-                  </td>
-
-                  <!-- Action: عرض Button & Quick Actions (إجراءات) -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                    <div class="flex items-center justify-center gap-2">
-                      <!-- View Details Button with Text + Icon -->
+                    <!-- Quick Action Buttons -->
+                    <div class="flex items-center justify-end gap-1.5 pt-1.5 border-t border-[#B4AED8]/30 dark:border-white/[0.05]">
+                      <!-- Details Button -->
                       <button
-                        @click="openDetails(row)"
-                        class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-primary dark:text-purple-300 bg-white dark:bg-white/[0.05] hover:bg-bx-primary hover:text-white hover:border-bx-primary transition-all cursor-pointer shadow-xs"
+                        @click="openDetails(row.cells[term.id].row)"
+                        class="w-7 h-7 rounded-lg border border-[#B4AED8]/60 dark:border-white/10 bg-white dark:bg-white/[0.05] text-bx-muted hover:text-bx-primary hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                        title="عرض تفاصيل الفترة"
                       >
                         <Eye class="w-3.5 h-3.5" />
-                        <span>عرض</span>
                       </button>
 
-                      <!-- Quick Action Icons Matching Reference Squircle -->
+                      <!-- Quick Activate Button (when not already active) -->
                       <button
-                        v-if="row.is_active !== 1"
-                        @click="handleActivate(row.id)"
-                        title="تفعيل الفترة الحالية"
-                        class="w-8 h-8 rounded-xl border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                        v-if="row.cells[term.id].row.is_active !== 1"
+                        @click="handleActivate(row.cells[term.id].row.id)"
+                        class="w-7 h-7 rounded-lg border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                        title="تفعيل هذا الفصل للصف"
                       >
-                        <Zap class="w-4 h-4" />
+                        <Zap class="w-3.5 h-3.5" />
                       </button>
 
+                      <!-- Lock / Unlock Toggle -->
                       <button
-                        @click="handleToggleClose(row.id)"
-                        :title="row.is_closed === 1 ? 'فتح رصد الدرجات' : 'إغلاق رصد الدرجات'"
-                        class="w-8 h-8 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-600 hover:text-white hover:border-amber-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                        @click="handleToggleClose(row.cells[term.id].row.id)"
+                        class="w-7 h-7 rounded-lg border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-600 hover:text-white hover:border-amber-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                        :title="row.cells[term.id].row.is_closed === 1 ? 'فتح رصد الدرجات' : 'إغلاق رصد الدرجات'"
                       >
-                        <component :is="row.is_closed === 1 ? Lock : Unlock" class="w-4 h-4" />
+                        <component :is="row.cells[term.id].row.is_closed === 1 ? Lock : Unlock" class="w-3.5 h-3.5" />
                       </button>
 
+                      <!-- Unassign / Delete Button (when not active) -->
                       <button
-                        v-if="row.is_active !== 1"
-                        @click="confirmDelete(row)"
-                        title="فك الارتباط بالفترة"
-                        class="w-8 h-8 rounded-xl border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                        v-if="row.cells[term.id].row.is_active !== 1"
+                        @click="confirmDelete(row.cells[term.id].row)"
+                        class="w-7 h-7 rounded-lg border border-rose-300 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white hover:border-rose-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                        title="فك الارتباط بهذا الفصل"
                       >
-                        <Trash2 class="w-4 h-4" />
+                        <Trash2 class="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  </td>
-                </tr>
-              </template>
+                  </div>
+
+                  <!-- CASE 2: Term Unassigned (e.g. 3rd Term in Kindergarten) -->
+                  <div
+                    v-else
+                    class="h-full min-h-[82px] p-3 rounded-2xl border-2 border-dashed border-slate-200 dark:border-white/10 bg-slate-500/[0.02] flex flex-col items-center justify-center gap-1.5 transition-all group hover:border-bx-primary/40 hover:bg-purple-500/[0.03]"
+                  >
+                    <div class="flex items-center gap-1 text-slate-400 dark:text-slate-500">
+                      <span class="text-sm font-bold">—</span>
+                      <span class="text-[11px] font-medium">غير مدرج</span>
+                    </div>
+                    <button
+                      @click="openCreateDrawer(row.class_id, term.id)"
+                      class="opacity-75 group-hover:opacity-100 text-[10px] font-bold text-bx-primary hover:underline cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 transition-all"
+                    >
+                      <Plus class="w-3 h-3" />
+                      <span>ربط الفصل</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -698,10 +758,10 @@ onMounted(async () => {
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 text-xs font-bold text-bx-muted">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
-          <span>إجمالي الصفوف المعروضة: <strong class="text-bx-title font-black">{{ filteredGroups?.length || 0 }}</strong> صفوف (مجموع <strong class="text-bx-title font-black">{{ totalTermsCount }}</strong> فترة دراسية)</span>
+          <span>إجمالي الصفوف في المصفوفة: <strong class="text-bx-title font-black">{{ filteredMatrixRows?.length || 0 }}</strong> صفوف (مجموع <strong class="text-bx-title font-black">{{ totalAssignedTermsCount }}</strong> فترات مخصصة)</span>
         </div>
         <div class="text-[11px] text-bx-muted">
-          فترات وحالات الصفوف (عرض كامل بدون تجزئة صفحات)
+          عرض شبكي شامل بدون تجزئة صفحات (Academic Matrix View)
         </div>
       </div>
     </div>
