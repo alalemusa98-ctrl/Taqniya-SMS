@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, defineAsyncComponent } from 'vue';
 import {
   academicApi,
   type AcademicSectionItem,
 } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
-import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
+
+// Component Lazy Loading (component_lazy_loading)
+const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
+
 import {
   Users2,
   Plus,
@@ -20,16 +23,9 @@ const toast = useToast();
 const loading = ref(false);
 const sections = ref<AcademicSectionItem[]>([]);
 const search = ref('');
-const pagination = ref({
-  page: 1,
-  per_page: 15,
-  total: 0,
-});
 
-const changePage = (newPage: number) => {
-  pagination.value.page = newPage;
-  fetchSections();
-};
+// Request Cancellation Controller (request_cancellation)
+let activeAbortController: AbortController | null = null;
 
 // Drawer state
 const showDrawer = ref(false);
@@ -47,25 +43,29 @@ const sectionToDelete = ref<AcademicSectionItem | null>(null);
 const isDeleting = ref(false);
 
 const fetchSections = async () => {
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+
   loading.value = true;
   try {
     const params: any = {
-      page: pagination.value.page,
-      per_page: pagination.value.per_page,
+      per_page: 100, // Non-paginated complete catalogue of sections
     };
     if (search.value.trim()) params.search = search.value.trim();
 
-    const res = await academicApi.getSections(params);
+    const res = await academicApi.getSections(params, activeAbortController.signal);
     if (res.data.success) {
       sections.value = res.data.data;
-      if (res.data.meta) {
-        pagination.value.total = res.data.meta.total;
-      }
     }
   } catch (err: any) {
+    if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     toast.error('تعذر جلب كتالوج الشعب العامة', err.response?.data?.message);
   } finally {
-    loading.value = false;
+    if (!activeAbortController?.signal.aborted) {
+      loading.value = false;
+    }
   }
 };
 
@@ -149,16 +149,26 @@ onMounted(() => {
     <!-- Header & Action Toolbar -->
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[var(--bx-surface-solid)] p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] shadow-xs">
       <div class="flex flex-1 items-center gap-3">
-        <!-- Search Input -->
-        <div class="relative flex-1 max-w-md">
-          <Search class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-bx-muted pointer-events-none" />
-          <input
-            v-model="search"
-            @keyup.enter="fetchSections"
-            type="text"
-            placeholder="بحث في كتالوج الشُعب العامة..."
-            class="w-full pr-10 pl-4 h-[42px] bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
-          />
+        <!-- Search Input with Action Trigger Button -->
+        <div class="relative flex-1 max-w-md flex items-center gap-1.5">
+          <div class="relative flex-1">
+            <Search class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-bx-muted pointer-events-none" />
+            <input
+              v-model="search"
+              @keyup.enter="fetchSections"
+              type="text"
+              placeholder="بحث في كتالوج الشُعب العامة..."
+              class="w-full pr-10 pl-4 h-[42px] bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold text-start"
+            />
+          </div>
+          <button
+            @click="fetchSections"
+            :disabled="loading"
+            class="h-[42px] px-3.5 rounded-2xl bg-bx-primary/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-bx-primary/20 text-xs font-bold transition-all cursor-pointer flex items-center justify-center shrink-0"
+            title="بحث فوري (أو اضغط Enter)"
+          >
+            <Search class="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -228,7 +238,7 @@ onMounted(() => {
             >
               <td class="py-3.5 px-5">
                 <span class="w-7 h-7 rounded-xl bg-teal-500/10 border border-[#B4AED8]/60 dark:border-white/10 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-teal-600 group-hover:border-teal-500/30 transition-colors">
-                  {{ (pagination.page - 1) * pagination.per_page + idx + 1 }}
+                  {{ idx + 1 }}
                 </span>
               </td>
               <td class="py-3.5 px-5">
@@ -266,29 +276,14 @@ onMounted(() => {
         </table>
       </div>
 
-      <!-- Table Bottom Stats & Pagination Bar -->
-      <div class="px-5 py-3.5 border-t border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-bx-muted font-bold">
+      <!-- Table Bottom Stats Bar (Non-paginated full catalogue) -->
+      <div class="px-5 py-3.5 border-t border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] flex items-center justify-between text-xs text-bx-muted font-bold">
         <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-teal-500"></span>
-          <span>إجمالي الشُعب العامة: <strong class="text-bx-title font-black">{{ pagination.total || sections.length }}</strong></span>
+          <span class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
+          <span>إجمالي الشُعب العامة: <strong class="text-bx-title font-black">{{ sections.length }}</strong></span>
         </div>
-
-        <div v-if="pagination.total > pagination.per_page" class="flex items-center gap-2">
-          <button
-            :disabled="pagination.page <= 1"
-            @click="changePage(pagination.page - 1)"
-            class="px-3 py-1.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] hover:bg-[var(--bx-row-hover)] text-bx-title disabled:opacity-40 cursor-pointer transition-all"
-          >
-            السابق
-          </button>
-          <span class="text-[11px] px-2 font-mono">صفحة {{ pagination.page }} من {{ Math.ceil(pagination.total / pagination.per_page) || 1 }}</span>
-          <button
-            :disabled="pagination.page >= Math.ceil(pagination.total / pagination.per_page)"
-            @click="changePage(pagination.page + 1)"
-            class="px-3 py-1.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] hover:bg-[var(--bx-row-hover)] text-bx-title disabled:opacity-40 cursor-pointer transition-all"
-          >
-            التالي
-          </button>
+        <div class="text-[11px] text-bx-muted">
+          بنك الشُعب المعتمد (عرض كامل بدون تجزئة صفحات)
         </div>
       </div>
     </div>
