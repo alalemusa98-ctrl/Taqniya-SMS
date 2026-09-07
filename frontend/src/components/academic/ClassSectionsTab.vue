@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue';
 import {
   academicApi,
   type ClassSectionsGroupItem,
@@ -8,7 +8,9 @@ import {
 } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
 import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
-import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
+
+// Component Lazy Loading (component_lazy_loading)
+const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
 import {
   Users2,
   Plus,
@@ -31,9 +33,8 @@ const stages = ref<any[]>([]);
 const search = ref('');
 const statusPill = ref<'all' | 'assigned' | 'empty'>('all');
 
-// Pagination state (by class group)
-const currentPage = ref(1);
-const itemsPerPage = ref(4);
+// Request Cancellation Controller (request_cancellation)
+let activeAbortController: AbortController | null = null;
 
 // Drawer state for assigning section
 const showDrawer = ref(false);
@@ -67,15 +68,23 @@ async function fetchPredecessors() {
 }
 
 async function fetchClassSections() {
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+
   loading.value = true;
   try {
-    const res = await academicApi.getClassSections({ per_page: 100 });
+    const res = await academicApi.getClassSections({ per_page: 100 }, activeAbortController.signal);
     rawGroups.value = res.data?.data?.classes || [];
   } catch (err: any) {
+    if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     const msg = err.response?.data?.message || 'تعذر تحميل شعب الصفوف الدراسية.';
     toast.error(msg);
   } finally {
-    loading.value = false;
+    if (!activeAbortController?.signal.aborted) {
+      loading.value = false;
+    }
   }
 }
 
@@ -159,32 +168,32 @@ const allGroups = computed<UnifiedClassSectionGroup[]>(() => {
 
 // Filtered groups based on status pill and search query
 const filteredGroups = computed(() => {
-  return allGroups.value
+  return (allGroups.value || [])
     .map((grp) => {
       // Status pill filter
-      if (statusPill.value === 'assigned' && grp.sections.length === 0) return null;
-      if (statusPill.value === 'empty' && grp.sections.length > 0) return null;
+      if (statusPill.value === 'assigned' && (grp.sections?.length || 0) === 0) return null;
+      if (statusPill.value === 'empty' && (grp.sections?.length || 0) > 0) return null;
 
       // Filter child sections by search
-      const matchingSections = grp.sections.filter((row) => {
+      const matchingSections = (grp.sections || []).filter((row) => {
         if (search.value.trim()) {
           const q = search.value.trim().toLowerCase();
-          const matchClass = grp.class_name.toLowerCase().includes(q);
-          const matchSec = row.section_name.toLowerCase().includes(q);
-          const matchCode = row.code.toLowerCase().includes(q);
-          const matchStage = grp.stage_name.toLowerCase().includes(q);
+          const matchClass = (grp.class_name || '').toLowerCase().includes(q);
+          const matchSec = (row.section_name || '').toLowerCase().includes(q);
+          const matchCode = (row.code || '').toLowerCase().includes(q);
+          const matchStage = (grp.stage_name || '').toLowerCase().includes(q);
           return matchClass || matchSec || matchCode || matchStage;
         }
         return true;
       });
 
       // If search query matches class name, keep all sections
-      if (search.value.trim() && grp.class_name.toLowerCase().includes(search.value.trim().toLowerCase())) {
+      if (search.value.trim() && (grp.class_name || '').toLowerCase().includes(search.value.trim().toLowerCase())) {
         return grp;
       }
 
       // If filtering by search and no child sections matched, exclude group
-      if (search.value.trim() && matchingSections.length === 0) {
+      if (search.value.trim() && (matchingSections?.length || 0) === 0) {
         return null;
       }
 
@@ -196,14 +205,8 @@ const filteredGroups = computed(() => {
     .filter((grp): grp is UnifiedClassSectionGroup => grp !== null);
 });
 
-// Pagination
-const totalPages = computed(() => Math.ceil(filteredGroups.value.length / itemsPerPage.value) || 1);
-const paginatedGroups = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  return filteredGroups.value.slice(start, start + itemsPerPage.value);
-});
 const totalSectionsCount = computed(() => {
-  return filteredGroups.value.reduce((acc, g) => acc + g.sections.length, 0);
+  return (filteredGroups.value || []).reduce((acc, g) => acc + (g.sections?.length || 0), 0);
 });
 
 function openDetails(row: UnifiedSectionRow) {
@@ -373,7 +376,7 @@ onMounted(async () => {
 
       <!-- Empty State -->
       <div
-        v-else-if="filteredGroups.length === 0"
+        v-else-if="!filteredGroups || filteredGroups.length === 0"
         class="py-20 text-center border-t border-[#B4AED8] dark:border-white/[0.08] space-y-3"
       >
         <AlertCircle class="w-12 h-12 mx-auto text-bx-muted opacity-40" />
@@ -395,8 +398,8 @@ onMounted(async () => {
             </thead>
 
           <!-- Table Body with Crisp Dividers & Class Group Headers -->
-          <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.08]">
-            <template v-for="grp in paginatedGroups" :key="grp.class_id">
+          <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12]">
+            <template v-for="grp in filteredGroups" :key="grp.class_id">
               <!-- Class Group Header Row -->
               <tr class="bg-purple-500/[0.05] dark:bg-white/[0.03]">
                 <td colspan="3" class="py-2.5 px-4">
@@ -410,7 +413,7 @@ onMounted(async () => {
                     </div>
                     <div class="flex items-center gap-2">
                       <span class="text-[11px] font-bold text-bx-muted">
-                        {{ grp.sections.length }} شُعب مفتوحة
+                        {{ grp.sections?.length || 0 }} شُعب مفتوحة
                       </span>
                       <button
                         @click="openCreateDrawer(grp.class_id)"
@@ -425,7 +428,7 @@ onMounted(async () => {
               </tr>
 
               <!-- Empty sections for this class -->
-              <tr v-if="grp.sections.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
+              <tr v-if="!grp.sections || grp.sections.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
                 <td colspan="3" class="py-4 px-4 text-center text-bx-muted text-xs">
                   <span>لا توجد شُعب مسكنة لهذا الصف بعد.</span>
                   <button
@@ -495,53 +498,14 @@ onMounted(async () => {
       </div>
     </div>
 
-      <!-- Table Footer: Records Count on Right, Pagination on Left -->
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5">
-        <!-- Records Info -->
-        <span class="text-xs font-bold text-bx-muted order-2 sm:order-1">
-          عرض {{ (currentPage - 1) * itemsPerPage + 1 }} إلى
-          {{ Math.min(currentPage * itemsPerPage, filteredGroups.length) }} من
-          {{ filteredGroups.length }} صفوف دراسية (مجموع {{ totalSectionsCount }} شُعب مسكنة)
-        </span>
-
-        <!-- Pagination Controls -->
-        <div class="flex items-center gap-1.5 order-1 sm:order-2">
-          <!-- Prev Button -->
-          <button
-            @click="currentPage > 1 && (currentPage--)"
-            :disabled="currentPage === 1"
-            class="px-4 py-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            :class="currentPage > 1 ? 'text-bx-title hover:border-bx-primary' : 'text-bx-muted'"
-          >
-            السابق
-          </button>
-
-          <!-- Numbered Page Pills -->
-          <div class="flex items-center gap-1">
-            <button
-              v-for="p in totalPages"
-              :key="p"
-              @click="currentPage = p"
-              class="w-7 h-7 rounded-full text-xs font-black flex items-center justify-center transition-all cursor-pointer"
-              :class="
-                currentPage === p
-                  ? 'bg-bx-primary text-white shadow-sm'
-                  : 'text-bx-muted hover:text-bx-title border border-transparent'
-              "
-            >
-              {{ p }}
-            </button>
-          </div>
-
-          <!-- Next Button -->
-          <button
-            @click="currentPage < totalPages && (currentPage++)"
-            :disabled="currentPage === totalPages"
-            class="px-4 py-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            :class="currentPage < totalPages ? 'text-bx-title hover:border-bx-primary' : 'text-bx-muted'"
-          >
-            التالي
-          </button>
+      <!-- Table Footer: Records Info (Non-paginated full catalogue) -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 text-xs font-bold text-bx-muted">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
+          <span>إجمالي الصفوف المعروضة: <strong class="text-bx-title font-black">{{ filteredGroups?.length || 0 }}</strong> صفوف (مجموع <strong class="text-bx-title font-black">{{ totalSectionsCount }}</strong> شُعب مسكنة)</span>
+        </div>
+        <div class="text-[11px] text-bx-muted">
+          تسكين الشُعب الدراسية (عرض كامل بدون تجزئة صفحات)
         </div>
       </div>
     </div>

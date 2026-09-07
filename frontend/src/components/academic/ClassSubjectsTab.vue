@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue';
 import {
   academicApi,
   type ClassSubjectsGroupItem,
@@ -9,7 +9,9 @@ import {
 } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
 import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
-import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
+
+// Component Lazy Loading (component_lazy_loading)
+const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
 import {
   BookOpenCheck,
   Plus,
@@ -37,8 +39,9 @@ const globalTerms = ref<any[]>([]);
 // Search & Filter
 const search = ref('');
 const selectedClassFilter = ref<string | number>('all');
-const currentPage = ref(1);
-const itemsPerPage = ref(4);
+
+// Request Cancellation Controller (request_cancellation)
+let activeAbortController: AbortController | null = null;
 
 // Drawer state
 const showDrawer = ref(false);
@@ -93,15 +96,23 @@ async function fetchPredecessors() {
 }
 
 async function fetchClassSubjects() {
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+
   loading.value = true;
   try {
-    const res = await academicApi.getClassSubjects({ per_page: 100 });
+    const res = await academicApi.getClassSubjects({ per_page: 100 }, activeAbortController.signal);
     groups.value = res.data?.data?.classes || [];
   } catch (err: any) {
+    if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     const msg = err.response?.data?.message || 'تعذر تحميل مناهج ومقررات الصفوف.';
     toast.error(msg);
   } finally {
-    loading.value = false;
+    if (!activeAbortController?.signal.aborted) {
+      loading.value = false;
+    }
   }
 }
 
@@ -183,13 +194,13 @@ const allClassSubjectGroups = computed<UnifiedClassMatrixGroup[]>(() => {
     'border-rose-500 text-rose-400 bg-rose-500/10',
   ];
 
-  for (const grp of groups.value) {
+  for (const grp of groups.value || []) {
     const stageName = classStageMap.value[grp.class_id] || 'التعليم العام';
     let classTerms = getTermsForClass(grp.class_id);
-    if (classTerms.length === 0 && grp.terms) {
-      classTerms = grp.terms.map((t) => ({
+    if ((classTerms?.length || 0) === 0 && grp.terms) {
+      classTerms = (grp.terms || []).map((t) => ({
         id: t.class_academic_term_id,
-        term_name: t.term_name,
+        term_name: t.term_name || '',
         is_closed: t.is_closed,
       }));
     }
@@ -202,7 +213,7 @@ const allClassSubjectGroups = computed<UnifiedClassMatrixGroup[]>(() => {
           const idx = subjectsMap.size;
           subjectsMap.set(sub.subject_id, {
             subject_id: sub.subject_id,
-            name: sub.name,
+            name: sub.name || '',
             code: sub.code || `SUB-${sub.subject_id}`,
             class_id: grp.class_id,
             class_name: grp.class_name,
@@ -218,8 +229,8 @@ const allClassSubjectGroups = computed<UnifiedClassMatrixGroup[]>(() => {
           class_academic_term_id: term.class_academic_term_id,
           class_subject_id: sub.id,
           term_name: term.term_name,
-          passing_score: Number(sub.passing_score),
-          max_score: Number(sub.max_score),
+          passing_score: Number(sub.passing_score || 0),
+          max_score: Number(sub.max_score || 0),
           is_closed: term.is_closed,
         };
       }
@@ -229,7 +240,7 @@ const allClassSubjectGroups = computed<UnifiedClassMatrixGroup[]>(() => {
       class_id: grp.class_id,
       class_name: grp.class_name,
       stage_name: stageName,
-      terms: classTerms,
+      terms: classTerms || [],
       subjects: Array.from(subjectsMap.values()),
     });
   }
@@ -240,7 +251,7 @@ const allClassSubjectGroups = computed<UnifiedClassMatrixGroup[]>(() => {
 const filteredGroups = computed(() => {
   const q = search.value.trim().toLowerCase();
 
-  return allClassSubjectGroups.value
+  return (allClassSubjectGroups.value || [])
     .filter((grp) => {
       if (selectedClassFilter.value !== 'all') {
         return grp.class_id === Number(selectedClassFilter.value);
@@ -250,10 +261,10 @@ const filteredGroups = computed(() => {
     .map((grp) => {
       if (!q) return grp;
 
-      const matchingSubjects = grp.subjects.filter((sub) => {
-        const matchName = sub.name.toLowerCase().includes(q);
-        const matchCode = sub.code.toLowerCase().includes(q);
-        const matchClass = grp.class_name.toLowerCase().includes(q);
+      const matchingSubjects = (grp.subjects || []).filter((sub) => {
+        const matchName = (sub.name || '').toLowerCase().includes(q);
+        const matchCode = (sub.code || '').toLowerCase().includes(q);
+        const matchClass = (grp.class_name || '').toLowerCase().includes(q);
         return matchName || matchCode || matchClass;
       });
 
@@ -264,17 +275,12 @@ const filteredGroups = computed(() => {
     })
     .filter((grp) => {
       if (!q) return true;
-      return grp.subjects.length > 0;
+      return (grp.subjects?.length || 0) > 0;
     });
 });
 
-const totalPages = computed(() => Math.ceil(filteredGroups.value.length / itemsPerPage.value) || 1);
-const paginatedGroups = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  return filteredGroups.value.slice(start, start + itemsPerPage.value);
-});
 const totalSubjectsCount = computed(() => {
-  return filteredGroups.value.reduce((acc, g) => acc + g.subjects.length, 0);
+  return (filteredGroups.value || []).reduce((acc, g) => acc + (g.subjects?.length || 0), 0);
 });
 
 // Options for forms and filters
@@ -516,7 +522,7 @@ onMounted(async () => {
 
       <!-- Empty State -->
       <div
-        v-else-if="filteredGroups.length === 0"
+        v-else-if="!filteredGroups || filteredGroups.length === 0"
         class="py-20 text-center border-t border-[#B4AED8] dark:border-white/[0.08] space-y-3"
       >
         <AlertCircle class="w-12 h-12 mx-auto text-bx-muted opacity-40" />
@@ -527,7 +533,7 @@ onMounted(async () => {
       <!-- Classes Curriculum List: Each Class has its own Dynamic Headers & Semesters directly above subjects -->
       <div v-else class="space-y-6">
         <div
-          v-for="grp in paginatedGroups"
+          v-for="grp in filteredGroups"
           :key="grp.class_id"
           class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] shadow-xs"
         >
@@ -542,7 +548,7 @@ onMounted(async () => {
             </div>
             <div class="flex items-center gap-2">
               <span class="text-[11px] font-bold text-bx-muted">
-                {{ grp.subjects.length }} مواد مقررة ({{ grp.terms.length }} فصول دراسية)
+                {{ grp.subjects?.length || 0 }} مواد مقررة ({{ grp.terms?.length || 0 }} فصول دراسية)
               </span>
               <button
                 @click="openCreateDrawer(grp.class_id)"
@@ -563,7 +569,7 @@ onMounted(async () => {
                   <th class="py-3 px-4 font-bold text-start min-w-[180px]">المادة الدراسية</th>
                   <!-- Dynamic headers for THIS class's terms only -->
                   <th
-                    v-for="t in grp.terms"
+                    v-for="t in (grp.terms || [])"
                     :key="t.id"
                     class="py-3 px-4 font-bold text-center min-w-[150px]"
                   >
@@ -575,8 +581,8 @@ onMounted(async () => {
 
               <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12]">
                 <!-- Empty subjects for this class -->
-                <tr v-if="grp.subjects.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
-                  <td :colspan="3 + grp.terms.length" class="py-6 px-4 text-center text-bx-muted text-xs">
+                <tr v-if="!grp.subjects || grp.subjects.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
+                  <td :colspan="3 + (grp.terms?.length || 0)" class="py-6 px-4 text-center text-bx-muted text-xs">
                     <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
                     <button
                       @click="openCreateDrawer(grp.class_id)"
@@ -590,7 +596,7 @@ onMounted(async () => {
 
                 <!-- Subject Rows for this Class -->
                 <tr
-                  v-for="row in grp.subjects"
+                  v-for="row in (grp.subjects || [])"
                   :key="row.subject_id"
                   class="hover:bg-purple-500/[0.08] dark:hover:bg-white/[0.06] transition-colors duration-150"
                 >
@@ -683,53 +689,14 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Table Footer: Records Count on Right, Pagination on Left (Without double border) -->
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5">
-        <!-- Records Info -->
-        <span class="text-xs font-bold text-bx-muted order-2 sm:order-1">
-          عرض {{ (currentPage - 1) * itemsPerPage + 1 }} إلى
-          {{ Math.min(currentPage * itemsPerPage, filteredGroups.length) }} من
-          {{ filteredGroups.length }} صفوف دراسية (مجموع {{ totalSubjectsCount }} مواد مقررة)
-        </span>
-
-        <!-- Pagination Controls -->
-        <div class="flex items-center gap-1.5 order-1 sm:order-2">
-          <!-- Prev Button -->
-          <button
-            @click="currentPage > 1 && (currentPage--)"
-            :disabled="currentPage === 1"
-            class="px-4 py-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            :class="currentPage > 1 ? 'text-bx-title hover:border-bx-primary' : 'text-bx-muted'"
-          >
-            السابق
-          </button>
-
-          <!-- Numbered Page Pills -->
-          <div class="flex items-center gap-1">
-            <button
-              v-for="p in totalPages"
-              :key="p"
-              @click="currentPage = p"
-              class="w-7 h-7 rounded-full text-xs font-black flex items-center justify-center transition-all cursor-pointer"
-              :class="
-                currentPage === p
-                  ? 'bg-bx-primary text-white shadow-sm'
-                  : 'text-bx-muted hover:text-bx-title border border-transparent'
-              "
-            >
-              {{ p }}
-            </button>
-          </div>
-
-          <!-- Next Button -->
-          <button
-            @click="currentPage < totalPages && (currentPage++)"
-            :disabled="currentPage === totalPages"
-            class="px-4 py-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            :class="currentPage < totalPages ? 'text-bx-title hover:border-bx-primary' : 'text-bx-muted'"
-          >
-            التالي
-          </button>
+      <!-- Table Footer: Records Info (Non-paginated full catalogue) -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 text-xs font-bold text-bx-muted">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
+          <span>إجمالي الصفوف المعروضة: <strong class="text-bx-title font-black">{{ filteredGroups?.length || 0 }}</strong> صفوف (مجموع <strong class="text-bx-title font-black">{{ totalSubjectsCount }}</strong> مقرراً مسكناً)</span>
+        </div>
+        <div class="text-[11px] text-bx-muted">
+          مناهج ومقررات الصفوف (عرض كامل بدون تجزئة صفحات)
         </div>
       </div>
     </div>

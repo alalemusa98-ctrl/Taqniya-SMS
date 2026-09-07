@@ -476,9 +476,9 @@ const filteredClassMatrixGroups = computed(() => {
   const hasTeacherFilter = appliedTeacherFilter.value !== 'all';
 
   if (searchVal || hasTeacherFilter) {
-    return classMatrixGroups.value.filter((g) => g.subjects.length > 0);
+    return (classMatrixGroups.value || []).filter((g) => (g.subjects?.length || 0) > 0);
   }
-  return classMatrixGroups.value;
+  return classMatrixGroups.value || [];
 });
 
 function openEditDrawer(assignment: AssignmentItem, classId: number, sectionId: number) {
@@ -763,7 +763,7 @@ onMounted(async () => {
               <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
               <h3 class="font-black text-sm text-bx-title font-display">{{ grp.class_name }}</h3>
               <span class="text-[11px] font-semibold text-bx-muted px-2.5 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
-                {{ grp.sections.length }} شُعب دراسية
+                {{ grp.sections?.length || 0 }} شُعب دراسية
               </span>
               <span class="text-[11px] font-bold text-bx-primary px-2.5 py-0.5 rounded-full border border-bx-primary/20 bg-bx-primary/10">
                 {{ grp.totalAssignmentsCount }} إسنادات مسجلة
@@ -782,7 +782,7 @@ onMounted(async () => {
           </div>
 
           <!-- If class has no sections -->
-          <div v-if="grp.sections.length === 0" class="p-8 text-center text-xs text-bx-muted space-y-2">
+          <div v-if="!grp.sections || grp.sections.length === 0" class="p-8 text-center text-xs text-bx-muted space-y-2">
             <AlertCircle class="w-8 h-8 text-amber-500 mx-auto opacity-70" />
             <p class="font-bold text-bx-title">لم يتم تسجيل شُعب دراسية لهذا الصف حتى الآن</p>
             <p class="text-[11px]">يرجى إضافة شُعب دراسية في تبويب الهيكل الأكاديمي لتتمكن من توزيع الكادر التعليمي.</p>
@@ -797,7 +797,7 @@ onMounted(async () => {
                   <th class="py-3 px-4 font-bold text-start min-w-[200px]">المادة الدراسية</th>
                   <!-- Dynamic Section Headers for THIS class -->
                   <th
-                    v-for="sec in grp.sections"
+                    v-for="sec in (grp.sections || [])"
                     :key="sec.class_section_id"
                     class="py-3 px-4 font-bold text-center min-w-[210px]"
                   >
@@ -812,8 +812,8 @@ onMounted(async () => {
 
               <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12]">
                 <!-- Empty subjects row -->
-                <tr v-if="grp.subjects.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
-                  <td :colspan="3 + grp.sections.length" class="py-8 px-4 text-center text-bx-muted text-xs">
+                <tr v-if="!grp.subjects || grp.subjects.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
+                  <td :colspan="3 + (grp.sections?.length || 0)" class="py-8 px-4 text-center text-bx-muted text-xs">
                     <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
                     <button
                       @click="openCreateDrawer(grp.class_id)"

@@ -280,8 +280,10 @@ export const academicApi = {
   deleteSubject: (id: number) => apiClient.delete(`/academic/subjects/${id}`),
 
   // Class Academic Terms (02-C)
-  getClassAcademicTerms: (params?: any) => apiClient.get('/academic/class-academic-terms', { params }),
-  getClassAcademicTermById: (id: number) => apiClient.get(`/academic/class-academic-terms/${id}`),
+  getClassAcademicTerms: (params?: any, signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/class-academic-terms', { params, signal }),
+  getClassAcademicTermById: (id: number, signal?: AbortSignal) =>
+    deduplicatedGet<any>(`/academic/class-academic-terms/${id}`, { signal }),
   createClassAcademicTerm: (payload: CreateClassAcademicTermPayload) => apiClient.post('/academic/class-academic-terms', payload),
   updateClassAcademicTerm: (id: number, payload: UpdateClassAcademicTermPayload) => apiClient.put(`/academic/class-academic-terms/${id}`, payload),
   activateClassAcademicTerm: (id: number) => apiClient.post(`/academic/class-academic-terms/${id}/activate`),
@@ -289,14 +291,18 @@ export const academicApi = {
   deleteClassAcademicTerm: (id: number) => apiClient.delete(`/academic/class-academic-terms/${id}`),
 
   // Class Sections (02-C)
-  getClassSections: (params?: any) => apiClient.get('/academic/class-sections', { params }),
-  getClassSectionById: (id: number) => apiClient.get(`/academic/class-sections/${id}`),
+  getClassSections: (params?: any, signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/class-sections', { params, signal }),
+  getClassSectionById: (id: number, signal?: AbortSignal) =>
+    deduplicatedGet<any>(`/academic/class-sections/${id}`, { signal }),
   createClassSection: (payload: CreateClassSectionPayload) => apiClient.post('/academic/class-sections', payload),
   deleteClassSection: (id: number) => apiClient.delete(`/academic/class-sections/${id}`),
 
   // Class Subjects (02-C)
-  getClassSubjects: (params?: any) => apiClient.get('/academic/class-subjects', { params }),
-  getClassSubjectById: (id: number) => apiClient.get(`/academic/class-subjects/${id}`),
+  getClassSubjects: (params?: any, signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/class-subjects', { params, signal }),
+  getClassSubjectById: (id: number, signal?: AbortSignal) =>
+    deduplicatedGet<any>(`/academic/class-subjects/${id}`, { signal }),
   createClassSubject: (payload: CreateClassSubjectPayload) => apiClient.post('/academic/class-subjects', payload),
   updateClassSubject: (id: number, payload: UpdateClassSubjectPayload) => apiClient.put(`/academic/class-subjects/${id}`, payload),
   deleteClassSubject: (id: number) => apiClient.delete(`/academic/class-subjects/${id}`),

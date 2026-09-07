@@ -55,21 +55,21 @@ const isSelected = (val: string | number) => {
 
 const selectedLabel = computed(() => {
   if (props.multiple) {
-    if (selectedValues.value.length === 0) return props.placeholder || 'اختر...';
-    return `${selectedValues.value.length} محددة`;
+    if ((selectedValues.value?.length || 0) === 0) return props.placeholder || 'اختر...';
+    return `${selectedValues.value?.length || 0} محددة`;
   }
-  const found = props.options.find((o) => String(o.value) === String(props.modelValue));
+  const found = (props.options || []).find((o) => String(o.value) === String(props.modelValue));
   return found ? found.label : props.placeholder || 'اختر...';
 });
 
 const getOption = (val: string | number) => {
-  return props.options.find((o) => String(o.value) === String(val));
+  return (props.options || []).find((o) => String(o.value) === String(val));
 };
 
 const filteredOptions = computed(() => {
-  if (!searchQuery.value.trim()) return props.options;
+  if (!searchQuery.value.trim()) return props.options || [];
   const q = searchQuery.value.trim().toLowerCase();
-  return props.options.filter((opt) => {
+  return (props.options || []).filter((opt) => {
     const matchLabel = (opt.label || '').toLowerCase().includes(q);
     const matchCode = (opt.code || '').toLowerCase().includes(q);
     const matchSubtext = (opt.subtext || '').toLowerCase().includes(q);
@@ -132,7 +132,7 @@ const removeOption = (val: string | number) => {
         <component :is="icon" v-if="icon" class="w-3.5 h-3.5 text-bx-muted shrink-0" />
 
         <!-- Multiple selection chips mode -->
-        <template v-if="multiple && selectedValues.length > 0">
+        <template v-if="multiple && (selectedValues?.length || 0) > 0">
           <div class="flex flex-wrap items-center gap-1.5 py-0.5 overflow-hidden">
             <span
               v-for="val in selectedValues"
@@ -177,7 +177,7 @@ const removeOption = (val: string | number) => {
       :class="fullWidth ? 'w-full min-w-full' : 'min-w-[240px] w-max max-w-sm'"
     >
       <!-- Quick Fuzzy Search Bar -->
-      <div v-if="searchable && options.length > 2" class="relative">
+      <div v-if="searchable && (options?.length || 0) > 2" class="relative">
         <div class="relative flex items-center">
           <input
             ref="searchInputRef"
@@ -238,7 +238,7 @@ const removeOption = (val: string | number) => {
         </div>
 
         <!-- Empty Search State -->
-        <div v-if="filteredOptions.length === 0" class="py-4 text-center text-xs text-bx-muted">
+        <div v-if="!filteredOptions || filteredOptions.length === 0" class="py-4 text-center text-xs text-bx-muted">
           لا توجد خيارات مطابقة للبحث
         </div>
       </div>
