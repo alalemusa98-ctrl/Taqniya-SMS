@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue';
 import {
   Plus,
   Search,
@@ -13,6 +13,8 @@ import {
   ChevronRight,
   ChevronLeft,
   UserCheck,
+  Filter,
+  RotateCcw,
 } from 'lucide-vue-next';
 import {
   teachingAssignmentsApi,
@@ -24,8 +26,11 @@ import {
 import { teachersApi, type Teacher } from '../api/teachers.api';
 import { academicApi } from '../api/academic.api';
 import { useToast } from '../composables/useToast';
-import TaqniyaDrawer from '../components/ui/TaqniyaDrawer.vue';
+import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
+
+// Component Lazy Loading (component_lazy_loading)
+const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
 
 const toast = useToast();
 
@@ -41,12 +46,23 @@ const meta = ref<PaginationMeta>({
 const loading = ref(false);
 const isSubmitting = ref(false);
 
-// Filters
+// Filter Form Inputs (Draft - Non-immediate)
 const search = ref('');
 const selectedYearId = ref<number>(0);
 const selectedClassFilter = ref<number | string>('all');
 const selectedTeacherFilter = ref<number | string>('all');
+
+// Applied Filter Values (Triggered explicitly by button / Enter)
+const appliedSearch = ref('');
+const appliedYearId = ref<number>(0);
+const appliedClassFilter = ref<number | string>('all');
+const appliedTeacherFilter = ref<number | string>('all');
+
+// Request Cancellation Controller (request_cancellation)
+let activeAbortController: AbortController | null = null;
+
 const currentPage = ref(1);
+
 
 // Metadata for selects
 const academicYears = ref<any[]>([]);
@@ -148,6 +164,7 @@ async function fetchPrerequisites() {
     const activeY = academicYears.value.find((y) => y.is_active === 1) || academicYears.value[0];
     if (activeY) {
       selectedYearId.value = activeY.id;
+      appliedYearId.value = activeY.id;
       form.value.academic_year_id = activeY.id;
     }
   } catch (err) {
@@ -155,47 +172,73 @@ async function fetchPrerequisites() {
   }
 }
 
-// Fetch Assignments Hierarchy
+// Fetch Assignments Hierarchy with Request Cancellation & Applied Filters
 async function fetchAssignments() {
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+
   loading.value = true;
   try {
     const params: any = {
       page: currentPage.value,
       per_page: 15,
     };
-    if (selectedYearId.value) params.academic_year_id = selectedYearId.value;
-    if (selectedClassFilter.value !== 'all') params.class_id = selectedClassFilter.value;
-    if (search.value.trim()) params.search = search.value.trim();
+    if (appliedYearId.value) params.academic_year_id = appliedYearId.value;
+    if (appliedClassFilter.value !== 'all') params.class_id = appliedClassFilter.value;
+    if (appliedSearch.value.trim()) params.search = appliedSearch.value.trim();
 
-    const res = await teachingAssignmentsApi.getAll(params);
+    const res = await teachingAssignmentsApi.getAll(params, activeAbortController.signal);
     hierarchyData.value = res.data.data;
     meta.value = res.data.meta;
   } catch (err: any) {
+    if (err?.name === 'CanceledError' || err?.name === 'AbortError') {
+      return;
+    }
     const msg = err.response?.data?.message || 'تعذر تحميل كشوفات إسناد التدريس.';
     toast.error(msg);
   } finally {
-    loading.value = false;
+    if (!activeAbortController?.signal.aborted) {
+      loading.value = false;
+    }
   }
 }
 
-// Watchers
-watch([selectedYearId, selectedClassFilter, selectedTeacherFilter], () => {
+// Explicit Filter Execution (Non-immediate, triggered by filter button or Enter)
+function applyFilters() {
+  appliedSearch.value = search.value.trim();
+  appliedYearId.value = selectedYearId.value;
+  appliedClassFilter.value = selectedClassFilter.value;
+  appliedTeacherFilter.value = selectedTeacherFilter.value;
   currentPage.value = 1;
   fetchAssignments();
+}
+
+function resetFilters() {
+  search.value = '';
+  appliedSearch.value = '';
+  selectedClassFilter.value = 'all';
+  appliedClassFilter.value = 'all';
+  selectedTeacherFilter.value = 'all';
+  appliedTeacherFilter.value = 'all';
+  currentPage.value = 1;
+  fetchAssignments();
+}
+
+const hasActiveFilters = computed(() => {
+  return (
+    appliedSearch.value.trim() !== '' ||
+    appliedClassFilter.value !== 'all' ||
+    appliedTeacherFilter.value !== 'all'
+  );
 });
 
-let searchDebounce: any;
-watch(search, () => {
-  clearTimeout(searchDebounce);
-  searchDebounce = setTimeout(() => {
-    currentPage.value = 1;
-    fetchAssignments();
-  }, 350);
-});
-
+// Watch only pagination changes
 watch(currentPage, () => {
   fetchAssignments();
 });
+
 
 // Options mappings
 const yearOptions = computed<TaqniyaSelectOption[]>(() =>
@@ -355,9 +398,9 @@ const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
     // Build subject rows
     let subjectList = Array.from(subjectsMap.values());
 
-    // Filter if text search or teacher filter is active
-    const searchVal = search.value.trim().toLowerCase();
-    const hasTeacherFilter = selectedTeacherFilter.value !== 'all';
+    // Filter if text search or teacher filter is active (using explicitly applied values)
+    const searchVal = appliedSearch.value.trim().toLowerCase();
+    const hasTeacherFilter = appliedTeacherFilter.value !== 'all';
 
     if (searchVal || hasTeacherFilter) {
       subjectList = subjectList.filter((sub) => {
@@ -367,7 +410,7 @@ const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
         // Teacher filter: Subject MUST have the selected teacher assigned in at least one section
         if (hasTeacherFilter) {
           const matchTeacher = assignmentsList.some(
-            (a) => Number(a.teacher_id) === Number(selectedTeacherFilter.value),
+            (a) => Number(a.teacher_id) === Number(appliedTeacherFilter.value),
           );
           if (!matchTeacher) return false;
         }
@@ -414,8 +457,8 @@ const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
 });
 
 const filteredClassMatrixGroups = computed(() => {
-  const searchVal = search.value.trim().toLowerCase();
-  const hasTeacherFilter = selectedTeacherFilter.value !== 'all';
+  const searchVal = appliedSearch.value.trim().toLowerCase();
+  const hasTeacherFilter = appliedTeacherFilter.value !== 'all';
 
   if (searchVal || hasTeacherFilter) {
     return classMatrixGroups.value.filter((g) => g.subjects.length > 0);
@@ -546,7 +589,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-4 font-sans" dir="rtl">
+  <TaqniyaErrorBoundary>
+    <div class="space-y-4 font-sans" dir="rtl">
     <!-- Top Container Card -->
     <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
       <!-- Card Header: Title on Right, Controls & Filters on Left -->
@@ -561,7 +605,7 @@ onMounted(async () => {
           </p>
         </div>
 
-        <!-- Controls: Add Button + Quick Search -->
+        <!-- Controls: Add Button + Manual Search -->
         <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
           <!-- Add Button -->
           <button
@@ -572,51 +616,98 @@ onMounted(async () => {
             <span>+ إسناد تدريس جديد</span>
           </button>
 
-          <!-- Search Input (Pill Shaped) -->
-          <div class="relative flex-1 sm:w-60">
-            <Search class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-bx-muted pointer-events-none" />
-            <input
-              v-model="search"
-              type="text"
-              placeholder="بحث باسم المعلم أو المادة أو الشعبة..."
-              class="w-full pr-10 pl-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-start"
-            />
+          <!-- Search Input with Explicit Search Trigger -->
+          <div class="relative flex-1 sm:w-72 flex items-center gap-1.5">
+            <div class="relative flex-1">
+              <Search class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-bx-muted pointer-events-none" />
+              <input
+                v-model="search"
+                @keydown.enter="applyFilters"
+                type="text"
+                placeholder="بحث باسم المعلم أو المادة أو الشعبة..."
+                class="w-full pr-10 pl-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-start"
+              />
+            </div>
+            <button
+              @click="applyFilters"
+              :disabled="loading"
+              class="h-8 px-3 rounded-full bg-bx-primary/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-bx-primary/20 text-xs font-bold transition-all cursor-pointer flex items-center justify-center shrink-0"
+              title="بحث فوري (أو اضغط Enter)"
+            >
+              <Search class="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Filters Bar: Academic Year, Class, Teacher Filters -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6">
-        <div>
-          <label class="block text-[11px] font-bold text-bx-muted mb-1">العام الدراسي المستهدف</label>
-          <TaqniyaSelect
-            v-model="selectedYearId"
-            :options="yearOptions"
-            placeholder="اختر العام الدراسي..."
-            full-width
-          />
+      <!-- Filters Bar: Academic Year, Class, Teacher Filters + Action Buttons -->
+      <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-bx-muted mb-1">العام الدراسي المستهدف</label>
+            <TaqniyaSelect
+              v-model="selectedYearId"
+              :options="yearOptions"
+              placeholder="اختر العام الدراسي..."
+              full-width
+            />
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب الصف الدراسي</label>
+            <TaqniyaSelect
+              v-model="selectedClassFilter"
+              :options="classFilterOptions"
+              placeholder="كافة الصفوف..."
+              full-width
+            />
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب المعلم</label>
+            <TaqniyaSelect
+              v-model="selectedTeacherFilter"
+              :options="teacherFilterOptions"
+              placeholder="كافة المعلمين..."
+              full-width
+            />
+          </div>
         </div>
 
-        <div>
-          <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب الصف الدراسي</label>
-          <TaqniyaSelect
-            v-model="selectedClassFilter"
-            :options="classFilterOptions"
-            placeholder="كافة الصفوف..."
-            full-width
-          />
-        </div>
+        <!-- Filter Action Toolbar: Apply Button, Reset Button, and Active Filter Indicator -->
+        <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <!-- Apply Filters Button -->
+            <button
+              type="button"
+              @click="applyFilters"
+              :disabled="loading"
+              class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+            >
+              <Filter class="w-3.5 h-3.5" />
+              <span>تطبيق التصفية</span>
+            </button>
 
-        <div>
-          <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب المعلم</label>
-          <TaqniyaSelect
-            v-model="selectedTeacherFilter"
-            :options="teacherFilterOptions"
-            placeholder="كافة المعلمين..."
-            full-width
-          />
+            <!-- Reset Filters Button -->
+            <button
+              type="button"
+              @click="resetFilters"
+              :disabled="loading"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] disabled:opacity-50 transition-all cursor-pointer"
+            >
+              <RotateCcw class="w-3.5 h-3.5" />
+              <span>إعادة تعيين الفلاتر</span>
+            </button>
+          </div>
+
+          <!-- Active Filter Indicator Badge -->
+          <div v-if="hasActiveFilters" class="flex items-center gap-2 text-[11px] text-bx-primary font-bold">
+            <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
+            <span>يتم تطبيق فلاتر مخصصة (انقر تطبيق بعد التعديل)</span>
+          </div>
         </div>
       </div>
+
 
       <!-- Loading State -->
       <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
@@ -750,7 +841,7 @@ onMounted(async () => {
                       @click="openEditDrawer(row.assignmentsBySection[sec.class_section_id], grp.class_id, sec.class_section_id)"
                       class="inline-flex items-center justify-between gap-2.5 h-[42px] px-3 rounded-full border transition-all cursor-pointer group/pill shadow-xs max-w-[220px] w-full"
                       :class="[
-                        selectedTeacherFilter !== 'all' && Number(selectedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
+                        appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
                           ? 'border-bx-primary ring-2 ring-bx-primary/50 bg-purple-500/15 dark:bg-purple-500/25 shadow-md scale-[1.02]'
                           : 'border-purple-300/80 dark:border-white/10 bg-purple-500/[0.05] dark:bg-purple-950/30 hover:border-bx-primary hover:bg-purple-500/[0.1] dark:hover:bg-purple-900/40'
                       ]"
@@ -759,7 +850,7 @@ onMounted(async () => {
                       <!-- Avatar -->
                       <div
                         class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 shadow-xs transition-colors"
-                        :class="selectedTeacherFilter !== 'all' && Number(selectedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
+                        :class="appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
                           ? 'bg-bx-primary text-white ring-2 ring-bx-primary/30'
                           : 'bg-bx-primary text-white'"
                       >
@@ -770,13 +861,13 @@ onMounted(async () => {
                       <div class="flex-1 min-w-0 text-start leading-tight">
                         <div class="flex items-center gap-1.5">
                           <span
-                            v-if="selectedTeacherFilter !== 'all' && Number(selectedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)"
+                            v-if="appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)"
                             class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse"
                             title="المعلم المختار"
                           ></span>
                           <div
                             class="font-bold text-xs group-hover/pill:text-bx-primary transition-colors truncate"
-                            :class="selectedTeacherFilter !== 'all' && Number(selectedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
+                            :class="appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
                               ? 'text-bx-primary font-black'
                               : 'text-bx-title'"
                             dir="auto"
@@ -788,6 +879,7 @@ onMounted(async () => {
                           {{ row.assignmentsBySection[sec.class_section_id].teacher_code }}
                         </div>
                       </div>
+
 
                       <!-- Approved Taqniya Delete Button -->
                       <button
@@ -1070,4 +1162,7 @@ onMounted(async () => {
       </div>
     </Teleport>
   </div>
+</TaqniyaErrorBoundary>
 </template>
+
+

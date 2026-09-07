@@ -1,4 +1,5 @@
-import { apiClient } from './client';
+import { apiClient, deduplicatedGet } from './client';
+
 
 export interface AssignmentItem {
   id: number;
@@ -70,27 +71,29 @@ export interface UpdateAssignmentPayload extends CreateAssignmentPayload {}
 
 export const teachingAssignmentsApi = {
   // 1.1 GET /teaching-assignments
-  getAll: (params?: GetAssignmentsParams) => {
-    return apiClient.get<{
+  getAll: (params?: GetAssignmentsParams, signal?: AbortSignal) => {
+    return deduplicatedGet<{
       success: boolean;
       message: string;
       data: TeachingAssignmentsHierarchy;
       meta: PaginationMeta;
-    }>('/teaching-assignments', { params });
+    }>('/teaching-assignments', { params, signal });
   },
 
   // 1.2 GET /teachers/:teacher_id/assignments
   getTeacherAssignments: (
     teacherId: number,
     params?: { academic_year_id?: number; search?: string; page?: number; per_page?: number },
+    signal?: AbortSignal,
   ) => {
-    return apiClient.get<{
+    return deduplicatedGet<{
       success: boolean;
       message: string;
       data: TeacherWorkloadItem[];
       meta: PaginationMeta;
-    }>(`/teachers/${teacherId}/assignments`, { params });
+    }>(`/teachers/${teacherId}/assignments`, { params, signal });
   },
+
 
   // 1.3 POST /teaching-assignments
   create: (payload: CreateAssignmentPayload) => {
