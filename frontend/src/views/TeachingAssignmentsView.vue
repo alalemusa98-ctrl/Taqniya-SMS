@@ -55,6 +55,7 @@ const allSections = ref<any[]>([]);
 const allSubjects = ref<any[]>([]);
 const allTeachers = ref<Teacher[]>([]);
 const allClassSections = ref<any[]>([]);
+const rawClassSubjects = ref<any[]>([]);
 
 // Drawer State
 const showDrawer = ref(false);
@@ -84,16 +85,38 @@ const assignmentToDelete = ref<AssignmentItem | null>(null);
 const isDeleting = ref(false);
 const deleteErrorMessage = ref<string | null>(null);
 
+// Matrix Interfaces
+export interface ClassMatrixSubjectRow {
+  subject_id: number;
+  subject_name: string;
+  subject_code: string;
+  assignmentsBySection: Record<number, AssignmentItem>;
+  assignedCount: number;
+  totalSections: number;
+}
+
+export interface ClassMatrixGroup {
+  class_id: number;
+  class_name: string;
+  sections: {
+    class_section_id: number;
+    section_name: string;
+  }[];
+  subjects: ClassMatrixSubjectRow[];
+  totalAssignmentsCount: number;
+}
+
 // Fetch Initial Meta Options
 async function fetchPrerequisites() {
   try {
-    const [yearsRes, classesRes, sectionsRes, subjectsRes, teachersRes, classSectionsRes] = await Promise.all([
+    const [yearsRes, classesRes, sectionsRes, subjectsRes, teachersRes, classSectionsRes, classSubjectsRes] = await Promise.all([
       academicApi.getYears({ per_page: 50 }),
       academicApi.getClasses({ per_page: 100 }),
       academicApi.getSections({ per_page: 100 }),
       academicApi.getSubjects({ per_page: 100 }),
       teachersApi.getTeachers({ per_page: 200, is_active: 1 }),
       academicApi.getClassSections({ per_page: 200 }),
+      academicApi.getClassSubjects({ per_page: 100 }).catch(() => ({ data: { data: { classes: [] } } })),
     ]);
 
     academicYears.value = yearsRes.data?.data || [];
@@ -101,6 +124,7 @@ async function fetchPrerequisites() {
     allSections.value = sectionsRes.data?.data || [];
     allSubjects.value = subjectsRes.data?.data || [];
     allTeachers.value = teachersRes.data?.data || [];
+    rawClassSubjects.value = classSubjectsRes.data?.data?.classes || classSubjectsRes.data?.data || [];
 
     // Extract class-sections list from grouped response (data.classes -> sections)
     const groupedClasses = classSectionsRes.data?.data?.classes || [];
@@ -141,7 +165,6 @@ async function fetchAssignments() {
     };
     if (selectedYearId.value) params.academic_year_id = selectedYearId.value;
     if (selectedClassFilter.value !== 'all') params.class_id = selectedClassFilter.value;
-    if (selectedTeacherFilter.value !== 'all') params.teacher_id = selectedTeacherFilter.value;
     if (search.value.trim()) params.search = search.value.trim();
 
     const res = await teachingAssignmentsApi.getAll(params);
@@ -249,7 +272,7 @@ const formTeacherOptions = computed<TaqniyaSelectOption[]>(() =>
 );
 
 // Drawer Openers
-function openCreateDrawer(classId?: number, sectionId?: number) {
+function openCreateDrawer(classId?: number, sectionId?: number, subjectId?: number) {
   drawerMode.value = 'create';
   activeAssignmentId.value = null;
 
@@ -258,18 +281,147 @@ function openCreateDrawer(classId?: number, sectionId?: number) {
     (cs) => Number(cs.class_id) === Number(targetClassId),
   );
   const targetSectionId = sectionId || availableForClass[0]?.id || 0;
+  const targetSubjectId = subjectId || allSubjects.value[0]?.id || 0;
 
   form.value = {
     academic_year_id: selectedYearId.value || academicYears.value[0]?.id || 0,
     class_id: targetClassId,
     class_section_id: targetSectionId,
-    subject_id: allSubjects.value[0]?.id || 0,
+    subject_id: targetSubjectId,
     teacher_id: allTeachers.value[0]?.id || 0,
   };
   fieldErrors.value = {};
   formErrorMessage.value = null;
   showDrawer.value = true;
 }
+
+// Compute Class Assignment Matrix Groups (One Table per Class with Dynamic Columns for Sections)
+const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
+  if (!hierarchyData.value?.classes) return [];
+
+  return hierarchyData.value.classes.map((cls) => {
+    // 1. Gather all sections for this class
+    const sections = (cls.sections || []).map((s) => ({
+      class_section_id: s.class_section_id,
+      section_name: s.section_name,
+    }));
+
+    // 2. Gather all distinct subjects from curriculum + existing assignments
+    const subjectsMap = new Map<number, { id: number; name: string; code: string }>();
+
+    // From curriculum
+    const currClass = rawClassSubjects.value.find((c: any) => c.class_id === cls.class_id);
+    if (currClass && currClass.terms) {
+      for (const t of currClass.terms) {
+        for (const sub of t.subjects || []) {
+          if (!subjectsMap.has(sub.subject_id)) {
+            subjectsMap.set(sub.subject_id, {
+              id: sub.subject_id,
+              name: sub.name,
+              code: sub.code || `SUB-${sub.subject_id}`,
+            });
+          }
+        }
+      }
+    }
+
+    // From existing assignments in all sections of this class
+    for (const sec of cls.sections || []) {
+      for (const asgn of sec.assignments || []) {
+        if (!subjectsMap.has(asgn.subject_id)) {
+          subjectsMap.set(asgn.subject_id, {
+            id: asgn.subject_id,
+            name: asgn.subject_name,
+            code: asgn.subject_code || `SUB-${asgn.subject_id}`,
+          });
+        }
+      }
+    }
+
+    // Build assignment lookup: [subject_id][class_section_id] -> AssignmentItem
+    const assignmentLookup: Record<number, Record<number, AssignmentItem>> = {};
+    let totalAssignmentsCount = 0;
+
+    for (const sec of cls.sections || []) {
+      for (const asgn of sec.assignments || []) {
+        if (!assignmentLookup[asgn.subject_id]) {
+          assignmentLookup[asgn.subject_id] = {};
+        }
+        assignmentLookup[asgn.subject_id][sec.class_section_id] = asgn;
+        totalAssignmentsCount++;
+      }
+    }
+
+    // Build subject rows
+    let subjectList = Array.from(subjectsMap.values());
+
+    // Filter if text search or teacher filter is active
+    const searchVal = search.value.trim().toLowerCase();
+    const hasTeacherFilter = selectedTeacherFilter.value !== 'all';
+
+    if (searchVal || hasTeacherFilter) {
+      subjectList = subjectList.filter((sub) => {
+        const asgns = assignmentLookup[sub.id] || {};
+        const assignmentsList = Object.values(asgns);
+
+        // Teacher filter: Subject MUST have the selected teacher assigned in at least one section
+        if (hasTeacherFilter) {
+          const matchTeacher = assignmentsList.some(
+            (a) => Number(a.teacher_id) === Number(selectedTeacherFilter.value),
+          );
+          if (!matchTeacher) return false;
+        }
+
+        // Search filter:
+        if (searchVal) {
+          const matchSub =
+            sub.name.toLowerCase().includes(searchVal) ||
+            sub.code.toLowerCase().includes(searchVal);
+          const matchAnyTeacher = assignmentsList.some(
+            (a) =>
+              a.teacher_name.toLowerCase().includes(searchVal) ||
+              a.teacher_code.toLowerCase().includes(searchVal),
+          );
+          const matchClass = cls.class_name.toLowerCase().includes(searchVal);
+          if (!matchSub && !matchAnyTeacher && !matchClass) return false;
+        }
+
+        return true;
+      });
+    }
+
+    const subjectRows: ClassMatrixSubjectRow[] = subjectList.map((sub) => {
+      const sectionAssignments = assignmentLookup[sub.id] || {};
+      const assignedCount = Object.keys(sectionAssignments).length;
+      return {
+        subject_id: sub.id,
+        subject_name: sub.name,
+        subject_code: sub.code,
+        assignmentsBySection: sectionAssignments,
+        assignedCount,
+        totalSections: sections.length,
+      };
+    });
+
+    return {
+      class_id: cls.class_id,
+      class_name: cls.class_name,
+      sections,
+      subjects: subjectRows,
+      totalAssignmentsCount,
+    };
+  });
+});
+
+const filteredClassMatrixGroups = computed(() => {
+  const searchVal = search.value.trim().toLowerCase();
+  const hasTeacherFilter = selectedTeacherFilter.value !== 'all';
+
+  if (searchVal || hasTeacherFilter) {
+    return classMatrixGroups.value.filter((g) => g.subjects.length > 0);
+  }
+  return classMatrixGroups.value;
+});
 
 function openEditDrawer(assignment: AssignmentItem, classId: number, sectionId: number) {
   drawerMode.value = 'edit';
@@ -474,7 +626,7 @@ onMounted(async () => {
 
       <!-- Empty State -->
       <div
-        v-else-if="!hierarchyData || !hierarchyData.classes || hierarchyData.classes.length === 0"
+        v-else-if="!filteredClassMatrixGroups || filteredClassMatrixGroups.length === 0"
         class="py-14 text-center space-y-3 rounded-2xl border border-dashed border-[#B4AED8] dark:border-white/[0.12] p-8"
       >
         <div class="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-950/40 text-bx-primary flex items-center justify-center mx-auto">
@@ -493,120 +645,190 @@ onMounted(async () => {
         </button>
       </div>
 
-      <!-- Hierarchical Classes Grid & Accordions -->
+      <!-- Hierarchical Classes Matrix List: Each Class has its own unified Table with dynamic columns for Sections -->
       <div v-else class="space-y-6">
         <div
-          v-for="cls in hierarchyData.classes"
-          :key="cls.class_id"
+          v-for="grp in filteredClassMatrixGroups"
+          :key="grp.class_id"
           class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs"
         >
-          <!-- Class Card Header -->
-          <div class="py-3.5 px-5 bg-purple-500/[0.06] dark:bg-white/[0.04] border-b border-[#B4AED8] dark:border-white/[0.12] flex items-center justify-between">
-            <div class="flex items-center gap-3">
+          <!-- Class Header Bar -->
+          <div class="bg-purple-500/[0.05] dark:bg-white/[0.03] py-3.5 px-5 border-b border-[#B4AED8] dark:border-white/[0.12] flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
               <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
-              <h3 class="font-black text-sm text-bx-title font-display">{{ cls.class_name }}</h3>
-              <span class="text-[11px] font-bold text-bx-muted px-2.5 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
-                {{ cls.sections.length }} شُعب
+              <h3 class="font-black text-sm text-bx-title font-display">{{ grp.class_name }}</h3>
+              <span class="text-[11px] font-semibold text-bx-muted px-2.5 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
+                {{ grp.sections.length }} شُعب دراسية
+              </span>
+              <span class="text-[11px] font-bold text-bx-primary px-2.5 py-0.5 rounded-full border border-bx-primary/20 bg-bx-primary/10">
+                {{ grp.totalAssignmentsCount }} إسنادات مسجلة
               </span>
             </div>
-            <button
-              @click="openCreateDrawer(cls.class_id)"
-              class="inline-flex items-center gap-1 text-xs font-bold text-bx-primary hover:underline cursor-pointer"
-            >
-              <Plus class="w-3.5 h-3.5" />
-              <span>إسناد مادة لهذا الصف</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                @click="openCreateDrawer(grp.class_id)"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary text-xs font-bold transition-all cursor-pointer shadow-xs"
+                title="إسناد مادة لهذا الصف الدراسي"
+              >
+                <Plus class="w-3.5 h-3.5" />
+                <span>إسناد مادة لهذا الصف</span>
+              </button>
+            </div>
           </div>
 
-          <!-- Class Sections Grid -->
-          <div class="p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div
-              v-for="sec in cls.sections"
-              :key="sec.class_section_id"
-              class="rounded-xl border border-[#B4AED8]/70 dark:border-white/[0.08] bg-[var(--bx-canvas)]/40 overflow-hidden"
-            >
-              <!-- Section Header -->
-              <div class="py-2.5 px-4 bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/[0.08] flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-xs text-bx-title">{{ sec.section_name }}</span>
-                  <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-bx-primary/10 text-bx-primary">
-                    {{ sec.assignments.length }} مواد مسندة
-                  </span>
-                </div>
-                <button
-                  @click="openCreateDrawer(cls.class_id, sec.class_section_id)"
-                  class="w-7 h-7 rounded-lg border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white flex items-center justify-center transition-all cursor-pointer"
-                  title="إسناد مادة لهذه الشعبة"
-                >
-                  <Plus class="w-3.5 h-3.5" />
-                </button>
-              </div>
+          <!-- If class has no sections -->
+          <div v-if="grp.sections.length === 0" class="p-8 text-center text-xs text-bx-muted space-y-2">
+            <AlertCircle class="w-8 h-8 text-amber-500 mx-auto opacity-70" />
+            <p class="font-bold text-bx-title">لم يتم تسجيل شُعب دراسية لهذا الصف حتى الآن</p>
+            <p class="text-[11px]">يرجى إضافة شُعب دراسية في تبويب الهيكل الأكاديمي لتتمكن من توزيع الكادر التعليمي.</p>
+          </div>
 
-              <!-- Section Assignments Table -->
-              <div v-if="sec.assignments.length > 0" class="overflow-x-auto">
-                <table class="w-full text-start text-xs border-collapse">
-                  <thead>
-                    <tr class="text-[11px] font-bold text-bx-muted border-b border-[#B4AED8]/40 dark:border-white/[0.05] bg-transparent">
-                      <th class="py-2 px-3 text-start">#</th>
-                      <th class="py-2 px-3 text-start">المادة التعليمية</th>
-                      <th class="py-2 px-3 text-start">المعلم المكلف</th>
-                      <th class="py-2 px-3 text-center">الإجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-[#B4AED8]/30 dark:divide-white/[0.05]">
-                    <tr
-                      v-for="(row, idx) in sec.assignments"
-                      :key="row.id"
-                      class="hover:bg-purple-500/[0.08] dark:hover:bg-white/[0.06] transition-colors"
+          <!-- Class Matrix Table -->
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-start border-collapse text-xs">
+              <thead>
+                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
+                  <th class="py-3 px-4 font-bold text-start w-12">#</th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[200px]">المادة الدراسية</th>
+                  <!-- Dynamic Section Headers for THIS class -->
+                  <th
+                    v-for="sec in grp.sections"
+                    :key="sec.class_section_id"
+                    class="py-3 px-4 font-bold text-center min-w-[210px]"
+                  >
+                    <div class="inline-flex items-center justify-center gap-1.5 font-bold text-bx-title">
+                      <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                      <span>{{ sec.section_name }}</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-center w-28">نسبة التغطية</th>
+                </tr>
+              </thead>
+
+              <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12]">
+                <!-- Empty subjects row -->
+                <tr v-if="grp.subjects.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
+                  <td :colspan="3 + grp.sections.length" class="py-8 px-4 text-center text-bx-muted text-xs">
+                    <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
+                    <button
+                      @click="openCreateDrawer(grp.class_id)"
+                      class="text-bx-primary font-bold hover:underline me-2 cursor-pointer inline-flex items-center gap-1"
                     >
-                      <td class="py-2.5 px-3 font-['Alexandria',sans-serif] font-bold text-bx-muted text-[11px]">
-                        {{ idx + 1 }}
-                      </td>
-                      <td class="py-2.5 px-3">
-                        <div class="font-bold text-bx-title">{{ row.subject_name }}</div>
-                        <span v-if="row.subject_code" class="text-[10px] font-mono text-purple-600 dark:text-purple-400">
-                          {{ row.subject_code }}
-                        </span>
-                      </td>
-                      <td class="py-2.5 px-3">
-                        <button
-                          @click="openWorkloadDrawer(row.teacher_id)"
-                          class="text-start hover:underline group cursor-pointer"
-                        >
-                          <div class="font-bold text-bx-title group-hover:text-bx-primary transition-colors">
-                            {{ row.teacher_name }}
+                      <Plus class="w-3.5 h-3.5" />
+                      <span>إسناد أول مادة الآن</span>
+                    </button>
+                  </td>
+                </tr>
+
+                <!-- Subject Rows -->
+                <tr
+                  v-for="(row, idx) in grp.subjects"
+                  :key="row.subject_id"
+                  class="hover:bg-purple-500/[0.04] dark:hover:bg-white/[0.02] transition-colors duration-150"
+                >
+                  <!-- Index -->
+                  <td class="py-3.5 px-4 font-mono font-bold text-bx-muted text-[11px]">
+                    {{ idx + 1 }}
+                  </td>
+
+                  <!-- Subject Name -->
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class="font-bold text-xs text-bx-title block">
+                      {{ row.subject_name }}
+                    </span>
+                  </td>
+
+                  <!-- Columns per Section showing Teacher Name -->
+                  <td
+                    v-for="sec in grp.sections"
+                    :key="sec.class_section_id"
+                    class="py-3 px-3 text-center whitespace-nowrap"
+                  >
+                    <!-- Assigned: Interactive Teacher Capsule (Click anywhere to edit, with discreet remove icon) -->
+                    <div
+                      v-if="row.assignmentsBySection[sec.class_section_id]"
+                      @click="openEditDrawer(row.assignmentsBySection[sec.class_section_id], grp.class_id, sec.class_section_id)"
+                      class="inline-flex items-center justify-between gap-2.5 h-[42px] px-3 rounded-full border transition-all cursor-pointer group/pill shadow-xs max-w-[220px] w-full"
+                      :class="[
+                        selectedTeacherFilter !== 'all' && Number(selectedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
+                          ? 'border-bx-primary ring-2 ring-bx-primary/50 bg-purple-500/15 dark:bg-purple-500/25 shadow-md scale-[1.02]'
+                          : 'border-purple-300/80 dark:border-white/10 bg-purple-500/[0.05] dark:bg-purple-950/30 hover:border-bx-primary hover:bg-purple-500/[0.1] dark:hover:bg-purple-900/40'
+                      ]"
+                      :title="'انقر لتعديل إسناد المعلم ' + row.assignmentsBySection[sec.class_section_id].teacher_name"
+                    >
+                      <!-- Avatar -->
+                      <div
+                        class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 shadow-xs transition-colors"
+                        :class="selectedTeacherFilter !== 'all' && Number(selectedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
+                          ? 'bg-bx-primary text-white ring-2 ring-bx-primary/30'
+                          : 'bg-bx-primary text-white'"
+                      >
+                        <UserCheck class="w-3.5 h-3.5" />
+                      </div>
+
+                      <!-- Teacher Info -->
+                      <div class="flex-1 min-w-0 text-start leading-tight">
+                        <div class="flex items-center gap-1.5">
+                          <span
+                            v-if="selectedTeacherFilter !== 'all' && Number(selectedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)"
+                            class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse"
+                            title="المعلم المختار"
+                          ></span>
+                          <div
+                            class="font-bold text-xs group-hover/pill:text-bx-primary transition-colors truncate"
+                            :class="selectedTeacherFilter !== 'all' && Number(selectedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
+                              ? 'text-bx-primary font-black'
+                              : 'text-bx-title'"
+                            dir="auto"
+                          >
+                            {{ row.assignmentsBySection[sec.class_section_id].teacher_name }}
                           </div>
-                          <span class="text-[10px] font-mono font-bold text-bx-muted">
-                            {{ row.teacher_code }}
-                          </span>
-                        </button>
-                      </td>
-                      <td class="py-2.5 px-3 text-center">
-                        <div class="flex items-center justify-center gap-1.5">
-                          <button
-                            @click="openEditDrawer(row, cls.class_id, sec.class_section_id)"
-                            class="w-7 h-7 rounded-lg border border-gray-300 dark:border-white/10 hover:border-bx-primary hover:bg-bx-primary hover:text-white flex items-center justify-center transition-all cursor-pointer"
-                            title="تعديل الإسناد أو تغيير المعلم"
-                          >
-                            <Edit2 class="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            @click="confirmDelete(row)"
-                            class="w-7 h-7 rounded-lg border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all cursor-pointer"
-                            title="فك وإلغاء إسناد المادة"
-                          >
-                            <Trash2 class="w-3.5 h-3.5" />
-                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div v-else class="py-4 text-center text-[11px] text-bx-muted">
-                لا توجد مواد مسندة لهذه الشعبة بعد.
-              </div>
-            </div>
+                        <div class="text-[10px] text-bx-muted font-mono leading-none mt-0.5">
+                          {{ row.assignmentsBySection[sec.class_section_id].teacher_code }}
+                        </div>
+                      </div>
+
+                      <!-- Approved Taqniya Delete Button -->
+                      <button
+                        @click.stop="confirmDelete(row.assignmentsBySection[sec.class_section_id])"
+                        class="w-7 h-7 rounded-xl border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs"
+                        title="فك وإلغاء إسناد المادة"
+                      >
+                        <Trash2 class="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <!-- Unassigned: + تعيين معلم button (Matching pill geometry) -->
+                    <button
+                      v-else
+                      @click="openCreateDrawer(grp.class_id, sec.class_section_id, row.subject_id)"
+                      class="inline-flex items-center justify-center gap-1.5 h-[42px] px-3 rounded-full border border-dashed border-[#B4AED8] dark:border-white/20 bg-transparent hover:bg-bx-primary/5 hover:border-bx-primary text-bx-muted hover:text-bx-primary text-xs font-bold transition-all cursor-pointer max-w-[220px] w-full shadow-xs"
+                      title="إسناد معلم لهذه المادة في هذه الشعبة"
+                    >
+                      <Plus class="w-3.5 h-3.5" />
+                      <span>تعيين معلم</span>
+                    </button>
+                  </td>
+
+                  <!-- Coverage Badge -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span
+                      class="inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full text-xs font-bold border shadow-xs"
+                      :class="row.assignedCount === row.totalSections && row.totalSections > 0
+                        ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                        : row.assignedCount > 0
+                        ? 'border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10'
+                        : 'border-red-500/30 text-red-600 dark:text-red-400 bg-red-500/10'"
+                    >
+                      <span class="font-mono font-black">{{ row.assignedCount }}</span>
+                      <span class="text-[10px] opacity-70">من</span>
+                      <span class="font-mono font-black">{{ row.totalSections }}</span>
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
