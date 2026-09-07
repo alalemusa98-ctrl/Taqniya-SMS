@@ -898,7 +898,7 @@ onMounted(async () => {
                       <!-- Approved Taqniya Delete Button -->
                       <button
                         @click.stop="confirmDelete(row.assignmentsBySection[sec.class_section_id])"
-                        class="w-7 h-7 rounded-xl border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs"
+                        class="w-7 h-7 rounded-full border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs"
                         title="فك وإلغاء إسناد المادة"
                       >
                         <Trash2 class="w-3.5 h-3.5" />

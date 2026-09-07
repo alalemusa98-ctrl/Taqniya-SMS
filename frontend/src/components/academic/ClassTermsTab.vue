@@ -693,7 +693,7 @@ onMounted(async () => {
                       <!-- Details Button -->
                       <button
                         @click="openDetails(row.cells[term.id].row)"
-                        class="w-7 h-7 rounded-lg border border-[#B4AED8]/60 dark:border-white/10 bg-white dark:bg-white/[0.05] text-bx-muted hover:text-bx-primary hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                        class="w-7 h-7 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-white dark:bg-white/[0.05] text-bx-muted hover:text-bx-primary hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-2xs"
                         title="عرض تفاصيل الفترة"
                       >
                         <Eye class="w-3.5 h-3.5" />
@@ -703,7 +703,7 @@ onMounted(async () => {
                       <button
                         v-if="row.cells[term.id].row.is_active !== 1"
                         @click="handleActivate(row.cells[term.id].row.id)"
-                        class="w-7 h-7 rounded-lg border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                        class="w-7 h-7 rounded-full border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
                         title="تفعيل هذا الفصل للصف"
                       >
                         <Zap class="w-3.5 h-3.5" />
@@ -712,7 +712,7 @@ onMounted(async () => {
                       <!-- Lock / Unlock Toggle -->
                       <button
                         @click="handleToggleClose(row.cells[term.id].row.id)"
-                        class="w-7 h-7 rounded-lg border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-600 hover:text-white hover:border-amber-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                        class="w-7 h-7 rounded-full border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-600 hover:text-white hover:border-amber-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
                         :title="row.cells[term.id].row.is_closed === 1 ? 'فتح رصد الدرجات' : 'إغلاق رصد الدرجات'"
                       >
                         <component :is="row.cells[term.id].row.is_closed === 1 ? Lock : Unlock" class="w-3.5 h-3.5" />
@@ -722,7 +722,7 @@ onMounted(async () => {
                       <button
                         v-if="row.cells[term.id].row.is_active !== 1"
                         @click="confirmDelete(row.cells[term.id].row)"
-                        class="w-7 h-7 rounded-lg border border-rose-300 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white hover:border-rose-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                        class="w-7 h-7 rounded-full border border-rose-300 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white hover:border-rose-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
                         title="فك الارتباط بهذا الفصل"
                       >
                         <Trash2 class="w-3.5 h-3.5" />

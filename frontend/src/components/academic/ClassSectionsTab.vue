@@ -417,7 +417,7 @@ onMounted(async () => {
                       </span>
                       <button
                         @click="openCreateDrawer(grp.class_id)"
-                        class="w-8 h-8 rounded-xl border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                        class="w-8 h-8 rounded-full border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-xs"
                         title="تسكين شعبة إضافية لهذا الصف"
                       >
                         <Plus class="w-4 h-4" />
@@ -485,7 +485,7 @@ onMounted(async () => {
                     <button
                       @click="confirmDelete({ id: row.id, name: row.section_name })"
                       title="فك ربط الشعبة من الصف"
-                      class="w-8 h-8 rounded-xl border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                      class="w-8 h-8 rounded-full border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                     >
                       <Trash2 class="w-4 h-4" />
                     </button>

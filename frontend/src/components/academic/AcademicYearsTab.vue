@@ -347,14 +347,14 @@ onMounted(() => {
                     v-if="yr.is_active !== 1"
                     @click="confirmActivate(yr)"
                     title="تفعيل هذه السنة (جعلها السنة النشطة)"
-                    class="w-8 h-8 rounded-xl border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                    class="w-8 h-8 rounded-full border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                   >
                     <Zap class="w-3.5 h-3.5" />
                   </button>
                   <button
                     @click="openEditDrawer(yr)"
                     title="تعديل السنة في القائمة الجانبية (Drawer)"
-                    class="w-8 h-8 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                    class="w-8 h-8 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                   >
                     <Edit2 class="w-3.5 h-3.5" />
                   </button>
@@ -362,7 +362,7 @@ onMounted(() => {
                     @click="confirmDelete(yr)"
                     :disabled="yr.is_active === 1"
                     :title="yr.is_active === 1 ? 'لا يمكن حذف السنة النشطة' : 'حذف السنة'"
-                    class="w-8 h-8 rounded-xl border transition-all shadow-xs flex items-center justify-center"
+                    class="w-8 h-8 rounded-full border transition-all shadow-xs flex items-center justify-center"
                     :class="yr.is_active === 1
                       ? 'text-bx-muted/30 border-[#B4AED8]/30 dark:border-white/5 cursor-not-allowed bg-slate-500/5'
                       : 'border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 cursor-pointer'"

@@ -258,14 +258,14 @@ onMounted(() => {
                   <button
                     @click="openEditDrawer(sec)"
                     title="تعديل مسمى الشعبة في القائمة الجانبية (Drawer)"
-                    class="w-8 h-8 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                    class="w-8 h-8 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                   >
                     <Edit2 class="w-3.5 h-3.5" />
                   </button>
                   <button
                     @click="confirmDelete(sec)"
                     title="حذف الشعبة"
-                    class="w-8 h-8 rounded-xl border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                    class="w-8 h-8 rounded-full border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                   >
                     <Trash2 class="w-3.5 h-3.5" />
                   </button>
