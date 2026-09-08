@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router';
 import { useAuthStore } from '../stores/auth.store';
 import HeaderUserDropdown from '../components/layout/HeaderUserDropdown.vue';
 import ThemeToggle from '../components/layout/ThemeToggle.vue';
-import { Users, ShieldCheck, Layers, GraduationCap, UserCheck, BookOpenCheck } from 'lucide-vue-next';
+import { Users, ShieldCheck, Layers, GraduationCap, UserCheck, BookOpenCheck, HeartHandshake } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 
@@ -77,6 +77,24 @@ onUnmounted(() => {
             >
               <Users class="w-4 h-4" />
               <span>إدارة المستخدمين</span>
+            </RouterLink>
+
+            <RouterLink
+              to="/students"
+              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
+              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <GraduationCap class="w-4 h-4" />
+              <span>الطلاب</span>
+            </RouterLink>
+
+            <RouterLink
+              to="/guardians"
+              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
+              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <HeartHandshake class="w-4 h-4" />
+              <span>أولياء الأمور</span>
             </RouterLink>
 
             <RouterLink

@@ -8,6 +8,9 @@ import { UsersModule } from './modules/users/users.module.js';
 import { AcademicModule } from './modules/academic/academic.module.js';
 import { TeachersModule } from './modules/teachers/teachers.module.js';
 import { TeachingAssignmentsModule } from './modules/teaching-assignments/teaching-assignments.module.js';
+import { StudentsModule } from './modules/students/students.module.js';
+import { GuardiansModule } from './modules/guardians/guardians.module.js';
+import { GuardianStudentsModule } from './modules/guardian-students/guardian-students.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -28,6 +31,9 @@ import { AppService } from './app.service.js';
     AcademicModule,
     TeachersModule,
     TeachingAssignmentsModule,
+    StudentsModule,
+    GuardiansModule,
+    GuardianStudentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

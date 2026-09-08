@@ -10,6 +10,8 @@ const AuditLogsView = () => import('../views/AuditLogsView.vue');
 const AcademicStructureView = () => import('../views/AcademicStructureView.vue');
 const TeachersManagementView = () => import('../views/TeachersManagementView.vue');
 const TeachingAssignmentsView = () => import('../views/TeachingAssignmentsView.vue');
+const StudentsManagementView = () => import('../views/StudentsManagementView.vue');
+const GuardiansManagementView = () => import('../views/GuardiansManagementView.vue');
 
 const routes = [
   {
@@ -31,6 +33,18 @@ const routes = [
         path: 'users',
         name: 'users',
         component: UsersManagementView,
+        meta: { roles: ['admin'] },
+      },
+      {
+        path: 'students',
+        name: 'students',
+        component: StudentsManagementView,
+        meta: { roles: ['admin'] },
+      },
+      {
+        path: 'guardians',
+        name: 'guardians',
+        component: GuardiansManagementView,
         meta: { roles: ['admin'] },
       },
       {
