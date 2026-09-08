@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import { ChevronDown, Search, X } from 'lucide-vue-next';
 
 export interface TaqniyaSelectOption {
@@ -21,12 +21,14 @@ const props = withDefaults(
     disabled?: boolean;
     multiple?: boolean;
     searchable?: boolean;
+    placement?: 'auto' | 'up' | 'down';
   }>(),
   {
     fullWidth: false,
     disabled: false,
     multiple: false,
     searchable: true,
+    placement: 'auto',
     searchPlaceholder: 'بحث سريع في الخيارات...',
   },
 );
@@ -78,12 +80,85 @@ const filteredOptions = computed(() => {
   });
 });
 
+const containerRef = ref<HTMLElement | null>(null);
+const dropdownMenuRef = ref<HTMLElement | null>(null);
+const actualPlacement = ref<'down' | 'up'>('down');
+
+const displayOptions = computed(() => {
+  if (actualPlacement.value === 'up') {
+    return [...filteredOptions.value].reverse();
+  }
+  return filteredOptions.value;
+});
+
+const updatePlacement = () => {
+  if (props.placement === 'up') {
+    actualPlacement.value = 'up';
+    return;
+  }
+  if (props.placement === 'down') {
+    actualPlacement.value = 'down';
+    return;
+  }
+  if (!containerRef.value) return;
+
+  const rect = containerRef.value.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+  // Detect nearest scrollable parent container (e.g. Drawer, Modal, or overflow element)
+  let scrollParentBottom = viewportHeight;
+  let parent = containerRef.value.parentElement;
+  while (parent && parent !== document.body) {
+    const style = window.getComputedStyle(parent);
+    if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+      const parentRect = parent.getBoundingClientRect();
+      scrollParentBottom = Math.min(scrollParentBottom, parentRect.bottom);
+      break;
+    }
+    parent = parent.parentElement;
+  }
+
+  const spaceBelow = scrollParentBottom - rect.bottom;
+  const spaceAbove = rect.top;
+
+  // If space below is less than 230px (fewer than ~4 items comfortably)
+  // and there is more room above than below, open upwards!
+  if (spaceBelow < 230 && spaceAbove > spaceBelow) {
+    actualPlacement.value = 'up';
+  } else {
+    actualPlacement.value = 'down';
+  }
+};
+
+const handleWindowEvents = () => {
+  if (isOpen.value) {
+    updatePlacement();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('resize', handleWindowEvents);
+  window.addEventListener('scroll', handleWindowEvents, true);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleWindowEvents);
+  window.removeEventListener('scroll', handleWindowEvents, true);
+});
+
 const toggleOpen = async () => {
   if (props.disabled) return;
+  if (!isOpen.value) {
+    updatePlacement();
+  }
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
     searchQuery.value = '';
     await nextTick();
+    updatePlacement();
+    if (actualPlacement.value === 'up' && dropdownMenuRef.value) {
+      dropdownMenuRef.value.scrollTop = dropdownMenuRef.value.scrollHeight;
+    }
     if (searchInputRef.value) {
       searchInputRef.value.focus();
     }
@@ -116,6 +191,7 @@ const removeOption = (val: string | number) => {
 
 <template>
   <div
+    ref="containerRef"
     class="relative text-start font-sans"
     :class="fullWidth ? 'w-full block' : 'inline-block w-auto min-w-[190px]'"
     dir="rtl"
@@ -173,11 +249,15 @@ const removeOption = (val: string | number) => {
     <!-- Dropdown Menu (Matching Reference Image) -->
     <div
       v-if="isOpen"
-      class="z-50 p-2.5 max-h-72 overflow-y-auto rounded-2xl shadow-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] space-y-2 absolute top-full mt-1.5 end-0"
-      :class="fullWidth ? 'w-full min-w-full' : 'min-w-[240px] w-max max-w-sm'"
+      ref="dropdownMenuRef"
+      class="z-50 p-2.5 max-h-72 overflow-y-auto rounded-2xl shadow-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] space-y-2 absolute end-0"
+      :class="[
+        fullWidth ? 'w-full min-w-full' : 'min-w-[240px] w-max max-w-sm',
+        actualPlacement === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+      ]"
     >
       <!-- Quick Fuzzy Search Bar -->
-      <div v-if="searchable && (options?.length || 0) > 2" class="relative">
+      <div v-if="searchable && (options?.length || 0) > 5" class="relative">
         <div class="relative flex items-center">
           <input
             ref="searchInputRef"
@@ -194,7 +274,7 @@ const removeOption = (val: string | number) => {
       <!-- Options List with Smooth Dividers -->
       <div class="divide-y divide-purple-100/60 dark:divide-white/[0.06]">
         <div
-          v-for="opt in filteredOptions"
+          v-for="opt in displayOptions"
           :key="opt.value"
           @click="selectOption(opt.value)"
           class="flex items-center justify-between gap-3 text-xs font-bold py-2.5 px-3 cursor-pointer transition-all rounded-xl"

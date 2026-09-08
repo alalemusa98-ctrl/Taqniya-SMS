@@ -18,6 +18,7 @@ import {
   Filter,
   User,
   CheckCircle2,
+  ArrowLeftRight,
 } from 'lucide-vue-next';
 import {
   studentEnrollmentsApi,
@@ -71,6 +72,9 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 const showDrawer = ref(false);
 const drawerMode = ref<'create' | 'edit'>('create');
 const activeEnrollmentId = ref<number | null>(null);
+const activeStudentForDrawer = ref<EnrolledStudent | null>(null);
+const currentSectionInfo = ref<{ className: string; sectionName: string } | null>(null);
+const selectedDrawerClassId = ref<number | ''>('');
 
 const showHistoryDrawer = ref(false);
 const historyStudentName = ref('');
@@ -186,7 +190,7 @@ const classFilterOptions = computed<TaqniyaSelectOption[]>(() => {
   for (const c of rawClasses.value) {
     options.push({
       value: c.id,
-      label: `${c.name} (المستوى ${c.grade_level})`,
+      label: c.name,
     });
   }
   return options;
@@ -195,25 +199,104 @@ const classFilterOptions = computed<TaqniyaSelectOption[]>(() => {
 // Section Filter Options
 const sectionFilterOptions = computed<TaqniyaSelectOption[]>(() => {
   const options: TaqniyaSelectOption[] = [{ value: 'all', label: 'كافة الشعب الدراسية' }];
+  const list = Array.isArray(rawSections.value) ? rawSections.value : [];
   const filtered = selectedClassFilter.value !== 'all'
-    ? rawSections.value.filter((s) => s.class_id === Number(selectedClassFilter.value))
-    : rawSections.value;
+    ? list.filter((s) => s.class_id === Number(selectedClassFilter.value))
+    : list;
   for (const s of filtered) {
     options.push({
       value: s.id,
-      label: `${s.section?.name || s.name || `شعبة #${s.id}`} (${s.class?.name || ''})`,
+      label: `${s.name || `شعبة #${s.id}`} (${s.class_name || ''})`,
     });
   }
   return options;
 });
 
-// Form Section Options
-const formSectionOptions = computed<TaqniyaSelectOption[]>(() => {
-  return rawSections.value.map((s) => ({
-    value: s.id,
-    label: `${s.class?.name || 'صف'} - ${s.section?.name || s.name || 'شعبة'}`,
+// Drawer Class Options
+const drawerClassOptions = computed<TaqniyaSelectOption[]>(() => {
+  return rawClasses.value.map((c) => ({
+    value: c.id,
+    label: c.name,
   }));
 });
+
+// Drawer Section Options (filtered strictly by selectedDrawerClassId)
+const drawerSectionOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (!selectedDrawerClassId.value) return [];
+  const list = Array.isArray(rawSections.value) ? rawSections.value : [];
+  return list
+    .filter((s) => s.class_id === Number(selectedDrawerClassId.value))
+    .map((s) => ({
+      value: s.id,
+      label: s.name || `شعبة #${s.id}`,
+    }));
+});
+
+// Create Student Options (unenrolled students in the current active matrix)
+const createStudentOptions = computed<TaqniyaSelectOption[]>(() => {
+  const enrolledIds = new Set<number>();
+  for (const c of classesList.value) {
+    for (const sec of c.sections) {
+      for (const st of sec.students) {
+        enrolledIds.add(st.student_id);
+      }
+    }
+  }
+
+  return rawStudents.value
+    .filter((s) => !enrolledIds.has(s.id))
+    .map((s) => ({
+      value: s.id,
+      label: s.full_name,
+      code: s.user_code,
+      subtext: s.user_code ? `الرمز الموحد: ${s.user_code}` : undefined,
+    }));
+});
+
+// Bulk Class & Section Options
+const bulkClassOptions = computed<TaqniyaSelectOption[]>(() => {
+  return rawClasses.value.map((c) => ({
+    value: c.id,
+    label: c.name,
+  }));
+});
+
+const bulkSectionOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (!bulkForm.value.class_id) return [];
+  const list = Array.isArray(rawSections.value) ? rawSections.value : [];
+  return list
+    .filter((s) => s.class_id === Number(bulkForm.value.class_id))
+    .map((s) => ({
+      value: s.id,
+      label: s.name || `شعبة #${s.id}`,
+    }));
+});
+
+// Synchronize Drawer Section with Selected Drawer Class
+watch(selectedDrawerClassId, (newClassId) => {
+  if (!newClassId) {
+    form.value.class_section_id = 0;
+    return;
+  }
+  const available = rawSections.value.filter((s) => s.class_id === Number(newClassId));
+  const stillValid = available.some((s) => s.id === form.value.class_section_id);
+  if (!stillValid) {
+    form.value.class_section_id = available.length > 0 ? available[0].id : 0;
+  }
+});
+
+// Synchronize Bulk Section with Selected Bulk Class
+watch(
+  () => bulkForm.value.class_id,
+  (newClassId) => {
+    if (!newClassId) {
+      bulkForm.value.class_section_id = 0;
+      return;
+    }
+    const available = rawSections.value.filter((s) => s.class_id === Number(newClassId));
+    bulkForm.value.class_section_id = available.length > 0 ? available[0].id : 0;
+  },
+);
 
 // Available unenrolled students for bulk enroll
 const availableStudentsForBulk = computed(() => {
@@ -254,14 +337,39 @@ const loadMetadata = async () => {
   try {
     const [yearsRes, classesRes, sectionsRes, studentsRes] = await Promise.all([
       academicApi.getYears({ per_page: 50 }),
-      academicApi.getClasses(),
-      academicApi.getClassSections(),
+      academicApi.getClasses({ per_page: 100 }),
+      academicApi.getClassSections({ per_page: 100 }),
       studentsApi.getStudents({ per_page: 200 }),
     ]);
 
-    academicYears.value = yearsRes.data?.data || yearsRes.data || [];
-    rawClasses.value = classesRes.data?.data || classesRes.data || [];
-    rawSections.value = sectionsRes.data?.data || sectionsRes.data || [];
+    academicYears.value = Array.isArray(yearsRes.data?.data)
+      ? yearsRes.data.data
+      : Array.isArray(yearsRes.data)
+        ? yearsRes.data
+        : [];
+    rawClasses.value = Array.isArray(classesRes.data?.data)
+      ? classesRes.data.data
+      : Array.isArray(classesRes.data)
+        ? classesRes.data
+        : [];
+
+    // Flatten sections: getClassSections returns { data: { classes: [ { class_id, class_name, sections: [...] } ] } }
+    const sectionsList: any[] = [];
+    const groupedClasses = sectionsRes.data?.data?.classes || sectionsRes.data?.classes || [];
+    if (Array.isArray(groupedClasses)) {
+      for (const cls of groupedClasses) {
+        for (const sec of cls.sections || []) {
+          sectionsList.push({
+            id: Number(sec.id),
+            section_id: Number(sec.section_id),
+            name: sec.name,
+            class_id: Number(cls.class_id),
+            class_name: cls.class_name,
+          });
+        }
+      }
+    }
+    rawSections.value = sectionsList;
     rawStudents.value = (studentsRes.data?.data as Student[]) || [];
 
     const active = academicYears.value.find((y) => y.is_active === 1);
@@ -352,10 +460,23 @@ const resetFilters = () => {
 const openCreateDrawer = () => {
   drawerMode.value = 'create';
   activeEnrollmentId.value = null;
+  activeStudentForDrawer.value = null;
+  currentSectionInfo.value = null;
+
+  const firstClassId = rawClasses.value[0]?.id || '';
+  selectedDrawerClassId.value = firstClassId;
+
+  const initialSections = firstClassId
+    ? rawSections.value.filter((s) => s.class_id === Number(firstClassId))
+    : [];
+
+  const availableStudents = createStudentOptions.value;
+  const firstStudentId = availableStudents[0]?.value ? Number(availableStudents[0].value) : 0;
+
   form.value = {
     academic_year_id: academicYearId.value || academicYears.value[0]?.id || 0,
-    student_id: 0,
-    class_section_id: rawSections.value[0]?.id || 0,
+    student_id: firstStudentId,
+    class_section_id: initialSections[0]?.id || 0,
     seating_number: '',
     status: 'enrolled',
   };
@@ -368,6 +489,20 @@ const openCreateDrawer = () => {
 const openEditDrawer = (student: EnrolledStudent, sectionId: number) => {
   drawerMode.value = 'edit';
   activeEnrollmentId.value = student.enrollment_id;
+  activeStudentForDrawer.value = student;
+
+  const sectionObj = rawSections.value.find((s) => s.id === sectionId);
+  if (sectionObj) {
+    selectedDrawerClassId.value = sectionObj.class_id;
+    currentSectionInfo.value = {
+      className: sectionObj.class_name,
+      sectionName: sectionObj.name,
+    };
+  } else {
+    selectedDrawerClassId.value = '';
+    currentSectionInfo.value = null;
+  }
+
   form.value = {
     academic_year_id: academicYearId.value || 0,
     student_id: student.student_id,
@@ -402,7 +537,7 @@ const handleSaveEnrollment = async () => {
         seating_number: form.value.seating_number ? form.value.seating_number.trim() : undefined,
         status: form.value.status,
       });
-      toast.success(res.data.message || 'تم تحديث بيانات التسكين بنجاح');
+      toast.success(res.data.message || 'تم تحديث بيانات التسكين ونقل الشعبة بنجاح');
     }
 
     showDrawer.value = false;
@@ -425,10 +560,12 @@ const handleSaveEnrollment = async () => {
 
 // Open Bulk Enroll Modal
 const openBulkModal = () => {
+  const firstClassId = rawClasses.value[0]?.id || 0;
+  const initialSections = rawSections.value.filter((s) => s.class_id === Number(firstClassId));
   bulkForm.value = {
     academic_year_id: academicYearId.value || academicYears.value[0]?.id || 0,
-    class_id: rawClasses.value[0]?.id || 0,
-    class_section_id: rawSections.value[0]?.id || 0,
+    class_id: firstClassId,
+    class_section_id: initialSections[0]?.id || 0,
     selected_student_ids: [],
     studentSearch: '',
   };
@@ -931,108 +1068,265 @@ onMounted(async () => {
       <TaqniyaDrawer
         :is-open="showDrawer"
         @close="showDrawer = false"
-        :title="drawerMode === 'create' ? 'تسكين طالب جديد في فصل وشعبة' : 'تعديل بيانات التسكين ونقل الشعبة'"
-        max-width="max-w-[520px]"
+        :title="drawerMode === 'create' ? 'تسكين طالب جديد في صف وشعبة' : 'نقل الشعبة وتعديل بيانات التسكين'"
+        max-width="max-w-[660px]"
       >
-        <form @submit.prevent="handleSaveEnrollment" class="space-y-4 p-6 font-sans" dir="rtl">
+        <form @submit.prevent="handleSaveEnrollment" class="space-y-4 font-sans" dir="rtl">
+          <!-- Form Error Alert -->
           <div
             v-if="formErrorMessage"
-            class="p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl text-xs flex items-center gap-2 font-bold"
+            class="p-3.5 bg-rose-500/[0.08] dark:bg-rose-950/50 border border-rose-400/40 text-rose-600 dark:text-rose-400 rounded-2xl text-xs flex items-center gap-2.5 font-bold"
           >
             <AlertCircle class="w-4 h-4 flex-shrink-0" />
             <span>{{ formErrorMessage }}</span>
           </div>
 
-          <!-- Academic Year -->
-          <div v-if="drawerMode === 'create'">
-            <label class="block text-xs font-bold text-bx-title mb-1.5">
-              العام الدراسي <span class="text-rose-500">*</span>
-            </label>
-            <TaqniyaSelect
-              v-model="form.academic_year_id"
-              :options="yearOptions.filter(y => y.value !== 'all')"
-              full-width
-            />
-            <p v-if="fieldErrors.academic_year_id" class="text-xs text-rose-500 mt-1 font-bold">
-              {{ fieldErrors.academic_year_id[0] }}
-            </p>
-          </div>
+          <!-- ============================================== -->
+          <!-- 🟢 CREATE MODE: ENROLL STUDENT INTO CLASS & SECTION -->
+          <!-- ============================================== -->
+          <template v-if="drawerMode === 'create'">
+            <!-- Card 1: Student Selection (Active Year is automatically used) -->
+            <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-3.5 shadow-xs">
+              <div class="flex items-center gap-2 border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-2.5">
+                <div class="w-7 h-7 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold">
+                  <User class="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 class="text-xs font-black text-bx-title">بيانات الطالب المستهدف</h4>
+                  <p class="text-[10px] text-bx-muted">ابحث عن الطالب غير المسكن لتسكينه في العام الدراسي النشط</p>
+                </div>
+              </div>
 
-          <!-- Student Selection (Create Only) -->
-          <div v-if="drawerMode === 'create'">
-            <label class="block text-xs font-bold text-bx-title mb-1.5">
-              الطالب المستهدف <span class="text-rose-500">*</span>
-            </label>
-            <select
-              v-model="form.student_id"
-              class="w-full px-3.5 py-2 rounded-xl text-xs font-medium border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-bx-title focus:outline-none focus:border-bx-primary transition-all"
-            >
-              <option :value="0" disabled>-- اختر الطالب المراد تسكينه --</option>
-              <option v-for="s in rawStudents" :key="s.id" :value="s.id">
-                {{ s.full_name }} ({{ s.user_code }})
-              </option>
-            </select>
-            <p v-if="fieldErrors.student_id" class="text-xs text-rose-500 mt-1 font-bold">
-              {{ fieldErrors.student_id[0] }}
-            </p>
-          </div>
+              <!-- Student Selection via Searchable TaqniyaSelect -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-bold text-bx-title block">
+                  الطالب المستهدف <span class="text-rose-500">*</span>
+                </label>
+                <TaqniyaSelect
+                  v-model="form.student_id"
+                  :options="createStudentOptions"
+                  :placeholder="createStudentOptions.length === 0 ? 'لا يوجد طلاب غير مسكنين بالعام الحالي' : 'ابحث عن الطالب بالاسم أو الرمز الموحد...'"
+                  :icon="User"
+                  :disabled="createStudentOptions.length === 0"
+                  full-width
+                />
+                <p v-if="fieldErrors.student_id" class="text-[11px] text-rose-500 font-bold mt-1">
+                  {{ fieldErrors.student_id[0] }}
+                </p>
+              </div>
+            </div>
 
-          <!-- Class Section Selection -->
-          <div>
-            <label class="block text-xs font-bold text-bx-title mb-1.5">
-              الصف والشعبة الدراسية <span class="text-rose-500">*</span>
-            </label>
-            <TaqniyaSelect
-              v-model="form.class_section_id"
-              :options="formSectionOptions"
-              full-width
-            />
-            <p v-if="fieldErrors.class_section_id" class="text-xs text-rose-500 mt-1 font-bold">
-              {{ fieldErrors.class_section_id[0] }}
-            </p>
-          </div>
+            <!-- Card 2: Academic Placement (Hierarchical: Class THEN Section) -->
+            <div class="p-4 rounded-2xl border border-indigo-500/20 bg-indigo-500/[0.03] space-y-3.5 shadow-xs">
+              <div class="flex items-center justify-between border-b border-indigo-500/20 pb-2.5">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                    <School class="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-black text-bx-title">التسكين الأكاديمي وتحديد الشعبة</h4>
+                    <p class="text-[10px] text-bx-muted">اختر الصف الدراسي أولاً لتفعيل الشعب المتاحة له</p>
+                  </div>
+                </div>
+              </div>
 
-          <!-- Seating Number -->
-          <div>
-            <label class="block text-xs font-bold text-bx-title mb-1.5">
-              رقم الجلوس (اختياري)
-            </label>
-            <input
-              v-model="form.seating_number"
-              type="text"
-              placeholder="مثال: SEAT-5001"
-              class="w-full px-3.5 py-2 rounded-xl text-xs font-medium border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono"
-            />
-          </div>
+              <!-- 2-Column Dependent Selectors -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <!-- 1. Select Class -->
+                <div class="space-y-1.5">
+                  <label class="text-[11px] font-bold text-bx-title block">
+                    1. الصف الدراسي <span class="text-rose-500">*</span>
+                  </label>
+                  <TaqniyaSelect
+                    v-model="selectedDrawerClassId"
+                    :options="drawerClassOptions"
+                    placeholder="اختر الصف الدراسي..."
+                    :icon="School"
+                    full-width
+                  />
+                </div>
 
-          <!-- Status -->
-          <div>
-            <label class="block text-xs font-bold text-bx-title mb-1.5">
-              الحالة الأكاديمية
-            </label>
-            <TaqniyaSelect
-              v-model="form.status"
-              :options="formStatusOptions"
-              full-width
-            />
-          </div>
+                <!-- 2. Select Section -->
+                <div class="space-y-1.5">
+                  <label class="text-[11px] font-bold text-bx-title block">
+                    2. الشعبة الدراسية <span class="text-rose-500">*</span>
+                  </label>
+                  <TaqniyaSelect
+                    v-model="form.class_section_id"
+                    :options="drawerSectionOptions"
+                    :placeholder="
+                      !selectedDrawerClassId
+                        ? 'يرجى اختيار الصف أولاً...'
+                        : drawerSectionOptions.length === 0
+                        ? 'لا توجد شعب لهذا الصف'
+                        : 'اختر الشعبة المتاحة...'
+                    "
+                    :disabled="!selectedDrawerClassId || drawerSectionOptions.length === 0"
+                    :icon="GraduationCap"
+                    full-width
+                  />
+                  <p v-if="fieldErrors.class_section_id" class="text-[11px] text-rose-500 font-bold mt-1">
+                    {{ fieldErrors.class_section_id[0] }}
+                  </p>
+                </div>
+              </div>
 
-          <!-- Actions -->
-          <div class="pt-4 flex items-center justify-end gap-2 border-t border-[#B4AED8]/40 dark:border-white/10">
+              <!-- Seating Number (Optional) -->
+              <div class="space-y-1.5 pt-1">
+                <div class="flex items-center gap-1.5 text-bx-title">
+                  <Hash class="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                  <label class="text-[11px] font-bold">رقم الجلوس في الشعبة (اختياري)</label>
+                </div>
+                <input
+                  v-model="form.seating_number"
+                  type="text"
+                  maxlength="50"
+                  placeholder="مثال: 101، أو SEAT-501"
+                  class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
+                />
+              </div>
+            </div>
+          </template>
+
+          <!-- ============================================== -->
+          <!-- 🔵 EDIT MODE: SECTION TRANSFER & PLACEMENT EDIT -->
+          <!-- ============================================== -->
+          <template v-else>
+            <!-- Card 1: Current Student & Placement Information -->
+            <div v-if="activeStudentForDrawer" class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-3 shadow-xs">
+              <div class="flex items-center justify-between border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-2.5">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold">
+                    <User class="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-black text-bx-title">بيانات القيد الحالي للطالب</h4>
+                    <p class="text-[10px] text-bx-muted">معلومات الطالب والشعبة المسكن بها حالياً</p>
+                  </div>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full font-mono text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20">
+                  {{ activeStudentForDrawer.student_code }}
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div class="p-3 rounded-xl bg-purple-500/[0.03] border border-[#B4AED8]/40 dark:border-white/[0.05]">
+                  <span class="text-[10px] text-bx-muted font-bold block mb-1">اسم الطالب الرباعي</span>
+                  <span class="font-black text-bx-title">{{ activeStudentForDrawer.student_name }}</span>
+                </div>
+                <div class="p-3 rounded-xl bg-purple-500/[0.03] border border-[#B4AED8]/40 dark:border-white/[0.05]">
+                  <span class="text-[10px] text-bx-muted font-bold block mb-1">الشعبة والصف الحالي</span>
+                  <span class="font-black text-indigo-600 dark:text-indigo-400">
+                    {{ currentSectionInfo ? `${currentSectionInfo.className} — ${currentSectionInfo.sectionName}` : 'الشعبة الحالية' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Transfer to Target Class & Section -->
+            <div class="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.03] space-y-3.5 shadow-xs">
+              <div class="flex items-center justify-between border-b border-emerald-500/20 pb-2.5">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                    <ArrowLeftRight class="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-black text-bx-title">نقل الطالب إلى شعبة جديدة</h4>
+                    <p class="text-[10px] text-bx-muted">حدد الصف والشعبة المستهدفة لنقل قيد الطالب</p>
+                  </div>
+                </div>
+                <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  نقل الشعبة
+                </span>
+              </div>
+
+              <!-- 2-Column Dependent Selectors -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <!-- 1. Target Class -->
+                <div class="space-y-1.5">
+                  <label class="text-[11px] font-bold text-bx-title block">
+                    1. الصف الدراسي المستهدف <span class="text-rose-500">*</span>
+                  </label>
+                  <TaqniyaSelect
+                    v-model="selectedDrawerClassId"
+                    :options="drawerClassOptions"
+                    placeholder="اختر الصف الدراسي..."
+                    :icon="School"
+                    full-width
+                  />
+                </div>
+
+                <!-- 2. Target Section -->
+                <div class="space-y-1.5">
+                  <label class="text-[11px] font-bold text-bx-title block">
+                    2. الشعبة الدراسية المستهدفة <span class="text-rose-500">*</span>
+                  </label>
+                  <TaqniyaSelect
+                    v-model="form.class_section_id"
+                    :options="drawerSectionOptions"
+                    :placeholder="
+                      !selectedDrawerClassId
+                        ? 'يرجى اختيار الصف أولاً...'
+                        : drawerSectionOptions.length === 0
+                        ? 'لا توجد شعب لهذا الصف'
+                        : 'اختر الشعبة المتاحة...'
+                    "
+                    :disabled="!selectedDrawerClassId || drawerSectionOptions.length === 0"
+                    :icon="GraduationCap"
+                    full-width
+                  />
+                  <p v-if="fieldErrors.class_section_id" class="text-[11px] text-rose-500 font-bold mt-1">
+                    {{ fieldErrors.class_section_id[0] }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Seating Number -->
+              <div class="space-y-1.5 pt-1">
+                <div class="flex items-center gap-1.5 text-bx-title">
+                  <Hash class="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <label class="text-[11px] font-bold">رقم الجلوس في الشعبة الجديدة (اختياري)</label>
+                </div>
+                <input
+                  v-model="form.seating_number"
+                  type="text"
+                  maxlength="50"
+                  placeholder="مثال: 101، أو SEAT-501"
+                  class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
+                />
+              </div>
+
+              <!-- Optional Status Update in Edit Mode -->
+              <div class="space-y-1.5 pt-1">
+                <div class="flex items-center justify-between text-bx-title">
+                  <label class="text-[11px] font-bold">الحالة الأكاديمية للقيد</label>
+                  <span class="text-[10px] text-bx-muted">(مسكن افتراضياً)</span>
+                </div>
+                <TaqniyaSelect
+                  v-model="form.status"
+                  :options="formStatusOptions"
+                  full-width
+                />
+              </div>
+            </div>
+          </template>
+
+          <!-- Drawer Actions Footer -->
+          <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#B4AED8]/40 dark:border-white/10">
             <button
               type="button"
               @click="showDrawer = false"
-              class="px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title transition cursor-pointer"
+              class="px-5 py-2.5 rounded-full text-xs font-bold border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] transition cursor-pointer"
             >
               إلغاء
             </button>
             <button
               type="submit"
-              :disabled="submitting"
-              class="px-5 py-2 rounded-full text-xs font-bold bg-bx-primary text-white shadow-sm hover:bg-bx-primary-hover transition cursor-pointer disabled:opacity-50"
+              :disabled="submitting || (drawerMode === 'create' && (!form.student_id || !form.class_section_id)) || (drawerMode === 'edit' && !form.class_section_id)"
+              class="px-6 py-2.5 rounded-full text-xs font-bold bg-bx-primary text-white shadow-sm hover:bg-bx-primary-hover transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
             >
-              <span v-if="submitting">جاري الحفظ...</span>
-              <span v-else>{{ drawerMode === 'create' ? 'تسكين الطالب' : 'تحديث البيانات' }}</span>
+              <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
+              <span>{{ drawerMode === 'create' ? 'تسكين الطالب' : 'تأكيد نقل الشعبة والتحديث' }}</span>
             </button>
           </div>
         </form>
@@ -1046,35 +1340,46 @@ onMounted(async () => {
       >
         <div class="bg-[var(--bx-surface-solid)] rounded-3xl border border-[#B4AED8] dark:border-white/[0.12] shadow-2xl max-w-xl w-full p-6 space-y-4 font-sans">
           <div class="flex items-center justify-between border-b border-[#B4AED8]/40 dark:border-white/10 pb-3">
-            <h3 class="text-base font-black text-bx-title flex items-center gap-2">
-              <Sparkles class="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span>التسكين والتوزيع الجماعي للطلاب</span>
-            </h3>
-            <button @click="showBulkModal = false" class="text-bx-muted hover:text-bx-title cursor-pointer text-xs font-bold">✕</button>
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold">
+                <Sparkles class="w-4 h-4" />
+              </div>
+              <div>
+                <h3 class="text-sm font-black text-bx-title">التسكين والتوزيع الجماعي للطلاب</h3>
+                <p class="text-[10px] text-bx-muted">توزيع دفعة من الطلاب غير المسكنين في صف وشعبة محددة</p>
+              </div>
+            </div>
+            <button @click="showBulkModal = false" class="text-bx-muted hover:text-bx-title cursor-pointer text-xs font-bold p-1">✕</button>
           </div>
 
           <div
             v-if="bulkErrorMessage"
-            class="p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl text-xs flex items-center gap-2 font-bold"
+            class="p-3.5 bg-rose-500/[0.08] dark:bg-rose-950/50 border border-rose-400/40 text-rose-600 dark:text-rose-400 rounded-2xl text-xs flex items-center gap-2.5 font-bold"
           >
             <AlertCircle class="w-4 h-4 flex-shrink-0" />
             <span>{{ bulkErrorMessage }}</span>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- 2-Column Selectors: Class, Section (Academic Year is automatically active) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label class="block text-xs font-bold text-bx-muted mb-1.5">العام الدراسي</label>
+              <label class="block text-[11px] font-bold text-bx-title mb-1.5">الصف المستهدف <span class="text-rose-500">*</span></label>
               <TaqniyaSelect
-                v-model="bulkForm.academic_year_id"
-                :options="yearOptions.filter(y => y.value !== 'all')"
+                v-model="bulkForm.class_id"
+                :options="bulkClassOptions"
+                placeholder="اختر الصف..."
+                :icon="School"
                 full-width
               />
             </div>
             <div>
-              <label class="block text-xs font-bold text-bx-muted mb-1.5">الشعبة المستهدفة</label>
+              <label class="block text-[11px] font-bold text-bx-title mb-1.5">الشعبة المستهدفة <span class="text-rose-500">*</span></label>
               <TaqniyaSelect
                 v-model="bulkForm.class_section_id"
-                :options="formSectionOptions"
+                :options="bulkSectionOptions"
+                :placeholder="!bulkForm.class_id ? 'اختر الصف أولاً...' : bulkSectionOptions.length === 0 ? 'لا توجد شعب' : 'اختر الشعبة...'"
+                :disabled="!bulkForm.class_id || bulkSectionOptions.length === 0"
+                :icon="GraduationCap"
                 full-width
               />
             </div>
@@ -1087,12 +1392,15 @@ onMounted(async () => {
                 الطلاب غير المسكنين بالعام الحالي (تم اختيار {{ bulkForm.selected_student_ids.length }})
               </label>
             </div>
-            <input
-              v-model="bulkForm.studentSearch"
-              type="text"
-              placeholder="تصفية الطلاب غير المسكنين..."
-              class="w-full px-3.5 py-1.5 rounded-full text-xs font-medium border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-bx-title focus:outline-none focus:border-bx-primary"
-            />
+            <div class="relative flex items-center">
+              <Search class="w-3.5 h-3.5 text-bx-muted absolute right-3 pointer-events-none" />
+              <input
+                v-model="bulkForm.studentSearch"
+                type="text"
+                placeholder="تصفية الطلاب غير المسكنين بالاسم أو الرمز..."
+                class="w-full pr-9 pl-4 py-2 rounded-full text-xs font-medium border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all"
+              />
+            </div>
             <div class="max-h-56 overflow-y-auto border border-[#B4AED8]/60 dark:border-white/10 rounded-2xl divide-y divide-[#B4AED8]/40 dark:divide-white/10 bg-purple-500/[0.01]">
               <div
                 v-for="s in availableStudentsForBulk"
@@ -1108,34 +1416,34 @@ onMounted(async () => {
                   type="checkbox"
                   :value="s.id"
                   v-model="bulkForm.selected_student_ids"
-                  class="rounded text-purple-600 focus:ring-purple-500"
+                  class="rounded text-bx-primary focus:ring-bx-primary cursor-pointer"
                   @click.stop
                 />
                 <span class="font-bold text-bx-title">{{ s.full_name }}</span>
                 <span class="text-bx-muted font-mono text-[11px]">({{ s.user_code }})</span>
               </div>
-              <div v-if="availableStudentsForBulk.length === 0" class="p-4 text-center text-bx-muted text-xs">
-                لا يوجد طلاب غير مسكنين متاحين.
+              <div v-if="availableStudentsForBulk.length === 0" class="p-4 text-center text-bx-muted text-xs font-medium">
+                لا يوجد طلاب غير مسكنين متاحين للعام الدراسي المحدد.
               </div>
             </div>
           </div>
 
-          <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#B4AED8]/40 dark:border-white/10">
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#B4AED8]/40 dark:border-white/10">
             <button
               type="button"
               @click="showBulkModal = false"
-              class="px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title cursor-pointer"
+              class="px-5 py-2 rounded-full text-xs font-bold border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] cursor-pointer transition"
             >
               إلغاء
             </button>
             <button
               type="button"
-              :disabled="submitting || bulkForm.selected_student_ids.length === 0"
+              :disabled="submitting || bulkForm.selected_student_ids.length === 0 || !bulkForm.class_section_id"
               @click="handleBulkEnrollSubmit"
-              class="px-5 py-2 rounded-full text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white transition cursor-pointer disabled:opacity-50"
+              class="px-6 py-2 rounded-full text-xs font-bold bg-bx-primary hover:bg-bx-primary-hover text-white transition cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-sm"
             >
-              <span v-if="submitting">جاري التسكين الذري...</span>
-              <span v-else>تسكين {{ bulkForm.selected_student_ids.length }} طلاب</span>
+              <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
+              <span>تسكين {{ bulkForm.selected_student_ids.length }} طلاب في الشعبة</span>
             </button>
           </div>
         </div>
@@ -1146,9 +1454,9 @@ onMounted(async () => {
         :is-open="showHistoryDrawer"
         @close="showHistoryDrawer = false"
         :title="`السجل والأرشيف التسكيني — ${historyStudentName}`"
-        max-width="max-w-[520px]"
+        max-width="max-w-[600px]"
       >
-        <div class="p-6 space-y-4 font-sans" dir="rtl">
+        <div class="space-y-4 font-sans" dir="rtl">
           <p class="text-xs text-bx-muted font-medium">
             يعرض هذا السجل التدرج الأكاديمي للطالب عبر كافة الأعوام السابقة (المستمدة من الصحائف المدرسية المؤرشفة) والعام التشغيلي الحالي.
           </p>
