@@ -126,6 +126,23 @@ const classStageMap = computed(() => {
   return map;
 });
 
+// Stage badge style helper
+function getStageBadgeClass(stageName: string) {
+  if (stageName.includes('روضة') || stageName.includes('تمهيدي')) {
+    return 'border-pink-500/30 text-pink-600 dark:text-pink-400 bg-pink-500/10';
+  }
+  if (stageName.includes('ابتدائي')) {
+    return 'border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10';
+  }
+  if (stageName.includes('إعدادي')) {
+    return 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10';
+  }
+  if (stageName.includes('ثانوي')) {
+    return 'border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10';
+  }
+  return 'border-[#B4AED8]/60 dark:border-white/10 text-bx-muted bg-slate-500/10';
+}
+
 // Helper to get terms allocated to a specific class
 function getTermsForClass(classId: number): ClassTermMeta[] {
   const c = rawClassTerms.value.find((item) => item.class_id === classId);
@@ -538,59 +555,75 @@ onMounted(async () => {
           class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] shadow-xs"
         >
           <!-- Class Header Bar -->
-          <div class="bg-purple-500/[0.05] dark:bg-white/[0.03] py-3 px-5 border-b border-[#B4AED8] dark:border-white/[0.12] flex items-center justify-between rounded-t-2xl">
-            <div class="flex items-center gap-2.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
-              <span class="font-black text-sm text-bx-title">{{ grp.class_name }}</span>
-              <span class="text-[11px] font-semibold text-bx-muted px-2.5 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
-                {{ grp.stage_name }}
-              </span>
+          <div class="bg-purple-500/[0.04] dark:bg-white/[0.03] py-3.5 px-5 border-b border-[#B4AED8]/60 dark:border-white/10 flex items-center justify-between rounded-t-2xl">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/30 dark:border-purple-400/40 flex items-center justify-center text-bx-primary dark:text-purple-300 shrink-0">
+                <GraduationCap class="w-4 h-4" />
+              </div>
+              <div>
+                <span class="font-black text-sm text-bx-title block leading-tight">{{ grp.class_name }}</span>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border" :class="getStageBadgeClass(grp.stage_name)">
+                    {{ grp.stage_name }}
+                  </span>
+                  <span class="text-[10px] font-semibold text-bx-muted">
+                    {{ grp.subjects?.length || 0 }} مواد مقررة ({{ grp.terms?.length || 0 }} فصول دراسية)
+                  </span>
+                </div>
+              </div>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-[11px] font-bold text-bx-muted">
-                {{ grp.subjects?.length || 0 }} مواد مقررة ({{ grp.terms?.length || 0 }} فصول دراسية)
-              </span>
-              <button
-                @click="openCreateDrawer(grp.class_id)"
-                class="w-8 h-8 rounded-full border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                title="إسناد مادة لهذا الصف الدراسي"
-              >
-                <Plus class="w-4 h-4" />
-              </button>
-            </div>
+            <button
+              @click="openCreateDrawer(grp.class_id)"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/60 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+              title="إسناد مادة لهذا الصف الدراسي"
+            >
+              <Plus class="w-3.5 h-3.5" />
+              <span>إسناد مادة</span>
+            </button>
           </div>
 
           <!-- Table with Dynamic Columns matching THIS class's exact semesters directly above the subjects -->
-          <div class="rounded-b-2xl">
+          <div class="rounded-b-2xl overflow-x-auto">
             <table class="w-full text-start border-collapse text-xs">
               <thead>
-                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
-                  <th class="py-3 px-4 font-bold text-start w-28">الرمز</th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[180px]">المادة الدراسية</th>
+                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
+                  <th class="py-3 px-4 font-bold text-start w-28 border-e border-[#B4AED8]/50 dark:border-white/10">الرمز</th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <BookOpenCheck class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>المادة الدراسية</span>
+                    </div>
+                  </th>
                   <!-- Dynamic headers for THIS class's terms only -->
                   <th
                     v-for="t in (grp.terms || [])"
                     :key="t.id"
-                    class="py-3 px-4 font-bold text-center min-w-[150px]"
+                    class="py-3 px-4 font-bold text-center min-w-[150px] border-e border-[#B4AED8]/50 dark:border-white/10"
                   >
-                    {{ t.term_name }}
+                    <div class="flex items-center justify-center gap-1.5 text-bx-title font-bold">
+                      <CalendarDays class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>{{ t.term_name }}</span>
+                    </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-center w-36">إجراءات</th>
+                  <th class="py-3 px-4 font-bold text-center w-36 last:border-e-0">إجراءات</th>
                 </tr>
               </thead>
 
-              <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12]">
+              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
                 <!-- Empty subjects for this class -->
                 <tr v-if="!grp.subjects || grp.subjects.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
-                  <td :colspan="3 + (grp.terms?.length || 0)" class="py-6 px-4 text-center text-bx-muted text-xs">
-                    <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
-                    <button
-                      @click="openCreateDrawer(grp.class_id)"
-                      class="text-bx-primary font-bold hover:underline me-2 cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <Plus class="w-3 h-3" />
-                      <span>إسناد أول مادة الآن</span>
-                    </button>
+                  <td :colspan="3 + (grp.terms?.length || 0)" class="py-8 px-4 text-center text-bx-muted text-xs">
+                    <div class="flex flex-col items-center justify-center gap-2">
+                      <AlertCircle class="w-8 h-8 text-bx-muted opacity-40" />
+                      <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
+                      <button
+                        @click="openCreateDrawer(grp.class_id)"
+                        class="text-bx-primary font-bold hover:underline cursor-pointer inline-flex items-center gap-1 text-xs mt-1"
+                      >
+                        <Plus class="w-3.5 h-3.5" />
+                        <span>إسناد أول مادة الآن</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
 
@@ -598,27 +631,24 @@ onMounted(async () => {
                 <tr
                   v-for="row in (grp.subjects || [])"
                   :key="row.subject_id"
-                  class="hover:bg-purple-500/[0.08] dark:hover:bg-white/[0.06] transition-colors duration-150"
+                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150"
                 >
                   <!-- Code (الرمز) -->
-                  <td class="py-3.5 px-4 font-mono font-bold text-bx-muted text-xs whitespace-nowrap">
-                    {{ row.code }}
+                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-bx-title/80">
+                      {{ row.code }}
+                    </span>
                   </td>
 
-                  <!-- Subject with Circular Letter Badge -->
-                  <td class="py-3.5 px-4 whitespace-nowrap">
-                    <div class="flex items-center gap-3">
-                      <div
-                        class="w-7 h-7 rounded-full border-2 font-black text-[11px] flex items-center justify-center shrink-0"
-                        :class="row.letterColor"
-                      >
-                        {{ row.letter }}
+                  <!-- Subject (Clean without letter circle badge) -->
+                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-7 h-7 rounded-full bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/25 dark:border-purple-400/30 flex items-center justify-center text-bx-primary dark:text-purple-300 shrink-0">
+                        <BookOpenCheck class="w-3.5 h-3.5" />
                       </div>
-                      <div>
-                        <span class="font-bold text-xs text-bx-title block">
-                          {{ row.name }}
-                        </span>
-                      </div>
+                      <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight">
+                        {{ row.name }}
+                      </span>
                     </div>
                   </td>
 
@@ -626,18 +656,18 @@ onMounted(async () => {
                   <td
                     v-for="t in grp.terms"
                     :key="t.id"
-                    class="py-3.5 px-4 text-center whitespace-nowrap"
+                    class="py-3 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10"
                   >
                     <!-- If assigned to this semester -->
                     <div
                       v-if="row.assignments[t.term_name]"
-                      class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#B4AED8]/50 dark:border-white/10 bg-purple-500/[0.04]"
+                      class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border border-emerald-500/30 dark:border-emerald-400/40 bg-emerald-500/[0.05] dark:bg-emerald-950/30 shadow-2xs"
                     >
-                      <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                      <span class="text-xs font-black text-emerald-600 dark:text-emerald-400" title="درجة النجاح">
                         {{ row.assignments[t.term_name].passing_score }}
                       </span>
-                      <span class="text-bx-muted opacity-40">/</span>
-                      <span class="text-[11px] font-bold text-bx-title">
+                      <span class="text-bx-muted opacity-40 text-[10px] font-bold">/</span>
+                      <span class="text-xs font-black text-bx-title" title="الدرجة العظمى">
                         {{ row.assignments[t.term_name].max_score }}
                       </span>
                       <span
@@ -648,37 +678,37 @@ onMounted(async () => {
                     </div>
 
                     <!-- If not assigned to this semester -->
-                    <span v-else class="text-bx-muted/40 font-bold text-sm">—</span>
+                    <span v-else class="text-slate-400 dark:text-slate-500 font-bold text-xs">—</span>
                   </td>
 
-                  <!-- Actions (عرض لكافة الفصول + تعديل لكافة الفصول + إزالة) -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                    <div class="flex items-center justify-center gap-2">
+                  <!-- Actions (Uniform circular buttons with high contrast in dark mode) -->
+                  <td class="py-3 px-4 text-center whitespace-nowrap last:border-e-0">
+                    <div class="flex items-center justify-center gap-1.5">
                       <!-- View Details Button -->
                       <button
                         @click="openDetails(row)"
-                        class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-primary dark:text-purple-300 bg-white dark:bg-white/[0.05] hover:bg-bx-primary hover:text-white hover:border-bx-primary transition-all cursor-pointer shadow-xs"
+                        class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                        title="عرض تفاصيل درجات المادة لكافة الفصول"
                       >
                         <Eye class="w-3.5 h-3.5" />
-                        <span>عرض</span>
                       </button>
 
                       <!-- Quick Edit Button (Multi-Term Editor) -->
                       <button
                         @click="openEditDrawer(row)"
                         title="تعديل درجات المادة لكافة الفصول"
-                        class="w-8 h-8 rounded-full border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                        class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
                       >
-                        <Edit2 class="w-4 h-4" />
+                        <Edit2 class="w-3.5 h-3.5" />
                       </button>
 
                       <!-- Quick Delete Button -->
                       <button
                         @click="confirmDelete(row)"
-                        title="إزالة المادة من منهج الصف"
-                        class="w-8 h-8 rounded-full border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                        title="إزالة المادة من منهج هذا الصف"
+                        class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
                       >
-                        <Trash2 class="w-4 h-4" />
+                        <Trash2 class="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </td>
@@ -718,11 +748,8 @@ onMounted(async () => {
         <!-- Main Subject Header Card -->
         <div class="p-5 rounded-2xl border border-[#B4AED8]/70 dark:border-white/10 bg-purple-500/5 space-y-3">
           <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 rounded-full border-2 font-black text-sm flex items-center justify-center shrink-0 shadow-xs"
-              :class="activeRowDetails.letterColor"
-            >
-              {{ activeRowDetails.letter }}
+            <div class="w-10 h-10 rounded-2xl bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/30 dark:border-purple-400/40 flex items-center justify-center text-bx-primary dark:text-purple-300 shrink-0 shadow-xs">
+              <BookOpenCheck class="w-5 h-5" />
             </div>
             <div>
               <h4 class="text-sm font-black text-bx-title">{{ activeRowDetails.name }}</h4>
