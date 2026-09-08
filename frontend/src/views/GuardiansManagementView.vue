@@ -27,6 +27,7 @@ import {
   type GuardianStudentChild,
   type PaginationMeta,
 } from '../api/guardians.api';
+import { studentsApi, type Student } from '../api/students.api';
 import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
@@ -67,17 +68,22 @@ const form = ref({
 const fieldErrors = ref<Record<string, string[]>>({});
 const formErrorMessage = ref<string | null>(null);
 
-// Custody Modal State
-const showCustodyModal = ref(false);
+// Custody Drawer & On-Demand Search State
+const showCustodyDrawer = ref(false);
+const showCustodyModal = showCustodyDrawer; // alias
 const selectedGuardianForCustody = ref<Guardian | null>(null);
 const custodyChildren = ref<GuardianStudentChild[]>([]);
 const loadingCustody = ref(false);
-const isLinking = ref(false);
-const linkForm = ref({
-  student_id: '' as string | number,
-  is_primary: 1,
-});
+const isLinkingCustody = ref(false);
 const custodyErrorMessage = ref<string | null>(null);
+
+// On-demand student search (لا يتم جلب الأسماء مسبقاً، بل يكتب المستخدم ويوجد زر لعرض النتائج)
+const studentSearchQuery = ref('');
+const isSearchingStudents = ref(false);
+const searchedStudents = ref<Student[]>([]);
+const hasSearchedStudents = ref(false);
+const selectedStudentToLink = ref<Student | null>(null);
+const linkCustodyType = ref<number>(1);
 
 // Delete Modal State
 const showDeleteModal = ref(false);
@@ -262,13 +268,21 @@ async function handleSaveGuardian() {
 }
 
 // Custody Management
-async function openCustodyModal(guardian: Guardian) {
+async function openCustodyDrawer(guardian: Guardian) {
+  showDrawer.value = false;
   selectedGuardianForCustody.value = guardian;
   custodyErrorMessage.value = null;
-  linkForm.value = { student_id: '', is_primary: 1 };
-  showCustodyModal.value = true;
+  studentSearchQuery.value = '';
+  searchedStudents.value = [];
+  hasSearchedStudents.value = false;
+  selectedStudentToLink.value = null;
+  linkCustodyType.value = 1;
+  showCustodyDrawer.value = true;
   await fetchGuardianChildren(guardian.id);
 }
+
+// Alias for backwards compatibility
+const openCustodyModal = openCustodyDrawer;
 
 async function fetchGuardianChildren(guardianId: number) {
   loadingCustody.value = true;
@@ -285,25 +299,62 @@ async function fetchGuardianChildren(guardianId: number) {
   }
 }
 
-async function handleLinkStudent() {
-  if (!selectedGuardianForCustody.value) return;
-  if (!linkForm.value.student_id) {
-    custodyErrorMessage.value = 'يرجى إدخال معرف الطالب.';
+async function searchStudentsOnDemand() {
+  if (!studentSearchQuery.value.trim()) {
+    toast.warning('يرجى كتابة اسم الطالب أو رمزه للبحث.');
     return;
   }
+  isSearchingStudents.value = true;
+  custodyErrorMessage.value = null;
+  selectedStudentToLink.value = null;
+  try {
+    const res = await studentsApi.getStudents({
+      search: studentSearchQuery.value.trim(),
+      per_page: 10,
+    });
+    if (res.data && res.data.success) {
+      searchedStudents.value = res.data.data;
+      hasSearchedStudents.value = true;
+    }
+  } catch (err: any) {
+    console.error('Error searching students:', err);
+    toast.error('حدث خطأ أثناء البحث عن الطلاب.');
+  } finally {
+    isSearchingStudents.value = false;
+  }
+}
 
-  isLinking.value = true;
+function selectStudentToLink(student: Student) {
+  const alreadyLinked = custodyChildren.value.some((c) => c.student_id === student.id);
+  if (alreadyLinked) {
+    toast.warning('هذا الطالب مرتبط بالفعل بهذا الوصي.');
+    return;
+  }
+  selectedStudentToLink.value = student;
+}
+
+function cancelSelectedStudent() {
+  selectedStudentToLink.value = null;
+}
+
+async function handleLinkStudent() {
+  if (!selectedGuardianForCustody.value || !selectedStudentToLink.value) return;
+
+  isLinkingCustody.value = true;
   custodyErrorMessage.value = null;
 
   try {
     const res = await guardiansApi.createCustody({
       guardian_id: selectedGuardianForCustody.value.id,
-      student_id: Number(linkForm.value.student_id),
-      is_primary: linkForm.value.is_primary,
+      student_id: selectedStudentToLink.value.id,
+      is_primary: linkCustodyType.value,
     });
     if (res.data.success) {
       toast.success(res.data.message || 'تم ربط وصاية الطالب بنجاح.');
-      linkForm.value.student_id = '';
+      selectedStudentToLink.value = null;
+      studentSearchQuery.value = '';
+      searchedStudents.value = [];
+      hasSearchedStudents.value = false;
       await fetchGuardianChildren(selectedGuardianForCustody.value.id);
       fetchGuardians();
     }
@@ -311,7 +362,7 @@ async function handleLinkStudent() {
     const errorData = err.response?.data;
     custodyErrorMessage.value = errorData?.message || 'تعذر ربط الوصاية.';
   } finally {
-    isLinking.value = false;
+    isLinkingCustody.value = false;
   }
 }
 
@@ -909,26 +960,34 @@ onMounted(() => {
         </template>
       </TaqniyaDrawer>
 
-      <!-- Custody Management Modal -->
-      <div
-        v-if="showCustodyModal"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      <!-- Custody Management Drawer (Spatial UI Design System) -->
+      <TaqniyaDrawer
+        :is-open="showCustodyDrawer"
+        title="إدارة وصاية الأبناء"
+        :subtitle="selectedGuardianForCustody ? `ولي الأمر: ${selectedGuardianForCustody.full_name} (${selectedGuardianForCustody.user_code})` : ''"
+        :icon="HeartHandshake"
+        max-width="max-w-[650px]"
+        @close="showCustodyDrawer = false"
       >
-        <div class="bg-[var(--bx-surface-solid)] w-full max-w-lg rounded-3xl p-6 border border-bx-border shadow-2xl space-y-5 text-right">
-          <div class="flex items-center justify-between border-b border-bx-border pb-3">
-            <div>
-              <h4 class="font-black text-base text-bx-title">إدارة وصاية الأبناء</h4>
-              <p class="text-xs text-bx-muted">
-                ولي الأمر: <strong class="text-bx-title">{{ selectedGuardianForCustody?.full_name }}</strong>
-                ({{ selectedGuardianForCustody?.user_code }})
-              </p>
+        <div class="space-y-6">
+          <!-- Guardian Profile Summary Banner -->
+          <div v-if="selectedGuardianForCustody" class="p-4 rounded-2xl border border-teal-500/20 bg-teal-500/[0.03] flex items-center justify-between gap-4 shadow-2xs">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                <HeartHandshake class="w-5 h-5" />
+              </div>
+              <div>
+                <h4 class="text-xs font-black text-bx-title">{{ selectedGuardianForCustody.full_name }}</h4>
+                <div class="flex items-center gap-2 mt-0.5 text-[11px] text-bx-muted">
+                  <span class="font-mono text-bx-primary font-bold">{{ selectedGuardianForCustody.user_code }}#</span>
+                  <span>•</span>
+                  <span>صلة القرابة: {{ relationshipLabels[selectedGuardianForCustody.relationship] || selectedGuardianForCustody.relationship }}</span>
+                </div>
+              </div>
             </div>
-            <button
-              @click="showCustodyModal = false"
-              class="p-1 rounded-lg text-bx-muted hover:text-bx-title hover:bg-[var(--bx-canvas)] cursor-pointer"
-            >
-              ✕
-            </button>
+            <span class="text-xs font-bold text-teal-600 dark:text-teal-400 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20">
+              {{ custodyChildren.length }} أبناء مكفولين
+            </span>
           </div>
 
           <!-- Error Alert -->
@@ -937,75 +996,208 @@ onMounted(() => {
             <span>{{ custodyErrorMessage }}</span>
           </div>
 
-          <!-- Link New Student Form -->
-          <form @submit.prevent="handleLinkStudent" class="p-4 bg-[var(--bx-canvas)] rounded-2xl border border-bx-border space-y-3">
-            <span class="text-xs font-bold text-bx-title block">ربط طالب جديد تحت الوصاية</span>
-            <div class="flex gap-2">
-              <input
-                v-model="linkForm.student_id"
-                type="number"
-                placeholder="معرف الطالب (ID)..."
-                class="flex-1 px-3 py-2 rounded-xl text-xs border border-bx-border bg-[var(--bx-surface-solid)] focus:outline-none focus:border-bx-primary font-mono text-bx-text"
-              />
-              <div class="w-48">
-                <TaqniyaSelect
-                  v-model="linkForm.is_primary"
-                  :options="custodyTypeOptions"
-                  placeholder="نوع الوصاية..."
-                  full-width
+          <!-- Section 1: Search & Link Student On-Demand (لا يتم جلب الأسماء مسبقاً) -->
+          <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-4 shadow-xs">
+            <div class="flex items-center gap-2 border-b border-[#B4AED8]/40 dark:border-white/[0.08] pb-2.5">
+              <User class="w-4 h-4 text-bx-primary shrink-0" />
+              <div>
+                <h4 class="text-xs font-black text-bx-title">البحث عن طالب لربطه تحت الوصاية</h4>
+                <p class="text-[10px] text-bx-muted">اكتب اسم الطالب واضغط على زر عرض النتائج لتحديد الطالب المطلوب</p>
+              </div>
+            </div>
+
+            <!-- Search Input with Explicit Search Button -->
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <Search class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-bx-muted pointer-events-none" />
+                <input
+                  v-model="studentSearchQuery"
+                  @keydown.enter.prevent="searchStudentsOnDemand"
+                  type="text"
+                  placeholder="اكتب اسم الطالب الرباعي أو الرمز STU-XXXX..."
+                  class="w-full pr-10 pl-4 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif]"
                 />
               </div>
               <button
-                type="submit"
-                :disabled="isLinking"
-                class="bg-bx-primary hover:bg-bx-primary-hover text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                type="button"
+                :disabled="isSearchingStudents"
+                @click="searchStudentsOnDemand"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-xs whitespace-nowrap"
               >
-                <Loader2 v-if="isLinking" class="w-3.5 h-3.5 animate-spin" />
-                <Plus v-else class="w-3.5 h-3.5" />
-                <span>ربط</span>
+                <Loader2 v-if="isSearchingStudents" class="w-3.5 h-3.5 animate-spin" />
+                <Search v-else class="w-3.5 h-3.5" />
+                <span>عرض النتائج</span>
               </button>
             </div>
-          </form>
 
-          <!-- Current Linked Children -->
-          <div class="space-y-2">
-            <span class="text-xs font-bold text-bx-title block">الأبناء المكفولون حالياً:</span>
+            <!-- Search Results Display (Shown only when searched) -->
+            <div v-if="hasSearchedStudents && !selectedStudentToLink" class="space-y-2 pt-2">
+              <div v-if="searchedStudents.length === 0" class="py-6 text-center text-bx-muted text-xs border border-dashed border-[#B4AED8]/50 dark:border-white/10 rounded-2xl bg-purple-500/[0.02]">
+                <AlertCircle class="w-6 h-6 mx-auto mb-1.5 opacity-40 text-bx-muted" />
+                <span class="font-bold block">لم يتم العثور على أي طالب يطابق هذا الاسم</span>
+                <span class="text-[10px]">تأكد من صحة الاسم المدخل أو ابحث برمز الطالب STU-...</span>
+              </div>
 
-            <div v-if="loadingCustody" class="py-6 text-center text-bx-muted">
-              <Loader2 class="w-5 h-5 animate-spin mx-auto" />
+              <div v-else class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                <div class="text-[11px] font-bold text-bx-muted flex items-center justify-between pb-1">
+                  <span>الطلاب المطابقون ({{ searchedStudents.length }}):</span>
+                  <span>اضغط على الطالب لاختياره للربط</span>
+                </div>
+
+                <div
+                  v-for="student in searchedStudents"
+                  :key="student.id"
+                  @click="selectStudentToLink(student)"
+                  class="p-3 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-[var(--bx-canvas)] hover:border-bx-primary hover:bg-purple-500/[0.04] transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                  :class="custodyChildren.some(c => c.student_id === student.id) ? 'opacity-50 cursor-not-allowed bg-gray-500/5' : ''"
+                >
+                  <div class="flex items-center gap-3">
+                    <span class="px-2.5 py-1 rounded-full font-mono text-[10px] font-bold bg-purple-500/[0.06] text-bx-primary border border-purple-500/20">
+                      {{ student.user_code }}#
+                    </span>
+                    <div>
+                      <h5 class="text-xs font-bold text-bx-title group-hover:text-bx-primary transition-colors">
+                        {{ student.full_name }}
+                      </h5>
+                      <p class="text-[10px] text-bx-muted mt-0.5">
+                        {{ student.class_section || 'غير مسكن بشعبة' }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span
+                      v-if="custodyChildren.some(c => c.student_id === student.id)"
+                      class="text-[10px] font-bold text-bx-muted px-2.5 py-1 rounded-full bg-slate-500/10 border border-slate-500/20"
+                    >
+                      مرتبط بالوصي مسبقاً
+                    </span>
+                    <button
+                      v-else
+                      type="button"
+                      class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-bx-primary/10 text-bx-primary border border-bx-primary/20 group-hover:bg-bx-primary group-hover:text-white transition-all pointer-events-none"
+                    >
+                      اختيار الطالب
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div v-else-if="custodyChildren.length === 0" class="py-6 text-center text-bx-muted text-xs">
-              لا يوجد أبناء مرتبطون بهذا الوصي حالياً.
+            <!-- Selected Student Confirmation & Custody Type Selector -->
+            <div v-if="selectedStudentToLink" class="p-4 rounded-2xl border-2 border-bx-primary/40 bg-purple-500/[0.04] space-y-4 shadow-xs">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs font-black text-bx-primary">
+                  <CheckCircle2 class="w-4 h-4 text-bx-primary" />
+                  <span>الطالب المحدد للربط:</span>
+                </div>
+                <button
+                  type="button"
+                  @click="cancelSelectedStudent"
+                  class="text-[11px] font-bold text-bx-muted hover:text-red-500 transition-colors cursor-pointer"
+                >
+                  تغيير الطالب
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between p-3.5 rounded-xl bg-[var(--bx-surface-solid)] border border-[#B4AED8]/40 dark:border-white/10">
+                <div class="flex items-center gap-3">
+                  <span class="font-mono text-xs font-bold text-bx-primary px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">
+                    {{ selectedStudentToLink.user_code }}#
+                  </span>
+                  <div>
+                    <h5 class="text-xs font-black text-bx-title">{{ selectedStudentToLink.full_name }}</h5>
+                    <p class="text-[10px] text-bx-muted mt-0.5">{{ selectedStudentToLink.class_section || 'غير مسكن بشعبة' }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-1.5">
+                <label class="block text-[11px] font-bold text-bx-title">نوع الوصاية الأكاديمية</label>
+                <TaqniyaSelect
+                  v-model="linkCustodyType"
+                  :options="custodyTypeOptions"
+                  placeholder="اختر نوع الوصاية..."
+                  full-width
+                />
+              </div>
+
+              <div class="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  @click="cancelSelectedStudent"
+                  class="px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/10 text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  :disabled="isLinkingCustody"
+                  @click="handleLinkStudent"
+                  class="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+                >
+                  <Loader2 v-if="isLinkingCustody" class="w-3.5 h-3.5 animate-spin" />
+                  <Link v-else class="w-3.5 h-3.5" />
+                  <span>تأكيد ربط الطالب تحت الوصاية</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Current Linked Children -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-1 border-b border-[#B4AED8]/30 dark:border-white/[0.06]">
+              <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
+                <GraduationCap class="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                <span>الأبناء المكفولون حالياً</span>
+              </div>
+              <span class="text-[11px] font-bold text-bx-muted">
+                (المجموع: {{ custodyChildren.length }})
+              </span>
             </div>
 
-            <div v-else class="space-y-2 max-h-60 overflow-y-auto">
+            <div v-if="loadingCustody" class="py-8 text-center text-bx-muted">
+              <Loader2 class="w-6 h-6 animate-spin mx-auto text-bx-primary mb-1.5" />
+              <span class="text-xs font-bold">جاري تحديث بيانات الأبناء المكفولين...</span>
+            </div>
+
+            <div v-else-if="custodyChildren.length === 0" class="py-8 text-center text-bx-muted text-xs border border-dashed border-[#B4AED8]/50 dark:border-white/10 rounded-2xl bg-[var(--bx-canvas)]">
+              <Users class="w-8 h-8 mx-auto mb-2 opacity-30 text-bx-muted" />
+              <span class="font-bold block text-bx-title">لا يوجد أبناء مرتبطون بهذا الوصي حالياً</span>
+              <p class="text-[10px] text-bx-muted mt-0.5">استخدم محرك البحث أعلاه لكتابة اسم الطالب وربطه بولي الأمر فورياً.</p>
+            </div>
+
+            <div v-else class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
               <div
                 v-for="child in custodyChildren"
                 :key="child.id"
-                class="flex items-center justify-between p-3 rounded-xl border border-bx-border bg-[var(--bx-surface-solid)] hover:bg-[var(--bx-pill)]/50 transition-colors"
+                class="flex items-center justify-between p-3.5 rounded-2xl border border-[#B4AED8]/50 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] hover:border-teal-500/30 transition-all shadow-2xs group"
               >
                 <div class="flex items-center gap-3">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-black bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
-                    {{ child.student_code }}
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                    {{ child.student_code }}#
                   </span>
                   <div>
-                    <h5 class="text-xs font-bold text-bx-title">{{ child.student_name }}</h5>
-                    <p class="text-[10px] text-bx-muted">{{ child.class_section || 'غير مسكن' }}</p>
+                    <h5 class="text-xs font-black text-bx-title group-hover:text-bx-primary transition-colors">
+                      {{ child.student_name }}
+                    </h5>
+                    <p class="text-[10px] text-bx-muted mt-0.5">
+                      {{ child.class_section || 'غير مسكن بشعبة' }}
+                    </p>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2.5">
                   <span
-                    :class="child.is_primary ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-gray-500/10 text-gray-500 border-gray-500/20'"
-                    class="px-2 py-0.5 rounded text-[10px] font-bold border"
+                    :class="child.is_primary ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'"
+                    class="px-3 py-1 rounded-full text-[10px] font-bold border"
                   >
-                    {{ child.is_primary ? 'رئيسي' : 'إضافي' }}
+                    {{ child.is_primary ? 'وصي رئيسي' : 'وصي إضافي' }}
                   </span>
                   <button
                     @click="handleUnlinkStudent(child.id)"
                     title="فك رابط الوصاية"
-                    class="p-1 rounded-lg text-red-500 hover:bg-red-500/10 cursor-pointer"
+                    class="w-7 h-7 rounded-full border border-red-200 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white dark:border-red-500/30 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
                   >
                     <Trash2 class="w-3.5 h-3.5" />
                   </button>
@@ -1013,17 +1205,18 @@ onMounted(() => {
               </div>
             </div>
           </div>
-
-          <div class="pt-2 text-left">
-            <button
-              @click="showCustodyModal = false"
-              class="px-5 py-2 rounded-xl border border-bx-border text-xs font-bold text-bx-muted hover:bg-[var(--bx-canvas)] cursor-pointer"
-            >
-              إغلاق
-            </button>
-          </div>
         </div>
-      </div>
+
+        <template #footer>
+          <button
+            type="button"
+            @click="showCustodyDrawer = false"
+            class="px-6 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+          >
+            إغلاق
+          </button>
+        </template>
+      </TaqniyaDrawer>
 
       <!-- Confirmation Delete Modal -->
       <div
