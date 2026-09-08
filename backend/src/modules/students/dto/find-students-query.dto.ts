@@ -29,4 +29,14 @@ export class FindStudentsQueryDto {
   @IsInt()
   @Min(1)
   per_page?: number = 15;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  class_id?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  class_section_id?: number;
 }

@@ -9,12 +9,17 @@ export interface Student {
   birth_date: string | null;
   gender: 'male' | 'female';
   class_section: string | null;
+  class_id?: number | null;
+  class_section_id?: number | null;
+  seating_number?: string | null;
   created_at: string;
 }
 
 export interface GetStudentsParams {
   search?: string;
   gender?: string;
+  class_id?: number;
+  class_section_id?: number;
   sort_by?: 'id' | 'full_name' | 'birth_date';
   sort_order?: 'asc' | 'desc';
   page?: number;

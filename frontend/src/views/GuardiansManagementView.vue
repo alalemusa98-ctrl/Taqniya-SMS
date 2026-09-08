@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, defineAsyncComponent } from 'vue';
+import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue';
 import {
   Plus,
   Search,
@@ -15,6 +15,11 @@ import {
   Save,
   Link,
   HeartHandshake,
+  User,
+  Calendar,
+  GraduationCap,
+  Users,
+  CheckCircle2,
 } from 'lucide-vue-next';
 import {
   guardiansApi,
@@ -24,6 +29,7 @@ import {
 } from '../api/guardians.api';
 import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
+import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
 
 const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
 const toast = useToast();
@@ -110,6 +116,37 @@ async function fetchGuardians() {
   }
 }
 
+interface EnrichedGuardianRow extends Guardian {
+  indexNumber: number;
+  code: string;
+}
+
+const enrichedGuardians = computed<EnrichedGuardianRow[]>(() => {
+  return guardians.value.map((g, index) => {
+    const indexNumber = (meta.value.current_page - 1) * meta.value.per_page + index + 1;
+    return {
+      ...g,
+      indexNumber,
+      code: `${g.user_code}#`,
+    };
+  });
+});
+
+const stats = computed(() => {
+  const total = meta.value.total;
+  const parentsCount = guardians.value.filter(
+    (g) => g.relationship === 'father' || g.relationship === 'mother'
+  ).length;
+  const othersCount = guardians.value.filter(
+    (g) => g.relationship !== 'father' && g.relationship !== 'mother'
+  ).length;
+  const totalCustodyCount = guardians.value.reduce(
+    (acc, g) => acc + (Number(g.students_count) || 0),
+    0
+  );
+  return { total, parentsCount, othersCount, totalCustodyCount };
+});
+
 // Watchers
 let debounceTimer: any = null;
 watch(search, () => {
@@ -156,6 +193,11 @@ function openDetailsDrawer(guardian: Guardian) {
   drawerMode.value = 'details';
   activeGuardian.value = guardian;
   showDrawer.value = true;
+}
+
+function openEditFromDetails() {
+  if (!activeGuardian.value) return;
+  openEditDrawer(activeGuardian.value);
 }
 
 async function handleSaveGuardian() {
@@ -326,6 +368,19 @@ const relationshipLabels: Record<string, string> = {
   other: 'صلة قرابة أخرى',
 };
 
+const relationshipOptions: TaqniyaSelectOption[] = [
+  { value: 'father', label: 'أب', subtext: 'الوصي الطبيعي' },
+  { value: 'mother', label: 'أم', subtext: 'الوصية الطبيعية' },
+  { value: 'brother', label: 'أخ', subtext: 'قرابة درجة أولى' },
+  { value: 'uncle', label: 'عم / خال', subtext: 'قرابة درجة ثانية' },
+  { value: 'other', label: 'صلة قرابة أخرى', subtext: 'كفيل / وصي قانوني' },
+];
+
+const custodyTypeOptions: TaqniyaSelectOption[] = [
+  { value: 1, label: 'وصي رئيسي', subtext: 'المسؤول الأول عن الطالب' },
+  { value: 0, label: 'وصي إضافي', subtext: 'وصاية ثانوية للمتابعة' },
+];
+
 onMounted(() => {
   fetchGuardians();
 });
@@ -334,304 +389,524 @@ onMounted(() => {
 <template>
   <TaqniyaErrorBoundary>
     <div class="space-y-6" dir="rtl">
-      <!-- Page Header -->
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--bx-surface-glass)] p-6 rounded-3xl border border-bx-border backdrop-blur-md shadow-sm">
-        <div>
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-400 text-white flex items-center justify-center font-black shadow-md shadow-teal-500/20">
-              <HeartHandshake class="w-6 h-6" />
+      <!-- Unified Container Card (Matching the Reference Design System) -->
+      <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
+        <!-- Card Header: Title on Right, Controls & Filters on Left -->
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
+          <!-- Title -->
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+              سجلات أولياء الأمور وشبكة الوصاية
+            </h2>
+            <p class="text-xs text-bx-muted font-medium mt-1">
+              إدارة ملفات الأولياء، بيانات التواصل، شبكة الكفالة وربط سياق الأبناء (PAR-XXXX)
+            </p>
+          </div>
+
+          <!-- Controls: Add Button + Search Input -->
+          <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            <!-- Add Button -->
+            <button
+              @click="openCreateDrawer"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer"
+            >
+              <Plus class="w-3.5 h-3.5" />
+              <span>تسجيل ولي أمر جديد</span>
+            </button>
+
+            <!-- Search Input (Pill Shaped) -->
+            <div class="relative flex-1 sm:w-64">
+              <Search class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-bx-muted pointer-events-none" />
+              <input
+                v-model="search"
+                type="text"
+                placeholder="بحث بالاسم، الهاتف أو PAR..."
+                class="w-full pr-10 pl-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Metrics Banner (Stats Ribbon) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-6">
+          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-purple-500/[0.03] flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
+              <Users class="w-4 h-4" />
             </div>
             <div>
-              <h2 class="text-xl sm:text-2xl font-black text-bx-title">سجل أولياء الأمور وشبكة الوصاية</h2>
-              <p class="text-xs sm:text-sm text-bx-muted font-medium">إدارة ملفات الأولياء وربط الوصاية لتفعيل سياق الابن (PAR-XXXX)</p>
+              <span class="text-[11px] text-bx-muted font-bold block">إجمالي أولياء الأمور</span>
+              <span class="text-base font-black font-display text-bx-title font-mono">{{ stats.total }}</span>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-teal-500/[0.03] flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+              <HeartHandshake class="w-4 h-4" />
+            </div>
+            <div>
+              <span class="text-[11px] text-bx-muted font-bold block">الآباء والأمهات</span>
+              <span class="text-base font-black font-display text-teal-600 dark:text-teal-400 font-mono">{{ stats.parentsCount }}</span>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-blue-500/[0.03] flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+              <User class="w-4 h-4" />
+            </div>
+            <div>
+              <span class="text-[11px] text-bx-muted font-bold block">أوصياء وأقارب آخرون</span>
+              <span class="text-base font-black font-display text-blue-600 dark:text-blue-400 font-mono">{{ stats.othersCount }}</span>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-amber-500/[0.03] flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+              <GraduationCap class="w-4 h-4" />
+            </div>
+            <div>
+              <span class="text-[11px] text-bx-muted font-bold block">إجمالي الطلاب المكفولين</span>
+              <span class="text-base font-black font-display text-amber-600 dark:text-amber-400 font-mono">{{ stats.totalCustodyCount }}</span>
             </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <!-- Loading State -->
+        <div v-if="loading" class="py-24 text-center text-bx-muted">
+          <Loader2 class="w-8 h-8 mx-auto animate-spin mb-2 text-bx-primary" />
+          <span class="text-xs font-bold">جاري تحميل سجلات أولياء الأمور...</span>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          v-else-if="enrichedGuardians.length === 0"
+          class="py-20 text-center border-t border-[#B4AED8] dark:border-white/[0.08] space-y-3"
+        >
+          <AlertCircle class="w-12 h-12 mx-auto text-bx-muted opacity-40" />
+          <h3 class="text-sm font-bold text-bx-title">لا توجد سجلات تطابق محددات البحث</h3>
+          <p class="text-xs text-bx-muted">جرب تغيير محددات البحث أو تسجيل ولي أمر جديد بالمنظومة.</p>
           <button
             @click="openCreateDrawer"
-            class="flex items-center gap-2 bg-bx-primary hover:bg-bx-primary-hover text-white px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-bx-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer mt-2"
           >
-            <Plus class="w-4 h-4" />
-            <span>تسجيل ولي أمر جديد</span>
+            <Plus class="w-3.5 h-3.5" />
+            <span>تسجيل أول ولي أمر</span>
           </button>
         </div>
-      </div>
 
-      <!-- Filters & Search Toolbar -->
-      <div class="flex items-center justify-between gap-4 bg-[var(--bx-surface-solid)] p-4 rounded-2xl border border-bx-border">
-        <div class="relative w-full sm:w-80">
-          <Search class="w-4 h-4 text-bx-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            v-model="search"
-            type="text"
-            placeholder="البحث بالاسم أو الهاتف أو PAR..."
-            class="w-full pl-3 pr-9 py-2 rounded-xl text-xs border border-bx-border bg-[var(--bx-canvas)] focus:outline-none focus:border-bx-primary transition-colors text-bx-text"
-          />
-        </div>
-      </div>
+        <!-- Unified Table Content: Enclosed in a Bordered Card -->
+        <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-start border-collapse text-xs">
+              <!-- Table Header with Distinct Background and Crisp Dividers -->
+              <thead>
+                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
+                  <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
+                  <th class="py-3 px-4 font-bold text-start border-e border-[#B4AED8]/50 dark:border-white/10">الرمز</th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[220px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <User class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>ولي الأمر والبيانات الشخصية</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[140px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <Phone class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>رقم الهاتف</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[130px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <HeartHandshake class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>صلة القرابة</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-center w-36 border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <GraduationCap class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>الأبناء المكفولين</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[130px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>تاريخ التسجيل</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-center w-40 last:border-e-0">الإجراءات</th>
+                </tr>
+              </thead>
 
-      <!-- Guardians Table Card -->
-      <div class="bg-[var(--bx-surface-solid)] rounded-3xl border border-bx-border overflow-hidden shadow-sm">
-        <div class="overflow-x-auto">
-          <table class="w-full text-right text-xs">
-            <thead>
-              <tr class="border-b border-bx-border bg-[var(--bx-canvas)]/50 text-bx-muted font-bold">
-                <th class="py-3.5 px-4">#</th>
-                <th class="py-3.5 px-4">كود ولي الأمر</th>
-                <th class="py-3.5 px-4">الاسم الكامل</th>
-                <th class="py-3.5 px-4">رقم الهاتف</th>
-                <th class="py-3.5 px-4">صلة القرابة</th>
-                <th class="py-3.5 px-4">عدد الأبناء المكفولين</th>
-                <th class="py-3.5 px-4">تاريخ الإنشاء</th>
-                <th class="py-3.5 px-4 text-center">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-bx-border">
-              <!-- Loading Skeleton -->
-              <tr v-if="loading" v-for="i in 5" :key="i" class="animate-pulse">
-                <td class="py-4 px-4"><div class="h-4 w-6 bg-bx-border rounded"></div></td>
-                <td class="py-4 px-4"><div class="h-4 w-20 bg-bx-border rounded-full"></div></td>
-                <td class="py-4 px-4"><div class="h-4 w-36 bg-bx-border rounded"></div></td>
-                <td class="py-4 px-4"><div class="h-4 w-24 bg-bx-border rounded"></div></td>
-                <td class="py-4 px-4"><div class="h-4 w-16 bg-bx-border rounded"></div></td>
-                <td class="py-4 px-4"><div class="h-4 w-12 bg-bx-border rounded-full"></div></td>
-                <td class="py-4 px-4"><div class="h-4 w-20 bg-bx-border rounded"></div></td>
-                <td class="py-4 px-4 text-center"><div class="h-4 w-20 bg-bx-border rounded mx-auto"></div></td>
-              </tr>
+              <!-- Table Body with Crisp Dividers -->
+              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
+                <tr
+                  v-for="guardian in enrichedGuardians"
+                  :key="guardian.id"
+                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
+                >
+                  <!-- Sequence Index -->
+                  <td class="py-3 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    {{ guardian.indexNumber }}
+                  </td>
 
-              <!-- Empty State -->
-              <tr v-else-if="guardians.length === 0">
-                <td colspan="8" class="py-12 text-center text-bx-muted">
-                  <div class="max-w-xs mx-auto space-y-3">
-                    <HeartHandshake class="w-10 h-10 mx-auto opacity-40 text-bx-muted" />
-                    <p class="text-sm font-bold">لا يوجد أولياء أمور مسجلون يطابقون محددات البحث</p>
-                    <button
-                      @click="openCreateDrawer"
-                      class="inline-flex items-center gap-2 text-xs font-bold text-bx-primary hover:underline cursor-pointer"
+                  <!-- Code Pill -->
+                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-bx-title/80">
+                      {{ guardian.code }}
+                    </span>
+                  </td>
+
+                  <!-- Guardian Info -->
+                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div>
+                      <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight group-hover:text-bx-primary transition-colors">
+                        {{ guardian.full_name }}
+                      </span>
+                    </div>
+                  </td>
+
+                  <!-- Phone -->
+                  <td class="py-3 px-4 font-mono text-xs text-bx-muted whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10" dir="ltr">
+                    {{ guardian.phone }}
+                  </td>
+
+                  <!-- Relationship Badge -->
+                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span
+                      class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border"
+                      :class="
+                        guardian.relationship === 'father' || guardian.relationship === 'mother'
+                          ? 'border-teal-500/30 text-teal-600 dark:text-teal-400 bg-teal-500/10 dark:bg-teal-950/30'
+                          : 'border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10 dark:bg-purple-950/30'
+                      "
                     >
-                      <Plus class="w-3.5 h-3.5" />
-                      <span>تسجيل أول ولي أمر الآن</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                      {{ relationshipLabels[guardian.relationship] || guardian.relationship }}
+                    </span>
+                  </td>
 
-              <!-- Guardians Data Rows -->
-              <tr
-                v-else
-                v-for="guardian in guardians"
-                :key="guardian.id"
-                class="hover:bg-[var(--bx-pill)]/50 transition-colors"
+                  <!-- Custody Children Count -->
+                  <td class="py-3 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border font-mono"
+                      :class="
+                        guardian.students_count > 0
+                          ? 'border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 dark:bg-indigo-950/30'
+                          : 'border-slate-500/20 text-slate-500 bg-slate-500/5'
+                      "
+                    >
+                      <GraduationCap class="w-3 h-3" />
+                      <span>{{ guardian.students_count }} طالب</span>
+                    </span>
+                  </td>
+
+                  <!-- Created Date -->
+                  <td class="py-3 px-4 font-['Alexandria',sans-serif] font-medium text-xs text-bx-muted whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span class="inline-flex items-center gap-1.5 font-bold font-mono">
+                      <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>{{ guardian.created_at.split('T')[0] }}</span>
+                    </span>
+                  </td>
+
+                  <!-- Actions: Uniform Circular Icon Buttons with High Contrast in Dark Mode -->
+                  <td class="py-3 px-4 text-center whitespace-nowrap last:border-e-0">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <!-- Manage Custody Button -->
+                      <button
+                        @click="openCustodyModal(guardian)"
+                        class="w-7 h-7 rounded-full border border-teal-300 bg-teal-50 text-teal-600 hover:bg-teal-600 hover:text-white dark:border-teal-400/60 dark:bg-teal-950/70 dark:text-teal-300 dark:hover:bg-teal-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                        title="إدارة الأبناء والوصاية الأكاديمية"
+                      >
+                        <Link class="w-3.5 h-3.5" />
+                      </button>
+
+                      <!-- View Details Button -->
+                      <button
+                        @click="openDetailsDrawer(guardian)"
+                        class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                        title="معاينة الملف الشخصي والحساب"
+                      >
+                        <Eye class="w-3.5 h-3.5" />
+                      </button>
+
+                      <!-- Edit Button -->
+                      <button
+                        @click="openEditDrawer(guardian)"
+                        class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                        title="تعديل بيانات ولي الأمر"
+                      >
+                        <Edit2 class="w-3.5 h-3.5" />
+                      </button>
+
+                      <!-- Delete Button -->
+                      <button
+                        @click="promptDelete(guardian)"
+                        class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                        title="حذف ملف ولي الأمر"
+                      >
+                        <Trash2 class="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Footer Matching Reference -->
+          <div
+            v-if="meta.last_page > 1"
+            class="p-4 border-t border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-table-header)] flex items-center justify-between gap-4"
+          >
+            <div class="text-xs text-bx-muted">
+              الصفحة <span class="font-bold text-bx-title">{{ meta.current_page }}</span> من <span class="font-bold text-bx-title">{{ meta.last_page }}</span> (إجمالي <span class="font-mono font-bold">{{ meta.total }}</span> أولياء أمور)
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <button
+                :disabled="currentPage <= 1"
+                @click="currentPage--"
+                class="p-1.5 rounded-lg border border-[#B4AED8] dark:border-white/[0.12] hover:bg-[var(--bx-pill)] disabled:opacity-40 transition-colors cursor-pointer"
               >
-                <td class="py-3.5 px-4 font-mono text-bx-muted">{{ guardian.id }}</td>
-                <td class="py-3.5 px-4">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-black bg-teal-500/10 text-teal-600 border border-teal-500/20">
-                    {{ guardian.user_code }}
-                  </span>
-                </td>
-                <td class="py-3.5 px-4 font-bold text-bx-title">
-                  {{ guardian.full_name }}
-                </td>
-                <td class="py-3.5 px-4 font-mono text-bx-muted">{{ guardian.phone }}</td>
-                <td class="py-3.5 px-4">
-                  <span class="font-bold text-bx-title">
-                    {{ relationshipLabels[guardian.relationship] || guardian.relationship }}
-                  </span>
-                </td>
-                <td class="py-3.5 px-4">
-                  <span
-                    :class="guardian.students_count > 0 ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' : 'bg-gray-500/10 text-gray-500 border-gray-500/20'"
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border font-mono"
-                  >
-                    {{ guardian.students_count }} طالب
-                  </span>
-                </td>
-                <td class="py-3.5 px-4 font-mono text-bx-muted">{{ guardian.created_at.split('T')[0] }}</td>
-                <td class="py-3.5 px-4 text-center">
-                  <div class="flex items-center justify-center gap-1.5">
-                    <button
-                      @click="openCustodyModal(guardian)"
-                      title="إدارة الأبناء والوصاية"
-                      class="p-1.5 rounded-lg text-bx-muted hover:text-teal-600 hover:bg-[var(--bx-surface-solid)] transition-all cursor-pointer"
-                    >
-                      <Link class="w-4 h-4" />
-                    </button>
-                    <button
-                      @click="openDetailsDrawer(guardian)"
-                      title="معاينة الملف"
-                      class="p-1.5 rounded-lg text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-surface-solid)] transition-all cursor-pointer"
-                    >
-                      <Eye class="w-4 h-4" />
-                    </button>
-                    <button
-                      @click="openEditDrawer(guardian)"
-                      title="تعديل البيانات"
-                      class="p-1.5 rounded-lg text-bx-muted hover:text-amber-500 hover:bg-[var(--bx-surface-solid)] transition-all cursor-pointer"
-                    >
-                      <Edit2 class="w-4 h-4" />
-                    </button>
-                    <button
-                      @click="promptDelete(guardian)"
-                      title="حذف ولي الأمر"
-                      class="p-1.5 rounded-lg text-bx-muted hover:text-red-500 hover:bg-[var(--bx-surface-solid)] transition-all cursor-pointer"
-                    >
-                      <Trash2 class="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Pagination Bar -->
-        <div v-if="meta.total > meta.per_page" class="flex items-center justify-between px-6 py-4 border-t border-bx-border bg-[var(--bx-canvas)]/30 text-xs">
-          <div class="text-bx-muted font-medium">
-            إجمالي أولياء الأمور: <strong class="text-bx-title font-mono">{{ meta.total }}</strong>
-          </div>
-          <div class="flex items-center gap-2">
-            <button
-              :disabled="currentPage <= 1"
-              @click="currentPage--"
-              class="p-1.5 rounded-lg border border-bx-border disabled:opacity-30 disabled:pointer-events-none hover:bg-[var(--bx-surface-solid)] transition-all cursor-pointer"
-            >
-              <ChevronRight class="w-4 h-4" />
-            </button>
-            <span class="font-bold text-bx-title px-2 font-mono">
-              {{ meta.current_page }} / {{ meta.last_page }}
-            </span>
-            <button
-              :disabled="currentPage >= meta.last_page"
-              @click="currentPage++"
-              class="p-1.5 rounded-lg border border-bx-border disabled:opacity-30 disabled:pointer-events-none hover:bg-[var(--bx-surface-solid)] transition-all cursor-pointer"
-            >
-              <ChevronLeft class="w-4 h-4" />
-            </button>
+                <ChevronRight class="w-4 h-4" />
+              </button>
+              <button
+                v-for="p in meta.last_page"
+                :key="p"
+                @click="currentPage = p"
+                class="w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                :class="p === currentPage ? 'bg-bx-primary text-white shadow-sm' : 'hover:bg-[var(--bx-pill)] text-bx-muted'"
+              >
+                {{ p }}
+              </button>
+              <button
+                :disabled="currentPage >= meta.last_page"
+                @click="currentPage++"
+                class="p-1.5 rounded-lg border border-[#B4AED8] dark:border-white/[0.12] hover:bg-[var(--bx-pill)] disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                <ChevronLeft class="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Slide-over Drawer for Create / Edit / Details -->
+      <!-- Taqniya Modern Drawer (View Details / Add / Edit) -->
       <TaqniyaDrawer
         :is-open="showDrawer"
-        :title="drawerMode === 'create' ? 'تسجيل ولي أمر جديد' : drawerMode === 'edit' ? 'تعديل بيانات ولي الأمر' : 'ملف ولي الأمر'"
+        :title="
+          drawerMode === 'details'
+            ? 'ملف ولي الأمر'
+            : drawerMode === 'create'
+            ? 'تسجيل ولي أمر جديد وتوليد الحساب'
+            : 'تعديل بيانات ولي الأمر'
+        "
+        :subtitle="
+          drawerMode === 'details'
+            ? 'تفاصيل السجل الشخصي، بيانات التواصل، وروابط الوصاية'
+            : drawerMode === 'create'
+            ? 'تسجيل ولي أمر جديد وتوليد حساب الدخول PAR-XXXX ذرياً'
+            : 'تحديث بيانات التواصل والسجل الشخصي لولي الأمر'
+        "
+        :icon="drawerMode === 'details' ? HeartHandshake : User"
+        max-width="max-w-[650px]"
         @close="showDrawer = false"
       >
         <!-- DETAILS VIEW -->
-        <div v-if="drawerMode === 'details' && activeGuardian" class="space-y-6 text-right">
-          <div class="bg-gradient-to-br from-teal-500/10 to-emerald-500/10 p-5 rounded-2xl border border-teal-500/20 text-center space-y-2">
-            <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-teal-600 to-emerald-500 text-white mx-auto flex items-center justify-center font-black text-2xl shadow-lg shadow-teal-500/20">
-              <HeartHandshake class="w-8 h-8" />
+        <div v-if="drawerMode === 'details' && activeGuardian" class="space-y-6">
+          <div class="p-5 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-3.5 shadow-xs">
+            <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+              <span class="text-xs font-bold text-bx-muted">الرمز المؤسسي الموحد</span>
+              <span class="font-mono font-bold text-xs text-teal-600 dark:text-teal-400 px-2.5 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/20">
+                {{ activeGuardian.user_code }}
+              </span>
             </div>
-            <h3 class="text-lg font-black text-bx-title">{{ activeGuardian.full_name }}</h3>
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-black bg-teal-500/15 text-teal-600 border border-teal-500/30">
-              {{ activeGuardian.user_code }}
-            </span>
+
+            <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+              <span class="text-xs font-bold text-bx-muted">الاسم الكامل</span>
+              <span class="font-black text-xs text-bx-title">{{ activeGuardian.full_name }}</span>
+            </div>
+
+            <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+              <span class="text-xs font-bold text-bx-muted">رقم هاتف التواصل</span>
+              <span class="font-mono font-bold text-xs text-bx-title" dir="ltr">
+                {{ activeGuardian.phone }}
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+              <span class="text-xs font-bold text-bx-muted">صلة القرابة</span>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                {{ relationshipLabels[activeGuardian.relationship] }}
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+              <span class="text-xs font-bold text-bx-muted">عدد الأبناء المكفولين</span>
+              <span class="font-mono font-bold text-xs text-bx-primary">
+                {{ activeGuardian.students_count }} طالب
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-bx-muted">تاريخ إنشاء القيد</span>
+              <span class="font-['Alexandria',sans-serif] font-bold text-xs text-bx-title">
+                {{ activeGuardian.created_at?.split('T')[0] }}
+              </span>
+            </div>
           </div>
 
-          <div class="bg-[var(--bx-surface-solid)] p-4 rounded-2xl border border-bx-border space-y-3 text-xs">
-            <div class="flex justify-between py-1.5 border-b border-bx-border/50">
-              <span class="text-bx-muted">رقم هاتف التواصل:</span>
-              <span class="font-mono font-bold text-bx-title">{{ activeGuardian.phone }}</span>
-            </div>
-            <div class="flex justify-between py-1.5 border-b border-bx-border/50">
-              <span class="text-bx-muted">صلة القرابة:</span>
-              <span class="font-bold text-bx-title">{{ relationshipLabels[activeGuardian.relationship] }}</span>
-            </div>
-            <div class="flex justify-between py-1.5 border-b border-bx-border/50">
-              <span class="text-bx-muted">عدد الأبناء المكفولين:</span>
-              <span class="font-mono font-bold text-bx-title">{{ activeGuardian.students_count }}</span>
-            </div>
-            <div class="flex justify-between py-1.5">
-              <span class="text-bx-muted">تاريخ إنشاء القيد:</span>
-              <span class="font-mono font-bold text-bx-title">{{ activeGuardian.created_at.split('T')[0] }}</span>
-            </div>
+          <!-- Management Actions Inside Drawer -->
+          <div class="space-y-2.5 pt-2">
+            <button
+              @click="openCustodyModal(activeGuardian)"
+              class="w-full py-2.5 px-4 rounded-full border border-teal-500/30 text-teal-600 dark:text-teal-400 bg-teal-500/10 font-bold text-xs flex items-center justify-center gap-2 hover:bg-teal-500/20 transition-all cursor-pointer"
+            >
+              <Link class="w-4 h-4" />
+              <span>إدارة روابط الوصاية والأبناء المكفولين ({{ activeGuardian.students_count }})</span>
+            </button>
+
+            <button
+              @click="openEditFromDetails"
+              class="w-full py-2.5 px-4 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-title font-bold text-xs flex items-center justify-center gap-2 hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+            >
+              <Edit2 class="w-4 h-4" />
+              <span>تعديل بيانات ولي الأمر</span>
+            </button>
+
+            <button
+              @click="promptDelete(activeGuardian)"
+              class="w-full py-2.5 px-4 rounded-full border border-rose-500/30 text-rose-500 font-bold text-xs flex items-center justify-center gap-2 hover:bg-rose-500/10 transition-all cursor-pointer"
+            >
+              <Trash2 class="w-4 h-4" />
+              <span>حذف ملف ولي الأمر</span>
+            </button>
+
+            <button
+              type="button"
+              @click="showDrawer = false"
+              class="w-full py-2.5 px-4 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title font-bold text-xs flex items-center justify-center gap-2 hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+            >
+              <span>إلغاء</span>
+            </button>
           </div>
         </div>
 
         <!-- CREATE / EDIT FORM -->
-        <form v-else @submit.prevent="handleSaveGuardian" class="space-y-4 text-right">
-          <div v-if="formErrorMessage" class="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-xs flex items-center gap-2">
+        <form v-else @submit.prevent="handleSaveGuardian" class="space-y-5">
+          <div
+            v-if="formErrorMessage"
+            class="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2"
+          >
             <AlertCircle class="w-4 h-4 shrink-0" />
             <span>{{ formErrorMessage }}</span>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-bx-title mb-1.5">الاسم الكامل لولي الأمر *</label>
+          <!-- Full Name -->
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-2 text-bx-title">
+              <User class="w-4 h-4 text-bx-primary shrink-0" />
+              <label class="text-xs font-bold">الاسم الكامل لولي الأمر <span class="text-red-500">*</span></label>
+            </div>
             <input
               v-model="form.full_name"
               type="text"
+              required
+              maxlength="150"
               placeholder="مثال: خالد مسعود السويح"
-              class="w-full px-3 py-2 rounded-xl text-xs border border-bx-border bg-[var(--bx-canvas)] focus:outline-none focus:border-bx-primary transition-colors text-bx-text"
+              class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
             />
-            <p v-if="fieldErrors.full_name" class="text-[11px] text-red-500 mt-1">{{ fieldErrors.full_name[0] }}</p>
+            <p v-if="fieldErrors.full_name" class="text-[11px] text-red-500 font-medium">
+              {{ fieldErrors.full_name[0] }}
+            </p>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-bx-title mb-1.5">رقم هاتف التواصل (فريد) *</label>
-            <div class="relative">
-              <Phone class="w-4 h-4 text-bx-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <!-- Phone & Relationship in 2 Columns -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Phone -->
+            <div class="space-y-1.5">
+              <div class="flex items-center gap-2 text-bx-title">
+                <Phone class="w-4 h-4 text-emerald-500 shrink-0" />
+                <label class="text-xs font-bold">رقم هاتف التواصل (فريد) <span class="text-red-500">*</span></label>
+              </div>
               <input
                 v-model="form.phone"
                 type="text"
+                required
+                maxlength="20"
                 placeholder="مثال: 0913333333"
-                class="w-full px-3 py-2 rounded-xl text-xs border border-bx-border bg-[var(--bx-canvas)] focus:outline-none focus:border-bx-primary transition-colors text-bx-text font-mono"
+                class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-medium"
+                dir="ltr"
+              />
+              <p v-if="fieldErrors.phone" class="text-[11px] text-red-500 font-medium">
+                {{ fieldErrors.phone[0] }}
+              </p>
+            </div>
+
+            <!-- Relationship -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-bx-title block">صلة القرابة</label>
+              <TaqniyaSelect
+                v-model="form.relationship"
+                :options="relationshipOptions"
+                placeholder="اختر صلة القرابة..."
+                full-width
               />
             </div>
-            <p v-if="fieldErrors.phone" class="text-[11px] text-red-500 mt-1">{{ fieldErrors.phone[0] }}</p>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-bx-title mb-1.5">صلة القرابة</label>
-            <select
-              v-model="form.relationship"
-              class="w-full px-3 py-2 rounded-xl text-xs border border-bx-border bg-[var(--bx-canvas)] focus:outline-none focus:border-bx-primary transition-colors text-bx-text"
-            >
-              <option value="father">أب</option>
-              <option value="mother">أم</option>
-              <option value="brother">أخ</option>
-              <option value="uncle">عم / خال</option>
-              <option value="other">صلة قرابة أخرى</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-bx-title mb-1.5">
-              {{ drawerMode === 'create' ? 'كلمة مرور الحساب الموحد *' : 'تغيير كلمة المرور (اختياري)' }}
-            </label>
-            <div class="relative">
-              <Lock class="w-4 h-4 text-bx-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                v-model="form.password"
-                type="password"
-                placeholder="8 خانات على الأقل..."
-                class="w-full px-3 py-2 rounded-xl text-xs border border-bx-border bg-[var(--bx-canvas)] focus:outline-none focus:border-bx-primary transition-colors text-bx-text font-mono"
-              />
+          <!-- Password -->
+          <div class="space-y-1.5 pt-2 border-t border-[#B4AED8]/40 dark:border-white/[0.08]">
+            <div class="flex items-center justify-between text-bx-title">
+              <div class="flex items-center gap-2">
+                <Lock class="w-4 h-4 text-blue-500 shrink-0" />
+                <label class="text-xs font-bold">
+                  كلمة مرور الحساب الموحد
+                  <span v-if="drawerMode === 'create'" class="text-red-500">*</span>
+                </label>
+              </div>
+              <span v-if="drawerMode === 'edit'" class="text-[10px] text-bx-muted">
+                (اتركها فارغة إذا كنت لا تريد التغيير)
+              </span>
             </div>
-            <p v-if="fieldErrors.password" class="text-[11px] text-red-500 mt-1">{{ fieldErrors.password[0] }}</p>
+            <input
+              v-model="form.password"
+              type="password"
+              :required="drawerMode === 'create'"
+              minlength="8"
+              placeholder="••••••••"
+              class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
+            />
+            <p v-if="fieldErrors.password" class="text-[11px] text-red-500 font-medium">
+              {{ fieldErrors.password[0] }}
+            </p>
           </div>
 
-          <div class="pt-4 flex items-center gap-3">
-            <button
-              type="submit"
-              :disabled="isSubmitting"
-              class="flex-1 flex items-center justify-center gap-2 bg-bx-primary hover:bg-bx-primary-hover text-white py-2.5 rounded-2xl text-xs font-bold shadow-md shadow-bx-primary/30 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
-              <Save v-else class="w-4 h-4" />
-              <span>{{ drawerMode === 'create' ? 'إنشاء ملف ولي الأمر' : 'حفظ التعديلات' }}</span>
-            </button>
-            <button
-              type="button"
-              @click="showDrawer = false"
-              class="px-5 py-2.5 rounded-2xl border border-bx-border text-xs font-bold text-bx-muted hover:bg-[var(--bx-canvas)] transition-all cursor-pointer"
-            >
-              إلغاء
-            </button>
+          <!-- Code Generation Info Note -->
+          <div v-if="drawerMode === 'create'" class="p-3.5 rounded-2xl bg-teal-500/[0.06] border border-teal-500/20 text-[11px] text-bx-muted leading-relaxed">
+            <p class="font-bold text-bx-title mb-0.5">💡 توليد الرمز الموحد:</p>
+            <span>سيقوم النظام آلياً بتوليد كود الدخول بصيغة <span class="font-mono font-bold text-teal-600 dark:text-teal-400">PAR-XXXX</span> وتشفير كلمة المرور ذرياً داخل قاعدة البيانات.</span>
           </div>
         </form>
+
+        <!-- Fixed Footer Template for Form Modes -->
+        <template v-if="drawerMode !== 'details'" #footer>
+          <button
+            type="button"
+            @click="showDrawer = false"
+            class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+          >
+            إلغاء
+          </button>
+          <button
+            type="button"
+            :disabled="isSubmitting"
+            @click="handleSaveGuardian"
+            class="inline-flex items-center gap-1.5 px-6 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer"
+          >
+            <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
+            <Save v-else class="w-4 h-4" />
+            <span>{{ isSubmitting ? 'جاري الحفظ...' : drawerMode === 'create' ? 'حفظ وإنشاء ملف ولي الأمر' : 'تحديث البيانات' }}</span>
+          </button>
+        </template>
       </TaqniyaDrawer>
 
       <!-- Custody Management Modal -->
@@ -672,13 +947,14 @@ onMounted(() => {
                 placeholder="معرف الطالب (ID)..."
                 class="flex-1 px-3 py-2 rounded-xl text-xs border border-bx-border bg-[var(--bx-surface-solid)] focus:outline-none focus:border-bx-primary font-mono text-bx-text"
               />
-              <select
-                v-model.number="linkForm.is_primary"
-                class="px-3 py-2 rounded-xl text-xs border border-bx-border bg-[var(--bx-surface-solid)] text-bx-text"
-              >
-                <option :value="1">وصي رئيسي</option>
-                <option :value="0">وصي إضافي</option>
-              </select>
+              <div class="w-48">
+                <TaqniyaSelect
+                  v-model="linkForm.is_primary"
+                  :options="custodyTypeOptions"
+                  placeholder="نوع الوصاية..."
+                  full-width
+                />
+              </div>
               <button
                 type="submit"
                 :disabled="isLinking"

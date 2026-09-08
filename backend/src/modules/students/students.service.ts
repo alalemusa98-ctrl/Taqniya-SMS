@@ -29,6 +29,22 @@ export class StudentsService {
       deleted_at: null,
     };
 
+    if (query.class_section_id) {
+      where.enrollments = {
+        some: {
+          class_section_id: BigInt(query.class_section_id),
+          deleted_at: null,
+        },
+      };
+    } else if (query.class_id) {
+      where.enrollments = {
+        some: {
+          class_id: BigInt(query.class_id),
+          deleted_at: null,
+        },
+      };
+    }
+
     if (query.gender && (query.gender === 'male' || query.gender === 'female')) {
       where.gender = query.gender as Gender;
     }
@@ -84,11 +100,17 @@ export class StudentsService {
 
     const data = students.map((s) => {
       let classSectionStr: string | null = null;
+      let classId: number | null = null;
+      let classSectionId: number | null = null;
+      let seatingNumber: string | null = null;
       if (s.enrollments && s.enrollments.length > 0) {
         const enr = s.enrollments[0];
         const className = enr.class?.name || '';
         const sectionName = enr.class_section?.section?.name || '';
         classSectionStr = className && sectionName ? `${className} - ${sectionName}` : className || sectionName || null;
+        classId = enr.class_id ? Number(enr.class_id) : null;
+        classSectionId = enr.class_section_id ? Number(enr.class_section_id) : null;
+        seatingNumber = enr.seating_number || null;
       }
 
       return {
@@ -100,6 +122,9 @@ export class StudentsService {
         birth_date: s.birth_date ? s.birth_date.toISOString().split('T')[0] : null,
         gender: s.gender,
         class_section: classSectionStr,
+        class_id: classId,
+        class_section_id: classSectionId,
+        seating_number: seatingNumber,
         created_at: s.created_at.toISOString(),
       };
     });
@@ -182,11 +207,17 @@ export class StudentsService {
     }
 
     let classSectionStr: string | null = null;
+    let classId: number | null = null;
+    let classSectionId: number | null = null;
+    let seatingNumber: string | null = null;
     if (student.enrollments && student.enrollments.length > 0) {
       const enr = student.enrollments[0];
       const className = enr.class?.name || '';
       const sectionName = enr.class_section?.section?.name || '';
       classSectionStr = className && sectionName ? `${className} - ${sectionName}` : className || sectionName || null;
+      classId = enr.class_id ? Number(enr.class_id) : null;
+      classSectionId = enr.class_section_id ? Number(enr.class_section_id) : null;
+      seatingNumber = enr.seating_number || null;
     }
 
     return {
@@ -201,6 +232,9 @@ export class StudentsService {
         birth_date: student.birth_date ? student.birth_date.toISOString().split('T')[0] : null,
         gender: student.gender,
         class_section: classSectionStr,
+        class_id: classId,
+        class_section_id: classSectionId,
+        seating_number: seatingNumber,
         created_at: student.created_at.toISOString(),
       },
     };
