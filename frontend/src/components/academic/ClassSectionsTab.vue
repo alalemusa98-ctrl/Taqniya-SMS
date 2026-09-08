@@ -488,7 +488,7 @@ onMounted(async () => {
                     <div class="flex items-center gap-1.5 shrink-0">
                       <!-- Details Button -->
                       <button
-                        @click="openDetails(row.cells[sec.id].row)"
+                        @click="openDetails(row.cells[sec.id]!.row!)"
                         class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
                         title="عرض تفاصيل تسكين الشعبة"
                       >
@@ -497,7 +497,7 @@ onMounted(async () => {
 
                       <!-- Unassign / Delete Button -->
                       <button
-                        @click="confirmDelete({ id: row.cells[sec.id].row.id, name: row.cells[sec.id].row.section_name })"
+                        @click="confirmDelete({ id: row.cells[sec.id]!.row!.id, name: row.cells[sec.id]!.row!.section_name })"
                         class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
                         title="فك ربط الشعبة من هذا الصف"
                       >

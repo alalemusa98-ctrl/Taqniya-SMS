@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue';
 import {
   Plus,
   Search,
-  Edit2,
+  UserCheck,
   Trash2,
   Loader2,
   AlertCircle,
@@ -677,7 +677,18 @@ onMounted(async () => {
           </div>
 
           <div>
-            <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب المعلم</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-[11px] font-bold text-bx-muted">تصفية حسب المعلم</label>
+              <button
+                v-if="selectedTeacherFilter && selectedTeacherFilter !== 'all'"
+                type="button"
+                @click="openWorkloadDrawer(Number(selectedTeacherFilter))"
+                class="text-[10px] font-bold text-bx-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+              >
+                <UserCheck class="w-3 h-3" />
+                <span>عرض النصاب التدريسي</span>
+              </button>
+            </div>
             <TaqniyaSelect
               v-model="selectedTeacherFilter"
               :options="teacherFilterOptions"
@@ -897,14 +908,25 @@ onMounted(async () => {
                         </div>
                       </div>
 
-                      <!-- Approved Taqniya Delete Button (Circular with High Contrast in Dark Mode) -->
-                      <button
-                        @click.stop="confirmDelete(row.assignmentsBySection[sec.class_section_id])"
-                        class="w-6 h-6 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                        title="فك وإلغاء إسناد المادة"
-                      >
-                        <Trash2 class="w-3 h-3" />
-                      </button>
+                      <div class="flex items-center gap-1 shrink-0">
+                        <!-- Workload Button -->
+                        <button
+                          @click.stop="openWorkloadDrawer(row.assignmentsBySection[sec.class_section_id].teacher_id)"
+                          class="w-6 h-6 rounded-full border border-[#B4AED8] bg-white text-bx-primary hover:bg-bx-primary hover:text-white dark:border-white/20 dark:bg-slate-800 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                          title="عرض النصاب التدريسي للمعلم"
+                        >
+                          <UserCheck class="w-3 h-3" />
+                        </button>
+
+                        <!-- Approved Taqniya Delete Button (Circular with High Contrast in Dark Mode) -->
+                        <button
+                          @click.stop="confirmDelete(row.assignmentsBySection[sec.class_section_id])"
+                          class="w-6 h-6 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                          title="فك وإلغاء إسناد المادة"
+                        >
+                          <Trash2 class="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
 
                     <!-- Unassigned: + تعيين معلم button (Matching pill geometry) -->

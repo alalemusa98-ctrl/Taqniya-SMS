@@ -12,7 +12,7 @@ export interface TaqniyaSelectOption {
 
 const props = withDefaults(
   defineProps<{
-    modelValue: string | number | (string | number)[];
+    modelValue?: string | number | (string | number)[] | null;
     options: TaqniyaSelectOption[];
     placeholder?: string;
     searchPlaceholder?: string;

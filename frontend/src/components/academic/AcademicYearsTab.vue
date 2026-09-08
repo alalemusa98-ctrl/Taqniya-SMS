@@ -3,7 +3,6 @@ import { ref, onMounted, defineAsyncComponent } from 'vue';
 import { academicApi, type AcademicYearItem } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
 import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
-import TaqniyaErrorBoundary from '../ui/TaqniyaErrorBoundary.vue';
 
 // Component Lazy Loading (component_lazy_loading)
 const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));

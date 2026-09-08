@@ -70,7 +70,6 @@ const formErrorMessage = ref<string | null>(null);
 
 // Custody Drawer & On-Demand Search State
 const showCustodyDrawer = ref(false);
-const showCustodyModal = showCustodyDrawer; // alias
 const selectedGuardianForCustody = ref<Guardian | null>(null);
 const custodyChildren = ref<GuardianStudentChild[]>([]);
 const loadingCustody = ref(false);

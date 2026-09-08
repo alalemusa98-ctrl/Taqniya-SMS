@@ -662,9 +662,9 @@ onMounted(async () => {
                     v-if="row.cells[term.id]?.isAssigned && row.cells[term.id]?.row"
                     class="p-3.5 rounded-2xl border transition-all duration-200 text-start space-y-3 group hover:-translate-y-0.5 hover:shadow-md"
                     :class="[
-                      row.cells[term.id].row.is_active === 1
+                      row.cells[term.id]!.row!.is_active === 1
                         ? 'border-emerald-500/50 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-500/[0.02] to-transparent dark:from-emerald-500/20 dark:via-emerald-500/5 dark:to-transparent ring-1 ring-emerald-500/30 shadow-xs'
-                        : row.cells[term.id].row.is_closed === 1
+                        : row.cells[term.id]!.row!.is_closed === 1
                         ? 'border-slate-300 dark:border-white/10 bg-slate-500/[0.04]'
                         : 'border-[#B4AED8]/70 dark:border-white/10 bg-[var(--bx-surface-solid)] hover:border-bx-primary/40'
                     ]"
@@ -673,28 +673,28 @@ onMounted(async () => {
                     <div class="flex items-center justify-between gap-2">
                       <!-- Reference Code Tag -->
                       <span class="px-2.5 py-0.5 rounded-full font-mono text-[10px] font-black bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/40 dark:border-white/10 text-bx-title/70">
-                        {{ row.cells[term.id].row.code }}
+                        {{ row.cells[term.id]!.row!.code }}
                       </span>
 
                       <!-- Status Badge -->
                       <span
                         class="px-2.5 py-0.5 rounded-full text-[10px] font-black border flex items-center gap-1.5 shadow-2xs"
                         :class="[
-                          row.cells[term.id].row.is_active === 1
+                          row.cells[term.id]!.row!.is_active === 1
                             ? 'border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-500/15'
-                            : row.cells[term.id].row.is_closed === 1
+                            : row.cells[term.id]!.row!.is_closed === 1
                             ? 'border-slate-400/40 text-slate-600 dark:text-slate-300 bg-slate-500/15'
                             : 'border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/15'
                         ]"
                       >
                         <!-- Beacon indicator for active -->
-                        <span v-if="row.cells[term.id].row.is_active === 1" class="relative flex h-2 w-2">
+                        <span v-if="row.cells[term.id]!.row!.is_active === 1" class="relative flex h-2 w-2">
                           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                           <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </span>
-                        <Lock v-else-if="row.cells[term.id].row.is_closed === 1" class="w-3 h-3 text-slate-500" />
+                        <Lock v-else-if="row.cells[term.id]!.row!.is_closed === 1" class="w-3 h-3 text-slate-500" />
                         <span v-else class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                        <span>{{ row.cells[term.id].row.statusLabel }}</span>
+                        <span>{{ row.cells[term.id]!.row!.statusLabel }}</span>
                       </span>
                     </div>
 
@@ -702,10 +702,10 @@ onMounted(async () => {
                     <div class="flex items-center justify-between gap-2 pt-2 border-t border-[#B4AED8]/30 dark:border-white/[0.06]">
                       <!-- Context Label -->
                       <div class="text-[10px] font-bold text-bx-muted truncate">
-                        <span v-if="row.cells[term.id].row.is_active === 1" class="text-emerald-600 dark:text-emerald-400 font-black flex items-center gap-1">
+                        <span v-if="row.cells[term.id]!.row!.is_active === 1" class="text-emerald-600 dark:text-emerald-400 font-black flex items-center gap-1">
                           الفترة الحالية
                         </span>
-                        <span v-else-if="row.cells[term.id].row.is_closed === 1" class="text-slate-500 font-bold">
+                        <span v-else-if="row.cells[term.id]!.row!.is_closed === 1" class="text-slate-500 font-bold">
                           الرصد مغلق
                         </span>
                         <span v-else class="text-bx-muted font-medium">
@@ -717,7 +717,7 @@ onMounted(async () => {
                       <div class="flex items-center gap-1.5 shrink-0">
                         <!-- Details Button -->
                         <button
-                          @click="openDetails(row.cells[term.id].row)"
+                          @click="openDetails(row.cells[term.id]!.row!)"
                           class="w-7 h-7 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-white dark:bg-white/[0.05] text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-2xs hover:scale-110 active:scale-95"
                           title="عرض تفاصيل الفترة"
                         >
@@ -726,8 +726,8 @@ onMounted(async () => {
 
                         <!-- Quick Activate Button (when not already active) -->
                         <button
-                          v-if="row.cells[term.id].row.is_active !== 1"
-                          @click="handleActivate(row.cells[term.id].row.id)"
+                          v-if="row.cells[term.id]!.row!.is_active !== 1"
+                          @click="handleActivate(row.cells[term.id]!.row!.id)"
                           class="w-7 h-7 rounded-full border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow-sm hover:shadow-emerald-500/30 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-2xs hover:scale-110 active:scale-95"
                           title="تفعيل هذا الفصل للصف"
                         >
@@ -736,17 +736,17 @@ onMounted(async () => {
 
                         <!-- Lock / Unlock Toggle -->
                         <button
-                          @click="handleToggleClose(row.cells[term.id].row.id)"
+                          @click="handleToggleClose(row.cells[term.id]!.row!.id)"
                           class="w-7 h-7 rounded-full border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-600 hover:text-white hover:border-amber-600 hover:shadow-sm hover:shadow-amber-500/30 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-2xs hover:scale-110 active:scale-95"
-                          :title="row.cells[term.id].row.is_closed === 1 ? 'فتح رصد الدرجات' : 'إغلاق رصد الدرجات'"
+                          :title="row.cells[term.id]!.row!.is_closed === 1 ? 'فتح رصد الدرجات' : 'إغلاق رصد الدرجات'"
                         >
-                          <component :is="row.cells[term.id].row.is_closed === 1 ? Lock : Unlock" class="w-3.5 h-3.5" />
+                          <component :is="row.cells[term.id]!.row!.is_closed === 1 ? Lock : Unlock" class="w-3.5 h-3.5" />
                         </button>
 
                         <!-- Unassign / Delete Button (when not active) -->
                         <button
-                          v-if="row.cells[term.id].row.is_active !== 1"
-                          @click="confirmDelete(row.cells[term.id].row)"
+                          v-if="row.cells[term.id]!.row!.is_active !== 1"
+                          @click="confirmDelete(row.cells[term.id]!.row!)"
                           class="w-7 h-7 rounded-full border border-rose-300 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white hover:border-rose-600 hover:shadow-sm hover:shadow-rose-500/30 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-2xs hover:scale-110 active:scale-95"
                           title="فك الارتباط بهذا الفصل"
                         >

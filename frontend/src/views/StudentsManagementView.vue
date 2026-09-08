@@ -17,8 +17,6 @@ import {
   GraduationCap,
   Save,
   Users,
-  BookOpen,
-  Sparkles,
   Hash,
   School,
   Filter,
