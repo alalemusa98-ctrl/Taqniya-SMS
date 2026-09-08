@@ -16,7 +16,10 @@ import { AppService } from './app.service.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: process.env.NODE_ENV === 'test' ? ['.env.test', '.env'] : ['.env'],
+    }),
     ThrottlerModule.forRoot([
       {
         name: 'default',

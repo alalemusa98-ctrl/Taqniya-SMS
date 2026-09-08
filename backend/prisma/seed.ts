@@ -62,20 +62,28 @@ async function main() {
   // ===========================================================================
   console.log('🧹 Purging old & transient records for a fresh clean state...');
 
-  // 2.1 Delete Phase 02-C child relations
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0;');
+
+  // Delete child relations across modules
+  await prisma.teachingAssignment.deleteMany({});
+  await prisma.studentEnrollment.deleteMany({});
+  await prisma.guardianStudent.deleteMany({});
+  await prisma.student.deleteMany({});
+  await prisma.guardian.deleteMany({});
+  await prisma.teacher.deleteMany({});
   await prisma.classSubject.deleteMany({});
   await prisma.classSection.deleteMany({});
   await prisma.classAcademicTerm.deleteMany({});
 
-  // 2.2 Delete Phase 02-B entities
+  // Delete entities
   await prisma.class.deleteMany({});
   await prisma.section.deleteMany({});
   await prisma.subject.deleteMany({});
-
-  // 2.3 Delete Phase 02-A entities
   await prisma.academicTerm.deleteMany({});
   await prisma.academicStage.deleteMany({});
   await prisma.academicYear.deleteMany({});
+
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1;');
 
   console.log('✅ Database reset complete.');
 

@@ -10,5 +10,10 @@ export default defineConfig({
     root: './',
     include: ['**/*.spec.ts'],
     fileParallelism: false,
+    env: {
+      NODE_ENV: 'test',
+      DB_NAME: 'taqniya_sms_test',
+      DATABASE_URL: 'mysql://root:12255@localhost:3306/taqniya_sms_test',
+    },
   },
 });
