@@ -14,6 +14,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { StudentsService } from './students.service.js';
+import { StudentEnrollmentsService } from '../student-enrollments/student-enrollments.service.js';
 import { CreateStudentDto } from './dto/create-student.dto.js';
 import { UpdateStudentDto } from './dto/update-student.dto.js';
 import { FindStudentsQueryDto } from './dto/find-students-query.dto.js';
@@ -27,7 +28,10 @@ import type { Request } from 'express';
 @Controller('api/v1/students')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class StudentsController {
-  constructor(private readonly studentsService: StudentsService) {}
+  constructor(
+    private readonly studentsService: StudentsService,
+    private readonly studentEnrollmentsService: StudentEnrollmentsService,
+  ) {}
 
   @Get()
   @Roles(RoleType.admin, RoleType.teacher)
@@ -80,5 +84,14 @@ export class StudentsController {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
     return this.studentsService.delete(id, Number(user.id), ipAddress, userAgent);
+  }
+
+  @Get(':student_id/enrollments')
+  @Roles(RoleType.admin, RoleType.teacher, RoleType.student, RoleType.parent)
+  async getEnrollments(
+    @Param('student_id', ParseIntPipe) studentId: number,
+    @CurrentUser() user: any,
+  ) {
+    return this.studentEnrollmentsService.getStudentEnrollments(studentId, user);
   }
 }

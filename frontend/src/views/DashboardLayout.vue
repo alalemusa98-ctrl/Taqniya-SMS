@@ -13,6 +13,7 @@ import {
   UserCheck,
   BookOpenCheck,
   HeartHandshake,
+  School,
   Menu,
   X,
 } from 'lucide-vue-next';
@@ -60,6 +61,12 @@ const studentsGroup: NavDropdownItem[] = [
     to: '/students',
     description: 'إدارة ملفات الطلاب، الأكواد الموحدة والتسكين الأكاديمي',
     icon: GraduationCap,
+  },
+  {
+    label: 'تسكين وتسجيل الطلاب',
+    to: '/student-enrollments',
+    description: 'توزيع وتسكين الطلاب بالفصول والشعب وأرقام الجلوس',
+    icon: School,
   },
   {
     label: 'أولياء الأمور والوصاية',

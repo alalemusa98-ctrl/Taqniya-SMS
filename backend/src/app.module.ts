@@ -11,6 +11,7 @@ import { TeachingAssignmentsModule } from './modules/teaching-assignments/teachi
 import { StudentsModule } from './modules/students/students.module.js';
 import { GuardiansModule } from './modules/guardians/guardians.module.js';
 import { GuardianStudentsModule } from './modules/guardian-students/guardian-students.module.js';
+import { StudentEnrollmentsModule } from './modules/student-enrollments/student-enrollments.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -37,6 +38,7 @@ import { AppService } from './app.service.js';
     StudentsModule,
     GuardiansModule,
     GuardianStudentsModule,
+    StudentEnrollmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
