@@ -4,9 +4,73 @@ import { RouterLink } from 'vue-router';
 import { useAuthStore } from '../stores/auth.store';
 import HeaderUserDropdown from '../components/layout/HeaderUserDropdown.vue';
 import ThemeToggle from '../components/layout/ThemeToggle.vue';
-import { Users, ShieldCheck, Layers, GraduationCap, UserCheck, BookOpenCheck, HeartHandshake } from 'lucide-vue-next';
+import HeaderNavDropdown, { type NavDropdownItem } from '../components/layout/HeaderNavDropdown.vue';
+import {
+  Users,
+  ShieldCheck,
+  Layers,
+  GraduationCap,
+  UserCheck,
+  BookOpenCheck,
+  HeartHandshake,
+  Menu,
+  X,
+} from 'lucide-vue-next';
 
 const authStore = useAuthStore();
+const isMobileMenuOpen = ref(false);
+
+// Nav Groups (Option A)
+const studentsGroup: NavDropdownItem[] = [
+  {
+    label: 'سجلات الطلاب',
+    to: '/students',
+    description: 'إدارة ملفات الطلاب، الأكواد الموحدة والتسكين الأكاديمي',
+    icon: GraduationCap,
+  },
+  {
+    label: 'أولياء الأمور والوصاية',
+    to: '/guardians',
+    description: 'ملفات أولياء الأمور، قيد الهواتف، وروابط كفالة الأبناء',
+    icon: HeartHandshake,
+  },
+];
+
+const academicGroup: NavDropdownItem[] = [
+  {
+    label: 'الهيكل الأكاديمي',
+    to: '/academic-structure',
+    description: 'المراحل الدراسية، الصفوف، الشعب، والمناهج والمواد',
+    icon: Layers,
+  },
+  {
+    label: 'الكادر التعليمي',
+    to: '/teachers',
+    description: 'ملفات المعلمين، الأكواد الوظيفية، والتخصصات التدريسية',
+    icon: UserCheck,
+  },
+  {
+    label: 'إسناد التدريس والنصاب',
+    to: '/teaching-assignments',
+    description: 'كشوفات توزيع المواد والشعب وفحص النصاب الأكاديمي',
+    icon: BookOpenCheck,
+  },
+];
+
+const systemGroup: NavDropdownItem[] = [
+  {
+    label: 'المستخدمون والحسابات',
+    to: '/users',
+    description: 'إدارة الحسابات الموحدة، الصلاحيات وتفعيل الجلسات',
+    icon: Users,
+  },
+  {
+    label: 'سجلات التدقيق الأمني',
+    to: '/audit-logs',
+    description: 'رصد وتتبع كافة العمليات الحساسة والتغييرات بالنظام',
+    icon: ShieldCheck,
+  },
+];
 
 // Smart Header: Hide on scroll down, reveal on scroll up
 const isHeaderVisible = ref(true);
@@ -26,6 +90,7 @@ const handleScroll = () => {
   // Scroll Down -> Hide
   if (currentScrollY > lastScrollY + scrollThreshold) {
     isHeaderVisible.value = false;
+    isMobileMenuOpen.value = false;
   }
   // Scroll Up -> Show
   else if (currentScrollY < lastScrollY - scrollThreshold) {
@@ -57,7 +122,7 @@ onUnmounted(() => {
     >
       <div class="max-w-[1600px] mx-auto px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
         <!-- Logo & Brand -->
-        <div class="flex items-center gap-8">
+        <div class="flex items-center gap-6 lg:gap-8">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-bx-primary to-purple-400 text-white flex items-center justify-center font-black text-lg shadow-md shadow-bx-primary/20">
               <Layers class="w-5 h-5" />
@@ -68,77 +133,114 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Nav Items -->
+          <!-- Nav Items with Dropdowns (Option A: Desktop / Tablet) -->
           <nav v-if="authStore.isAdmin" class="hidden md:flex items-center gap-2">
-            <RouterLink
-              to="/users"
-              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
-              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <Users class="w-4 h-4" />
-              <span>إدارة المستخدمين</span>
-            </RouterLink>
+            <!-- 1. Students & Guardians -->
+            <HeaderNavDropdown
+              title="شؤون الطلاب والأسرة"
+              :icon="GraduationCap"
+              :items="studentsGroup"
+            />
 
-            <RouterLink
-              to="/students"
-              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
-              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <GraduationCap class="w-4 h-4" />
-              <span>الطلاب</span>
-            </RouterLink>
+            <!-- 2. Academic Structure & Faculty -->
+            <HeaderNavDropdown
+              title="الهيكل والتعليم"
+              :icon="Layers"
+              :items="academicGroup"
+            />
 
-            <RouterLink
-              to="/guardians"
-              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
-              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <HeartHandshake class="w-4 h-4" />
-              <span>أولياء الأمور</span>
-            </RouterLink>
-
-            <RouterLink
-              to="/teachers"
-              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
-              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <UserCheck class="w-4 h-4" />
-              <span>الكادر التعليمي</span>
-            </RouterLink>
-
-            <RouterLink
-              to="/teaching-assignments"
-              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
-              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <BookOpenCheck class="w-4 h-4" />
-              <span>إسناد التدريس</span>
-            </RouterLink>
-
-            <RouterLink
-              to="/academic-structure"
-              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
-              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <GraduationCap class="w-4 h-4" />
-              <span>الهيكل الأكاديمي</span>
-            </RouterLink>
-
-            <RouterLink
-              to="/audit-logs"
-              active-class="!bg-bx-primary !text-white shadow-md shadow-bx-primary/30 font-black"
-              class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <ShieldCheck class="w-4 h-4" />
-              <span>سجلات التدقيق الأمني</span>
-            </RouterLink>
+            <!-- 3. System & Governance -->
+            <HeaderNavDropdown
+              title="إدارة النظام والأمان"
+              :icon="ShieldCheck"
+              :items="systemGroup"
+            />
           </nav>
         </div>
 
-        <!-- Controls: Theme Toggle + User Dropdown -->
-        <div class="flex items-center gap-3">
+        <!-- Controls: Theme Toggle + User Dropdown + Mobile Menu Button -->
+        <div class="flex items-center gap-2.5 sm:gap-3">
+          <!-- Mobile Menu Toggle Button -->
+          <button
+            v-if="authStore.isAdmin"
+            @click="isMobileMenuOpen = !isMobileMenuOpen"
+            class="md:hidden p-2 rounded-full border border-bx-border text-bx-muted hover:text-bx-title hover:bg-[var(--bx-pill)] transition-all cursor-pointer"
+            :title="isMobileMenuOpen ? 'إغلاق القائمة' : 'فتح القائمة الرئيسية'"
+          >
+            <component :is="isMobileMenuOpen ? X : Menu" class="w-5 h-5" />
+          </button>
+
           <ThemeToggle />
           <HeaderUserDropdown />
+        </div>
+      </div>
+
+      <!-- Mobile Navigation Drawer / Dropdown Panel -->
+      <div
+        v-if="isMobileMenuOpen && authStore.isAdmin"
+        class="md:hidden border-t border-[#B4AED8] dark:border-white/20 bg-white dark:bg-[#24253B] px-4 py-4 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl animate-in slide-in-from-top-2 duration-200"
+      >
+        <!-- Group 1 -->
+        <div>
+          <div class="text-[11px] font-black text-bx-primary flex items-center gap-1.5 mb-2 px-2">
+            <GraduationCap class="w-3.5 h-3.5" />
+            <span>شؤون الطلاب والأسرة</span>
+          </div>
+          <div class="grid grid-cols-1 gap-1.5">
+            <RouterLink
+              v-for="item in studentsGroup"
+              :key="item.to"
+              :to="item.to"
+              @click="isMobileMenuOpen = false"
+              active-class="bg-bx-primary text-white font-black"
+              class="flex items-center gap-3 p-2.5 rounded-xl text-xs font-bold text-bx-title hover:bg-[var(--bx-pill)] transition-colors"
+            >
+              <component :is="item.icon" class="w-4 h-4 text-bx-primary" />
+              <span>{{ item.label }}</span>
+            </RouterLink>
+          </div>
+        </div>
+
+        <!-- Group 2 -->
+        <div class="pt-2 border-t border-bx-border/60">
+          <div class="text-[11px] font-black text-bx-primary flex items-center gap-1.5 mb-2 px-2">
+            <Layers class="w-3.5 h-3.5" />
+            <span>الهيكل والتعليم</span>
+          </div>
+          <div class="grid grid-cols-1 gap-1.5">
+            <RouterLink
+              v-for="item in academicGroup"
+              :key="item.to"
+              :to="item.to"
+              @click="isMobileMenuOpen = false"
+              active-class="bg-bx-primary text-white font-black"
+              class="flex items-center gap-3 p-2.5 rounded-xl text-xs font-bold text-bx-title hover:bg-[var(--bx-pill)] transition-colors"
+            >
+              <component :is="item.icon" class="w-4 h-4 text-bx-primary" />
+              <span>{{ item.label }}</span>
+            </RouterLink>
+          </div>
+        </div>
+
+        <!-- Group 3 -->
+        <div class="pt-2 border-t border-bx-border/60">
+          <div class="text-[11px] font-black text-bx-primary flex items-center gap-1.5 mb-2 px-2">
+            <ShieldCheck class="w-3.5 h-3.5" />
+            <span>إدارة النظام والأمان</span>
+          </div>
+          <div class="grid grid-cols-1 gap-1.5">
+            <RouterLink
+              v-for="item in systemGroup"
+              :key="item.to"
+              :to="item.to"
+              @click="isMobileMenuOpen = false"
+              active-class="bg-bx-primary text-white font-black"
+              class="flex items-center gap-3 p-2.5 rounded-xl text-xs font-bold text-bx-title hover:bg-[var(--bx-pill)] transition-colors"
+            >
+              <component :is="item.icon" class="w-4 h-4 text-bx-primary" />
+              <span>{{ item.label }}</span>
+            </RouterLink>
+          </div>
         </div>
       </div>
     </header>

@@ -57,7 +57,7 @@ const getRoleBadge = (role?: string) => {
     <!-- Taqniya Dropdown Menu -->
     <div
       v-if="isOpen"
-      class="bx-dropdown-menu end-0 start-auto mt-2 w-64 z-50 p-2 animate-in fade-in zoom-in-95 duration-150"
+      class="bx-dropdown-menu !bg-white dark:!bg-[#24253B] border border-[#B4AED8] dark:border-white/20 shadow-2xl end-0 start-auto mt-2 w-64 z-[60] p-2 animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/10"
     >
       <!-- User Info Header -->
       <div class="p-3 border-b border-bx-border space-y-1">
