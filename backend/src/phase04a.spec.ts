@@ -238,6 +238,54 @@ describe('Phase 04-A: Students, Guardians & Custody Registry (TDD Verification)'
       expect(result.data.full_name).toBe(updateDto.full_name);
     });
 
+    it('TC-STU-06b: Should update student placement and safely handle existing or soft-deleted enrollment', async () => {
+      // 1. Assign student to class_section
+      const placeResult = await studentsService.update(
+        createdStudentId,
+        {
+          class_section_id: testClassSectionId,
+          seating_number: 'SEAT-TEST-01',
+        },
+        testAdminId,
+      );
+      expect(placeResult.success).toBe(true);
+
+      // Verify placement via findOne
+      const detail1 = await studentsService.findOne(createdStudentId);
+      expect(detail1.data.class_section_id).toBe(testClassSectionId);
+      expect(detail1.data.seating_number).toBe('SEAT-TEST-01');
+
+      // 2. Soft-delete the enrollment to simulate previous deletion
+      await prisma.studentEnrollment.updateMany({
+        where: {
+          student_id: BigInt(createdStudentId),
+          academic_year_id: BigInt(testYearId),
+        },
+        data: { deleted_at: new Date() },
+      });
+
+      // 3. Update again with new seating_number and section -> must NOT fail with 500 uq_student_year_enrollment
+      const restoreResult = await studentsService.update(
+        createdStudentId,
+        {
+          class_section_id: testClassSectionId,
+          seating_number: 'SEAT-TEST-02',
+        },
+        testAdminId,
+      );
+      expect(restoreResult.success).toBe(true);
+
+      // Verify it was restored with deleted_at = null
+      const detail2 = await studentsService.findOne(createdStudentId);
+      expect(detail2.data.class_section_id).toBe(testClassSectionId);
+      expect(detail2.data.seating_number).toBe('SEAT-TEST-02');
+
+      // Cleanup enrollment so TC-STU-07 / delete tests can manage their own state
+      await prisma.studentEnrollment.deleteMany({
+        where: { student_id: BigInt(createdStudentId) },
+      });
+    });
+
     it('TC-STU-07: Should reject deleting student when active enrollments or parents exist (RESTRICT)', async () => {
       // Add enrollment to block deletion
       const enrollment = await prisma.studentEnrollment.create({

@@ -94,6 +94,23 @@ export class StudentsService {
               },
             },
           },
+          guardians: {
+            where: { deleted_at: null, guardian: { deleted_at: null } },
+            orderBy: [{ is_primary: 'desc' }, { id: 'asc' }],
+            include: {
+              guardian: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      user_code: true,
+                      is_active: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       }),
     ]);
@@ -113,6 +130,18 @@ export class StudentsService {
         seatingNumber = enr.seating_number || null;
       }
 
+      const guardiansList = (s.guardians || []).map((gs: any) => ({
+        id: Number(gs.id),
+        guardian_id: Number(gs.guardian.id),
+        user_id: Number(gs.guardian.user_id),
+        user_code: gs.guardian.user?.user_code || '',
+        full_name: gs.guardian.full_name,
+        phone: gs.guardian.phone,
+        relationship: gs.guardian.relationship,
+        is_primary: gs.is_primary === 1,
+      }));
+      const primaryGuardian = guardiansList.find((g) => g.is_primary) || (guardiansList.length > 0 ? guardiansList[0] : null);
+
       return {
         id: Number(s.id),
         user_id: Number(s.user_id),
@@ -125,6 +154,8 @@ export class StudentsService {
         class_id: classId,
         class_section_id: classSectionId,
         seating_number: seatingNumber,
+        guardians: guardiansList,
+        primary_guardian: primaryGuardian,
         created_at: s.created_at.toISOString(),
       };
     });
@@ -162,6 +193,23 @@ export class StudentsService {
             class_section: {
               include: {
                 section: true,
+              },
+            },
+          },
+        },
+        guardians: {
+          where: { deleted_at: null, guardian: { deleted_at: null } },
+          orderBy: [{ is_primary: 'desc' }, { id: 'asc' }],
+          include: {
+            guardian: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    user_code: true,
+                    is_active: true,
+                  },
+                },
               },
             },
           },
@@ -220,6 +268,18 @@ export class StudentsService {
       seatingNumber = enr.seating_number || null;
     }
 
+    const guardiansList = (student.guardians || []).map((gs: any) => ({
+      id: Number(gs.id),
+      guardian_id: Number(gs.guardian.id),
+      user_id: Number(gs.guardian.user_id),
+      user_code: gs.guardian.user?.user_code || '',
+      full_name: gs.guardian.full_name,
+      phone: gs.guardian.phone,
+      relationship: gs.guardian.relationship,
+      is_primary: gs.is_primary === 1,
+    }));
+    const primaryGuardian = guardiansList.find((g) => g.is_primary) || (guardiansList.length > 0 ? guardiansList[0] : null);
+
     return {
       success: true,
       message: 'تم جلب تفاصيل ملف الطالب بنجاح.',
@@ -235,6 +295,8 @@ export class StudentsService {
         class_id: classId,
         class_section_id: classSectionId,
         seating_number: seatingNumber,
+        guardians: guardiansList,
+        primary_guardian: primaryGuardian,
         created_at: student.created_at.toISOString(),
       },
     };
@@ -447,63 +509,74 @@ export class StudentsService {
         include: { user: true },
       });
 
-      // Update enrollment if class_section_id is provided
-      if (dto.class_section_id) {
-        const classSection = await tx.classSection.findUnique({
-          where: { id: BigInt(dto.class_section_id) },
-          include: { class: true },
-        });
-        if (classSection) {
-          let yearId: bigint;
-          if (dto.academic_year_id) {
-            yearId = BigInt(dto.academic_year_id);
-          } else {
-            const activeYear = await tx.academicYear.findFirst({
-              where: { is_active: 1, deleted_at: null },
+      // Update enrollment if class_section_id or seating_number is provided
+      if (dto.class_section_id || dto.seating_number !== undefined) {
+        let yearId: bigint;
+        if (dto.academic_year_id) {
+          yearId = BigInt(dto.academic_year_id);
+        } else {
+          const activeYear = await tx.academicYear.findFirst({
+            where: { is_active: 1, deleted_at: null },
+          });
+          if (!activeYear) {
+            throw new BadRequestException({
+              success: false,
+              message: 'لا يوجد عام دراسي نشط حالياً لتسكين الطالب.',
             });
-            yearId = activeYear ? activeYear.id : BigInt(1);
           }
+          yearId = activeYear.id;
+        }
 
-          const existingEnrollment = await tx.studentEnrollment.findFirst({
-            where: {
+        let classSection: any = null;
+        if (dto.class_section_id) {
+          classSection = await tx.classSection.findUnique({
+            where: { id: BigInt(dto.class_section_id) },
+            include: { class: true },
+          });
+          if (!classSection) {
+            throw new BadRequestException({
+              success: false,
+              message: 'الشعبة الدراسية المحددة غير موجودة.',
+            });
+          }
+        }
+
+        const existingYearEnrollment = await tx.studentEnrollment.findUnique({
+          where: {
+            academic_year_id_student_id: {
+              academic_year_id: yearId,
               student_id: student.id,
+            },
+          },
+        });
+
+        if (existingYearEnrollment) {
+          await tx.studentEnrollment.update({
+            where: { id: existingYearEnrollment.id },
+            data: {
+              class_id: classSection ? classSection.class_id : existingYearEnrollment.class_id,
+              class_section_id: classSection ? classSection.id : existingYearEnrollment.class_section_id,
+              grade_level: classSection ? (classSection.class?.grade_level || 1) : existingYearEnrollment.grade_level,
+              seating_number:
+                dto.seating_number !== undefined
+                  ? dto.seating_number || null
+                  : existingYearEnrollment.seating_number,
+              status: 'enrolled',
               deleted_at: null,
             },
-            orderBy: { id: 'desc' },
           });
-
-          if (existingEnrollment) {
-            await tx.studentEnrollment.update({
-              where: { id: existingEnrollment.id },
-              data: {
-                academic_year_id: yearId,
-                class_id: classSection.class_id,
-                class_section_id: classSection.id,
-                grade_level: classSection.class?.grade_level || 1,
-                seating_number: dto.seating_number ?? existingEnrollment.seating_number,
-              },
-            });
-            await tx.studentEnrollment.updateMany({
-              where: {
-                student_id: student.id,
-                id: { not: existingEnrollment.id },
-                deleted_at: null,
-              },
-              data: { deleted_at: new Date() },
-            });
-          } else {
-            await tx.studentEnrollment.create({
-              data: {
-                student_id: student.id,
-                academic_year_id: yearId,
-                class_id: classSection.class_id,
-                class_section_id: classSection.id,
-                grade_level: classSection.class?.grade_level || 1,
-                seating_number: dto.seating_number || null,
-                status: 'enrolled',
-              },
-            });
-          }
+        } else if (classSection) {
+          await tx.studentEnrollment.create({
+            data: {
+              student_id: student.id,
+              academic_year_id: yearId,
+              class_id: classSection.class_id,
+              class_section_id: classSection.id,
+              grade_level: classSection.class?.grade_level || 1,
+              seating_number: dto.seating_number || null,
+              status: 'enrolled',
+            },
+          });
         }
       }
 

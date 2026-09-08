@@ -1,5 +1,16 @@
 import { apiClient, deduplicatedGet } from './client';
 
+export interface StudentGuardianInfo {
+  id: number;
+  guardian_id: number;
+  user_id: number;
+  user_code: string;
+  full_name: string;
+  phone: string;
+  relationship: 'father' | 'mother' | 'brother' | 'uncle' | 'other';
+  is_primary: boolean;
+}
+
 export interface Student {
   id: number;
   user_id: number;
@@ -12,6 +23,8 @@ export interface Student {
   class_id?: number | null;
   class_section_id?: number | null;
   seating_number?: string | null;
+  guardians?: StudentGuardianInfo[];
+  primary_guardian?: StudentGuardianInfo | null;
   created_at: string;
 }
 

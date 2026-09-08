@@ -21,6 +21,7 @@ import {
   School,
   Filter,
   RotateCcw,
+  HeartHandshake,
 } from 'lucide-vue-next';
 import { studentsApi, type Student, type PaginationMeta } from '../api/students.api';
 import { academicApi, type ClassSectionsGroupItem } from '../api/academic.api';
@@ -30,6 +31,14 @@ import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/Taqniy
 
 const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
 const toast = useToast();
+
+const relationshipLabels: Record<string, string> = {
+  father: 'أب',
+  mother: 'أم',
+  brother: 'أخ',
+  uncle: 'عم / خال',
+  other: 'صلة قرابة أخرى',
+};
 
 // State
 const students = ref<Student[]>([]);
@@ -330,10 +339,18 @@ async function openEditDrawer(student: Student) {
   isDrawerInitializing = false;
 }
 
-function openDetailsDrawer(student: Student) {
+async function openDetailsDrawer(student: Student) {
   drawerMode.value = 'details';
   activeStudent.value = student;
   showDrawer.value = true;
+  try {
+    const res = await studentsApi.getStudentById(student.id);
+    if (res.data && res.data.success && activeStudent.value?.id === student.id) {
+      activeStudent.value = { ...activeStudent.value, ...res.data.data };
+    }
+  } catch (err) {
+    console.error('Failed to load full student details:', err);
+  }
 }
 
 function openEditFromDetails() {
@@ -864,6 +881,13 @@ onMounted(() => {
               </span>
             </div>
 
+            <div v-if="activeStudent.seating_number" class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+              <span class="text-xs font-bold text-bx-muted">رقم الجلوس</span>
+              <span class="font-mono font-bold text-xs text-amber-600 dark:text-amber-400 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                {{ activeStudent.seating_number }}
+              </span>
+            </div>
+
             <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
               <span class="text-xs font-bold text-bx-muted">تاريخ الميلاد</span>
               <span class="font-['Alexandria',sans-serif] font-bold text-xs text-bx-title">
@@ -883,6 +907,89 @@ onMounted(() => {
               <span class="font-['Alexandria',sans-serif] font-bold text-xs text-bx-title">
                 {{ activeStudent.created_at?.split('T')[0] }}
               </span>
+            </div>
+          </div>
+
+          <!-- GUARDIAN / CUSTODY SECTION -->
+          <div class="p-5 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-4 shadow-xs">
+            <div class="flex items-center justify-between border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                  <HeartHandshake class="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 class="text-xs font-black text-bx-title">بيانات ولي الأمر / الوصي</h4>
+                  <p class="text-[10px] text-bx-muted">سجل الوصاية القانونية والارتباط الأسري</p>
+                </div>
+              </div>
+              <span
+                v-if="activeStudent.guardians && activeStudent.guardians.length > 0"
+                class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+              >
+                {{ activeStudent.guardians.length > 1 ? `${activeStudent.guardians.length} أوصياء مسجلين` : 'وصي مسجل' }}
+              </span>
+            </div>
+
+            <!-- List of Guardians -->
+            <div v-if="activeStudent.guardians && activeStudent.guardians.length > 0" class="space-y-3">
+              <div
+                v-for="g in activeStudent.guardians"
+                :key="g.id"
+                class="p-3.5 rounded-xl border border-[#B4AED8]/60 dark:border-white/[0.06] bg-[var(--bx-bg)]/50 space-y-2.5 transition-all"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-xs text-bx-title">{{ g.full_name }}</span>
+                    <span
+                      v-if="g.is_primary"
+                      class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                    >
+                      الوصي الأساسي
+                    </span>
+                  </div>
+                  <span
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                    :class="
+                      g.relationship === 'father' || g.relationship === 'mother'
+                        ? 'border-blue-500/30 text-blue-500 bg-blue-500/10'
+                        : 'border-purple-500/30 text-purple-500 bg-purple-500/10'
+                    "
+                  >
+                    {{ relationshipLabels[g.relationship] || g.relationship }}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1 border-t border-[#B4AED8]/30 dark:border-white/[0.04]">
+                  <div class="flex items-center gap-1.5 text-bx-muted">
+                    <span class="text-[11px]">رمز الحساب:</span>
+                    <span class="font-mono font-bold text-bx-title text-[11px]">{{ g.user_code }}</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 text-bx-muted justify-start sm:justify-end">
+                    <Phone class="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <a
+                      v-if="g.phone"
+                      :href="'tel:' + g.phone"
+                      class="font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline text-[11px]"
+                      dir="ltr"
+                    >
+                      {{ g.phone }}
+                    </a>
+                    <span v-else class="text-[11px] text-bx-muted">لا يوجد هاتف</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- No Guardian Linked Notice -->
+            <div
+              v-else
+              class="p-4 rounded-xl border border-dashed border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-bg)]/30 text-center space-y-1.5"
+            >
+              <div class="w-7 h-7 mx-auto rounded-full bg-[var(--bx-pill)] text-bx-muted flex items-center justify-center">
+                <Users class="w-3.5 h-3.5" />
+              </div>
+              <p class="text-xs font-bold text-bx-muted">لا يوجد ولي أمر أو وصي مرتبط بهذا الطالب حالياً</p>
+              <p class="text-[11px] text-bx-muted/80">يمكن ربط الطالب بولي أمره من خلال شاشة «إدارة أولياء الأمور»</p>
             </div>
           </div>
 
