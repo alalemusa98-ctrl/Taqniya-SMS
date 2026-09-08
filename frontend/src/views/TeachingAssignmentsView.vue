@@ -12,7 +12,6 @@ import {
   Save,
   ChevronRight,
   ChevronLeft,
-  UserCheck,
   Filter,
   RotateCcw,
   Calendar,
@@ -758,21 +757,27 @@ onMounted(async () => {
           class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs"
         >
           <!-- Class Header Bar -->
-          <div class="bg-purple-500/[0.05] dark:bg-white/[0.03] py-3.5 px-5 border-b border-[#B4AED8] dark:border-white/[0.12] flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
-              <h3 class="font-black text-sm text-bx-title font-display">{{ grp.class_name }}</h3>
-              <span class="text-[11px] font-semibold text-bx-muted px-2.5 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
-                {{ grp.sections?.length || 0 }} شُعب دراسية
-              </span>
-              <span class="text-[11px] font-bold text-bx-primary px-2.5 py-0.5 rounded-full border border-bx-primary/20 bg-bx-primary/10">
-                {{ grp.totalAssignmentsCount }} إسنادات مسجلة
-              </span>
+          <div class="bg-purple-500/[0.04] dark:bg-white/[0.03] py-3.5 px-5 border-b border-[#B4AED8]/60 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/30 dark:border-purple-400/40 flex items-center justify-center text-bx-primary dark:text-purple-300 shrink-0">
+                <GraduationCap class="w-4 h-4" />
+              </div>
+              <div>
+                <h3 class="font-black text-sm text-bx-title font-display block leading-tight">{{ grp.class_name }}</h3>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="text-[10px] font-semibold text-bx-muted px-2 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
+                    {{ grp.sections?.length || 0 }} شُعب دراسية
+                  </span>
+                  <span class="text-[10px] font-bold text-bx-primary px-2 py-0.5 rounded-full border border-bx-primary/20 bg-bx-primary/10">
+                    {{ grp.totalAssignmentsCount }} إسنادات مسجلة
+                  </span>
+                </div>
+              </div>
             </div>
             <div class="flex items-center gap-2">
               <button
                 @click="openCreateDrawer(grp.class_id)"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 text-bx-primary dark:text-purple-300 hover:bg-bx-primary hover:text-white hover:border-bx-primary text-xs font-bold transition-all cursor-pointer shadow-xs"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/60 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                 title="إسناد مادة لهذا الصف الدراسي"
               >
                 <Plus class="w-3.5 h-3.5" />
@@ -790,38 +795,46 @@ onMounted(async () => {
 
           <!-- Class Matrix Table -->
           <div v-else class="overflow-x-auto">
-            <table class="w-full text-start border-collapse text-xs">
+            <table class="w-full text-start border-collapse text-[11px]">
               <thead>
-                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
-                  <th class="py-3 px-4 font-bold text-start w-12">#</th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[200px]">المادة الدراسية</th>
+                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted text-[11px]">
+                  <th class="py-2.5 px-3.5 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
+                  <th class="py-2.5 px-3.5 font-bold text-start min-w-[190px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <BookOpen class="w-3 h-3 text-bx-primary" />
+                      <span>المادة الدراسية</span>
+                    </div>
+                  </th>
                   <!-- Dynamic Section Headers for THIS class -->
                   <th
                     v-for="sec in (grp.sections || [])"
                     :key="sec.class_section_id"
-                    class="py-3 px-4 font-bold text-center min-w-[210px]"
+                    class="py-2.5 px-3 font-bold text-center min-w-[195px] border-e border-[#B4AED8]/50 dark:border-white/10"
                   >
-                    <div class="inline-flex items-center justify-center gap-1.5 font-bold text-bx-title">
-                      <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                    <div class="inline-flex items-center justify-center gap-1.5 font-bold text-bx-title text-[11px]">
+                      <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
                       <span>{{ sec.section_name }}</span>
                     </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-center w-28">نسبة التغطية</th>
+                  <th class="py-2.5 px-3 font-bold text-center w-24 last:border-e-0">نسبة التغطية</th>
                 </tr>
               </thead>
 
-              <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12]">
+              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
                 <!-- Empty subjects row -->
                 <tr v-if="!grp.subjects || grp.subjects.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
-                  <td :colspan="3 + (grp.sections?.length || 0)" class="py-8 px-4 text-center text-bx-muted text-xs">
-                    <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
-                    <button
-                      @click="openCreateDrawer(grp.class_id)"
-                      class="text-bx-primary font-bold hover:underline me-2 cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <Plus class="w-3.5 h-3.5" />
-                      <span>إسناد أول مادة الآن</span>
-                    </button>
+                  <td :colspan="3 + (grp.sections?.length || 0)" class="py-8 px-4 text-center text-bx-muted text-[11px]">
+                    <div class="flex flex-col items-center justify-center gap-2">
+                      <AlertCircle class="w-7 h-7 text-bx-muted opacity-40" />
+                      <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
+                      <button
+                        @click="openCreateDrawer(grp.class_id)"
+                        class="text-bx-primary font-bold hover:underline cursor-pointer inline-flex items-center gap-1 text-[11px] mt-1"
+                      >
+                        <Plus class="w-3 h-3" />
+                        <span>إسناد أول مادة الآن</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
 
@@ -829,16 +842,16 @@ onMounted(async () => {
                 <tr
                   v-for="(row, idx) in grp.subjects"
                   :key="row.subject_id"
-                  class="hover:bg-purple-500/[0.04] dark:hover:bg-white/[0.02] transition-colors duration-150"
+                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150"
                 >
                   <!-- Index -->
-                  <td class="py-3.5 px-4 font-mono font-bold text-bx-muted text-[11px]">
+                  <td class="py-2.5 px-3.5 font-['Alexandria',sans-serif] font-bold text-bx-muted text-[10px] whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
                     {{ idx + 1 }}
                   </td>
 
-                  <!-- Subject Name -->
-                  <td class="py-3.5 px-4 whitespace-nowrap">
-                    <span class="font-bold text-xs text-bx-title block">
+                  <!-- Subject Name (Clean without icon) -->
+                  <td class="py-2.5 px-3.5 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span class="font-black text-[11px] text-bx-title block leading-tight">
                       {{ row.subject_name }}
                     </span>
                   </td>
@@ -847,40 +860,30 @@ onMounted(async () => {
                   <td
                     v-for="sec in grp.sections"
                     :key="sec.class_section_id"
-                    class="py-3 px-3 text-center whitespace-nowrap"
+                    class="py-2 px-2.5 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10"
                   >
-                    <!-- Assigned: Interactive Teacher Capsule (Click anywhere to edit, with discreet remove icon) -->
+                    <!-- Assigned: Interactive Teacher Capsule (Clean without avatar icon) -->
                     <div
                       v-if="row.assignmentsBySection[sec.class_section_id]"
                       @click="openEditDrawer(row.assignmentsBySection[sec.class_section_id], grp.class_id, sec.class_section_id)"
-                      class="inline-flex items-center justify-between gap-2.5 h-[42px] px-3 rounded-full border transition-all cursor-pointer group/pill shadow-xs max-w-[220px] w-full"
+                      class="inline-flex items-center justify-between gap-2 h-[34px] px-3 rounded-full border transition-all cursor-pointer group/pill shadow-2xs max-w-[200px] w-full"
                       :class="[
                         appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
-                          ? 'border-bx-primary ring-2 ring-bx-primary/50 bg-purple-500/15 dark:bg-purple-500/25 shadow-md scale-[1.02]'
-                          : 'border-purple-300/80 dark:border-white/10 bg-purple-500/[0.05] dark:bg-purple-950/30 hover:border-bx-primary hover:bg-purple-500/[0.1] dark:hover:bg-purple-900/40'
+                          ? 'border-bx-primary ring-2 ring-bx-primary/50 bg-purple-500/15 dark:bg-purple-500/25 shadow-md scale-[1.01]'
+                          : 'border-[#B4AED8]/70 dark:border-white/15 bg-purple-500/[0.04] dark:bg-slate-800/80 hover:border-bx-primary hover:bg-purple-500/[0.08] dark:hover:border-purple-400 dark:hover:bg-purple-900/30'
                       ]"
                       :title="'انقر لتعديل إسناد المعلم ' + row.assignmentsBySection[sec.class_section_id].teacher_name"
                     >
-                      <!-- Avatar -->
-                      <div
-                        class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 shadow-xs transition-colors"
-                        :class="appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
-                          ? 'bg-bx-primary text-white ring-2 ring-bx-primary/30'
-                          : 'bg-bx-primary text-white'"
-                      >
-                        <UserCheck class="w-3.5 h-3.5" />
-                      </div>
-
                       <!-- Teacher Info -->
                       <div class="flex-1 min-w-0 text-start leading-tight">
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1">
                           <span
                             v-if="appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)"
-                            class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse"
+                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse"
                             title="المعلم المختار"
                           ></span>
                           <div
-                            class="font-bold text-xs group-hover/pill:text-bx-primary transition-colors truncate"
+                            class="font-bold text-[11px] group-hover/pill:text-bx-primary transition-colors truncate"
                             :class="appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
                               ? 'text-bx-primary font-black'
                               : 'text-bx-title'"
@@ -889,19 +892,18 @@ onMounted(async () => {
                             {{ row.assignmentsBySection[sec.class_section_id].teacher_name }}
                           </div>
                         </div>
-                        <div class="text-[10px] text-bx-muted font-mono leading-none mt-0.5">
+                        <div class="text-[9px] text-bx-muted font-mono leading-none mt-0.5">
                           {{ row.assignmentsBySection[sec.class_section_id].teacher_code }}
                         </div>
                       </div>
 
-
-                      <!-- Approved Taqniya Delete Button -->
+                      <!-- Approved Taqniya Delete Button (Circular with High Contrast in Dark Mode) -->
                       <button
                         @click.stop="confirmDelete(row.assignmentsBySection[sec.class_section_id])"
-                        class="w-7 h-7 rounded-full border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs"
+                        class="w-6 h-6 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
                         title="فك وإلغاء إسناد المادة"
                       >
-                        <Trash2 class="w-3.5 h-3.5" />
+                        <Trash2 class="w-3 h-3" />
                       </button>
                     </div>
 
@@ -909,26 +911,26 @@ onMounted(async () => {
                     <button
                       v-else
                       @click="openCreateDrawer(grp.class_id, sec.class_section_id, row.subject_id)"
-                      class="inline-flex items-center justify-center gap-1.5 h-[42px] px-3 rounded-full border border-dashed border-[#B4AED8] dark:border-white/20 bg-transparent hover:bg-bx-primary/5 hover:border-bx-primary text-bx-muted hover:text-bx-primary text-xs font-bold transition-all cursor-pointer max-w-[220px] w-full shadow-xs"
+                      class="inline-flex items-center justify-center gap-1.5 h-[36px] px-2.5 rounded-full border border-dashed border-[#B4AED8]/70 dark:border-slate-600 bg-transparent hover:bg-bx-primary/5 hover:border-bx-primary text-bx-muted hover:text-bx-primary dark:text-slate-400 dark:hover:text-purple-300 text-[11px] font-bold transition-all cursor-pointer max-w-[210px] w-full shadow-2xs active:scale-95"
                       title="إسناد معلم لهذه المادة في هذه الشعبة"
                     >
-                      <Plus class="w-3.5 h-3.5" />
+                      <Plus class="w-3 h-3" />
                       <span>تعيين معلم</span>
                     </button>
                   </td>
 
                   <!-- Coverage Badge -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <td class="py-2 px-3 text-center whitespace-nowrap last:border-e-0">
                     <span
-                      class="inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full text-xs font-bold border shadow-xs"
+                      class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border shadow-2xs"
                       :class="row.assignedCount === row.totalSections && row.totalSections > 0
-                        ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                        ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/40 dark:border-emerald-400/50'
                         : row.assignedCount > 0
-                        ? 'border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10'
-                        : 'border-red-500/30 text-red-600 dark:text-red-400 bg-red-500/10'"
+                        ? 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-950/40 dark:border-amber-400/50'
+                        : 'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10 dark:bg-rose-950/40 dark:border-rose-400/50'"
                     >
                       <span class="font-mono font-black">{{ row.assignedCount }}</span>
-                      <span class="text-[10px] opacity-70">من</span>
+                      <span class="text-[9px] opacity-70">من</span>
                       <span class="font-mono font-black">{{ row.totalSections }}</span>
                     </span>
                   </td>

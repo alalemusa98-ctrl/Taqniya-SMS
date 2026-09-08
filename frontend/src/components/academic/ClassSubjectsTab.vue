@@ -584,13 +584,13 @@ onMounted(async () => {
 
           <!-- Table with Dynamic Columns matching THIS class's exact semesters directly above the subjects -->
           <div class="rounded-b-2xl overflow-x-auto">
-            <table class="w-full text-start border-collapse text-xs">
+            <table class="w-full text-start border-collapse text-[11px]">
               <thead>
-                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
-                  <th class="py-3 px-4 font-bold text-start w-28 border-e border-[#B4AED8]/50 dark:border-white/10">الرمز</th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted text-[11px]">
+                  <th class="py-2.5 px-3.5 font-bold text-start w-24 border-e border-[#B4AED8]/50 dark:border-white/10">الرمز</th>
+                  <th class="py-2.5 px-3.5 font-bold text-start min-w-[190px] border-e border-[#B4AED8]/50 dark:border-white/10">
                     <div class="flex items-center gap-1.5">
-                      <BookOpenCheck class="w-3.5 h-3.5 text-bx-primary" />
+                      <BookOpenCheck class="w-3 h-3 text-bx-primary" />
                       <span>المادة الدراسية</span>
                     </div>
                   </th>
@@ -598,29 +598,29 @@ onMounted(async () => {
                   <th
                     v-for="t in (grp.terms || [])"
                     :key="t.id"
-                    class="py-3 px-4 font-bold text-center min-w-[150px] border-e border-[#B4AED8]/50 dark:border-white/10"
+                    class="py-2.5 px-3 font-bold text-center min-w-[140px] border-e border-[#B4AED8]/50 dark:border-white/10"
                   >
-                    <div class="flex items-center justify-center gap-1.5 text-bx-title font-bold">
-                      <CalendarDays class="w-3.5 h-3.5 text-bx-primary" />
+                    <div class="flex items-center justify-center gap-1.5 text-bx-title font-bold text-[11px]">
+                      <CalendarDays class="w-3 h-3 text-bx-primary" />
                       <span>{{ t.term_name }}</span>
                     </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-center w-36 last:border-e-0">إجراءات</th>
+                  <th class="py-2.5 px-3 font-bold text-center w-32 last:border-e-0">إجراءات</th>
                 </tr>
               </thead>
 
               <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
                 <!-- Empty subjects for this class -->
                 <tr v-if="!grp.subjects || grp.subjects.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
-                  <td :colspan="3 + (grp.terms?.length || 0)" class="py-8 px-4 text-center text-bx-muted text-xs">
+                  <td :colspan="3 + (grp.terms?.length || 0)" class="py-6 px-3.5 text-center text-bx-muted text-[11px]">
                     <div class="flex flex-col items-center justify-center gap-2">
-                      <AlertCircle class="w-8 h-8 text-bx-muted opacity-40" />
+                      <AlertCircle class="w-7 h-7 text-bx-muted opacity-40" />
                       <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
                       <button
                         @click="openCreateDrawer(grp.class_id)"
-                        class="text-bx-primary font-bold hover:underline cursor-pointer inline-flex items-center gap-1 text-xs mt-1"
+                        class="text-bx-primary font-bold hover:underline cursor-pointer inline-flex items-center gap-1 text-[11px] mt-1"
                       >
-                        <Plus class="w-3.5 h-3.5" />
+                        <Plus class="w-3 h-3" />
                         <span>إسناد أول مادة الآن</span>
                       </button>
                     </div>
@@ -634,45 +634,40 @@ onMounted(async () => {
                   class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150"
                 >
                   <!-- Code (الرمز) -->
-                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-bx-title/80">
+                  <td class="py-2 px-3.5 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span class="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-bx-title/80">
                       {{ row.code }}
                     </span>
                   </td>
 
-                  <!-- Subject (Clean without letter circle badge) -->
-                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-7 h-7 rounded-full bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/25 dark:border-purple-400/30 flex items-center justify-center text-bx-primary dark:text-purple-300 shrink-0">
-                        <BookOpenCheck class="w-3.5 h-3.5" />
-                      </div>
-                      <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight">
-                        {{ row.name }}
-                      </span>
-                    </div>
+                  <!-- Subject (Clean without icon) -->
+                  <td class="py-2 px-3.5 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span class="font-black text-xs text-bx-title block leading-tight">
+                      {{ row.name }}
+                    </span>
                   </td>
 
                   <!-- Term Columns: Showing scores for each semester belonging to THIS class -->
                   <td
                     v-for="t in grp.terms"
                     :key="t.id"
-                    class="py-3 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10"
+                    class="py-2 px-3 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10"
                   >
                     <!-- If assigned to this semester -->
                     <div
                       v-if="row.assignments[t.term_name]"
-                      class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border border-emerald-500/30 dark:border-emerald-400/40 bg-emerald-500/[0.05] dark:bg-emerald-950/30 shadow-2xs"
+                      class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border border-emerald-500/30 dark:border-emerald-400/40 bg-emerald-500/[0.05] dark:bg-emerald-950/30 shadow-2xs"
                     >
-                      <span class="text-xs font-black text-emerald-600 dark:text-emerald-400" title="درجة النجاح">
+                      <span class="text-[11px] font-black text-emerald-600 dark:text-emerald-400" title="درجة النجاح">
                         {{ row.assignments[t.term_name].passing_score }}
                       </span>
-                      <span class="text-bx-muted opacity-40 text-[10px] font-bold">/</span>
-                      <span class="text-xs font-black text-bx-title" title="الدرجة العظمى">
+                      <span class="text-bx-muted opacity-40 text-[9px] font-bold">/</span>
+                      <span class="text-[11px] font-black text-bx-title" title="الدرجة العظمى">
                         {{ row.assignments[t.term_name].max_score }}
                       </span>
                       <span
                         v-if="row.assignments[t.term_name].is_closed === 1"
-                        class="w-2 h-2 rounded-full bg-rose-500 shrink-0"
+                        class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"
                         title="مغلقة للأرشفة"
                       ></span>
                     </div>
@@ -682,7 +677,7 @@ onMounted(async () => {
                   </td>
 
                   <!-- Actions (Uniform circular buttons with high contrast in dark mode) -->
-                  <td class="py-3 px-4 text-center whitespace-nowrap last:border-e-0">
+                  <td class="py-2 px-3 text-center whitespace-nowrap last:border-e-0">
                     <div class="flex items-center justify-center gap-1.5">
                       <!-- View Details Button -->
                       <button

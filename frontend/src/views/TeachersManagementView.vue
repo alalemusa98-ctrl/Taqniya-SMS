@@ -513,43 +513,60 @@ onMounted(() => {
       </div>
 
       <!-- Unified Table Content: Enclosed in a Bordered Card -->
-      <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)]">
+      <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
         <div class="overflow-x-auto">
           <table class="w-full text-start border-collapse text-xs">
             <!-- Table Header with Distinct Background and Crisp Dividers -->
             <thead>
-              <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
-                <th class="py-3.5 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif]">#</th>
-                <th class="py-3.5 px-4 font-bold text-start">الرمز</th>
-                <th class="py-3.5 px-4 font-bold text-start">المعلم والبيانات المهنية</th>
-                <th class="py-3.5 px-4 font-bold text-start">التخصص العلمي</th>
-                <th class="py-3.5 px-4 font-bold text-start">تاريخ المباشرة</th>
-                <th class="py-3.5 px-4 font-bold text-center">الحالة</th>
-                <th class="py-3.5 px-4 font-bold text-center">إجراءات</th>
+              <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
+                <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
+                <th class="py-3 px-4 font-bold text-start border-e border-[#B4AED8]/50 dark:border-white/10">الرمز</th>
+                <th class="py-3 px-4 font-bold text-start min-w-[220px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <div class="flex items-center gap-1.5">
+                    <User class="w-3.5 h-3.5 text-bx-primary" />
+                    <span>المعلم والبيانات المهنية</span>
+                  </div>
+                </th>
+                <th class="py-3 px-4 font-bold text-start min-w-[140px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <div class="flex items-center gap-1.5">
+                    <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
+                    <span>التخصص العلمي</span>
+                  </div>
+                </th>
+                <th class="py-3 px-4 font-bold text-start min-w-[130px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <div class="flex items-center gap-1.5">
+                    <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+                    <span>تاريخ المباشرة</span>
+                  </div>
+                </th>
+                <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">الحالة</th>
+                <th class="py-3 px-4 font-bold text-center w-40 last:border-e-0">إجراءات</th>
               </tr>
             </thead>
 
             <!-- Table Body with Crisp Dividers -->
-            <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12]">
+            <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
               <tr
                 v-for="row in enrichedTeachers"
                 :key="row.id"
-                class="hover:bg-purple-500/[0.08] dark:hover:bg-white/[0.06] transition-colors duration-150 group"
+                class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
               >
-                <!-- Order / Sequence Index Number (نوع الخط Alexandria) -->
-                <td class="py-3.5 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif]">
+                <!-- Order / Sequence Index Number -->
+                <td class="py-3 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
                   {{ row.indexNumber }}
                 </td>
 
                 <!-- Code (الرمز) -->
-                <td class="py-3.5 px-4 font-mono font-bold text-bx-muted text-xs whitespace-nowrap">
-                  {{ row.code }}
+                <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <span class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-bx-title/80">
+                    {{ row.code }}
+                  </span>
                 </td>
 
-                <!-- Teacher with Professional Info (Without letter avatars) -->
-                <td class="py-3.5 px-4 whitespace-nowrap">
+                <!-- Teacher with Professional Info (Clean without icon) -->
+                <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
                   <div>
-                    <span class="font-bold text-xs text-bx-title block group-hover:text-bx-primary transition-colors">
+                    <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight group-hover:text-bx-primary transition-colors">
                       {{ row.full_name }}
                     </span>
                     <span v-if="row.phone" class="font-mono text-[11px] text-bx-muted block mt-0.5" dir="ltr">
@@ -559,60 +576,69 @@ onMounted(() => {
                 </td>
 
                 <!-- Specialization Badge -->
-                <td class="py-3.5 px-4 whitespace-nowrap">
+                <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
                   <span
                     v-if="row.specialization"
-                    class="inline-block px-3 py-0.5 rounded-full text-[11px] font-bold border border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10"
+                    class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10 dark:bg-purple-950/30"
                   >
                     {{ row.specialization }}
                   </span>
-                  <span v-else class="text-bx-muted/60">—</span>
+                  <span v-else class="text-slate-400 dark:text-slate-500 font-bold text-xs">—</span>
                 </td>
 
                 <!-- Hire Date -->
-                <td class="py-3.5 px-4 font-['Alexandria',sans-serif] font-medium text-xs text-bx-muted whitespace-nowrap">
-                  <span v-if="row.hire_date" class="inline-flex items-center gap-1.5">
-                    <Calendar class="w-3.5 h-3.5 text-bx-muted/70" />
+                <td class="py-3 px-4 font-['Alexandria',sans-serif] font-medium text-xs text-bx-muted whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <span v-if="row.hire_date" class="inline-flex items-center gap-1.5 font-bold">
+                    <Calendar class="w-3.5 h-3.5 text-bx-primary" />
                     <span>{{ row.hire_date }}</span>
                   </span>
-                  <span v-else>—</span>
+                  <span v-else class="text-slate-400 dark:text-slate-500 font-bold text-xs">—</span>
                 </td>
 
                 <!-- Status Pill (Interactive Toggle) -->
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                <td class="py-3 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
                   <button
                     @click="handleToggleStatus(row)"
                     :disabled="isUpdatingStatus"
-                    class="inline-block px-4 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer hover:opacity-80 disabled:opacity-50"
-                    :class="row.statusClass"
+                    class="inline-block px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer hover:opacity-85 disabled:opacity-50 shadow-2xs"
+                    :class="
+                      row.is_active === 1
+                        ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/40 dark:border-emerald-400/50'
+                        : 'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10 dark:bg-rose-950/40 dark:border-rose-400/50'
+                    "
                     :title="row.is_active === 1 ? 'انقر لتعطيل الحساب' : 'انقر لتفعيل الحساب'"
                   >
-                    {{ row.statusLabel }}
+                    <span class="inline-flex items-center gap-1.5">
+                      <span
+                        class="w-1.5 h-1.5 rounded-full"
+                        :class="row.is_active === 1 ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'"
+                      ></span>
+                      <span>{{ row.statusLabel }}</span>
+                    </span>
                   </button>
                 </td>
 
-                <!-- Actions -->
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center gap-2">
-                    <!-- View Details Button with Text + Icon -->
+                <!-- Actions: 4 Uniform Circular Icon Buttons with High Contrast in Dark Mode -->
+                <td class="py-3 px-4 text-center whitespace-nowrap last:border-e-0">
+                  <div class="flex items-center justify-center gap-1.5">
+                    <!-- View Details Button -->
                     <button
                       @click="openDetails(row)"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-300 dark:border-white/10 hover:border-bx-primary hover:text-bx-primary text-xs font-bold transition-all cursor-pointer bg-white/5"
-                      title="معاينة التفاصيل الكاملة"
+                      class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                      title="معاينة الملف المهني والحساب"
                     >
                       <Eye class="w-3.5 h-3.5" />
-                      <span>عرض</span>
                     </button>
 
                     <!-- Toggle Status Button (Activate / Deactivate) -->
                     <button
                       @click="handleToggleStatus(row)"
                       :disabled="isUpdatingStatus"
-                      class="w-8 h-8 rounded-xl border flex items-center justify-center transition-all cursor-pointer disabled:opacity-50"
+                      class="w-7 h-7 rounded-full border flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95 disabled:opacity-50"
                       :class="
                         row.is_active === 1
-                          ? 'border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
-                          : 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
+                          ? 'border-amber-300 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white dark:border-amber-400/70 dark:bg-amber-950/80 dark:text-amber-300 dark:hover:bg-amber-600 dark:hover:text-white'
+                          : 'border-emerald-300 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white dark:border-emerald-400/70 dark:bg-emerald-950/80 dark:text-emerald-300 dark:hover:bg-emerald-600 dark:hover:text-white'
                       "
                       :title="row.is_active === 1 ? 'تعطيل حساب المعلم' : 'تفعيل حساب المعلم'"
                     >
@@ -623,8 +649,8 @@ onMounted(() => {
                     <!-- Edit Button -->
                     <button
                       @click="openEditDrawer(row)"
-                      class="w-8 h-8 rounded-xl border border-gray-300 dark:border-white/10 hover:border-bx-primary hover:bg-bx-primary hover:text-white flex items-center justify-center transition-all cursor-pointer"
-                      title="تعديل ملف المعلم"
+                      class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                      title="تعديل بيانات المعلم"
                     >
                       <Edit2 class="w-3.5 h-3.5" />
                     </button>
@@ -632,7 +658,7 @@ onMounted(() => {
                     <!-- Delete Button -->
                     <button
                       @click="confirmDelete(row)"
-                      class="w-8 h-8 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                      class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
                       title="حذف ملف المعلم"
                     >
                       <Trash2 class="w-3.5 h-3.5" />
@@ -823,7 +849,7 @@ onMounted(() => {
             required
             maxlength="150"
             placeholder="مثال: أحمد محمود سالم الورفلي"
-            class="w-full px-4 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
+            class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
           />
           <p v-if="fieldErrors.full_name" class="text-[11px] text-red-500 font-medium">
             {{ fieldErrors.full_name[0] }}
@@ -841,7 +867,7 @@ onMounted(() => {
             type="text"
             maxlength="100"
             placeholder="مثال: الرياضيات، العلوم العامة، اللغة العربية"
-            class="w-full px-4 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
+            class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
           />
           <p v-if="fieldErrors.specialization" class="text-[11px] text-red-500 font-medium">
             {{ fieldErrors.specialization[0] }}
@@ -859,7 +885,7 @@ onMounted(() => {
             type="text"
             maxlength="20"
             placeholder="مثال: 0912345678"
-            class="w-full px-4 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-medium"
+            class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-medium"
             dir="ltr"
           />
           <p v-if="fieldErrors.phone" class="text-[11px] text-red-500 font-medium">
@@ -879,7 +905,7 @@ onMounted(() => {
               type="text"
               placeholder="YYYY-MM-DD (مثال: 2024-09-01)"
               dir="ltr"
-              class="w-full pl-4 pr-11 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-medium"
+              class="w-full pl-5 pr-11 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-medium"
             />
             <input
               ref="datePickerInput"
@@ -893,7 +919,7 @@ onMounted(() => {
             <button
               type="button"
               @click="openNativeDatePicker"
-              class="absolute right-2.5 p-1.5 rounded-lg text-amber-500 hover:bg-amber-500/10 transition-all cursor-pointer"
+              class="absolute right-2.5 p-1.5 rounded-full text-amber-500 hover:bg-amber-500/10 transition-all cursor-pointer"
               title="اختيار التاريخ من التقويم"
             >
               <Calendar class="w-4 h-4" />
@@ -924,7 +950,7 @@ onMounted(() => {
             :required="drawerMode === 'create'"
             minlength="8"
             placeholder="••••••••"
-            class="w-full px-4 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
+            class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
           />
           <p v-if="fieldErrors.password" class="text-[11px] text-red-500 font-medium">
             {{ fieldErrors.password[0] }}
