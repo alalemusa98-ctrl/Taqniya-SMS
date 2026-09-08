@@ -126,8 +126,8 @@ const sectionOptions = computed<TaqniyaSelectOption[]>(() => {
   if (!selectedClassId.value) return [];
   return availableSections.value.map((sec) => ({
     value: sec.id,
-    label: sec.name,
-    subtext: `الشعبة (${sec.name})`,
+    label: sec.name.includes('شعبة') ? sec.name : `شعبة (${sec.name})`,
+    subtext: sec.name.includes('شعبة') ? sec.name : `الشعبة (${sec.name})`,
   }));
 });
 
@@ -174,7 +174,7 @@ const filterSectionOptions = computed<TaqniyaSelectOption[]>(() => {
     { value: 'all', label: 'كافة شعب الصف' },
     ...filterAvailableSections.value.map((sec) => ({
       value: sec.id,
-      label: `شعبة (${sec.name})`,
+      label: sec.name.includes('شعبة') ? sec.name : `شعبة (${sec.name})`,
     })),
   ];
 });

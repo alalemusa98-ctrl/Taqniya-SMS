@@ -467,20 +467,29 @@ export class StudentsService {
           const existingEnrollment = await tx.studentEnrollment.findFirst({
             where: {
               student_id: student.id,
-              academic_year_id: yearId,
               deleted_at: null,
             },
+            orderBy: { id: 'desc' },
           });
 
           if (existingEnrollment) {
             await tx.studentEnrollment.update({
               where: { id: existingEnrollment.id },
               data: {
+                academic_year_id: yearId,
                 class_id: classSection.class_id,
                 class_section_id: classSection.id,
                 grade_level: classSection.class?.grade_level || 1,
                 seating_number: dto.seating_number ?? existingEnrollment.seating_number,
               },
+            });
+            await tx.studentEnrollment.updateMany({
+              where: {
+                student_id: student.id,
+                id: { not: existingEnrollment.id },
+                deleted_at: null,
+              },
+              data: { deleted_at: new Date() },
             });
           } else {
             await tx.studentEnrollment.create({
