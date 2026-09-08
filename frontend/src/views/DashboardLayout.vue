@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { RouterLink } from 'vue-router';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { RouterLink, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth.store';
 import HeaderUserDropdown from '../components/layout/HeaderUserDropdown.vue';
 import ThemeToggle from '../components/layout/ThemeToggle.vue';
@@ -18,7 +18,40 @@ import {
 } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
+const route = useRoute();
 const isMobileMenuOpen = ref(false);
+
+// Coordinated single-dropdown state (opening one closes any previous)
+const activeDropdown = ref<string | null>(null);
+
+const handleToggleDropdown = (id: string) => {
+  activeDropdown.value = activeDropdown.value === id ? null : id;
+};
+
+const closeAllDropdowns = () => {
+  activeDropdown.value = null;
+};
+
+// Auto-close dropdowns on route changes
+watch(() => route.path, () => {
+  closeAllDropdowns();
+  isMobileMenuOpen.value = false;
+});
+
+// Click outside of any nav dropdown
+const handleGlobalClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.nav-dropdown-container')) {
+    activeDropdown.value = null;
+  }
+};
+
+const handleGlobalKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    activeDropdown.value = null;
+    isMobileMenuOpen.value = false;
+  }
+};
 
 // Nav Groups (Option A)
 const studentsGroup: NavDropdownItem[] = [
@@ -91,6 +124,7 @@ const handleScroll = () => {
   if (currentScrollY > lastScrollY + scrollThreshold) {
     isHeaderVisible.value = false;
     isMobileMenuOpen.value = false;
+    closeAllDropdowns();
   }
   // Scroll Up -> Show
   else if (currentScrollY < lastScrollY - scrollThreshold) {
@@ -102,10 +136,14 @@ const handleScroll = () => {
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true });
+  document.addEventListener('click', handleGlobalClick);
+  document.addEventListener('keydown', handleGlobalKeydown);
 });
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
+  document.removeEventListener('click', handleGlobalClick);
+  document.removeEventListener('keydown', handleGlobalKeydown);
 });
 </script>
 
@@ -133,27 +171,39 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Nav Items with Dropdowns (Option A: Desktop / Tablet) -->
+          <!-- Nav Items with Dropdowns (Single active dropdown coordination) -->
           <nav v-if="authStore.isAdmin" class="hidden md:flex items-center gap-2">
             <!-- 1. Students & Guardians -->
             <HeaderNavDropdown
+              id="students"
               title="شؤون الطلاب والأسرة"
               :icon="GraduationCap"
               :items="studentsGroup"
+              :is-open="activeDropdown === 'students'"
+              @toggle="handleToggleDropdown('students')"
+              @close="closeAllDropdowns"
             />
 
             <!-- 2. Academic Structure & Faculty -->
             <HeaderNavDropdown
+              id="academic"
               title="الهيكل والتعليم"
               :icon="Layers"
               :items="academicGroup"
+              :is-open="activeDropdown === 'academic'"
+              @toggle="handleToggleDropdown('academic')"
+              @close="closeAllDropdowns"
             />
 
             <!-- 3. System & Governance -->
             <HeaderNavDropdown
+              id="system"
               title="إدارة النظام والأمان"
               :icon="ShieldCheck"
               :items="systemGroup"
+              :is-open="activeDropdown === 'system'"
+              @toggle="handleToggleDropdown('system')"
+              @close="closeAllDropdowns"
             />
           </nav>
         </div>
@@ -178,7 +228,7 @@ onUnmounted(() => {
       <!-- Mobile Navigation Drawer / Dropdown Panel -->
       <div
         v-if="isMobileMenuOpen && authStore.isAdmin"
-        class="md:hidden border-t border-[#B4AED8] dark:border-white/20 bg-white dark:bg-[#24253B] px-4 py-4 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl animate-in slide-in-from-top-2 duration-200"
+        class="md:hidden border-t border-[#B4AED8] dark:border-white/20 bg-white dark:bg-[#1E1F31] px-4 py-4 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl animate-in slide-in-from-top-2 duration-200"
       >
         <!-- Group 1 -->
         <div>
@@ -192,17 +242,25 @@ onUnmounted(() => {
               :key="item.to"
               :to="item.to"
               @click="isMobileMenuOpen = false"
-              active-class="bg-bx-primary text-white font-black"
-              class="flex items-center gap-3 p-2.5 rounded-xl text-xs font-bold text-bx-title hover:bg-[var(--bx-pill)] transition-colors"
+              active-class="!bg-bx-primary !text-white font-black shadow-sm"
+              class="flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-bx-title hover:bg-[var(--bx-pill)] transition-all"
             >
-              <component :is="item.icon" class="w-4 h-4 text-bx-primary" />
-              <span>{{ item.label }}</span>
+              <div
+                class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border border-purple-500/20 bg-purple-500/10 text-bx-primary dark:border-white/10 dark:text-purple-300"
+                style="border-radius: 50% !important;"
+              >
+                <component :is="item.icon" class="w-4 h-4 stroke-[2.2]" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-bold leading-tight">{{ item.label }}</div>
+                <div class="text-[10px] text-bx-muted font-normal mt-0.5 truncate">{{ item.description }}</div>
+              </div>
             </RouterLink>
           </div>
         </div>
 
         <!-- Group 2 -->
-        <div class="pt-2 border-t border-bx-border/60">
+        <div class="pt-2 border-t border-[#B4AED8]/40 dark:border-white/10">
           <div class="text-[11px] font-black text-bx-primary flex items-center gap-1.5 mb-2 px-2">
             <Layers class="w-3.5 h-3.5" />
             <span>الهيكل والتعليم</span>
@@ -213,17 +271,25 @@ onUnmounted(() => {
               :key="item.to"
               :to="item.to"
               @click="isMobileMenuOpen = false"
-              active-class="bg-bx-primary text-white font-black"
-              class="flex items-center gap-3 p-2.5 rounded-xl text-xs font-bold text-bx-title hover:bg-[var(--bx-pill)] transition-colors"
+              active-class="!bg-bx-primary !text-white font-black shadow-sm"
+              class="flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-bx-title hover:bg-[var(--bx-pill)] transition-all"
             >
-              <component :is="item.icon" class="w-4 h-4 text-bx-primary" />
-              <span>{{ item.label }}</span>
+              <div
+                class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border border-purple-500/20 bg-purple-500/10 text-bx-primary dark:border-white/10 dark:text-purple-300"
+                style="border-radius: 50% !important;"
+              >
+                <component :is="item.icon" class="w-4 h-4 stroke-[2.2]" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-bold leading-tight">{{ item.label }}</div>
+                <div class="text-[10px] text-bx-muted font-normal mt-0.5 truncate">{{ item.description }}</div>
+              </div>
             </RouterLink>
           </div>
         </div>
 
         <!-- Group 3 -->
-        <div class="pt-2 border-t border-bx-border/60">
+        <div class="pt-2 border-t border-[#B4AED8]/40 dark:border-white/10">
           <div class="text-[11px] font-black text-bx-primary flex items-center gap-1.5 mb-2 px-2">
             <ShieldCheck class="w-3.5 h-3.5" />
             <span>إدارة النظام والأمان</span>
@@ -234,11 +300,19 @@ onUnmounted(() => {
               :key="item.to"
               :to="item.to"
               @click="isMobileMenuOpen = false"
-              active-class="bg-bx-primary text-white font-black"
-              class="flex items-center gap-3 p-2.5 rounded-xl text-xs font-bold text-bx-title hover:bg-[var(--bx-pill)] transition-colors"
+              active-class="!bg-bx-primary !text-white font-black shadow-sm"
+              class="flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-bx-title hover:bg-[var(--bx-pill)] transition-all"
             >
-              <component :is="item.icon" class="w-4 h-4 text-bx-primary" />
-              <span>{{ item.label }}</span>
+              <div
+                class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border border-purple-500/20 bg-purple-500/10 text-bx-primary dark:border-white/10 dark:text-purple-300"
+                style="border-radius: 50% !important;"
+              >
+                <component :is="item.icon" class="w-4 h-4 stroke-[2.2]" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-bold leading-tight">{{ item.label }}</div>
+                <div class="text-[10px] text-bx-muted font-normal mt-0.5 truncate">{{ item.description }}</div>
+              </div>
             </RouterLink>
           </div>
         </div>

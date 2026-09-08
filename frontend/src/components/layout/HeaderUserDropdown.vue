@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '../../stores/auth.store';
 import { KeyRound, LogOut, ChevronDown, Clock } from 'lucide-vue-next';
 import ChangePasswordModal from '../modals/ChangePasswordModal.vue';
@@ -9,8 +9,31 @@ import { formatTime } from '../../utils/formatters';
 const authStore = useAuthStore();
 
 const isOpen = ref(false);
+const dropdownRef = ref<HTMLElement | null>(null);
 const showChangePasswordModal = ref(false);
 const showLogoutModal = ref(false);
+
+const handleClickOutside = (event: MouseEvent) => {
+  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
+    isOpen.value = false;
+  }
+};
+
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && isOpen.value) {
+    isOpen.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+  document.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+  document.removeEventListener('keydown', handleKeydown);
+});
 
 const getRoleBadge = (role?: string) => {
   switch (role) {
@@ -29,10 +52,10 @@ const getRoleBadge = (role?: string) => {
 </script>
 
 <template>
-  <div class="relative" v-if="authStore.user">
+  <div ref="dropdownRef" class="relative" v-if="authStore.user">
     <!-- Trigger Button -->
     <button
-      @click="isOpen = !isOpen"
+      @click.stop="isOpen = !isOpen"
       class="flex items-center gap-3 p-1.5 pe-3.5 rounded-full border border-bx-border bg-[var(--bx-surface-solid)] hover:border-bx-primary transition-all shadow-sm cursor-pointer"
     >
       <div class="w-8 h-8 rounded-full bg-bx-primary text-white flex items-center justify-center font-black text-xs shadow-md shadow-bx-primary/20">
@@ -47,17 +70,10 @@ const getRoleBadge = (role?: string) => {
       <ChevronDown class="w-4 h-4 text-bx-muted transition-transform duration-200" :class="{ 'rotate-180': isOpen }" />
     </button>
 
-    <!-- Overlay backdrop -->
-    <div
-      v-if="isOpen"
-      @click="isOpen = false"
-      class="fixed inset-0 z-40"
-    ></div>
-
     <!-- Taqniya Dropdown Menu -->
     <div
       v-if="isOpen"
-      class="bx-dropdown-menu !bg-white dark:!bg-[#24253B] border border-[#B4AED8] dark:border-white/20 shadow-2xl end-0 start-auto mt-2 w-64 z-[60] p-2 animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/10"
+      class="bx-dropdown-menu !bg-white dark:!bg-[#202133] border border-[#B4AED8] dark:border-white/15 shadow-2xl end-0 start-auto mt-2.5 w-64 z-[70] p-2 rounded-[22px] animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/10"
     >
       <!-- User Info Header -->
       <div class="p-3 border-b border-bx-border space-y-1">
