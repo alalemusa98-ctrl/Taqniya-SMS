@@ -143,6 +143,7 @@ export interface ClassCountItem {
 export interface ClassCountsResponse {
   success: boolean;
   data: ClassCountItem[];
+  enrolled_student_ids?: number[];
 }
 
 export const studentEnrollmentsApi = {

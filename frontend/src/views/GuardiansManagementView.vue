@@ -20,6 +20,7 @@ import {
   GraduationCap,
   Users,
   CheckCircle2,
+  TrendingUp,
 } from 'lucide-vue-next';
 import {
   guardiansApi,
@@ -31,6 +32,7 @@ import { studentsApi, type Student } from '../api/students.api';
 import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
+import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 
 const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
 const toast = useToast();
@@ -149,7 +151,18 @@ const stats = computed(() => {
     (acc, g) => acc + (Number(g.students_count) || 0),
     0
   );
-  return { total, parentsCount, othersCount, totalCustodyCount };
+  const sampleCount = guardians.value.length || 1;
+  const parentsPercentage = Math.round((parentsCount / sampleCount) * 100);
+  const othersPercentage = Math.round((othersCount / sampleCount) * 100);
+
+  return {
+    total,
+    parentsCount,
+    othersCount,
+    totalCustodyCount,
+    parentsPercentage,
+    othersPercentage,
+  };
 });
 
 // Watchers
@@ -440,15 +453,18 @@ onMounted(() => {
   <TaqniyaErrorBoundary>
     <div class="space-y-6" dir="rtl">
       <!-- Unified Container Card (Matching the Reference Design System) -->
-      <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
+      <div class="rounded-3xl border border-bx-border bg-bx-surface p-6 sm:p-7 shadow-sm">
         <!-- Card Header: Title on Right, Controls & Filters on Left -->
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
-          <!-- Title -->
+          <!-- Title with Brand Accent Bar -->
           <div>
-            <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
-              سجلات أولياء الأمور وشبكة الوصاية
-            </h2>
-            <p class="text-xs text-bx-muted font-medium mt-1">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-7 rounded-full bg-bx-primary shrink-0"></span>
+              <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+                سجلات أولياء الأمور وشبكة الوصاية
+              </h2>
+            </div>
+            <p class="text-xs text-bx-muted font-medium mt-1 ms-5">
               إدارة ملفات الأولياء، بيانات التواصل، شبكة الكفالة وربط سياق الأبناء (PAR-XXXX)
             </p>
           </div>
@@ -471,53 +487,58 @@ onMounted(() => {
                 v-model="search"
                 type="text"
                 placeholder="بحث بالاسم، الهاتف أو PAR..."
-                class="w-full pr-10 pl-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
+                class="w-full pr-10 pl-5 py-2 rounded-full border border-bx-border bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
               />
             </div>
           </div>
         </div>
 
-        <!-- Quick Metrics Banner (Stats Ribbon) -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-6">
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-purple-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
-              <Users class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">إجمالي أولياء الأمور</span>
-              <span class="text-base font-black font-display text-bx-title font-mono">{{ stats.total }}</span>
-            </div>
-          </div>
+        <!-- 2. مؤشرات الأداء والبطاقات (8. KPI & Metrics - Exact Framework Section 8 Standard) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-6">
+          <!-- Card 1: Total Guardians -->
+          <TaqniyaKpiCard
+            title="إجمالي أولياء الأمور"
+            :value="stats.total"
+            :icon="Users"
+            variant="primary"
+            badge-text="سجلات الأولياء"
+            :badge-icon="TrendingUp"
+            :pulse-badge="true"
+            :progress="100"
+          />
 
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-teal-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
-              <HeartHandshake class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">الآباء والأمهات</span>
-              <span class="text-base font-black font-display text-teal-600 dark:text-teal-400 font-mono">{{ stats.parentsCount }}</span>
-            </div>
-          </div>
+          <!-- Card 2: Parents (Father/Mother) -->
+          <TaqniyaKpiCard
+            title="الآباء والأمهات"
+            :value="`${stats.parentsCount} ولي أمر`"
+            :icon="HeartHandshake"
+            variant="emerald"
+            :badge-text="`${stats.parentsPercentage}%`"
+            :badge-icon="TrendingUp"
+            :progress="stats.parentsPercentage"
+          />
 
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-blue-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-              <User class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">أوصياء وأقارب آخرون</span>
-              <span class="text-base font-black font-display text-blue-600 dark:text-blue-400 font-mono">{{ stats.othersCount }}</span>
-            </div>
-          </div>
+          <!-- Card 3: Other Guardians -->
+          <TaqniyaKpiCard
+            title="أوصياء وأقارب آخرون"
+            :value="`${stats.othersCount} وصي`"
+            :icon="User"
+            variant="blue"
+            :badge-text="`${stats.othersPercentage}%`"
+            :badge-icon="TrendingUp"
+            :progress="stats.othersPercentage"
+          />
 
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-amber-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-              <GraduationCap class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">إجمالي الطلاب المكفولين</span>
-              <span class="text-base font-black font-display text-amber-600 dark:text-amber-400 font-mono">{{ stats.totalCustodyCount }}</span>
-            </div>
-          </div>
+          <!-- Card 4: Custody Students -->
+          <TaqniyaKpiCard
+            title="إجمالي الطلاب المكفولين"
+            :value="`${stats.totalCustodyCount} طالب`"
+            :icon="GraduationCap"
+            variant="amber"
+            badge-text="شبكة الوصاية"
+            :badge-icon="TrendingUp"
+            :progress="100"
+          />
         </div>
 
         <!-- Loading State -->
@@ -529,7 +550,7 @@ onMounted(() => {
         <!-- Empty State -->
         <div
           v-else-if="enrichedGuardians.length === 0"
-          class="py-20 text-center border-t border-[#B4AED8] dark:border-white/[0.08] space-y-3"
+          class="py-20 text-center border-t border-bx-border space-y-3"
         >
           <AlertCircle class="w-12 h-12 mx-auto text-bx-muted opacity-40" />
           <h3 class="text-sm font-bold text-bx-title">لا توجد سجلات تطابق محددات البحث</h3>
@@ -544,39 +565,39 @@ onMounted(() => {
         </div>
 
         <!-- Unified Table Content: Enclosed in a Bordered Card -->
-        <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
+        <div v-else class="rounded-2xl border border-bx-border overflow-hidden bg-bx-surface shadow-xs">
           <div class="overflow-x-auto">
             <table class="w-full text-start border-collapse text-xs">
               <!-- Table Header with Distinct Background and Crisp Dividers -->
               <thead>
-                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
-                  <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
-                  <th class="py-3 px-4 font-bold text-start border-e border-[#B4AED8]/50 dark:border-white/10">الرمز</th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[220px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                <tr class="bg-bx-table-header border-b border-bx-border text-bx-muted">
+                  <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-bx-divider">#</th>
+                  <th class="py-3 px-4 font-bold text-start border-e border-bx-divider">الرمز</th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[220px] border-e border-bx-divider">
                     <div class="flex items-center gap-1.5">
                       <User class="w-3.5 h-3.5 text-bx-primary" />
                       <span>ولي الأمر والبيانات الشخصية</span>
                     </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[140px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <th class="py-3 px-4 font-bold text-start min-w-[140px] border-e border-bx-divider">
                     <div class="flex items-center gap-1.5">
                       <Phone class="w-3.5 h-3.5 text-bx-primary" />
                       <span>رقم الهاتف</span>
                     </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[130px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <th class="py-3 px-4 font-bold text-start min-w-[130px] border-e border-bx-divider">
                     <div class="flex items-center gap-1.5">
                       <HeartHandshake class="w-3.5 h-3.5 text-bx-primary" />
                       <span>صلة القرابة</span>
                     </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-center w-36 border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <th class="py-3 px-4 font-bold text-center w-36 border-e border-bx-divider">
                     <div class="flex items-center justify-center gap-1.5">
                       <GraduationCap class="w-3.5 h-3.5 text-bx-primary" />
                       <span>الأبناء المكفولين</span>
                     </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[130px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <th class="py-3 px-4 font-bold text-start min-w-[130px] border-e border-bx-divider">
                     <div class="flex items-center gap-1.5">
                       <Calendar class="w-3.5 h-3.5 text-bx-primary" />
                       <span>تاريخ التسجيل</span>
@@ -587,26 +608,26 @@ onMounted(() => {
               </thead>
 
               <!-- Table Body with Crisp Dividers -->
-              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
+              <tbody class="divide-y divide-bx-divider">
                 <tr
                   v-for="guardian in enrichedGuardians"
                   :key="guardian.id"
                   class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
                 >
                   <!-- Sequence Index -->
-                  <td class="py-3 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <td class="py-3 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-bx-divider">
                     {{ guardian.indexNumber }}
                   </td>
 
                   <!-- Code Pill -->
-                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-bx-title/80">
+                  <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
+                    <span class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-bx-border text-bx-title/80">
                       {{ guardian.code }}
                     </span>
                   </td>
 
                   <!-- Guardian Info -->
-                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
                     <div>
                       <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight group-hover:text-bx-primary transition-colors">
                         {{ guardian.full_name }}
@@ -615,12 +636,12 @@ onMounted(() => {
                   </td>
 
                   <!-- Phone -->
-                  <td class="py-3 px-4 font-mono text-xs text-bx-muted whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10" dir="ltr">
+                  <td class="py-3 px-4 font-mono text-xs text-bx-muted whitespace-nowrap border-e border-bx-divider" dir="ltr">
                     {{ guardian.phone }}
                   </td>
 
                   <!-- Relationship Badge -->
-                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
                     <span
                       class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border"
                       :class="
@@ -634,7 +655,7 @@ onMounted(() => {
                   </td>
 
                   <!-- Custody Children Count -->
-                  <td class="py-3 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <td class="py-3 px-4 text-center whitespace-nowrap border-e border-bx-divider">
                     <span
                       class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border font-mono"
                       :class="
@@ -649,7 +670,7 @@ onMounted(() => {
                   </td>
 
                   <!-- Created Date -->
-                  <td class="py-3 px-4 font-['Alexandria',sans-serif] font-medium text-xs text-bx-muted whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <td class="py-3 px-4 font-['Alexandria',sans-serif] font-medium text-xs text-bx-muted whitespace-nowrap border-e border-bx-divider">
                     <span class="inline-flex items-center gap-1.5 font-bold font-mono">
                       <Calendar class="w-3.5 h-3.5 text-bx-primary" />
                       <span>{{ guardian.created_at.split('T')[0] }}</span>
@@ -671,7 +692,7 @@ onMounted(() => {
                       <!-- View Details Button -->
                       <button
                         @click="openDetailsDrawer(guardian)"
-                        class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                        class="w-7 h-7 rounded-full border border-bx-border bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
                         title="معاينة الملف الشخصي والحساب"
                       >
                         <Eye class="w-3.5 h-3.5" />
@@ -704,7 +725,7 @@ onMounted(() => {
           <!-- Pagination Footer Matching Reference -->
           <div
             v-if="meta.last_page > 1"
-            class="p-4 border-t border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-table-header)] flex items-center justify-between gap-4"
+            class="p-4 border-t border-bx-border bg-bx-table-header flex items-center justify-between gap-4"
           >
             <div class="text-xs text-bx-muted">
               الصفحة <span class="font-bold text-bx-title">{{ meta.current_page }}</span> من <span class="font-bold text-bx-title">{{ meta.last_page }}</span> (إجمالي <span class="font-mono font-bold">{{ meta.total }}</span> أولياء أمور)
@@ -714,7 +735,7 @@ onMounted(() => {
               <button
                 :disabled="currentPage <= 1"
                 @click="currentPage--"
-                class="p-1.5 rounded-lg border border-[#B4AED8] dark:border-white/[0.12] hover:bg-[var(--bx-pill)] disabled:opacity-40 transition-colors cursor-pointer"
+                class="p-1.5 rounded-lg border border-bx-border hover:bg-bx-pill disabled:opacity-40 transition-colors cursor-pointer"
               >
                 <ChevronRight class="w-4 h-4" />
               </button>
@@ -723,14 +744,14 @@ onMounted(() => {
                 :key="p"
                 @click="currentPage = p"
                 class="w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                :class="p === currentPage ? 'bg-bx-primary text-white shadow-sm' : 'hover:bg-[var(--bx-pill)] text-bx-muted'"
+                :class="p === currentPage ? 'bg-bx-primary text-white shadow-sm' : 'hover:bg-bx-pill text-bx-muted'"
               >
                 {{ p }}
               </button>
               <button
                 :disabled="currentPage >= meta.last_page"
                 @click="currentPage++"
-                class="p-1.5 rounded-lg border border-[#B4AED8] dark:border-white/[0.12] hover:bg-[var(--bx-pill)] disabled:opacity-40 transition-colors cursor-pointer"
+                class="p-1.5 rounded-lg border border-bx-border hover:bg-bx-pill disabled:opacity-40 transition-colors cursor-pointer"
               >
                 <ChevronLeft class="w-4 h-4" />
               </button>
@@ -762,34 +783,34 @@ onMounted(() => {
       >
         <!-- DETAILS VIEW -->
         <div v-if="drawerMode === 'details' && activeGuardian" class="space-y-6">
-          <div class="p-5 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-3.5 shadow-xs">
-            <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+          <div class="p-5 rounded-2xl border border-bx-border bg-bx-surface space-y-3.5 shadow-xs">
+            <div class="flex items-center justify-between border-b border-bx-divider pb-3">
               <span class="text-xs font-bold text-bx-muted">الرمز المؤسسي الموحد</span>
               <span class="font-mono font-bold text-xs text-teal-600 dark:text-teal-400 px-2.5 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/20">
                 {{ activeGuardian.user_code }}
               </span>
             </div>
 
-            <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+            <div class="flex items-center justify-between border-b border-bx-divider pb-3">
               <span class="text-xs font-bold text-bx-muted">الاسم الكامل</span>
               <span class="font-black text-xs text-bx-title">{{ activeGuardian.full_name }}</span>
             </div>
 
-            <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+            <div class="flex items-center justify-between border-b border-bx-divider pb-3">
               <span class="text-xs font-bold text-bx-muted">رقم هاتف التواصل</span>
               <span class="font-mono font-bold text-xs text-bx-title" dir="ltr">
                 {{ activeGuardian.phone }}
               </span>
             </div>
 
-            <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+            <div class="flex items-center justify-between border-b border-bx-divider pb-3">
               <span class="text-xs font-bold text-bx-muted">صلة القرابة</span>
               <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                 {{ relationshipLabels[activeGuardian.relationship] }}
               </span>
             </div>
 
-            <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
+            <div class="flex items-center justify-between border-b border-bx-divider pb-3">
               <span class="text-xs font-bold text-bx-muted">عدد الأبناء المكفولين</span>
               <span class="font-mono font-bold text-xs text-bx-primary">
                 {{ activeGuardian.students_count }} طالب
@@ -816,7 +837,7 @@ onMounted(() => {
 
             <button
               @click="openEditFromDetails"
-              class="w-full py-2.5 px-4 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-title font-bold text-xs flex items-center justify-center gap-2 hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+              class="w-full py-2.5 px-4 rounded-full border border-bx-border text-bx-title font-bold text-xs flex items-center justify-center gap-2 hover:bg-bx-row-hover transition-all cursor-pointer"
             >
               <Edit2 class="w-4 h-4" />
               <span>تعديل بيانات ولي الأمر</span>
@@ -833,7 +854,7 @@ onMounted(() => {
             <button
               type="button"
               @click="showDrawer = false"
-              class="w-full py-2.5 px-4 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title font-bold text-xs flex items-center justify-center gap-2 hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+              class="w-full py-2.5 px-4 rounded-full border border-bx-border text-bx-muted hover:text-bx-title font-bold text-xs flex items-center justify-center gap-2 hover:bg-bx-row-hover transition-all cursor-pointer"
             >
               <span>إلغاء</span>
             </button>
@@ -862,7 +883,7 @@ onMounted(() => {
               required
               maxlength="150"
               placeholder="مثال: خالد مسعود السويح"
-              class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
+              class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
             />
             <p v-if="fieldErrors.full_name" class="text-[11px] text-red-500 font-medium">
               {{ fieldErrors.full_name[0] }}
@@ -883,7 +904,7 @@ onMounted(() => {
                 required
                 maxlength="20"
                 placeholder="مثال: 0913333333"
-                class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-medium"
+                class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-medium"
                 dir="ltr"
               />
               <p v-if="fieldErrors.phone" class="text-[11px] text-red-500 font-medium">
@@ -904,7 +925,7 @@ onMounted(() => {
           </div>
 
           <!-- Password -->
-          <div class="space-y-1.5 pt-2 border-t border-[#B4AED8]/40 dark:border-white/[0.08]">
+          <div class="space-y-1.5 pt-2 border-t border-bx-divider">
             <div class="flex items-center justify-between text-bx-title">
               <div class="flex items-center gap-2">
                 <Lock class="w-4 h-4 text-blue-500 shrink-0" />
@@ -923,7 +944,7 @@ onMounted(() => {
               :required="drawerMode === 'create'"
               minlength="8"
               placeholder="••••••••"
-              class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
+              class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
             />
             <p v-if="fieldErrors.password" class="text-[11px] text-red-500 font-medium">
               {{ fieldErrors.password[0] }}
@@ -942,7 +963,7 @@ onMounted(() => {
           <button
             type="button"
             @click="showDrawer = false"
-            class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+            class="px-5 py-2 rounded-full border border-bx-border text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
           >
             إلغاء
           </button>
@@ -996,8 +1017,8 @@ onMounted(() => {
           </div>
 
           <!-- Section 1: Search & Link Student On-Demand (لا يتم جلب الأسماء مسبقاً) -->
-          <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-4 shadow-xs">
-            <div class="flex items-center gap-2 border-b border-[#B4AED8]/40 dark:border-white/[0.08] pb-2.5">
+          <div class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-4 shadow-xs">
+            <div class="flex items-center gap-2 border-b border-bx-divider pb-2.5">
               <User class="w-4 h-4 text-bx-primary shrink-0" />
               <div>
                 <h4 class="text-xs font-black text-bx-title">البحث عن طالب لربطه تحت الوصاية</h4>
@@ -1014,7 +1035,7 @@ onMounted(() => {
                   @keydown.enter.prevent="searchStudentsOnDemand"
                   type="text"
                   placeholder="اكتب اسم الطالب الرباعي أو الرمز STU-XXXX..."
-                  class="w-full pr-10 pl-4 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif]"
+                  class="w-full pr-10 pl-4 py-2.5 rounded-full border border-bx-border bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif]"
                 />
               </div>
               <button
@@ -1031,7 +1052,7 @@ onMounted(() => {
 
             <!-- Search Results Display (Shown only when searched) -->
             <div v-if="hasSearchedStudents && !selectedStudentToLink" class="space-y-2 pt-2">
-              <div v-if="searchedStudents.length === 0" class="py-6 text-center text-bx-muted text-xs border border-dashed border-[#B4AED8]/50 dark:border-white/10 rounded-2xl bg-purple-500/[0.02]">
+              <div v-if="searchedStudents.length === 0" class="py-6 text-center text-bx-muted text-xs border border-dashed border-bx-border rounded-2xl bg-purple-500/[0.02]">
                 <AlertCircle class="w-6 h-6 mx-auto mb-1.5 opacity-40 text-bx-muted" />
                 <span class="font-bold block">لم يتم العثور على أي طالب يطابق هذا الاسم</span>
                 <span class="text-[10px]">تأكد من صحة الاسم المدخل أو ابحث برمز الطالب STU-...</span>
@@ -1047,7 +1068,7 @@ onMounted(() => {
                   v-for="student in searchedStudents"
                   :key="student.id"
                   @click="selectStudentToLink(student)"
-                  class="p-3 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-[var(--bx-canvas)] hover:border-bx-primary hover:bg-purple-500/[0.04] transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                  class="p-3 rounded-2xl border border-bx-border bg-bx-canvas hover:border-bx-primary hover:bg-purple-500/[0.04] transition-all cursor-pointer flex items-center justify-between gap-3 group"
                   :class="custodyChildren.some(c => c.student_id === student.id) ? 'opacity-50 cursor-not-allowed bg-gray-500/5' : ''"
                 >
                   <div class="flex items-center gap-3">
@@ -1099,7 +1120,7 @@ onMounted(() => {
                 </button>
               </div>
 
-              <div class="flex items-center justify-between p-3.5 rounded-xl bg-[var(--bx-surface-solid)] border border-[#B4AED8]/40 dark:border-white/10">
+              <div class="flex items-center justify-between p-3.5 rounded-xl bg-bx-surface border border-bx-border">
                 <div class="flex items-center gap-3">
                   <span class="font-mono text-xs font-bold text-bx-primary px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">
                     {{ selectedStudentToLink.user_code }}#
@@ -1125,7 +1146,7 @@ onMounted(() => {
                 <button
                   type="button"
                   @click="cancelSelectedStudent"
-                  class="px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/10 text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+                  class="px-4 py-2 rounded-full border border-bx-border text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
                 >
                   إلغاء
                 </button>
@@ -1145,7 +1166,7 @@ onMounted(() => {
 
           <!-- Section 2: Current Linked Children -->
           <div class="space-y-3">
-            <div class="flex items-center justify-between pb-1 border-b border-[#B4AED8]/30 dark:border-white/[0.06]">
+            <div class="flex items-center justify-between pb-1 border-b border-bx-divider">
               <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
                 <GraduationCap class="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
                 <span>الأبناء المكفولون حالياً</span>
@@ -1160,7 +1181,7 @@ onMounted(() => {
               <span class="text-xs font-bold">جاري تحديث بيانات الأبناء المكفولين...</span>
             </div>
 
-            <div v-else-if="custodyChildren.length === 0" class="py-8 text-center text-bx-muted text-xs border border-dashed border-[#B4AED8]/50 dark:border-white/10 rounded-2xl bg-[var(--bx-canvas)]">
+            <div v-else-if="custodyChildren.length === 0" class="py-8 text-center text-bx-muted text-xs border border-dashed border-bx-border rounded-2xl bg-bx-canvas">
               <Users class="w-8 h-8 mx-auto mb-2 opacity-30 text-bx-muted" />
               <span class="font-bold block text-bx-title">لا يوجد أبناء مرتبطون بهذا الوصي حالياً</span>
               <p class="text-[10px] text-bx-muted mt-0.5">استخدم محرك البحث أعلاه لكتابة اسم الطالب وربطه بولي الأمر فورياً.</p>
@@ -1170,7 +1191,7 @@ onMounted(() => {
               <div
                 v-for="child in custodyChildren"
                 :key="child.id"
-                class="flex items-center justify-between p-3.5 rounded-2xl border border-[#B4AED8]/50 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] hover:border-teal-500/30 transition-all shadow-2xs group"
+                class="flex items-center justify-between p-3.5 rounded-2xl border border-bx-border bg-bx-surface hover:border-teal-500/30 transition-all shadow-2xs group"
               >
                 <div class="flex items-center gap-3">
                   <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
@@ -1210,7 +1231,7 @@ onMounted(() => {
           <button
             type="button"
             @click="showCustodyDrawer = false"
-            class="px-6 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+            class="px-6 py-2 rounded-full border border-bx-border text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
           >
             إغلاق
           </button>
@@ -1222,7 +1243,7 @@ onMounted(() => {
         v-if="showDeleteModal"
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       >
-        <div class="bg-[var(--bx-surface-solid)] w-full max-w-md rounded-3xl p-6 border border-bx-border shadow-2xl space-y-4 text-right">
+        <div class="bg-bx-surface w-full max-w-md rounded-3xl p-6 border border-bx-border shadow-2xl space-y-4 text-right">
           <div class="flex items-center gap-3 text-red-500">
             <div class="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center">
               <AlertCircle class="w-6 h-6" />
@@ -1247,7 +1268,7 @@ onMounted(() => {
             <button
               type="button"
               @click="showDeleteModal = false"
-              class="px-4 py-2 rounded-xl border border-bx-border text-xs font-bold text-bx-muted hover:bg-[var(--bx-canvas)] transition-all cursor-pointer"
+              class="px-4 py-2 rounded-xl border border-bx-border text-xs font-bold text-bx-muted hover:bg-bx-canvas transition-all cursor-pointer"
             >
               إلغاء
             </button>

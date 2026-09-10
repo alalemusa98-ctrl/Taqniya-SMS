@@ -22,10 +22,12 @@ import {
   Save,
   UserCheck,
   UserX,
+  TrendingUp,
 } from 'lucide-vue-next';
 import { teachersApi, type Teacher, type PaginationMeta } from '../api/teachers.api';
 import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
+import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 
 // Component Lazy Loading (component_lazy_loading)
 const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
@@ -144,10 +146,13 @@ const availableSpecializations = computed(() => {
 // Stats Counters
 const stats = computed(() => {
   const total = meta.value.total;
+  const currentTotal = teachers.value.length;
   const activeCount = teachers.value.filter((t) => t.is_active === 1).length;
   const inactiveCount = teachers.value.filter((t) => t.is_active === 0).length;
+  const activePercentage = currentTotal > 0 ? Math.round((activeCount / currentTotal) * 100) : 0;
+  const inactivePercentage = currentTotal > 0 ? Math.round((inactiveCount / currentTotal) * 100) : 0;
   const specCount = availableSpecializations.value.length;
-  return { total, activeCount, inactiveCount, specCount };
+  return { total, activeCount, inactiveCount, activePercentage, inactivePercentage, specCount };
 });
 
 // Row enrichment with item sequence order and styling
@@ -362,16 +367,19 @@ onMounted(() => {
 <template>
   <TaqniyaErrorBoundary>
     <div class="space-y-4 font-sans" dir="rtl">
-    <!-- Unified Container Card (Matching the Academic Structure Reference Design System) -->
-    <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
+    <!-- Unified Container Card (Matching the Taqniya Reference Design System) -->
+    <div class="rounded-3xl border border-bx-border bg-bx-surface p-6 sm:p-7 shadow-sm">
       <!-- Card Header: Title on Right, Controls & Filters on Left -->
       <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
-        <!-- Title -->
+        <!-- Title & Subtitle with Taqniya Brand Accent -->
         <div>
-          <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
-            سجلات الكادر التعليمي الموحدة
-          </h2>
-          <p class="text-xs text-bx-muted font-medium mt-1">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-7 rounded-full bg-bx-primary shrink-0"></span>
+            <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+              سجلات الكادر التعليمي الموحدة
+            </h2>
+          </div>
+          <p class="text-xs text-bx-muted font-medium mt-1 ms-5">
             إدارة ملفات المعلمين، التخصصات العلمية، الحسابات الموحدة (TCH-XXXX) وحالات التفعيل
           </p>
         </div>
@@ -394,12 +402,12 @@ onMounted(() => {
               v-model="search"
               type="text"
               placeholder="بحث في المعلمين..."
-              class="w-full pr-10 pl-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
+              class="w-full pr-10 pl-5 py-2 rounded-full border border-bx-border bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
             />
           </div>
 
           <!-- Status Pill Segmented Filters -->
-          <div class="flex items-center gap-1.5 p-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent">
+          <div class="flex items-center gap-1.5 p-1 rounded-full border border-bx-border bg-transparent">
             <button
               @click="statusPill = 'all'"
               class="px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer"
@@ -425,47 +433,52 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Quick Metrics Banner (Stats Ribbon) -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-6">
-        <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-purple-500/[0.03] flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
-            <Users class="w-4 h-4" />
-          </div>
-          <div>
-            <span class="text-[11px] text-bx-muted font-bold block">إجمالي المعلمين</span>
-            <span class="text-base font-black font-display text-bx-title font-mono">{{ stats.total }}</span>
-          </div>
-        </div>
+      <!-- 2. مؤشرات الأداء والبطاقات (8. KPI & Metrics - Exact Framework Section 8 Standard) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-6">
+        <!-- Card 1: Total Teachers -->
+        <TaqniyaKpiCard
+          title="إجمالي الكادر التعليمي"
+          :value="stats.total"
+          :icon="Users"
+          variant="primary"
+          badge-text="فريق التدريس"
+          :badge-icon="TrendingUp"
+          :pulse-badge="true"
+          :progress="100"
+        />
 
-        <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-emerald-500/[0.03] flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-            <CheckCircle2 class="w-4 h-4" />
-          </div>
-          <div>
-            <span class="text-[11px] text-bx-muted font-bold block">حسابات نشطة</span>
-            <span class="text-base font-black font-display text-emerald-600 dark:text-emerald-400 font-mono">{{ stats.activeCount }}</span>
-          </div>
-        </div>
+        <!-- Card 2: Active Accounts -->
+        <TaqniyaKpiCard
+          title="حسابات نشطة ومفعلة"
+          :value="`${stats.activeCount} معلم`"
+          :icon="CheckCircle2"
+          variant="emerald"
+          :badge-text="`${stats.activePercentage}%`"
+          :badge-icon="UserCheck"
+          :progress="stats.activePercentage"
+        />
 
-        <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-red-500/[0.03] flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
-            <XCircle class="w-4 h-4" />
-          </div>
-          <div>
-            <span class="text-[11px] text-bx-muted font-bold block">حسابات معطلة</span>
-            <span class="text-base font-black font-display text-red-500 font-mono">{{ stats.inactiveCount }}</span>
-          </div>
-        </div>
+        <!-- Card 3: Inactive Accounts -->
+        <TaqniyaKpiCard
+          title="حسابات موقوفة / معطلة"
+          :value="`${stats.inactiveCount} حساب`"
+          :icon="UserX"
+          variant="rose"
+          :badge-text="stats.inactiveCount > 0 ? 'موقوف' : 'لا يوجد'"
+          :badge-icon="XCircle"
+          :progress="stats.inactivePercentage"
+        />
 
-        <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-blue-500/[0.03] flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-            <BookOpen class="w-4 h-4" />
-          </div>
-          <div>
-            <span class="text-[11px] text-bx-muted font-bold block">تخصصات علمية</span>
-            <span class="text-base font-black font-display text-blue-600 dark:text-blue-400 font-mono">{{ stats.specCount }}</span>
-          </div>
-        </div>
+        <!-- Card 4: Specializations -->
+        <TaqniyaKpiCard
+          title="التخصصات العلمية"
+          :value="`${stats.specCount} تخصص`"
+          :icon="GraduationCap"
+          variant="blue"
+          badge-text="تغطية المناهج"
+          :badge-icon="BookOpen"
+          :progress="100"
+        />
       </div>
 
       <!-- Specialization Chips Bar -->

@@ -18,10 +18,12 @@ import {
   Filter,
   User,
   Users,
+  UserX,
   ArrowLeftRight,
   CheckSquare,
   Check,
   Minus,
+  TrendingUp,
 } from 'lucide-vue-next';
 import {
   studentEnrollmentsApi,
@@ -35,6 +37,7 @@ import { academicApi } from '../api/academic.api';
 import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
+import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 
 // Lazy load drawers
 const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
@@ -63,6 +66,7 @@ const activeSectionPerClass = ref<Record<number, number>>({});
 
 // Fast Class Counts Map (Aggregated strictly by class_id)
 const classCountsMap = ref<Record<number, number>>({});
+const enrolledStudentIds = ref<Set<number>>(new Set());
 
 // Master Reference Data
 const academicYears = ref<any[]>([]);
@@ -131,10 +135,18 @@ const stats = computed(() => {
     totalEnrolled += classCountsMap.value[c.class_id] || 0;
   }
 
+  const totalRegistered = rawStudents.value.length;
+  // Accurate unenrolled count based on enrolled student IDs
+  const unenrolledCount = rawStudents.value.filter((s) => !enrolledStudentIds.value.has(s.id)).length;
+  const enrollmentRate = totalRegistered > 0 ? Math.round((totalEnrolled / totalRegistered) * 100) : (totalEnrolled > 0 ? 100 : 0);
+
   return {
     totalEnrolled,
     activeClassesCount,
     totalSections,
+    unenrolledCount,
+    totalRegistered,
+    enrollmentRate,
     academicYearName: academicYearName.value || 'العام النشط',
   };
 });
@@ -246,17 +258,8 @@ const drawerSectionOptions = computed<TaqniyaSelectOption[]>(() => {
 
 // Create Student Options (unenrolled students in the current active matrix)
 const createStudentOptions = computed<TaqniyaSelectOption[]>(() => {
-  const enrolledIds = new Set<number>();
-  for (const c of classesList.value) {
-    for (const sec of c.sections) {
-      for (const st of sec.students) {
-        enrolledIds.add(st.student_id);
-      }
-    }
-  }
-
   return rawStudents.value
-    .filter((s) => !enrolledIds.has(s.id))
+    .filter((s) => !enrolledStudentIds.value.has(s.id))
     .map((s) => ({
       value: s.id,
       label: s.full_name,
@@ -449,17 +452,9 @@ const handleBatchTransferSubmit = async () => {
 // Available unenrolled students for bulk enroll
 const availableStudentsForBulk = computed(() => {
   const searchLower = bulkForm.value.studentSearch.trim().toLowerCase();
-  const enrolledIds = new Set<number>();
-  for (const c of classesList.value) {
-    for (const sec of c.sections) {
-      for (const st of sec.students) {
-        enrolledIds.add(st.student_id);
-      }
-    }
-  }
 
   return rawStudents.value
-    .filter((s) => !enrolledIds.has(s.id))
+    .filter((s) => !enrolledStudentIds.value.has(s.id))
     .filter((s) => {
       if (!searchLower) return true;
       return (
@@ -544,6 +539,9 @@ const fetchClassCounts = async () => {
       map[item.class_id] = item.count;
     }
     classCountsMap.value = map;
+    if (Array.isArray(res.data?.enrolled_student_ids)) {
+      enrolledStudentIds.value = new Set(res.data.enrolled_student_ids);
+    }
   } catch (err) {
     console.error('Failed to fetch class counts:', err);
   }
@@ -930,24 +928,27 @@ onMounted(async () => {
   <TaqniyaErrorBoundary>
     <div class="space-y-4 font-sans" dir="rtl">
       <!-- Unified Container Card (Matching System SSoT Design System) -->
-      <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
+      <div class="rounded-3xl border border-bx-border bg-bx-surface p-6 sm:p-7 shadow-sm">
         
         <!-- Card Header: Title on Right, Controls & Filters on Left -->
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
-          <!-- Title -->
+          <!-- Title with Brand Accent Bar -->
           <div>
-            <div class="flex items-center gap-2">
-              <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
-                تسكين وتسجيل الطلاب بالفصول والشعب
-              </h2>
-              <span
-                v-if="academicYearName"
-                class="px-3 py-0.5 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.08] text-bx-primary border border-purple-500/20"
-              >
-                {{ academicYearName }}
-              </span>
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-7 rounded-full bg-bx-primary shrink-0"></span>
+              <div class="flex items-center gap-2">
+                <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+                  تسكين وتسجيل الطلاب بالفصول والشعب
+                </h2>
+                <span
+                  v-if="academicYearName"
+                  class="px-3 py-0.5 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.08] text-bx-primary border border-purple-500/20"
+                >
+                  {{ academicYearName }}
+                </span>
+              </div>
             </div>
-            <p class="text-xs text-bx-muted font-medium mt-1">
+            <p class="text-xs text-bx-muted font-medium mt-1 ms-5">
               إدارة توزيع الطلاب على الفصول والشعب، توليد أرقام الجلوس، ومتابعة حالات التدرج الأكاديمي
             </p>
           </div>
@@ -979,12 +980,12 @@ onMounted(async () => {
                 v-model="search"
                 type="text"
                 placeholder="بحث في المسكنين..."
-                class="w-full pr-10 pl-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
+                class="w-full pr-10 pl-5 py-2 rounded-full border border-bx-border bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
               />
             </div>
 
             <!-- Status Filter Pills -->
-            <div class="flex items-center gap-1 p-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent">
+            <div class="flex items-center gap-1 p-1 rounded-full border border-bx-border bg-transparent">
               <button
                 @click="statusFilter = 'all'"
                 class="px-3.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer"
@@ -1024,52 +1025,58 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Quick Metrics Banner (Stats Ribbon matching Reference Design) -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-6">
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-purple-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
-              <GraduationCap class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">إجمالي المسكنين</span>
-              <span class="text-base font-black font-display text-bx-title font-mono">{{ stats.totalEnrolled }}</span>
-            </div>
-          </div>
+        <!-- 2. مؤشرات الأداء والبطاقات (8. KPI & Metrics - Exact Framework Section 8 Standard) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-6">
+          <!-- Card 1: Total Enrolled -->
+          <TaqniyaKpiCard
+            title="إجمالي الطلاب المسكنين"
+            :value="stats.totalEnrolled"
+            :icon="GraduationCap"
+            variant="primary"
+            badge-text="توزيع الطلاب"
+            :badge-icon="TrendingUp"
+            :pulse-badge="true"
+            :progress="stats.enrollmentRate"
+          />
 
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-blue-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-              <Layers class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">الصفوف المسكنة</span>
-              <span class="text-base font-black font-display text-blue-600 dark:text-blue-400 font-mono">{{ stats.activeClassesCount }}</span>
-            </div>
-          </div>
+          <!-- Card 2: Active Classes -->
+          <TaqniyaKpiCard
+            title="الصفوف الدراسية"
+            :value="`${stats.activeClassesCount} صف`"
+            :icon="Layers"
+            variant="blue"
+            badge-text="المستويات الأكاديمية"
+            :badge-icon="TrendingUp"
+            :progress="100"
+          />
 
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-emerald-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-              <School class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">الشعب الدراسية</span>
-              <span class="text-base font-black font-display text-emerald-600 dark:text-emerald-400 font-mono">{{ stats.totalSections }}</span>
-            </div>
-          </div>
+          <!-- Card 3: Total Sections -->
+          <TaqniyaKpiCard
+            title="الشعب الدراسية"
+            :value="`${stats.totalSections} شعبة`"
+            :icon="School"
+            variant="emerald"
+            badge-text="الطاقة الاستيعابية"
+            :badge-icon="TrendingUp"
+            :progress="100"
+          />
 
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-indigo-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-              <Calendar class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">العام الدراسي الحالي</span>
-              <span class="text-sm font-black font-display text-indigo-600 dark:text-indigo-400">{{ stats.academicYearName }}</span>
-            </div>
-          </div>
+          <!-- Card 4: Students Awaiting Enrollment -->
+          <TaqniyaKpiCard
+            title="بانتظار التسكين"
+            :value="`${stats.unenrolledCount} طالب`"
+            :icon="UserX"
+            :variant="stats.unenrolledCount > 0 ? 'amber' : 'emerald'"
+            :badge-text="stats.unenrolledCount > 0 ? 'بحاجة لتسكين' : 'مكتمل التسكين'"
+            :badge-icon="TrendingUp"
+            :pulse-badge="stats.unenrolledCount > 0"
+            :progress="stats.unenrolledCount > 0 ? Math.min(100, Math.round((stats.unenrolledCount / (stats.totalRegistered || 1)) * 100)) : 100"
+          />
         </div>
 
         <!-- Academic Hierarchy Filter Ribbon -->
-        <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.08] mb-6 space-y-3.5 shadow-2xs">
-          <div class="flex items-center justify-between gap-2 border-b border-[#B4AED8]/30 dark:border-white/[0.06] pb-2.5">
+        <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-bx-border mb-6 space-y-3.5 shadow-2xs">
+          <div class="flex items-center justify-between gap-2 border-b border-bx-divider pb-2.5">
             <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
               <Filter class="w-4 h-4 text-bx-primary shrink-0" />
               <span>تصفية مصفوفة التسكين حسب الصف والشعبة والعام</span>
@@ -1152,7 +1159,7 @@ onMounted(async () => {
         <!-- ⚪ Empty State -->
         <div
           v-else-if="classesList.length === 0"
-          class="py-20 text-center border-t border-[#B4AED8] dark:border-white/[0.08] space-y-3"
+          class="py-20 text-center border-t border-bx-border space-y-3"
         >
           <AlertCircle class="w-12 h-12 mx-auto text-bx-muted opacity-40" />
           <h3 class="text-sm font-bold text-bx-title">لا توجد سجلات تسكين تطابق محددات البحث</h3>
@@ -1171,10 +1178,10 @@ onMounted(async () => {
           <div
             v-for="cls in displayClassesList"
             :key="cls.class_id"
-            class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs"
+            class="rounded-2xl border border-bx-border overflow-hidden bg-bx-surface shadow-xs"
           >
             <!-- Class Header Ribbon -->
-            <div class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div class="bg-bx-table-header border-b border-bx-border px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
               <div class="flex items-center gap-2.5">
                 <div class="w-7 h-7 rounded-lg bg-bx-primary/10 text-bx-primary flex items-center justify-center font-bold text-xs">
                   {{ cls.grade_level }}
@@ -1198,7 +1205,7 @@ onMounted(async () => {
             </div>
 
             <!-- Section Tabs Ribbon -->
-            <div class="p-4 bg-purple-500/[0.01] border-b border-[#B4AED8]/40 dark:border-white/10 flex flex-wrap items-center justify-between gap-2">
+            <div class="p-4 bg-purple-500/[0.01] border-b border-bx-divider flex flex-wrap items-center justify-between gap-2">
               <div class="flex flex-wrap items-center gap-2">
                 <button
                   v-for="sec in cls.sections"
@@ -1208,7 +1215,7 @@ onMounted(async () => {
                   :class="
                     activeSectionPerClass[cls.class_id] === sec.class_section_id
                       ? 'bg-bx-primary text-white border-bx-primary shadow-xs'
-                      : 'border-[#B4AED8]/60 dark:border-white/10 text-bx-muted hover:text-bx-title bg-transparent'
+                      : 'border-bx-border text-bx-muted hover:text-bx-title bg-transparent'
                   "
                 >
                   <Loader2 v-if="(sec as any).isLoading" class="w-3 h-3 animate-spin shrink-0" />
@@ -1269,9 +1276,9 @@ onMounted(async () => {
               <div v-else class="overflow-x-auto">
                 <table class="w-full text-start border-collapse text-xs">
                   <thead>
-                    <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
+                    <tr class="bg-bx-table-header border-b border-bx-border text-bx-muted">
                       <!-- Checkbox column for entire section selection -->
-                      <th class="py-3 px-3 text-center w-12 border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <th class="py-3 px-3 text-center w-12 border-e border-bx-divider">
                         <div class="flex items-center justify-center">
                           <button
                             type="button"
@@ -1284,7 +1291,7 @@ onMounted(async () => {
                                 ? 'bg-bx-primary border-bx-primary text-white shadow-xs'
                                 : isSectionPartiallySelected(sec.students)
                                   ? 'bg-bx-primary border-bx-primary text-white shadow-xs'
-                                  : 'border-[#B4AED8] dark:border-white/30 bg-white dark:bg-slate-800 hover:border-bx-primary'
+                                  : 'border-bx-border dark:border-white/30 bg-white dark:bg-slate-800 hover:border-bx-primary'
                             ]"
                             title="تحديد أو إلغاء تحديد كل طلاب الشعبة"
                           >
@@ -1293,15 +1300,15 @@ onMounted(async () => {
                           </button>
                         </div>
                       </th>
-                      <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
-                      <th class="py-3 px-4 font-bold text-start w-32 border-e border-[#B4AED8]/50 dark:border-white/10">الرمز الموحد</th>
-                      <th class="py-3 px-4 font-bold text-start min-w-[220px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-bx-divider">#</th>
+                      <th class="py-3 px-4 font-bold text-start w-32 border-e border-bx-divider">الرمز الموحد</th>
+                      <th class="py-3 px-4 font-bold text-start min-w-[220px] border-e border-bx-divider">
                         <div class="flex items-center gap-1.5">
                           <User class="w-3.5 h-3.5 text-bx-primary" />
                           <span>اسم الطالب الرباعي</span>
                         </div>
                       </th>
-                      <th class="py-3 px-4 font-bold text-start min-w-[140px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <th class="py-3 px-4 font-bold text-start min-w-[140px] border-e border-bx-divider">
                         <div class="flex items-center gap-1.5">
                           <Hash class="w-3.5 h-3.5 text-bx-primary" />
                           <span>رقم الجلوس</span>
@@ -1310,7 +1317,7 @@ onMounted(async () => {
                       <th class="py-3 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
+                  <tbody class="divide-y divide-bx-divider">
                     <tr
                       v-for="(st, idx) in sec.students"
                       :key="st.enrollment_id"
@@ -1322,7 +1329,7 @@ onMounted(async () => {
                       ]"
                     >
                       <!-- Checkbox column for individual student -->
-                      <td class="py-3 px-3 text-center border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <td class="py-3 px-3 text-center border-e border-bx-divider">
                         <div class="flex items-center justify-center">
                           <button
                             type="button"
@@ -1333,7 +1340,7 @@ onMounted(async () => {
                             :class="[
                               selectedEnrollmentIds.includes(st.enrollment_id)
                                 ? 'bg-bx-primary border-bx-primary text-white shadow-xs'
-                                : 'border-[#B4AED8] dark:border-white/30 bg-white dark:bg-slate-800 group-hover:border-bx-primary'
+                                : 'border-bx-border dark:border-white/30 bg-white dark:bg-slate-800 group-hover:border-bx-primary'
                             ]"
                             :title="`تحديد الطالب ${st.student_name}`"
                           >
@@ -1341,20 +1348,20 @@ onMounted(async () => {
                           </button>
                         </div>
                       </td>
-                      <td class="py-3 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <td class="py-3 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-bx-divider">
                         {{ idx + 1 }}
                       </td>
-                      <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                        <span class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-bx-title/80">
+                      <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
+                        <span class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-bx-border text-bx-title/80">
                           {{ st.student_code }}
                         </span>
                       </td>
-                      <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
                         <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight group-hover:text-bx-primary transition-colors">
                           {{ st.student_name }}
                         </span>
                       </td>
-                      <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
                         <span
                           v-if="st.seating_number"
                           class="inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-bx-title border border-slate-300 dark:border-slate-700"
@@ -1368,7 +1375,7 @@ onMounted(async () => {
                           <!-- History Button -->
                           <button
                             @click="openHistoryDrawer(st)"
-                            class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                            class="w-7 h-7 rounded-full border border-bx-border bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
                             title="السجل الأكاديمي والتاريخي"
                           >
                             <History class="w-3.5 h-3.5" />
@@ -1424,8 +1431,8 @@ onMounted(async () => {
           <!-- ============================================== -->
           <template v-if="drawerMode === 'create'">
             <!-- Card 1: Student Selection (Active Year is automatically used) -->
-            <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-3.5 shadow-xs">
-              <div class="flex items-center gap-2 border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-2.5">
+            <div class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-3.5 shadow-xs">
+              <div class="flex items-center gap-2 border-b border-bx-divider pb-2.5">
                 <div class="w-7 h-7 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold">
                   <User class="w-4 h-4" />
                 </div>
@@ -1520,7 +1527,7 @@ onMounted(async () => {
                   type="text"
                   maxlength="50"
                   placeholder="مثال: 101، أو SEAT-501"
-                  class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
+                  class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
                 />
               </div>
             </div>
@@ -1531,8 +1538,8 @@ onMounted(async () => {
           <!-- ============================================== -->
           <template v-else>
             <!-- Card 1: Current Student & Placement Information -->
-            <div v-if="activeStudentForDrawer" class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-3 shadow-xs">
-              <div class="flex items-center justify-between border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-2.5">
+            <div v-if="activeStudentForDrawer" class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-3 shadow-xs">
+              <div class="flex items-center justify-between border-b border-bx-divider pb-2.5">
                 <div class="flex items-center gap-2">
                   <div class="w-7 h-7 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold">
                     <User class="w-4 h-4" />
@@ -1548,11 +1555,11 @@ onMounted(async () => {
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div class="p-3 rounded-xl bg-purple-500/[0.03] border border-[#B4AED8]/40 dark:border-white/[0.05]">
+                <div class="p-3 rounded-xl bg-purple-500/[0.03] border border-bx-border">
                   <span class="text-[10px] text-bx-muted font-bold block mb-1">اسم الطالب الرباعي</span>
                   <span class="font-black text-bx-title">{{ activeStudentForDrawer.student_name }}</span>
                 </div>
-                <div class="p-3 rounded-xl bg-purple-500/[0.03] border border-[#B4AED8]/40 dark:border-white/[0.05]">
+                <div class="p-3 rounded-xl bg-purple-500/[0.03] border border-bx-border">
                   <span class="text-[10px] text-bx-muted font-bold block mb-1">الشعبة والصف الحالي</span>
                   <span class="font-black text-indigo-600 dark:text-indigo-400">
                     {{ currentSectionInfo ? `${currentSectionInfo.className} — ${currentSectionInfo.sectionName}` : 'الشعبة الحالية' }}
@@ -1630,7 +1637,7 @@ onMounted(async () => {
                   type="text"
                   maxlength="50"
                   placeholder="مثال: 101، أو SEAT-501"
-                  class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
+                  class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
                 />
               </div>
 
@@ -1650,11 +1657,11 @@ onMounted(async () => {
           </template>
 
           <!-- Drawer Actions Footer -->
-          <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#B4AED8]/40 dark:border-white/10">
+          <div class="pt-4 flex items-center justify-end gap-3 border-t border-bx-divider">
             <button
               type="button"
               @click="showDrawer = false"
-              class="px-5 py-2.5 rounded-full text-xs font-bold border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] transition cursor-pointer"
+              class="px-5 py-2.5 rounded-full text-xs font-bold border border-bx-border text-bx-muted hover:text-bx-title hover:bg-bx-row-hover transition cursor-pointer"
             >
               إلغاء
             </button>
@@ -1731,7 +1738,7 @@ onMounted(async () => {
           </div>
 
           <!-- Card 2: Students Multi-select with Search & Quick Actions -->
-          <div class="p-4 rounded-2xl border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)] space-y-3 shadow-xs">
+          <div class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-3 shadow-xs">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <div class="w-7 h-7 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold">
@@ -1774,12 +1781,12 @@ onMounted(async () => {
                 v-model="bulkForm.studentSearch"
                 type="text"
                 placeholder="تصفية الطلاب بالاسم أو الرمز الموحد..."
-                class="w-full pr-9 pl-4 py-2 rounded-full text-xs font-medium border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all"
+                class="w-full pr-9 pl-4 py-2 rounded-full text-xs font-medium border border-bx-border bg-transparent text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all"
               />
             </div>
 
             <!-- Scrollable Student List -->
-            <div class="max-h-60 overflow-y-auto border border-[#B4AED8]/50 dark:border-white/10 rounded-2xl divide-y divide-[#B4AED8]/40 dark:divide-white/10 bg-purple-500/[0.01]">
+            <div class="max-h-60 overflow-y-auto border border-bx-border rounded-2xl divide-y divide-bx-divider bg-purple-500/[0.01]">
               <div
                 v-for="s in availableStudentsForBulk"
                 :key="s.id"
@@ -1796,7 +1803,7 @@ onMounted(async () => {
                     :class="[
                       bulkForm.selected_student_ids.includes(s.id)
                         ? 'bg-bx-primary border-bx-primary text-white shadow-xs'
-                        : 'border-[#B4AED8] dark:border-white/30 bg-white dark:bg-slate-800'
+                        : 'border-bx-border dark:border-white/30 bg-white dark:bg-slate-800'
                     ]"
                   >
                     <Check v-if="bulkForm.selected_student_ids.includes(s.id)" class="w-3.5 h-3.5 stroke-[3]" />
@@ -1834,11 +1841,11 @@ onMounted(async () => {
           </div>
 
           <!-- Actions Footer -->
-          <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#B4AED8]/40 dark:border-white/10">
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-bx-divider">
             <button
               type="button"
               @click="showBulkModal = false"
-              class="px-5 py-2 rounded-full text-xs font-bold border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] cursor-pointer transition"
+              class="px-5 py-2 rounded-full text-xs font-bold border border-bx-border text-bx-muted hover:text-bx-title hover:bg-bx-row-hover cursor-pointer transition"
             >
               إلغاء
             </button>
@@ -1880,7 +1887,7 @@ onMounted(async () => {
             <div
               v-for="item in historyItems"
               :key="item.id"
-              class="p-4 rounded-2xl bg-purple-500/[0.02] border border-[#B4AED8]/60 dark:border-white/10 space-y-2"
+              class="p-4 rounded-2xl bg-purple-500/[0.02] border border-bx-border space-y-2"
             >
               <div class="flex items-center justify-between">
                 <span class="font-black text-xs sm:text-sm text-bx-title font-display">
@@ -1913,7 +1920,7 @@ onMounted(async () => {
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         dir="rtl"
       >
-        <div class="bg-[var(--bx-surface-solid)] rounded-3xl border border-[#B4AED8] dark:border-white/[0.12] shadow-2xl max-w-md w-full p-6 space-y-4 font-sans text-center">
+        <div class="bg-bx-surface rounded-3xl border border-bx-border shadow-2xl max-w-md w-full p-6 space-y-4 font-sans text-center">
           <div class="w-12 h-12 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
             <Trash2 class="w-5 h-5" />
           </div>
@@ -1926,7 +1933,7 @@ onMounted(async () => {
             </p>
           </div>
 
-          <div class="flex items-center justify-center gap-2 pt-3 border-t border-[#B4AED8]/40 dark:border-white/10">
+          <div class="flex items-center justify-center gap-2 pt-3 border-t border-bx-divider">
             <button
               type="button"
               @click="showDeleteModal = false"
@@ -1953,8 +1960,8 @@ onMounted(async () => {
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         dir="rtl"
       >
-        <div class="bg-[var(--bx-surface-solid)] rounded-3xl border border-[#B4AED8] dark:border-white/[0.12] shadow-2xl max-w-lg w-full p-6 space-y-4 font-sans">
-          <div class="flex items-center justify-between border-b border-[#B4AED8]/40 dark:border-white/10 pb-3">
+        <div class="bg-bx-surface rounded-3xl border border-bx-border shadow-2xl max-w-lg w-full p-6 space-y-4 font-sans">
+          <div class="flex items-center justify-between border-b border-bx-divider pb-3">
             <div class="flex items-center gap-2.5">
               <div class="w-9 h-9 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-bold">
                 <ArrowLeftRight class="w-5 h-5" />
@@ -1978,7 +1985,7 @@ onMounted(async () => {
           <!-- List of Selected Students -->
           <div class="space-y-1.5">
             <label class="block text-[11px] font-bold text-bx-title">الطلاب المحددين للنقل ({{ selectedStudentsInfo.length }}):</label>
-            <div class="max-h-32 overflow-y-auto p-2.5 rounded-2xl bg-purple-500/[0.02] border border-[#B4AED8]/40 dark:border-white/10 flex flex-wrap gap-1.5">
+            <div class="max-h-32 overflow-y-auto p-2.5 rounded-2xl bg-purple-500/[0.02] border border-bx-border flex flex-wrap gap-1.5">
               <span
                 v-for="st in selectedStudentsInfo"
                 :key="st.enrollment_id"
@@ -2027,11 +2034,11 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#B4AED8]/40 dark:border-white/10">
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-bx-divider">
             <button
               type="button"
               @click="showBatchTransferModal = false"
-              class="px-5 py-2 rounded-full text-xs font-bold border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] cursor-pointer transition"
+              class="px-5 py-2 rounded-full text-xs font-bold border border-bx-border text-bx-muted hover:text-bx-title hover:bg-bx-row-hover cursor-pointer transition"
             >
               إلغاء
             </button>
@@ -2077,7 +2084,7 @@ onMounted(async () => {
             <div class="flex items-center gap-2">
               <button
                 @click="selectedEnrollmentIds = []"
-                class="px-3 py-1.5 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title border border-[#B4AED8]/50 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                class="px-3 py-1.5 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title border border-bx-border hover:bg-bx-surface transition cursor-pointer"
               >
                 إلغاء التحديد
               </button>

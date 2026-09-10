@@ -193,6 +193,7 @@ export class StudentEnrollmentsService {
       return {
         success: true,
         data: [],
+        enrolled_student_ids: [],
       };
     }
 
@@ -207,12 +208,24 @@ export class StudentEnrollmentsService {
       },
     });
 
+    const enrolledStudents = await this.prisma.studentEnrollment.findMany({
+      where: {
+        academic_year_id: BigInt(yearId),
+        deleted_at: null,
+      },
+      select: {
+        student_id: true,
+      },
+      distinct: ['student_id'],
+    });
+
     return {
       success: true,
       data: counts.map((c) => ({
         class_id: Number(c.class_id),
         count: c._count.id,
       })),
+      enrolled_student_ids: enrolledStudents.map((e) => Number(e.student_id)),
     };
   }
 

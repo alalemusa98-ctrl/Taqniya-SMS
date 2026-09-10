@@ -625,12 +625,12 @@ watch([filterType, sortBy, sortOrder], () => {
                   </td>
 
                   <!-- Start Time -->
-                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-bx-divider" dir="ltr">
+                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-bx-divider text-start">
                     {{ slot.start_time.substring(0, 5) }}
                   </td>
 
                   <!-- End Time -->
-                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-bx-divider" dir="ltr">
+                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-bx-divider text-start">
                     {{ slot.end_time.substring(0, 5) }}
                   </td>
 
