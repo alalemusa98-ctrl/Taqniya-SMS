@@ -18,6 +18,10 @@ import {
   Sparkles,
   Save,
   Hash,
+  Zap,
+  TrendingUp,
+  CheckCircle2,
+  Star,
 } from 'lucide-vue-next';
 import {
   periodSlotsApi,
@@ -340,12 +344,15 @@ watch([filterType, sortBy, sortOrder], () => {
         
         <!-- 1. Card Header: Title on Right, Controls & Actions on Left -->
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
-          <!-- Title & Subtitle -->
+          <!-- Title & Subtitle with Taqniya Brand Accent -->
           <div>
-            <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
-              فترات وتوقيتات الحصص اليومية
-            </h2>
-            <p class="text-xs text-bx-muted font-medium mt-1">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-7 rounded-full bg-bx-primary shrink-0"></span>
+              <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+                فترات وتوقيتات الحصص اليومية
+              </h2>
+            </div>
+            <p class="text-xs text-bx-muted font-medium mt-1 ms-5">
               إدارة فترات اليوم المدرسي، مواعيد الحصص والفسح، والمخطط الزمني التفاعلي
             </p>
           </div>
@@ -402,42 +409,47 @@ watch([filterType, sortBy, sortOrder], () => {
           </div>
         </div>
 
-        <!-- 2. مؤشرات الأداء والبطاقات (8. KPI & Metrics - Using Reusable TaqniyaKpiCard) -->
+        <!-- 2. مؤشرات الأداء والبطاقات (8. KPI & Metrics - Exact Framework Section 8 Standard) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-6">
+          <!-- Card 1: Zap Icon with Trending Badge (Section 8 Standard) -->
           <TaqniyaKpiCard
-            title="إجمالي الفترات"
+            title="إجمالي فترات اليوم"
             :value="stats.total"
-            :icon="Clock"
+            :icon="Zap"
             variant="primary"
             badge-text="اليوم المدرسي"
+            :badge-icon="TrendingUp"
             :pulse-badge="true"
             :progress="100"
           />
 
+          <!-- Card 2: CheckCircle2 Icon with Emerald Border (Section 8 Standard) -->
           <TaqniyaKpiCard
             title="الحصص التعليمية"
-            :value="stats.classCount"
-            :icon="BookOpen"
-            variant="blue"
+            :value="`${stats.classCount} حصص`"
+            :icon="CheckCircle2"
+            variant="emerald"
             :badge-text="`${stats.classPercentage}%`"
             :progress="stats.classPercentage"
           />
 
+          <!-- Card 3: Clock Icon with Amber Border (Section 8 Standard) -->
           <TaqniyaKpiCard
             title="فترات الاستراحة"
-            :value="stats.breakCount"
-            :icon="Coffee"
+            :value="`${stats.breakCount} استراحة`"
+            :icon="Clock"
             variant="amber"
-            :badge-text="`${stats.breakPercentage}%`"
+            badge-text="فسحة 30 د"
             :progress="stats.breakPercentage"
           />
 
+          <!-- Card 4: Star Icon with Quality/Duration (Section 8 Standard) -->
           <TaqniyaKpiCard
             title="إجمالي زمن اليوم المدرسي"
             :value="stats.durationText"
-            :icon="Sparkles"
-            variant="emerald"
-            badge-text="نشط"
+            :icon="Star"
+            variant="primary"
+            badge-text="توقيت معتمد"
             :progress="100"
           />
         </div>

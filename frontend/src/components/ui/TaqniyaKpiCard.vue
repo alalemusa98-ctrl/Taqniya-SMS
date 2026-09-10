@@ -7,6 +7,7 @@ export interface TaqniyaKpiCardProps {
   icon?: any;
   variant?: 'primary' | 'blue' | 'amber' | 'emerald' | 'rose';
   badgeText?: string;
+  badgeIcon?: any;
   pulseBadge?: boolean;
   progress?: number;
 }
@@ -21,7 +22,7 @@ const variantClasses = computed(() => {
   switch (props.variant) {
     case 'blue':
       return {
-        icon: 'border-2 border-blue-500/30 text-blue-500 bg-blue-500/[0.04]',
+        icon: 'border-2 border-blue-500/30 text-blue-500',
         badge: 'border-blue-500/30 text-blue-600 dark:text-blue-400',
         value: 'text-blue-600 dark:text-blue-400',
         progressBar: 'bg-blue-500',
@@ -29,7 +30,7 @@ const variantClasses = computed(() => {
       };
     case 'amber':
       return {
-        icon: 'border-2 border-amber-500/30 text-amber-500 bg-amber-500/[0.04]',
+        icon: 'border-2 border-amber-500/30 text-amber-500',
         badge: 'border-amber-500/30 text-amber-600 dark:text-amber-400',
         value: 'text-amber-600 dark:text-amber-400',
         progressBar: 'bg-amber-500',
@@ -37,7 +38,7 @@ const variantClasses = computed(() => {
       };
     case 'emerald':
       return {
-        icon: 'border-2 border-emerald-500/30 text-emerald-500 bg-emerald-500/[0.04]',
+        icon: 'border-2 border-emerald-500/30 text-emerald-500',
         badge: 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
         value: 'text-emerald-600 dark:text-emerald-400',
         progressBar: 'bg-emerald-500',
@@ -45,7 +46,7 @@ const variantClasses = computed(() => {
       };
     case 'rose':
       return {
-        icon: 'border-2 border-rose-500/30 text-rose-500 bg-rose-500/[0.04]',
+        icon: 'border-2 border-rose-500/30 text-rose-500',
         badge: 'border-rose-500/30 text-rose-600 dark:text-rose-400',
         value: 'text-rose-600 dark:text-rose-400',
         progressBar: 'bg-rose-500',
@@ -54,8 +55,8 @@ const variantClasses = computed(() => {
     case 'primary':
     default:
       return {
-        icon: 'border border-[#B4AED8]/70 dark:border-white/10 text-bx-primary bg-purple-500/[0.04]',
-        badge: 'border-[#B4AED8]/70 dark:border-white/10 text-bx-primary',
+        icon: 'border border-[#B4AED8] dark:border-white/10 text-bx-primary',
+        badge: 'border-[#B4AED8] dark:border-white/10 text-bx-primary',
         value: 'text-bx-title',
         progressBar: 'bg-bx-primary',
         progressBorder: 'border-[#B4AED8]/50 dark:border-white/10',
@@ -72,7 +73,7 @@ const clampedProgress = computed(() => {
 
 <template>
   <div class="bx-card p-5 sm:p-6 flex flex-col justify-between space-y-4">
-    <!-- Top Tier: Icon & Badge/Tag -->
+    <!-- Top Tier: Icon & Badge/Tag (Matching Section 8 Specification) -->
     <div class="flex items-center justify-between">
       <span
         v-if="icon"
@@ -85,7 +86,7 @@ const clampedProgress = computed(() => {
 
       <span
         v-if="badgeText || $slots.badge"
-        class="bx-tag font-mono text-[11px]"
+        class="bx-tag font-mono text-[11px] inline-flex items-center gap-1"
         :class="variantClasses.badge"
       >
         <span
@@ -94,6 +95,7 @@ const clampedProgress = computed(() => {
         ></span>
         <slot name="badge">
           <span>{{ badgeText }}</span>
+          <component :is="badgeIcon" v-if="badgeIcon" class="w-3 h-3" />
         </slot>
       </span>
     </div>
