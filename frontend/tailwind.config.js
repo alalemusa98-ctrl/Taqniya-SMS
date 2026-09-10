@@ -19,6 +19,8 @@ export default {
         'bx-border-strong': 'var(--bx-border-strong)',
         'bx-divider': 'var(--bx-divider)',
         'bx-pill': 'var(--bx-pill)',
+        'bx-table-header': 'var(--bx-table-header)',
+        'bx-row-hover': 'var(--bx-row-hover)',
         'bx-danger': 'var(--bx-danger)',
         'bx-success': 'var(--bx-success)',
         'bx-warning': 'var(--bx-warning)',

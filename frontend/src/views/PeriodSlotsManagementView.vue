@@ -340,7 +340,7 @@ watch([filterType, sortBy, sortOrder], () => {
   <TaqniyaErrorBoundary>
     <div class="space-y-4 font-sans" dir="rtl">
       <!-- Unified Container Card (Matching the Taqniya Reference Design System) -->
-      <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
+      <div class="rounded-3xl border border-bx-border bg-bx-surface p-6 sm:p-7 shadow-sm">
         
         <!-- 1. Card Header: Title on Right, Controls & Actions on Left -->
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
@@ -376,12 +376,12 @@ watch([filterType, sortBy, sortOrder], () => {
                 @input="onSearchInput"
                 type="text"
                 placeholder="بحث في فترات الحصص..."
-                class="w-full pr-10 pl-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
+                class="w-full pr-10 pl-5 py-2 rounded-full border border-bx-border bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-center sm:text-start"
               />
             </div>
 
             <!-- Filter Pills -->
-            <div class="flex items-center gap-1.5 p-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent">
+            <div class="flex items-center gap-1.5 p-1 rounded-full border border-bx-border bg-transparent">
               <button
                 @click="filterType = 'all'"
                 class="px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer"
@@ -455,8 +455,8 @@ watch([filterType, sortBy, sortOrder], () => {
         </div>
 
         <!-- 3. Visual Daily Timeline (المخطط الزمني التفاعلي) -->
-        <div v-if="sortedTimelineSlots.length > 0" class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.08] mb-6 space-y-3 shadow-2xs">
-          <div class="flex items-center justify-between gap-2 border-b border-[#B4AED8]/30 dark:border-white/[0.06] pb-2.5">
+        <div v-if="sortedTimelineSlots.length > 0" class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-bx-border mb-6 space-y-3 shadow-2xs">
+          <div class="flex items-center justify-between gap-2 border-b border-bx-divider pb-2.5">
             <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
               <Calendar class="w-4 h-4 text-bx-primary shrink-0" />
               <span>المخطط الزمني لليوم المدرسي</span>
@@ -506,7 +506,7 @@ watch([filterType, sortBy, sortOrder], () => {
                   {{ slot.name }}
                 </div>
 
-                <div class="flex items-center justify-between text-[11px] text-bx-muted font-mono pt-2 border-t border-[#B4AED8]/30 dark:border-white/[0.06]">
+                <div class="flex items-center justify-between text-[11px] text-bx-muted font-mono pt-2 border-t border-bx-divider">
                   <span>{{ slot.start_time.substring(0, 5) }}</span>
                   <span class="text-[10px] text-bx-muted/60">←</span>
                   <span>{{ slot.end_time.substring(0, 5) }}</span>
@@ -517,7 +517,7 @@ watch([filterType, sortBy, sortOrder], () => {
         </div>
 
         <!-- 4. Table & UI States (With Crisp Dividers Matching Students/Teachers Views) -->
-        <div class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
+        <div class="rounded-2xl border border-bx-border overflow-hidden bg-bx-surface shadow-xs">
           <!-- Loading State -->
           <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
             <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
@@ -562,33 +562,33 @@ watch([filterType, sortBy, sortOrder], () => {
           <div v-else class="overflow-x-auto">
             <table class="w-full text-start border-collapse">
               <thead>
-                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted text-xs">
-                  <th class="py-3 px-4 font-bold text-start w-16 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10"># الرقم</th>
-                  <th class="py-3 px-4 font-bold text-start border-e border-[#B4AED8]/50 dark:border-white/10">
+                <tr class="bg-bx-table-header border-b border-bx-border text-bx-muted text-xs">
+                  <th class="py-3 px-4 font-bold text-start w-16 font-['Alexandria',sans-serif] border-e border-bx-divider"># الرقم</th>
+                  <th class="py-3 px-4 font-bold text-start border-e border-bx-divider">
                     <div class="flex items-center gap-1.5">
                       <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
                       <span>مسمى الحصة / الفترة</span>
                     </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-bx-divider">
                     <div class="flex items-center gap-1.5">
                       <Clock class="w-3.5 h-3.5 text-bx-primary" />
                       <span>وقت البداية</span>
                     </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-bx-divider">
                     <div class="flex items-center gap-1.5">
                       <Clock class="w-3.5 h-3.5 text-bx-primary" />
                       <span>وقت النهاية</span>
                     </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-bx-divider">
                     <div class="flex items-center gap-1.5">
                       <Sparkles class="w-3.5 h-3.5 text-bx-primary" />
                       <span>المدة المحسوبة</span>
                     </div>
                   </th>
-                  <th class="py-3 px-4 font-bold text-center min-w-[130px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <th class="py-3 px-4 font-bold text-center min-w-[130px] border-e border-bx-divider">
                     <div class="flex items-center justify-center gap-1.5">
                       <Coffee class="w-3.5 h-3.5 text-bx-primary" />
                       <span>نوع الفترة</span>
@@ -597,14 +597,14 @@ watch([filterType, sortBy, sortOrder], () => {
                   <th class="py-3 px-4 font-bold text-center w-28 last:border-e-0">الإجراءات</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10 text-xs font-medium text-bx-title">
+              <tbody class="divide-y divide-bx-divider text-xs font-medium text-bx-title">
                 <tr
                   v-for="slot in slots"
                   :key="slot.id"
                   class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
                 >
                   <!-- Slot Number -->
-                  <td class="py-3 px-4 font-mono font-bold whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <td class="py-3 px-4 font-mono font-bold whitespace-nowrap border-e border-bx-divider">
                     <span
                       class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold font-mono"
                       :class="[
@@ -618,31 +618,31 @@ watch([filterType, sortBy, sortOrder], () => {
                   </td>
 
                   <!-- Name -->
-                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
                     <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight group-hover:text-bx-primary transition-colors">
                       {{ slot.name }}
                     </span>
                   </td>
 
                   <!-- Start Time -->
-                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10" dir="ltr">
+                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-bx-divider" dir="ltr">
                     {{ slot.start_time.substring(0, 5) }}
                   </td>
 
                   <!-- End Time -->
-                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10" dir="ltr">
+                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-bx-divider" dir="ltr">
                     {{ slot.end_time.substring(0, 5) }}
                   </td>
 
                   <!-- Duration -->
-                  <td class="py-3 px-4 font-mono font-bold text-bx-title whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span class="px-2.5 py-0.5 rounded-full bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-[11px]">
+                  <td class="py-3 px-4 font-mono font-bold text-bx-title whitespace-nowrap border-e border-bx-divider">
+                    <span class="px-2.5 py-0.5 rounded-full bg-purple-500/[0.06] dark:bg-white/[0.05] border border-bx-border text-[11px]">
                       {{ calculateDuration(slot.start_time, slot.end_time) }}
                     </span>
                   </td>
 
                   <!-- Type -->
-                  <td class="py-3 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                  <td class="py-3 px-4 text-center whitespace-nowrap border-e border-bx-divider">
                     <span
                       class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border"
                       :class="[
@@ -686,7 +686,7 @@ watch([filterType, sortBy, sortOrder], () => {
             <!-- Pagination Footer (Matching Students/Teachers Reference) -->
             <div
               v-if="meta.last_page > 1"
-              class="p-4 border-t border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-table-header)] flex items-center justify-between gap-4"
+              class="p-4 border-t border-bx-border bg-bx-table-header flex items-center justify-between gap-4"
             >
               <div class="text-xs text-bx-muted">
                 الصفحة <span class="font-bold text-bx-title">{{ meta.current_page }}</span> من <span class="font-bold text-bx-title">{{ meta.last_page }}</span> (إجمالي <span class="font-mono font-bold">{{ meta.total }}</span> فترة)
@@ -696,7 +696,7 @@ watch([filterType, sortBy, sortOrder], () => {
                 <button
                   :disabled="currentPage <= 1"
                   @click="currentPage--; fetchSlots();"
-                  class="p-1.5 rounded-lg border border-[#B4AED8] dark:border-white/[0.12] hover:bg-[var(--bx-pill)] disabled:opacity-40 transition-colors cursor-pointer"
+                  class="p-1.5 rounded-lg border border-bx-border hover:bg-bx-pill disabled:opacity-40 transition-colors cursor-pointer"
                 >
                   <ChevronRight class="w-4 h-4" />
                 </button>
@@ -705,14 +705,14 @@ watch([filterType, sortBy, sortOrder], () => {
                   :key="p"
                   @click="currentPage = p; fetchSlots();"
                   class="w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                  :class="p === currentPage ? 'bg-bx-primary text-white shadow-sm' : 'hover:bg-[var(--bx-pill)] text-bx-muted'"
+                  :class="p === currentPage ? 'bg-bx-primary text-white shadow-sm' : 'hover:bg-bx-pill text-bx-muted'"
                 >
                   {{ p }}
                 </button>
                 <button
                   :disabled="currentPage >= meta.last_page"
                   @click="currentPage++; fetchSlots();"
-                  class="p-1.5 rounded-lg border border-[#B4AED8] dark:border-white/[0.12] hover:bg-[var(--bx-pill)] disabled:opacity-40 transition-colors cursor-pointer"
+                  class="p-1.5 rounded-lg border border-bx-border hover:bg-bx-pill disabled:opacity-40 transition-colors cursor-pointer"
                 >
                   <ChevronLeft class="w-4 h-4" />
                 </button>
@@ -742,8 +742,8 @@ watch([filterType, sortBy, sortOrder], () => {
           </div>
 
           <!-- Section 1: Basic Period Info Card -->
-          <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-4 shadow-xs">
-            <div class="flex items-center gap-2 border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-2.5">
+          <div class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-4 shadow-xs">
+            <div class="flex items-center gap-2 border-b border-bx-divider pb-2.5">
               <BookOpen class="w-4 h-4 text-bx-primary shrink-0" />
               <h4 class="text-xs font-black text-bx-title">البيانات الأساسية للحصة</h4>
             </div>
@@ -759,7 +759,7 @@ watch([filterType, sortBy, sortOrder], () => {
                 required
                 maxlength="50"
                 placeholder="مثال: الحصة الأولى، الفسحة الكبرى..."
-                class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
+                class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
                 :class="[formErrors.name ? 'border-red-400 bg-red-50/20' : '']"
               />
               <p v-if="formErrors.name" class="text-[11px] text-red-500 font-medium">
@@ -780,7 +780,7 @@ watch([filterType, sortBy, sortOrder], () => {
                 max="255"
                 required
                 placeholder="1, 2, 3..."
-                class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono font-medium"
+                class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono font-medium"
                 :class="[formErrors.slot_number ? 'border-red-400 bg-red-50/20' : '']"
               />
               <p v-if="formErrors.slot_number" class="text-[11px] text-red-500 font-medium">
@@ -790,8 +790,8 @@ watch([filterType, sortBy, sortOrder], () => {
           </div>
 
           <!-- Section 2: Times & Duration Card -->
-          <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-4 shadow-xs">
-            <div class="flex items-center gap-2 border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-2.5">
+          <div class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-4 shadow-xs">
+            <div class="flex items-center gap-2 border-b border-bx-divider pb-2.5">
               <Clock class="w-4 h-4 text-amber-500 shrink-0" />
               <h4 class="text-xs font-black text-bx-title">توقيت البداية والنهاية</h4>
             </div>
@@ -806,7 +806,7 @@ watch([filterType, sortBy, sortOrder], () => {
                   v-model="formData.start_time"
                   type="time"
                   required
-                  class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono font-medium text-center"
+                  class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono font-medium text-center"
                   :class="[formErrors.start_time ? 'border-red-400 bg-red-50/20' : '']"
                 />
                 <p v-if="formErrors.start_time" class="text-[11px] text-red-500 font-medium">
@@ -823,7 +823,7 @@ watch([filterType, sortBy, sortOrder], () => {
                   v-model="formData.end_time"
                   type="time"
                   required
-                  class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono font-medium text-center"
+                  class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono font-medium text-center"
                   :class="[formErrors.end_time ? 'border-red-400 bg-red-50/20' : '']"
                 />
                 <p v-if="formErrors.end_time" class="text-[11px] text-red-500 font-medium">
@@ -835,7 +835,7 @@ watch([filterType, sortBy, sortOrder], () => {
             <!-- Duration Notice -->
             <div
               v-if="formData.start_time && formData.end_time && formData.start_time < formData.end_time"
-              class="p-3 rounded-2xl bg-purple-500/[0.04] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.08] text-xs text-bx-title flex items-center justify-between"
+              class="p-3 rounded-2xl bg-purple-500/[0.04] dark:bg-white/[0.02] border border-bx-border text-xs text-bx-title flex items-center justify-between"
             >
               <span class="text-bx-muted font-bold">المدة المحسوبة تلقائياً:</span>
               <span class="font-black font-mono text-bx-primary">{{ calculateDuration(formData.start_time, formData.end_time) }}</span>
@@ -843,8 +843,8 @@ watch([filterType, sortBy, sortOrder], () => {
           </div>
 
           <!-- Section 3: Period Classification Card -->
-          <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-3.5 shadow-xs">
-            <div class="flex items-center gap-2 border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-2.5">
+          <div class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-3.5 shadow-xs">
+            <div class="flex items-center gap-2 border-b border-bx-divider pb-2.5">
               <Coffee class="w-4 h-4 text-purple-500 shrink-0" />
               <h4 class="text-xs font-black text-bx-title">تصنيف الفترة</h4>
             </div>
@@ -856,7 +856,7 @@ watch([filterType, sortBy, sortOrder], () => {
                   type="button"
                   @click="formData.is_break = false"
                   class="py-2.5 px-3 rounded-full border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
-                  :class="!formData.is_break ? 'border-bx-primary bg-bx-primary/10 text-bx-primary shadow-xs' : 'border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title'"
+                  :class="!formData.is_break ? 'border-bx-primary bg-bx-primary/10 text-bx-primary shadow-xs' : 'border-bx-border text-bx-muted hover:text-bx-title'"
                 >
                   <BookOpen class="w-3.5 h-3.5" />
                   <span>حصة دراسية</span>
@@ -865,7 +865,7 @@ watch([filterType, sortBy, sortOrder], () => {
                   type="button"
                   @click="formData.is_break = true"
                   class="py-2.5 px-3 rounded-full border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
-                  :class="formData.is_break ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-xs' : 'border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title'"
+                  :class="formData.is_break ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-xs' : 'border-bx-border text-bx-muted hover:text-bx-title'"
                 >
                   <Coffee class="w-3.5 h-3.5" />
                   <span>فسحة / استراحة</span>
@@ -884,7 +884,7 @@ watch([filterType, sortBy, sortOrder], () => {
           <button
             type="button"
             @click="showDrawer = false"
-            class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+            class="px-5 py-2 rounded-full border border-bx-border text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
           >
             إلغاء
           </button>
@@ -915,7 +915,7 @@ watch([filterType, sortBy, sortOrder], () => {
           ></div>
 
           <!-- Dialog Box -->
-          <div class="relative bg-[var(--bx-surface-solid)] rounded-3xl p-6 sm:p-7 border border-[#B4AED8] dark:border-white/[0.12] max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div class="relative bg-bx-surface rounded-3xl p-6 sm:p-7 border border-bx-border max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div class="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 flex items-center justify-center text-red-600 mx-auto">
               <AlertTriangle class="w-6 h-6" />
             </div>
@@ -943,7 +943,7 @@ watch([filterType, sortBy, sortOrder], () => {
               <button
                 :disabled="isDeleting"
                 @click="showDeleteModal = false"
-                class="flex-1 px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title text-xs font-bold transition-all cursor-pointer"
+                class="flex-1 px-5 py-2.5 rounded-full border border-bx-border text-bx-muted hover:text-bx-title text-xs font-bold transition-all cursor-pointer"
               >
                 إلغاء
               </button>

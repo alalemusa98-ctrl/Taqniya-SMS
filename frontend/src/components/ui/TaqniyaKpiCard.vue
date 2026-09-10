@@ -55,11 +55,11 @@ const variantClasses = computed(() => {
     case 'primary':
     default:
       return {
-        icon: 'border border-[#B4AED8] dark:border-white/10 text-bx-primary',
-        badge: 'border-[#B4AED8] dark:border-white/10 text-bx-primary',
+        icon: 'border border-bx-border text-bx-primary',
+        badge: 'border-bx-border text-bx-primary',
         value: 'text-bx-title',
         progressBar: 'bg-bx-primary',
-        progressBorder: 'border-[#B4AED8]/50 dark:border-white/10',
+        progressBorder: 'border-bx-border',
       };
   }
 });
