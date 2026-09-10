@@ -16,6 +16,8 @@ import {
   ChevronRight,
   ChevronLeft,
   Sparkles,
+  Save,
+  Hash,
 } from 'lucide-vue-next';
 import {
   periodSlotsApi,
@@ -26,6 +28,7 @@ import {
 } from '../api/period-slots.api';
 import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
+import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 
 // 1. Component Lazy Loading (frontend_capabilities.yaml)
 const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
@@ -87,7 +90,7 @@ function calculateDuration(start: string, end: string): string {
   return diff > 0 ? `${diff} دقيقة` : '-';
 }
 
-// 5. Async Data Fetching & Request Deduplication (async_data_fetching & request_deduplication)
+// 5. Async Data Fetching & Request Deduplication
 async function fetchSlots() {
   if (activeAbortController) {
     activeAbortController.abort();
@@ -128,7 +131,7 @@ async function fetchSlots() {
   }
 }
 
-// 6. Debouncing & Throttling (debouncing_throttling)
+// 6. Debouncing & Throttling
 let debounceTimer: any = null;
 function onSearchInput() {
   clearTimeout(debounceTimer);
@@ -289,11 +292,13 @@ async function handleDelete() {
   }
 }
 
-// Quick Metrics / Stats Ribbon
+// Quick Metrics / Stats (8. KPI & Metrics - Taqniya Design System)
 const stats = computed(() => {
   const total = slots.value.length;
   const classCount = slots.value.filter((s) => s.is_break === 0).length;
   const breakCount = slots.value.filter((s) => s.is_break === 1).length;
+  const classPercentage = total > 0 ? Math.round((classCount / total) * 100) : 0;
+  const breakPercentage = total > 0 ? Math.round((breakCount / total) * 100) : 0;
 
   let totalMinutes = 0;
   slots.value.forEach((s) => {
@@ -309,7 +314,7 @@ const stats = computed(() => {
   const mins = totalMinutes % 60;
   const durationText = hours > 0 ? `${hours} س و ${mins} د` : `${mins} دقيقة`;
 
-  return { total, classCount, breakCount, durationText };
+  return { total, classCount, breakCount, classPercentage, breakPercentage, durationText };
 });
 
 // Chronological timeline slots
@@ -329,7 +334,7 @@ watch([filterType, sortBy, sortOrder], () => {
 
 <template>
   <TaqniyaErrorBoundary>
-    <div class="space-y-6 pb-12" dir="rtl">
+    <div class="space-y-4 font-sans" dir="rtl">
       <!-- Unified Container Card (Matching the Taqniya Reference Design System) -->
       <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
         
@@ -337,15 +342,10 @@ watch([filterType, sortBy, sortOrder], () => {
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
           <!-- Title & Subtitle -->
           <div>
-            <div class="flex items-center gap-2.5">
-              <div class="w-9 h-9 rounded-2xl bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/30 dark:border-purple-400/40 flex items-center justify-center text-bx-primary dark:text-purple-300 font-bold">
-                <Clock class="w-5 h-5" />
-              </div>
-              <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
-                فترات وتوقيتات الحصص اليومية
-              </h2>
-            </div>
-            <p class="text-xs text-bx-muted font-medium mt-1.5 ms-11">
+            <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+              فترات وتوقيتات الحصص اليومية
+            </h2>
+            <p class="text-xs text-bx-muted font-medium mt-1">
               إدارة فترات اليوم المدرسي، مواعيد الحصص والفسح، والمخطط الزمني التفاعلي
             </p>
           </div>
@@ -374,78 +374,75 @@ watch([filterType, sortBy, sortOrder], () => {
             </div>
 
             <!-- Filter Pills -->
-            <div class="flex items-center gap-1 p-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent">
+            <div class="flex items-center gap-1.5 p-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent">
               <button
                 @click="filterType = 'all'"
-                class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer"
+                class="px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer"
                 :class="filterType === 'all' ? 'bg-bx-primary text-white shadow-sm' : 'text-bx-muted hover:text-bx-title'"
               >
                 الكل
               </button>
               <button
                 @click="filterType = 'class'"
-                class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1"
+                class="px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
                 :class="filterType === 'class' ? 'bg-bx-primary text-white shadow-sm' : 'text-bx-muted hover:text-bx-title'"
               >
-                <BookOpen class="w-3 h-3" />
-                <span>حصص دراسية</span>
+                <BookOpen class="w-3.5 h-3.5" />
+                <span>حصص</span>
               </button>
               <button
                 @click="filterType = 'break'"
-                class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1"
+                class="px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
                 :class="filterType === 'break' ? 'bg-bx-primary text-white shadow-sm' : 'text-bx-muted hover:text-bx-title'"
               >
-                <Coffee class="w-3 h-3" />
-                <span>فترات الاستراحة</span>
+                <Coffee class="w-3.5 h-3.5" />
+                <span>فترات استراحة</span>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- 2. Quick Metrics Banner (Stats Ribbon - Matching Taqniya Standard) -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-6">
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-purple-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
-              <Clock class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">إجمالي الفترات</span>
-              <span class="text-base font-black font-display text-bx-title font-mono">{{ stats.total }}</span>
-            </div>
-          </div>
+        <!-- 2. مؤشرات الأداء والبطاقات (8. KPI & Metrics - Using Reusable TaqniyaKpiCard) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-6">
+          <TaqniyaKpiCard
+            title="إجمالي الفترات"
+            :value="stats.total"
+            :icon="Clock"
+            variant="primary"
+            badge-text="اليوم المدرسي"
+            :pulse-badge="true"
+            :progress="100"
+          />
 
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-blue-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-              <BookOpen class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">الحصص التعليمية</span>
-              <span class="text-base font-black font-display text-blue-600 dark:text-blue-400 font-mono">{{ stats.classCount }}</span>
-            </div>
-          </div>
+          <TaqniyaKpiCard
+            title="الحصص التعليمية"
+            :value="stats.classCount"
+            :icon="BookOpen"
+            variant="blue"
+            :badge-text="`${stats.classPercentage}%`"
+            :progress="stats.classPercentage"
+          />
 
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-amber-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-              <Coffee class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">فترات الاستراحة</span>
-              <span class="text-base font-black font-display text-amber-600 dark:text-amber-400 font-mono">{{ stats.breakCount }}</span>
-            </div>
-          </div>
+          <TaqniyaKpiCard
+            title="فترات الاستراحة"
+            :value="stats.breakCount"
+            :icon="Coffee"
+            variant="amber"
+            :badge-text="`${stats.breakPercentage}%`"
+            :progress="stats.breakPercentage"
+          />
 
-          <div class="p-3.5 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-emerald-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-              <Sparkles class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">إجمالي زمن اليوم المدرسي</span>
-              <span class="text-base font-black font-display text-emerald-600 dark:text-emerald-400 font-mono">{{ stats.durationText }}</span>
-            </div>
-          </div>
+          <TaqniyaKpiCard
+            title="إجمالي زمن اليوم المدرسي"
+            :value="stats.durationText"
+            :icon="Sparkles"
+            variant="emerald"
+            badge-text="نشط"
+            :progress="100"
+          />
         </div>
 
-        <!-- 3. Visual Daily Timeline (المخطط الزمني التفاعلي المتسق مع هوية Taqniya) -->
+        <!-- 3. Visual Daily Timeline (المخطط الزمني التفاعلي) -->
         <div v-if="sortedTimelineSlots.length > 0" class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.08] mb-6 space-y-3 shadow-2xs">
           <div class="flex items-center justify-between gap-2 border-b border-[#B4AED8]/30 dark:border-white/[0.06] pb-2.5">
             <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
@@ -507,7 +504,7 @@ watch([filterType, sortBy, sortOrder], () => {
           </div>
         </div>
 
-        <!-- 4. Table & UI States -->
+        <!-- 4. Table & UI States (With Crisp Dividers Matching Students/Teachers Views) -->
         <div class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
           <!-- Loading State -->
           <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
@@ -549,30 +546,55 @@ watch([filterType, sortBy, sortOrder], () => {
             </button>
           </div>
 
-          <!-- Success State: Table -->
+          <!-- Success State: Table with Crisp Column Dividers and Standard Taqniya Tokens -->
           <div v-else class="overflow-x-auto">
             <table class="w-full text-start border-collapse">
               <thead>
-                <tr class="bg-purple-500/[0.04] dark:bg-white/[0.03] text-bx-title text-xs font-bold border-b border-[#B4AED8]/60 dark:border-white/10">
-                  <th class="py-3.5 px-4 text-start font-display"># الرقم</th>
-                  <th class="py-3.5 px-4 text-start font-display">مسمى الحصة / الفترة</th>
-                  <th class="py-3.5 px-4 text-start font-display">وقت البداية</th>
-                  <th class="py-3.5 px-4 text-start font-display">وقت النهاية</th>
-                  <th class="py-3.5 px-4 text-start font-display">المدة الزمنية</th>
-                  <th class="py-3.5 px-4 text-start font-display">نوع الفترة</th>
-                  <th class="py-3.5 px-4 text-center font-display">الإجراءات</th>
+                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted text-xs">
+                  <th class="py-3 px-4 font-bold text-start w-16 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10"># الرقم</th>
+                  <th class="py-3 px-4 font-bold text-start border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>مسمى الحصة / الفترة</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <Clock class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>وقت البداية</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <Clock class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>وقت النهاية</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <Sparkles class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>المدة المحسوبة</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-center min-w-[130px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <Coffee class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>نوع الفترة</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 font-bold text-center w-28 last:border-e-0">الإجراءات</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-[#B4AED8]/20 dark:divide-white/[0.04] text-xs font-medium text-bx-title">
+              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10 text-xs font-medium text-bx-title">
                 <tr
                   v-for="slot in slots"
                   :key="slot.id"
-                  class="hover:bg-[var(--bx-row-hover)] transition-colors duration-150"
+                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
                 >
                   <!-- Slot Number -->
-                  <td class="py-3.5 px-4 font-mono font-bold">
+                  <td class="py-3 px-4 font-mono font-bold whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
                     <span
-                      class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold font-mono"
                       :class="[
                         slot.is_break === 1
                           ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
@@ -584,33 +606,37 @@ watch([filterType, sortBy, sortOrder], () => {
                   </td>
 
                   <!-- Name -->
-                  <td class="py-3.5 px-4 font-bold text-bx-title">
-                    {{ slot.name }}
+                  <td class="py-3 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight group-hover:text-bx-primary transition-colors">
+                      {{ slot.name }}
+                    </span>
                   </td>
 
                   <!-- Start Time -->
-                  <td class="py-3.5 px-4 font-mono text-bx-muted">
+                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10" dir="ltr">
                     {{ slot.start_time.substring(0, 5) }}
                   </td>
 
                   <!-- End Time -->
-                  <td class="py-3.5 px-4 font-mono text-bx-muted">
+                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10" dir="ltr">
                     {{ slot.end_time.substring(0, 5) }}
                   </td>
 
                   <!-- Duration -->
-                  <td class="py-3.5 px-4 text-bx-muted font-mono font-semibold">
-                    {{ calculateDuration(slot.start_time, slot.end_time) }}
+                  <td class="py-3 px-4 font-mono font-bold text-bx-title whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span class="px-2.5 py-0.5 rounded-full bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-[11px]">
+                      {{ calculateDuration(slot.start_time, slot.end_time) }}
+                    </span>
                   </td>
 
                   <!-- Type -->
-                  <td class="py-3.5 px-4">
+                  <td class="py-3 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
                     <span
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold"
+                      class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border"
                       :class="[
                         slot.is_break === 1
-                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/60 dark:border-amber-500/20'
-                          : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-500/20',
+                          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 dark:bg-amber-950/30'
+                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 dark:bg-emerald-950/30',
                       ]"
                     >
                       <Coffee v-if="slot.is_break === 1" class="w-3 h-3" />
@@ -619,20 +645,23 @@ watch([filterType, sortBy, sortOrder], () => {
                     </span>
                   </td>
 
-                  <!-- Actions -->
-                  <td class="py-3.5 px-4 text-center">
-                    <div class="inline-flex items-center gap-1.5">
+                  <!-- Actions: Uniform Circular Icon Buttons Matching Taqniya Standard -->
+                  <td class="py-3 px-4 text-center whitespace-nowrap last:border-e-0">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <!-- Edit Button -->
                       <button
                         @click="openEditDrawer(slot)"
-                        title="تعديل"
-                        class="p-1.5 rounded-lg text-bx-muted hover:text-bx-primary hover:bg-purple-500/10 transition-colors cursor-pointer"
+                        class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                        title="تعديل فترة الحصة"
                       >
                         <Edit2 class="w-3.5 h-3.5" />
                       </button>
+
+                      <!-- Delete Button -->
                       <button
                         @click="confirmDelete(slot)"
-                        title="حذف"
-                        class="p-1.5 rounded-lg text-bx-muted hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                        class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                        title="حذف فترة الحصة"
                       >
                         <Trash2 class="w-3.5 h-3.5" />
                       </button>
@@ -642,31 +671,38 @@ watch([filterType, sortBy, sortOrder], () => {
               </tbody>
             </table>
 
-            <!-- Pagination Footer (Matching Taqniya Reference) -->
+            <!-- Pagination Footer (Matching Students/Teachers Reference) -->
             <div
               v-if="meta.last_page > 1"
-              class="flex items-center justify-between px-6 py-4 border-t border-[#B4AED8]/40 dark:border-white/[0.06] bg-purple-500/[0.02]"
+              class="p-4 border-t border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-table-header)] flex items-center justify-between gap-4"
             >
-              <span class="text-xs text-bx-muted font-medium">
-                عرض {{ slots.length }} من إجمالي {{ meta.total }} فترة
-              </span>
-              <div class="flex items-center gap-2">
+              <div class="text-xs text-bx-muted">
+                الصفحة <span class="font-bold text-bx-title">{{ meta.current_page }}</span> من <span class="font-bold text-bx-title">{{ meta.last_page }}</span> (إجمالي <span class="font-mono font-bold">{{ meta.total }}</span> فترة)
+              </div>
+
+              <div class="flex items-center gap-1.5">
                 <button
                   :disabled="currentPage <= 1"
                   @click="currentPage--; fetchSlots();"
-                  class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-title hover:bg-[var(--bx-row-hover)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  class="p-1.5 rounded-lg border border-[#B4AED8] dark:border-white/[0.12] hover:bg-[var(--bx-pill)] disabled:opacity-40 transition-colors cursor-pointer"
                 >
-                  <ChevronRight class="w-3.5 h-3.5" />
+                  <ChevronRight class="w-4 h-4" />
                 </button>
-                <span class="text-xs font-bold text-bx-title font-mono px-2">
-                  {{ meta.current_page }} / {{ meta.last_page }}
-                </span>
+                <button
+                  v-for="p in meta.last_page"
+                  :key="p"
+                  @click="currentPage = p; fetchSlots();"
+                  class="w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                  :class="p === currentPage ? 'bg-bx-primary text-white shadow-sm' : 'hover:bg-[var(--bx-pill)] text-bx-muted'"
+                >
+                  {{ p }}
+                </button>
                 <button
                   :disabled="currentPage >= meta.last_page"
                   @click="currentPage++; fetchSlots();"
-                  class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-title hover:bg-[var(--bx-row-hover)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  class="p-1.5 rounded-lg border border-[#B4AED8] dark:border-white/[0.12] hover:bg-[var(--bx-pill)] disabled:opacity-40 transition-colors cursor-pointer"
                 >
-                  <ChevronLeft class="w-3.5 h-3.5" />
+                  <ChevronLeft class="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -674,167 +710,235 @@ watch([filterType, sortBy, sortOrder], () => {
         </div>
       </div>
 
-      <!-- 5. Slide-Over Drawer (TaqniyaDrawer Standard) -->
+      <!-- 5. Slide-Over Drawer (TaqniyaDrawer Standard with Header Icon, Subtitle, and Fixed Footer Slot) -->
       <TaqniyaDrawer
         :is-open="showDrawer"
-        :title="drawerMode === 'create' ? 'إضافة فترة حصة يومية' : 'تعديل فترة الحصة'"
+        :title="drawerMode === 'create' ? 'إضافة فترة حصة يومية' : 'تعديل فترة الحصة اليومية'"
+        :subtitle="drawerMode === 'create' ? 'تسجيل فترة حصة أو استراحة جديدة مع ضبط التوقيت والتسلسل اليومي' : 'تحديث مسمى وتوقيتات الحصة ونوعها في جدول اليوم المدرسي'"
+        :icon="Clock"
+        max-width="max-w-[540px]"
         @close="showDrawer = false"
       >
-        <form @submit.prevent="handleSubmit" class="space-y-5 p-6" dir="rtl">
+        <form id="slotForm" @submit.prevent="handleSubmit" class="space-y-5">
           <!-- Error Alert inside Drawer -->
           <div
             v-if="formErrorMessage"
-            class="p-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-2"
+            class="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-2"
           >
             <AlertCircle class="w-4 h-4 shrink-0" />
             <span>{{ formErrorMessage }}</span>
           </div>
 
-          <!-- Name -->
-          <div>
-            <label class="block text-[11px] font-bold text-bx-title mb-1.5">
-              مسمى الحصة / الفترة <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="formData.name"
-              type="text"
-              placeholder="مثال: الحصة الأولى، الفسحة..."
-              class="w-full px-4 py-2.5 text-xs rounded-2xl border bg-transparent text-bx-title focus:outline-none focus:border-bx-primary transition-all"
-              :class="[formErrors.name ? 'border-red-400 bg-red-50/20' : 'border-[#B4AED8] dark:border-white/[0.12]']"
-            />
-            <p v-if="formErrors.name" class="text-[11px] text-red-500 mt-1 font-bold">{{ formErrors.name }}</p>
-          </div>
+          <!-- Section 1: Basic Period Info Card -->
+          <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-4 shadow-xs">
+            <div class="flex items-center gap-2 border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-2.5">
+              <BookOpen class="w-4 h-4 text-bx-primary shrink-0" />
+              <h4 class="text-xs font-black text-bx-title">البيانات الأساسية للحصة</h4>
+            </div>
 
-          <!-- Slot Number -->
-          <div>
-            <label class="block text-[11px] font-bold text-bx-title mb-1.5">
-              الرقم التسلسلي للحصة <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model.number="formData.slot_number"
-              type="number"
-              min="1"
-              max="255"
-              class="w-full px-4 py-2.5 text-xs rounded-2xl border bg-transparent text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono"
-              :class="[formErrors.slot_number ? 'border-red-400 bg-red-50/20' : 'border-[#B4AED8] dark:border-white/[0.12]']"
-            />
-            <p v-if="formErrors.slot_number" class="text-[11px] text-red-500 mt-1 font-bold">{{ formErrors.slot_number }}</p>
-          </div>
-
-          <!-- Times Grid -->
-          <div class="grid grid-cols-2 gap-3.5">
-            <!-- Start Time -->
-            <div>
-              <label class="block text-[11px] font-bold text-bx-title mb-1.5">
-                وقت البداية <span class="text-red-500">*</span>
+            <!-- Name -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-bx-title block">
+                مسمى الحصة / الفترة <span class="text-red-500">*</span>
               </label>
               <input
-                v-model="formData.start_time"
-                type="time"
-                class="w-full px-4 py-2.5 text-xs rounded-2xl border bg-transparent text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono"
-                :class="[formErrors.start_time ? 'border-red-400 bg-red-50/20' : 'border-[#B4AED8] dark:border-white/[0.12]']"
+                v-model="formData.name"
+                type="text"
+                required
+                maxlength="50"
+                placeholder="مثال: الحصة الأولى، الفسحة الكبرى..."
+                class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
+                :class="[formErrors.name ? 'border-red-400 bg-red-50/20' : '']"
               />
-              <p v-if="formErrors.start_time" class="text-[11px] text-red-500 mt-1 font-bold">{{ formErrors.start_time }}</p>
+              <p v-if="formErrors.name" class="text-[11px] text-red-500 font-medium">
+                {{ formErrors.name }}
+              </p>
             </div>
 
-            <!-- End Time -->
-            <div>
-              <label class="block text-[11px] font-bold text-bx-title mb-1.5">
-                وقت النهاية <span class="text-red-500">*</span>
-              </label>
+            <!-- Slot Number -->
+            <div class="space-y-1.5">
+              <div class="flex items-center gap-1.5 text-bx-title">
+                <Hash class="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <label class="text-xs font-bold">الرقم التسلسلي في اليوم <span class="text-red-500">*</span></label>
+              </div>
               <input
-                v-model="formData.end_time"
-                type="time"
-                class="w-full px-4 py-2.5 text-xs rounded-2xl border bg-transparent text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono"
-                :class="[formErrors.end_time ? 'border-red-400 bg-red-50/20' : 'border-[#B4AED8] dark:border-white/[0.12]']"
+                v-model.number="formData.slot_number"
+                type="number"
+                min="1"
+                max="255"
+                required
+                placeholder="1, 2, 3..."
+                class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono font-medium"
+                :class="[formErrors.slot_number ? 'border-red-400 bg-red-50/20' : '']"
               />
-              <p v-if="formErrors.end_time" class="text-[11px] text-red-500 mt-1 font-bold">{{ formErrors.end_time }}</p>
+              <p v-if="formErrors.slot_number" class="text-[11px] text-red-500 font-medium">
+                {{ formErrors.slot_number }}
+              </p>
             </div>
           </div>
 
-          <!-- Duration Notice -->
-          <div
-            v-if="formData.start_time && formData.end_time && formData.start_time < formData.end_time"
-            class="p-3 rounded-2xl bg-purple-500/[0.04] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.08] text-xs text-bx-title flex items-center justify-between"
-          >
-            <span class="text-bx-muted font-bold">المدة المحسوبة للفترة:</span>
-            <span class="font-black font-mono text-bx-primary">{{ calculateDuration(formData.start_time, formData.end_time) }}</span>
-          </div>
-
-          <!-- Is Break Toggle -->
-          <div class="flex items-center justify-between p-4 rounded-2xl border border-[#B4AED8]/50 dark:border-white/[0.08] bg-purple-500/[0.02]">
-            <div>
-              <div class="text-xs font-bold text-bx-title">فترة استراحة / فسحة</div>
-              <p class="text-[11px] text-bx-muted mt-0.5">تمييز هذه الفترة كاستراحة لا تدرج فيها حصص دراسية</p>
+          <!-- Section 2: Times & Duration Card -->
+          <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-4 shadow-xs">
+            <div class="flex items-center gap-2 border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-2.5">
+              <Clock class="w-4 h-4 text-amber-500 shrink-0" />
+              <h4 class="text-xs font-black text-bx-title">توقيت البداية والنهاية</h4>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input v-model="formData.is_break" type="checkbox" class="sr-only peer" />
-              <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-            </label>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Start Time -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-bold text-bx-title block">
+                  وقت البداية <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="formData.start_time"
+                  type="time"
+                  required
+                  class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono font-medium text-center"
+                  :class="[formErrors.start_time ? 'border-red-400 bg-red-50/20' : '']"
+                />
+                <p v-if="formErrors.start_time" class="text-[11px] text-red-500 font-medium">
+                  {{ formErrors.start_time }}
+                </p>
+              </div>
+
+              <!-- End Time -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-bold text-bx-title block">
+                  وقت النهاية <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="formData.end_time"
+                  type="time"
+                  required
+                  class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono font-medium text-center"
+                  :class="[formErrors.end_time ? 'border-red-400 bg-red-50/20' : '']"
+                />
+                <p v-if="formErrors.end_time" class="text-[11px] text-red-500 font-medium">
+                  {{ formErrors.end_time }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Duration Notice -->
+            <div
+              v-if="formData.start_time && formData.end_time && formData.start_time < formData.end_time"
+              class="p-3 rounded-2xl bg-purple-500/[0.04] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.08] text-xs text-bx-title flex items-center justify-between"
+            >
+              <span class="text-bx-muted font-bold">المدة المحسوبة تلقائياً:</span>
+              <span class="font-black font-mono text-bx-primary">{{ calculateDuration(formData.start_time, formData.end_time) }}</span>
+            </div>
           </div>
 
-          <!-- Submit Buttons -->
-          <div class="pt-4 flex items-center gap-3 border-t border-[#B4AED8]/30 dark:border-white/[0.06]">
-            <button
-              type="submit"
-              :disabled="isSubmitting"
-              class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer"
-            >
-              <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
-              <span>{{ drawerMode === 'create' ? 'حفظ الفترة' : 'تحديث الفترة' }}</span>
-            </button>
-            <button
-              type="button"
-              @click="showDrawer = false"
-              class="px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title text-xs font-bold transition-all cursor-pointer"
-            >
-              إلغاء
-            </button>
+          <!-- Section 3: Period Classification Card -->
+          <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-3.5 shadow-xs">
+            <div class="flex items-center gap-2 border-b border-[#B4AED8]/50 dark:border-white/[0.08] pb-2.5">
+              <Coffee class="w-4 h-4 text-purple-500 shrink-0" />
+              <h4 class="text-xs font-black text-bx-title">تصنيف الفترة</h4>
+            </div>
+
+            <div class="space-y-2">
+              <label class="text-xs font-bold text-bx-title block">نوع الفترة التعليمية <span class="text-red-500">*</span></label>
+              <div class="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  @click="formData.is_break = false"
+                  class="py-2.5 px-3 rounded-full border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  :class="!formData.is_break ? 'border-bx-primary bg-bx-primary/10 text-bx-primary shadow-xs' : 'border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title'"
+                >
+                  <BookOpen class="w-3.5 h-3.5" />
+                  <span>حصة دراسية</span>
+                </button>
+                <button
+                  type="button"
+                  @click="formData.is_break = true"
+                  class="py-2.5 px-3 rounded-full border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  :class="formData.is_break ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-xs' : 'border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title'"
+                >
+                  <Coffee class="w-3.5 h-3.5" />
+                  <span>فسحة / استراحة</span>
+                </button>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-bx-muted leading-relaxed">
+              💡 ملحوظة: فترات الاستراحة تُستثنى آلياً من إمكانية تسكين المواد والمناهج الدراسية عليها داخل الجدول الأسبوعي.
+            </p>
           </div>
         </form>
+
+        <!-- Fixed Footer Template for TaqniyaDrawer -->
+        <template #footer>
+          <button
+            type="button"
+            @click="showDrawer = false"
+            class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+          >
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            form="slotForm"
+            :disabled="isSubmitting"
+            class="inline-flex items-center gap-1.5 px-6 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer"
+          >
+            <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
+            <Save v-else class="w-4 h-4" />
+            <span>{{ isSubmitting ? 'جاري الحفظ...' : drawerMode === 'create' ? 'حفظ فترة الحصة' : 'تحديث البيانات' }}</span>
+          </button>
+        </template>
       </TaqniyaDrawer>
 
-      <!-- 6. Confirmation Modal (حذف فترة حصة) -->
-      <div
-        v-if="showDeleteModal"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
-        dir="rtl"
-      >
-        <div class="bg-[var(--bx-surface-solid)] rounded-3xl p-6 sm:p-7 border border-[#B4AED8] dark:border-white/[0.12] max-w-md w-full shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-          <div class="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 flex items-center justify-center text-red-600 mx-auto">
-            <AlertTriangle class="w-6 h-6" />
-          </div>
+      <!-- 6. Confirmation Modal (حذف فترة حصة - Using Teleport) -->
+      <Teleport to="body">
+        <div
+          v-if="showDeleteModal && slotToDelete"
+          class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          dir="rtl"
+        >
+          <!-- Backdrop with click to close -->
+          <div
+            @click="showDeleteModal = false"
+            class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity cursor-pointer"
+          ></div>
 
-          <div class="text-center">
-            <h3 class="text-base font-black font-display text-bx-title">تأكيد حذف فترة الحصة</h3>
-            <p class="text-xs text-bx-muted mt-1.5 leading-relaxed">
-              هل أنت متأكد من رغبتك في حذف فترة:
-              <span class="font-bold text-bx-title">"{{ slotToDelete?.name }}"</span>؟
-            </p>
-            <p class="text-[11px] text-amber-700 dark:text-amber-300 mt-3 bg-amber-500/[0.08] p-3 rounded-2xl border border-amber-300/50 dark:border-amber-400/20 leading-normal">
-              ⚠️ تنبيه أمان: سيتم حظر الحذف تلقائياً برمز 409 Conflict في حال ارتباط هذه الفترة بأي جدول أسبوعي للشعب.
-            </p>
-          </div>
+          <!-- Dialog Box -->
+          <div class="relative bg-[var(--bx-surface-solid)] rounded-3xl p-6 sm:p-7 border border-[#B4AED8] dark:border-white/[0.12] max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div class="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 flex items-center justify-center text-red-600 mx-auto">
+              <AlertTriangle class="w-6 h-6" />
+            </div>
 
-          <div class="flex items-center gap-3 pt-2">
-            <button
-              :disabled="isDeleting"
-              @click="handleDelete"
-              class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-            >
-              <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
-              <span>نعم، حذف الفترة</span>
-            </button>
-            <button
-              :disabled="isDeleting"
-              @click="showDeleteModal = false"
-              class="flex-1 px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title text-xs font-bold transition-all cursor-pointer"
-            >
-              إلغاء
-            </button>
+            <div class="text-center">
+              <h3 class="text-base font-black font-display text-bx-title">تأكيد حذف فترة الحصة</h3>
+              <p class="text-xs text-bx-muted mt-1.5 leading-relaxed">
+                هل أنت متأكد من رغبتك في حذف فترة:
+                <span class="font-bold text-bx-title">"{{ slotToDelete.name }}"</span>؟
+              </p>
+              <p class="text-[11px] text-amber-700 dark:text-amber-300 mt-3 bg-amber-500/[0.08] p-3 rounded-2xl border border-amber-300/50 dark:border-amber-400/20 leading-normal">
+                ⚠️ تنبيه أمان: سيتم حظر الحذف تلقائياً برمز 409 Conflict في حال ارتباط هذه الفترة بأي حصص مجدولة في الجداول الأسبوعية.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+              <button
+                :disabled="isDeleting"
+                @click="handleDelete"
+                class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+              >
+                <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
+                <span>نعم، حذف الفترة</span>
+              </button>
+              <button
+                :disabled="isDeleting"
+                @click="showDeleteModal = false"
+                class="flex-1 px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title text-xs font-bold transition-all cursor-pointer"
+              >
+                إلغاء
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </Teleport>
     </div>
   </TaqniyaErrorBoundary>
 </template>
