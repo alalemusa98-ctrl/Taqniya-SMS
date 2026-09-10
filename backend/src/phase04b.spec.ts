@@ -332,12 +332,12 @@ describe('Phase 04-B: Student Enrollments Registry (TDD Verification)', () => {
       expect(result.data.academic_year_id).toBe(testYearId);
       expect(Array.isArray(result.data.classes)).toBe(true);
 
-      const cls5 = result.data.classes.find((c: any) => c.class_id === testClass5Id);
+      const cls5: any = result.data.classes.find((c: any) => c.class_id === testClass5Id);
       expect(cls5).toBeDefined();
       expect(cls5.grade_level).toBe(5);
       expect(Array.isArray(cls5.sections)).toBe(true);
 
-      const secA = cls5.sections.find((s: any) => s.class_section_id === testClass5SectionAId);
+      const secA: any = cls5.sections.find((s: any) => s.class_section_id === testClass5SectionAId);
       expect(secA).toBeDefined();
       expect(secA.enrolled_count).toBeGreaterThanOrEqual(2);
       expect(secA.students.some((s: any) => s.student_id === testStudent1Id)).toBe(true);
@@ -360,9 +360,9 @@ describe('Phase 04-B: Student Enrollments Registry (TDD Verification)', () => {
       });
 
       expect(result.success).toBe(true);
-      const cls5 = result.data.classes.find((c: any) => c.class_id === testClass5Id);
+      const cls5: any = result.data.classes.find((c: any) => c.class_id === testClass5Id);
       expect(cls5).toBeDefined();
-      const secA = cls5.sections.find((s: any) => s.class_section_id === testClass5SectionAId);
+      const secA: any = cls5.sections.find((s: any) => s.class_section_id === testClass5SectionAId);
       expect(secA.students.some((s: any) => s.seating_number === 'SEAT-5001')).toBe(true);
     });
 
