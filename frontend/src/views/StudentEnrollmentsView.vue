@@ -17,6 +17,7 @@ import {
   Calendar,
   Filter,
   User,
+  Users,
   ArrowLeftRight,
   CheckSquare,
   Check,
@@ -965,10 +966,10 @@ onMounted(async () => {
             <!-- Bulk Enroll Button -->
             <button
               @click="openBulkModal"
-              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-purple-600 text-white text-xs font-bold shadow-sm hover:bg-purple-700 transition-all cursor-pointer"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/60 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
             >
               <Sparkles class="w-3.5 h-3.5" />
-              <span>⚡ تسكين جماعي</span>
+              <span>تسكين جماعي</span>
             </button>
 
             <!-- Search Input (Pill Shaped) -->
@@ -1669,105 +1670,170 @@ onMounted(async () => {
         </form>
       </TaqniyaDrawer>
 
-      <!-- ⚡ Bulk Enroll Modal -->
-      <div
-        v-if="showBulkModal"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-        dir="rtl"
+      <!-- ⚡ Bulk Enroll Drawer -->
+      <TaqniyaDrawer
+        :is-open="showBulkModal"
+        @close="showBulkModal = false"
+        title="التسكين والتوزيع الجماعي للطلاب"
+        subtitle="تسكين دفعة من الطلاب غير المسكنين بالعام الدراسي الحالي في صف وشعبة محددة"
+        :icon="Sparkles"
+        max-width="max-w-[560px]"
       >
-        <div class="bg-[var(--bx-surface-solid)] rounded-3xl border border-[#B4AED8] dark:border-white/[0.12] shadow-2xl max-w-xl w-full p-6 space-y-4 font-sans">
-          <div class="flex items-center justify-between border-b border-[#B4AED8]/40 dark:border-white/10 pb-3">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold">
-                <Sparkles class="w-4 h-4" />
-              </div>
-              <div>
-                <h3 class="text-sm font-black text-bx-title">التسكين والتوزيع الجماعي للطلاب</h3>
-                <p class="text-[10px] text-bx-muted">توزيع دفعة من الطلاب غير المسكنين في صف وشعبة محددة</p>
-              </div>
-            </div>
-            <button @click="showBulkModal = false" class="text-bx-muted hover:text-bx-title cursor-pointer text-xs font-bold p-1">✕</button>
-          </div>
-
+        <div class="space-y-4 font-sans" dir="rtl">
+          <!-- Error alert -->
           <div
             v-if="bulkErrorMessage"
             class="p-3.5 bg-rose-500/[0.08] dark:bg-rose-950/50 border border-rose-400/40 text-rose-600 dark:text-rose-400 rounded-2xl text-xs flex items-center gap-2.5 font-bold"
           >
-            <AlertCircle class="w-4 h-4 flex-shrink-0" />
+            <AlertCircle class="w-4 h-4 shrink-0" />
             <span>{{ bulkErrorMessage }}</span>
           </div>
 
-          <!-- 2-Column Selectors: Class, Section (Academic Year is automatically active) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label class="block text-[11px] font-bold text-bx-title mb-1.5">الصف المستهدف <span class="text-rose-500">*</span></label>
-              <TaqniyaSelect
-                v-model="bulkForm.class_id"
-                :options="bulkClassOptions"
-                placeholder="اختر الصف..."
-                :icon="School"
-                full-width
-              />
+          <!-- Card 1: Target Class & Section -->
+          <div class="p-4 rounded-2xl border border-purple-500/20 bg-purple-500/[0.02] space-y-3.5 shadow-xs">
+            <div class="flex items-center gap-2 border-b border-purple-500/20 pb-2.5">
+              <div class="w-7 h-7 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold">
+                <School class="w-4 h-4" />
+              </div>
+              <div>
+                <h4 class="text-xs font-black text-bx-title">الصف والشعبة المستهدفة</h4>
+                <p class="text-[10px] text-bx-muted">حدد وجهة تسكين الطلاب</p>
+              </div>
             </div>
-            <div>
-              <label class="block text-[11px] font-bold text-bx-title mb-1.5">الشعبة المستهدفة <span class="text-rose-500">*</span></label>
-              <TaqniyaSelect
-                v-model="bulkForm.class_section_id"
-                :options="bulkSectionOptions"
-                :placeholder="!bulkForm.class_id ? 'اختر الصف أولاً...' : bulkSectionOptions.length === 0 ? 'لا توجد شعب' : 'اختر الشعبة...'"
-                :disabled="!bulkForm.class_id || bulkSectionOptions.length === 0"
-                :icon="GraduationCap"
-                full-width
-              />
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div class="space-y-1.5">
+                <label class="block text-[11px] font-bold text-bx-title">
+                  1. الصف المستهدف <span class="text-rose-500">*</span>
+                </label>
+                <TaqniyaSelect
+                  v-model="bulkForm.class_id"
+                  :options="bulkClassOptions"
+                  placeholder="اختر الصف..."
+                  :icon="School"
+                  full-width
+                />
+              </div>
+              <div class="space-y-1.5">
+                <label class="block text-[11px] font-bold text-bx-title">
+                  2. الشعبة المستهدفة <span class="text-rose-500">*</span>
+                </label>
+                <TaqniyaSelect
+                  v-model="bulkForm.class_section_id"
+                  :options="bulkSectionOptions"
+                  :placeholder="!bulkForm.class_id ? 'اختر الصف أولاً...' : bulkSectionOptions.length === 0 ? 'لا توجد شعب' : 'اختر الشعبة...'"
+                  :disabled="!bulkForm.class_id || bulkSectionOptions.length === 0"
+                  :icon="GraduationCap"
+                  full-width
+                />
+              </div>
             </div>
           </div>
 
-          <!-- Students Multi-select list -->
-          <div class="space-y-2">
+          <!-- Card 2: Students Multi-select with Search & Quick Actions -->
+          <div class="p-4 rounded-2xl border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)] space-y-3 shadow-xs">
             <div class="flex items-center justify-between">
-              <label class="block text-xs font-bold text-bx-title">
-                الطلاب غير المسكنين بالعام الحالي (تم اختيار {{ bulkForm.selected_student_ids.length }})
-              </label>
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold">
+                  <Users class="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 class="text-xs font-black text-bx-title">الطلاب غير المسكنين</h4>
+                  <p class="text-[10px] text-bx-muted">
+                    المتاح: {{ availableStudentsForBulk.length }} طالب
+                  </p>
+                </div>
+              </div>
+
+              <!-- Quick Selection Actions -->
+              <div v-if="availableStudentsForBulk.length > 0" class="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  @click="
+                    bulkForm.selected_student_ids = availableStudentsForBulk.map((s) => s.id)
+                  "
+                  class="text-[10.5px] font-bold text-bx-primary hover:underline cursor-pointer px-2 py-0.5 rounded-full hover:bg-purple-500/10 transition"
+                >
+                  تحديد الكل
+                </button>
+                <span class="text-bx-muted text-[10px] opacity-40">|</span>
+                <button
+                  type="button"
+                  @click="bulkForm.selected_student_ids = []"
+                  class="text-[10.5px] font-bold text-bx-muted hover:text-rose-500 cursor-pointer px-2 py-0.5 rounded-full hover:bg-rose-500/10 transition"
+                >
+                  إلغاء التحديد
+                </button>
+              </div>
             </div>
+
+            <!-- Search input -->
             <div class="relative flex items-center">
               <Search class="w-3.5 h-3.5 text-bx-muted absolute right-3 pointer-events-none" />
               <input
                 v-model="bulkForm.studentSearch"
                 type="text"
-                placeholder="تصفية الطلاب غير المسكنين بالاسم أو الرمز..."
+                placeholder="تصفية الطلاب بالاسم أو الرمز الموحد..."
                 class="w-full pr-9 pl-4 py-2 rounded-full text-xs font-medium border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all"
               />
             </div>
-            <div class="max-h-56 overflow-y-auto border border-[#B4AED8]/60 dark:border-white/10 rounded-2xl divide-y divide-[#B4AED8]/40 dark:divide-white/10 bg-purple-500/[0.01]">
+
+            <!-- Scrollable Student List -->
+            <div class="max-h-60 overflow-y-auto border border-[#B4AED8]/50 dark:border-white/10 rounded-2xl divide-y divide-[#B4AED8]/40 dark:divide-white/10 bg-purple-500/[0.01]">
               <div
                 v-for="s in availableStudentsForBulk"
                 :key="s.id"
-                class="flex items-center gap-3 p-2.5 hover:bg-purple-500/[0.05] dark:hover:bg-white/[0.03] text-xs cursor-pointer transition-colors"
+                class="flex items-center justify-between p-2.5 hover:bg-purple-500/[0.05] dark:hover:bg-white/[0.03] text-xs cursor-pointer transition-colors"
                 @click="
                   bulkForm.selected_student_ids.includes(s.id)
                     ? bulkForm.selected_student_ids = bulkForm.selected_student_ids.filter(id => id !== s.id)
                     : bulkForm.selected_student_ids.push(s.id)
                 "
               >
-                <div
-                  class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 shrink-0 shadow-2xs"
-                  :class="[
-                    bulkForm.selected_student_ids.includes(s.id)
-                      ? 'bg-bx-primary border-bx-primary text-white shadow-xs'
-                      : 'border-[#B4AED8] dark:border-white/30 bg-white dark:bg-slate-800 group-hover:border-bx-primary'
-                  ]"
-                >
-                  <Check v-if="bulkForm.selected_student_ids.includes(s.id)" class="w-3.5 h-3.5 stroke-[3]" />
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div
+                    class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 shrink-0 shadow-2xs"
+                    :class="[
+                      bulkForm.selected_student_ids.includes(s.id)
+                        ? 'bg-bx-primary border-bx-primary text-white shadow-xs'
+                        : 'border-[#B4AED8] dark:border-white/30 bg-white dark:bg-slate-800'
+                    ]"
+                  >
+                    <Check v-if="bulkForm.selected_student_ids.includes(s.id)" class="w-3.5 h-3.5 stroke-[3]" />
+                  </div>
+                  <div class="truncate">
+                    <span class="font-bold text-bx-title block leading-tight truncate">{{ s.full_name }}</span>
+                    <span v-if="s.user_code" class="text-bx-muted font-mono text-[10px] block mt-0.5">
+                      الرمز: {{ s.user_code }}
+                    </span>
+                  </div>
                 </div>
-                <span class="font-bold text-bx-title">{{ s.full_name }}</span>
-                <span class="text-bx-muted font-mono text-[11px]">({{ s.user_code }})</span>
+
+                <span
+                  v-if="bulkForm.selected_student_ids.includes(s.id)"
+                  class="text-[10px] font-bold text-bx-primary px-2 py-0.5 rounded-full bg-purple-500/10 shrink-0"
+                >
+                  تم الاختيار
+                </span>
               </div>
-              <div v-if="availableStudentsForBulk.length === 0" class="p-4 text-center text-bx-muted text-xs font-medium">
-                لا يوجد طلاب غير مسكنين متاحين للعام الدراسي المحدد.
+
+              <div v-if="availableStudentsForBulk.length === 0" class="p-8 text-center text-bx-muted text-xs space-y-1">
+                <AlertCircle class="w-7 h-7 mx-auto opacity-40 text-amber-500 mb-1" />
+                <p class="font-bold text-bx-title">لا يوجد طلاب غير مسكنين متاحين</p>
+                <p class="text-[11px]">كافة الطلاب مقيدون ومسكنون في شعب دراسية للعام الحالي.</p>
               </div>
+            </div>
+
+            <!-- Counter Info Bar -->
+            <div class="flex items-center justify-between text-[11px] font-bold pt-1">
+              <span class="text-bx-muted">المحددون للتسكين:</span>
+              <span class="text-bx-primary font-mono px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20">
+                {{ bulkForm.selected_student_ids.length }} طالب
+              </span>
             </div>
           </div>
 
+          <!-- Actions Footer -->
           <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#B4AED8]/40 dark:border-white/10">
             <button
               type="button"
@@ -1780,14 +1846,15 @@ onMounted(async () => {
               type="button"
               :disabled="submitting || bulkForm.selected_student_ids.length === 0 || !bulkForm.class_section_id"
               @click="handleBulkEnrollSubmit"
-              class="px-6 py-2 rounded-full text-xs font-bold bg-bx-primary hover:bg-bx-primary-hover text-white transition cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-sm"
+              class="px-6 py-2 rounded-full text-xs font-bold bg-bx-primary hover:bg-bx-primary-hover text-white transition cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-sm active:scale-95"
             >
               <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
+              <Sparkles v-else class="w-3.5 h-3.5" />
               <span>تسكين {{ bulkForm.selected_student_ids.length }} طلاب في الشعبة</span>
             </button>
           </div>
         </div>
-      </div>
+      </TaqniyaDrawer>
 
       <!-- 📜 Student Academic Progression Drawer -->
       <TaqniyaDrawer
