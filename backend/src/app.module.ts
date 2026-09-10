@@ -12,6 +12,7 @@ import { StudentsModule } from './modules/students/students.module.js';
 import { GuardiansModule } from './modules/guardians/guardians.module.js';
 import { GuardianStudentsModule } from './modules/guardian-students/guardian-students.module.js';
 import { StudentEnrollmentsModule } from './modules/student-enrollments/student-enrollments.module.js';
+import { PeriodSlotsModule } from './modules/period-slots/period-slots.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -39,6 +40,7 @@ import { AppService } from './app.service.js';
     GuardiansModule,
     GuardianStudentsModule,
     StudentEnrollmentsModule,
+    PeriodSlotsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

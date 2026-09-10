@@ -14,6 +14,7 @@ import {
   BookOpenCheck,
   HeartHandshake,
   School,
+  Clock,
   Menu,
   X,
 } from 'lucide-vue-next';
@@ -94,6 +95,12 @@ const academicGroup: NavDropdownItem[] = [
     to: '/teaching-assignments',
     description: 'كشوفات توزيع المواد والشعب وفحص النصاب الأكاديمي',
     icon: BookOpenCheck,
+  },
+  {
+    label: 'أوقات الحصص اليومية',
+    to: '/period-slots',
+    description: 'ضبط المخطط الزمني ومواعيد الحصص والفسح لليوم المدرسي',
+    icon: Clock,
   },
 ];
 

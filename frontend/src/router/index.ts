@@ -13,6 +13,7 @@ const TeachingAssignmentsView = () => import('../views/TeachingAssignmentsView.v
 const StudentsManagementView = () => import('../views/StudentsManagementView.vue');
 const StudentEnrollmentsView = () => import('../views/StudentEnrollmentsView.vue');
 const GuardiansManagementView = () => import('../views/GuardiansManagementView.vue');
+const PeriodSlotsManagementView = () => import('../views/PeriodSlotsManagementView.vue');
 
 const routes = [
   {
@@ -71,6 +72,12 @@ const routes = [
         name: 'academic-structure',
         component: AcademicStructureView,
         meta: { roles: ['admin'] },
+      },
+      {
+        path: 'period-slots',
+        name: 'period-slots',
+        component: PeriodSlotsManagementView,
+        meta: { roles: ['admin', 'teacher', 'student', 'parent'] },
       },
       {
         path: 'audit-logs',
