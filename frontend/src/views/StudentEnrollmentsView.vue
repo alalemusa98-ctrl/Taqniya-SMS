@@ -17,8 +17,10 @@ import {
   Calendar,
   Filter,
   User,
-  CheckCircle2,
   ArrowLeftRight,
+  CheckSquare,
+  Check,
+  Minus,
 } from 'lucide-vue-next';
 import {
   studentEnrollmentsApi,
@@ -58,6 +60,9 @@ const selectedSectionFilter = ref<number | string>('all');
 // Active section selection per class
 const activeSectionPerClass = ref<Record<number, number>>({});
 
+// Fast Class Counts Map (Aggregated strictly by class_id)
+const classCountsMap = ref<Record<number, number>>({});
+
 // Master Reference Data
 const academicYears = ref<any[]>([]);
 const rawClasses = ref<any[]>([]);
@@ -84,6 +89,14 @@ const historyLoading = ref(false);
 const showBulkModal = ref(false);
 const showDeleteModal = ref(false);
 const enrollmentToDelete = ref<EnrolledStudent | null>(null);
+
+// Batch Multi-Select & Transfer State
+const selectedEnrollmentIds = ref<number[]>([]);
+const showBatchTransferModal = ref(false);
+const batchTransferClassId = ref<number | ''>('');
+const batchTransferSectionId = ref<number | ''>('');
+const batchTransferSubmitting = ref(false);
+const batchTransferError = ref<string | null>(null);
 
 // Form State
 const form = ref({
@@ -114,9 +127,7 @@ const stats = computed(() => {
 
   for (const c of classesList.value) {
     totalSections += c.sections.length;
-    for (const sec of c.sections) {
-      totalEnrolled += sec.enrolled_count;
-    }
+    totalEnrolled += classCountsMap.value[c.class_id] || 0;
   }
 
   return {
@@ -298,6 +309,142 @@ watch(
   },
 );
 
+// Batch Transfer Options & Watcher
+const batchTransferClassOptions = computed<TaqniyaSelectOption[]>(() => {
+  return rawClasses.value.map((c) => ({
+    value: c.id,
+    label: c.name,
+  }));
+});
+
+const batchTransferSectionOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (!batchTransferClassId.value) return [];
+  const list = Array.isArray(rawSections.value) ? rawSections.value : [];
+  return list
+    .filter((s) => s.class_id === Number(batchTransferClassId.value))
+    .map((s) => ({
+      value: s.id,
+      label: s.name || `شعبة #${s.id}`,
+    }));
+});
+
+watch(batchTransferClassId, (newClassId) => {
+  if (!newClassId) {
+    batchTransferSectionId.value = '';
+    return;
+  }
+  const available = rawSections.value.filter((s) => s.class_id === Number(newClassId));
+  batchTransferSectionId.value = available.length > 0 ? available[0].id : '';
+});
+
+// Selected Students Info for Batch Transfer UI
+const selectedStudentsInfo = computed(() => {
+  const selectedSet = new Set(selectedEnrollmentIds.value);
+  const infoList: { enrollment_id: number; student_name: string; student_code: string; class_name?: string; section_name?: string }[] = [];
+  for (const c of classesList.value) {
+    for (const sec of c.sections) {
+      for (const st of sec.students) {
+        if (selectedSet.has(st.enrollment_id)) {
+          infoList.push({
+            enrollment_id: st.enrollment_id,
+            student_name: st.student_name,
+            student_code: st.student_code,
+            class_name: c.class_name,
+            section_name: sec.section_name,
+          });
+        }
+      }
+    }
+  }
+  return infoList;
+});
+
+// Section multi-select helpers
+const isSectionAllSelected = (students: EnrolledStudent[]) => {
+  if (!students || students.length === 0) return false;
+  return students.every((st) => selectedEnrollmentIds.value.includes(st.enrollment_id));
+};
+
+const isSectionPartiallySelected = (students: EnrolledStudent[]) => {
+  if (!students || students.length === 0) return false;
+  const count = students.filter((st) => selectedEnrollmentIds.value.includes(st.enrollment_id)).length;
+  return count > 0 && count < students.length;
+};
+
+const toggleSelectAllSection = (students: EnrolledStudent[]) => {
+  if (!students || students.length === 0) return;
+  const allSelected = isSectionAllSelected(students);
+  if (allSelected) {
+    const secEnrollmentIds = new Set(students.map((st) => st.enrollment_id));
+    selectedEnrollmentIds.value = selectedEnrollmentIds.value.filter((id) => !secEnrollmentIds.has(id));
+  } else {
+    const currentSet = new Set(selectedEnrollmentIds.value);
+    for (const st of students) {
+      currentSet.add(st.enrollment_id);
+    }
+    selectedEnrollmentIds.value = Array.from(currentSet);
+  }
+};
+
+const toggleSelectStudent = (enrollmentId: number) => {
+  const index = selectedEnrollmentIds.value.indexOf(enrollmentId);
+  if (index >= 0) {
+    selectedEnrollmentIds.value.splice(index, 1);
+  } else {
+    selectedEnrollmentIds.value.push(enrollmentId);
+  }
+};
+
+const openBatchTransferModal = () => {
+  if (selectedEnrollmentIds.value.length === 0) return;
+  batchTransferError.value = null;
+  batchTransferClassId.value = '';
+  batchTransferSectionId.value = '';
+  showBatchTransferModal.value = true;
+};
+
+const handleBatchTransferSubmit = async () => {
+  if (!batchTransferSectionId.value || selectedEnrollmentIds.value.length === 0) {
+    batchTransferError.value = 'يرجى تحديد الصف والشعبة الدراسية المستهدفة.';
+    return;
+  }
+
+  batchTransferSubmitting.value = true;
+  batchTransferError.value = null;
+
+  try {
+    const targetSectionId = Number(batchTransferSectionId.value);
+    const targetClass = rawClasses.value.find((c) => c.id === Number(batchTransferClassId.value));
+    const targetSection = rawSections.value.find((s) => s.id === targetSectionId);
+    const destinationLabel = targetSection && targetClass ? `${targetClass.name} — ${targetSection.name}` : 'الشعبة الجديدة';
+
+    // Execute transfer requests concurrently
+    const promises = selectedEnrollmentIds.value.map((id) =>
+      studentEnrollmentsApi.updateEnrollment(id, {
+        class_section_id: targetSectionId,
+      })
+    );
+
+    const results = await Promise.allSettled(promises);
+    const successCount = results.filter((r) => r.status === 'fulfilled' && (r.value as any).data?.success !== false).length;
+    const failureCount = results.length - successCount;
+
+    if (failureCount > 0) {
+      toast.warning(`تم نقل ${successCount} طالب، بينما تعذر نقل ${failureCount} طلاب.`);
+    } else {
+      toast.success(`تم نقل جميع الطلاب المحددين (${successCount} طالب) بنجاح إلى ${destinationLabel}`);
+    }
+
+    selectedEnrollmentIds.value = [];
+    showBatchTransferModal.value = false;
+    await refreshActiveSections();
+  } catch (err: any) {
+    batchTransferError.value = err.response?.data?.message || 'حدث خطأ أثناء نقل الطلاب.';
+  } finally {
+    batchTransferSubmitting.value = false;
+  }
+};
+
 // Available unenrolled students for bulk enroll
 const availableStudentsForBulk = computed(() => {
   const searchLower = bulkForm.value.studentSearch.trim().toLowerCase();
@@ -378,56 +525,162 @@ const loadMetadata = async () => {
       form.value.academic_year_id = active.id;
       bulkForm.value.academic_year_id = active.id;
     }
+
+    initClassesListFromMetadata();
+    await fetchClassCounts();
   } catch (err) {
     console.error('Failed to load metadata:', err);
   }
 };
 
-// Fetch Matrix Data
-const fetchEnrollments = async () => {
+// Fetch fast aggregate class counts (grouped strictly by class_id)
+const fetchClassCounts = async () => {
+  try {
+    const params = academicYearId.value ? { academic_year_id: academicYearId.value } : undefined;
+    const res = await studentEnrollmentsApi.getClassCounts(params);
+    const map: Record<number, number> = {};
+    for (const item of res.data?.data || []) {
+      map[item.class_id] = item.count;
+    }
+    classCountsMap.value = map;
+  } catch (err) {
+    console.error('Failed to fetch class counts:', err);
+  }
+};
+
+// Initialize classes and sections structure from metadata (no students loaded initially)
+const initClassesListFromMetadata = () => {
+  classesList.value = rawClasses.value.map((c) => {
+    const classSections = rawSections.value.filter((s) => s.class_id === c.id);
+    return {
+      class_id: c.id,
+      class_name: c.name,
+      grade_level: c.grade_level,
+      sections: classSections.map((s) => ({
+        class_section_id: s.id,
+        section_name: s.name,
+        enrolled_count: 0,
+        students: [] as EnrolledStudent[],
+        isLoaded: false,
+        isLoading: false,
+      })),
+    };
+  });
+  activeSectionPerClass.value = {};
+};
+
+// Filtered list of classes based on selectedClassFilter
+const displayClassesList = computed(() => {
+  if (selectedClassFilter.value !== 'all') {
+    return classesList.value.filter((c) => c.class_id === Number(selectedClassFilter.value));
+  }
+  return classesList.value;
+});
+
+// Load a specific section's students on-demand (when clicked or filtered)
+const handleSectionClick = async (classId: number, sectionId: number, forceRefresh = false) => {
+  // If clicking an already open section, toggle close
+  if (!forceRefresh && activeSectionPerClass.value[classId] === sectionId) {
+    delete activeSectionPerClass.value[classId];
+    return;
+  }
+
+  activeSectionPerClass.value[classId] = sectionId;
+
+  // Find section in classesList
+  const cls = classesList.value.find((c) => c.class_id === classId);
+  const sec = cls?.sections.find((s: any) => s.class_section_id === sectionId);
+
+  // If already loaded and not force-refreshing, return immediately (served from cache)
+  if (sec && (sec as any).isLoaded && !forceRefresh) {
+    return;
+  }
+
+  if (sec) (sec as any).isLoading = true;
+  try {
+    const params: any = {
+      academic_year_id: academicYearId.value,
+      class_section_id: sectionId,
+    };
+    if (statusFilter.value !== 'all') {
+      params.status = statusFilter.value;
+    }
+
+    const res = await studentEnrollmentsApi.getEnrollmentsMatrix(params);
+    const returnedClass = res.data?.data?.classes?.[0];
+    const returnedSec =
+      returnedClass?.sections?.find((s: any) => s.class_section_id === sectionId) ||
+      returnedClass?.sections?.[0];
+
+    if (sec) {
+      sec.students = returnedSec?.students || [];
+      sec.enrolled_count = returnedSec?.enrolled_count ?? sec.students.length;
+      (sec as any).isLoaded = true;
+    }
+  } catch (err: any) {
+    toast.error('تعذر جلب بيانات طلاب الشعبة.');
+  } finally {
+    if (sec) (sec as any).isLoading = false;
+  }
+};
+
+// Refresh currently open sections after changes (e.g. transfer, delete, create)
+const refreshActiveSections = async () => {
+  const activeEntries = Object.entries(activeSectionPerClass.value);
+  for (const [classIdStr, sectionId] of activeEntries) {
+    if (sectionId) {
+      await handleSectionClick(Number(classIdStr), Number(sectionId), true);
+    }
+  }
+  await fetchClassCounts();
+};
+
+// Search handler: searches server and automatically opens matching sections
+const handleSearch = async () => {
+  const q = search.value.trim();
+  if (!q) {
+    if (!hasActiveFilters.value) {
+      initClassesListFromMetadata();
+    }
+    return;
+  }
+
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
   loading.value = true;
-  errorMessage.value = null;
-
   try {
-    const params: any = {};
-    if (selectedYearFilter.value !== 'all') {
-      params.academic_year_id = Number(selectedYearFilter.value);
-    }
-    if (selectedClassFilter.value !== 'all') {
-      params.class_id = Number(selectedClassFilter.value);
-    }
-    if (selectedSectionFilter.value !== 'all') {
-      params.class_section_id = Number(selectedSectionFilter.value);
-    }
+    const params: any = {
+      academic_year_id: academicYearId.value,
+      search: q,
+    };
     if (statusFilter.value !== 'all') {
       params.status = statusFilter.value;
-    }
-    if (search.value.trim()) {
-      params.search = search.value.trim();
     }
 
     const res = await studentEnrollmentsApi.getEnrollmentsMatrix(params, activeAbortController.signal);
     if (res.data?.data) {
-      academicYearId.value = res.data.data.academic_year_id;
-      academicYearName.value = res.data.data.academic_year_name;
-      classesList.value = res.data.data.classes || [];
+      classesList.value = (res.data.data.classes || []).map((c) => ({
+        ...c,
+        sections: (c.sections || []).map((s) => ({
+          ...s,
+          isLoaded: true,
+          isLoading: false,
+        })),
+      }));
 
-      for (const cls of classesList.value) {
-        if (!activeSectionPerClass.value[cls.class_id] && cls.sections.length > 0) {
-          activeSectionPerClass.value[cls.class_id] = cls.sections[0].class_section_id;
+      // Automatically activate sections that have search results
+      activeSectionPerClass.value = {};
+      for (const c of classesList.value) {
+        if (c.sections.length > 0) {
+          activeSectionPerClass.value[c.class_id] = c.sections[0].class_section_id;
         }
       }
     }
   } catch (err: any) {
-    if (err.name !== 'CanceledError' && !err.message?.includes('canceled')) {
-      errorMessage.value = err.response?.data?.message || 'حدث خطأ أثناء تحميل بيانات تسكين الطلاب.';
-      toast.error(errorMessage.value || 'تعذر تحميل البيانات');
-    }
+    toast.error('تعذر إجراء البحث.');
   } finally {
     loading.value = false;
   }
@@ -437,23 +690,46 @@ const fetchEnrollments = async () => {
 watch(search, () => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
-    fetchEnrollments();
+    handleSearch();
   }, 350);
 });
 
-// Watch status filter change
+// Watch section filter change: automatically open and load that section
+watch(selectedSectionFilter, (newSecId) => {
+  if (!newSecId || newSecId === 'all') return;
+  const secId = Number(newSecId);
+  const secObj = rawSections.value.find((s) => s.id === secId);
+  if (secObj) {
+    handleSectionClick(secObj.class_id, secId, true);
+  }
+});
+
+// Watch status filter change: refresh active sections with status
 watch(statusFilter, () => {
-  fetchEnrollments();
+  refreshActiveSections();
+});
+
+// Watch academic year filter change: refresh counts and active sections
+watch(selectedYearFilter, async (newYear) => {
+  if (newYear !== 'all') {
+    academicYearId.value = Number(newYear);
+  } else {
+    const active = academicYears.value.find((y) => y.is_active === 1);
+    academicYearId.value = active ? active.id : null;
+  }
+  await fetchClassCounts();
+  await refreshActiveSections();
 });
 
 // Reset Filters
-const resetFilters = () => {
+const resetFilters = async () => {
   search.value = '';
   statusFilter.value = 'all';
   selectedYearFilter.value = 'all';
   selectedClassFilter.value = 'all';
   selectedSectionFilter.value = 'all';
-  fetchEnrollments();
+  initClassesListFromMetadata();
+  await fetchClassCounts();
 };
 
 // Open Single Enrollment Drawer (Create Mode)
@@ -541,7 +817,7 @@ const handleSaveEnrollment = async () => {
     }
 
     showDrawer.value = false;
-    await fetchEnrollments();
+    await refreshActiveSections();
   } catch (err: any) {
     if (err.response?.status === 422) {
       fieldErrors.value = err.response.data?.errors || {};
@@ -590,7 +866,7 @@ const handleBulkEnrollSubmit = async () => {
     });
     toast.success(res.data.message || 'تم التسكين الجماعي للطلاب بنجاح');
     showBulkModal.value = false;
-    await fetchEnrollments();
+    await refreshActiveSections();
   } catch (err: any) {
     bulkErrorMessage.value = err.response?.data?.message || 'فشل التسكين الجماعي للطلاب.';
     toast.error(bulkErrorMessage.value || 'خطأ بالتسكين الجماعي');
@@ -632,7 +908,7 @@ const handleDeleteEnrollment = async () => {
     toast.success(res.data?.message || 'تم إلغاء سجل التسكين بنجاح');
     showDeleteModal.value = false;
     enrollmentToDelete.value = null;
-    await fetchEnrollments();
+    await refreshActiveSections();
   } catch (err: any) {
     if (err.response?.status === 409) {
       toast.error(err.response.data?.message || 'لا يمكن إلغاء التسكين لارتباط الطالب بدرجات أو امتحانات.');
@@ -646,7 +922,6 @@ const handleDeleteEnrollment = async () => {
 
 onMounted(async () => {
   await loadMetadata();
-  await fetchEnrollments();
 });
 </script>
 
@@ -822,7 +1097,7 @@ onMounted(async () => {
                 placeholder="اختر العام الدراسي..."
                 :icon="Calendar"
                 full-width
-                @update:model-value="fetchEnrollments"
+                @update:model-value="refreshActiveSections"
               />
             </div>
 
@@ -834,7 +1109,6 @@ onMounted(async () => {
                 placeholder="كافة الصفوف الدراسية..."
                 :icon="Layers"
                 full-width
-                @update:model-value="fetchEnrollments"
               />
             </div>
 
@@ -846,7 +1120,6 @@ onMounted(async () => {
                 placeholder="كافة الشعب..."
                 :icon="School"
                 full-width
-                @update:model-value="fetchEnrollments"
               />
             </div>
           </div>
@@ -862,7 +1135,7 @@ onMounted(async () => {
             <span>{{ errorMessage }}</span>
           </div>
           <button
-            @click="fetchEnrollments"
+            @click="refreshActiveSections"
             class="px-3 py-1 rounded-full bg-rose-600 text-white hover:bg-rose-700 transition text-[11px] cursor-pointer"
           >
             إعادة المحاولة
@@ -895,7 +1168,7 @@ onMounted(async () => {
         <!-- 🟢 Success State: Class & Section Matrix Tables -->
         <div v-else class="space-y-6">
           <div
-            v-for="cls in classesList"
+            v-for="cls in displayClassesList"
             :key="cls.class_id"
             class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs"
           >
@@ -918,36 +1191,63 @@ onMounted(async () => {
               <div class="text-[11px] font-bold text-bx-muted">
                 إجمالي الطلاب المسكنين بالصف:
                 <strong class="text-bx-title font-mono font-bold mr-1">
-                  {{ cls.sections.reduce((sum, s) => sum + s.enrolled_count, 0) }}
+                  {{ classCountsMap[cls.class_id] ?? 0 }}
                 </strong>
               </div>
             </div>
 
             <!-- Section Tabs Ribbon -->
-            <div class="p-4 bg-purple-500/[0.01] border-b border-[#B4AED8]/40 dark:border-white/10 flex flex-wrap items-center gap-2">
-              <button
-                v-for="sec in cls.sections"
-                :key="sec.class_section_id"
-                @click="activeSectionPerClass[cls.class_id] = sec.class_section_id"
-                class="px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border"
-                :class="
-                  activeSectionPerClass[cls.class_id] === sec.class_section_id
-                    ? 'bg-bx-primary text-white border-bx-primary shadow-xs'
-                    : 'border-[#B4AED8]/60 dark:border-white/10 text-bx-muted hover:text-bx-title bg-transparent'
-                "
-              >
-                <span>{{ sec.section_name }}</span>
-                <span
-                  class="px-2 py-0.2 rounded-full font-mono text-[10px] font-bold"
+            <div class="p-4 bg-purple-500/[0.01] border-b border-[#B4AED8]/40 dark:border-white/10 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  v-for="sec in cls.sections"
+                  :key="sec.class_section_id"
+                  @click="handleSectionClick(cls.class_id, sec.class_section_id)"
+                  class="px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border"
                   :class="
                     activeSectionPerClass[cls.class_id] === sec.class_section_id
-                      ? 'bg-white/20 text-white'
-                      : 'bg-purple-500/10 text-bx-primary'
+                      ? 'bg-bx-primary text-white border-bx-primary shadow-xs'
+                      : 'border-[#B4AED8]/60 dark:border-white/10 text-bx-muted hover:text-bx-title bg-transparent'
                   "
                 >
-                  {{ sec.enrolled_count }}
-                </span>
-              </button>
+                  <Loader2 v-if="(sec as any).isLoading" class="w-3 h-3 animate-spin shrink-0" />
+                  <span>{{ sec.section_name }}</span>
+                  <span
+                    v-if="(sec as any).isLoaded"
+                    class="px-2 py-0.2 rounded-full font-mono text-[10px] font-bold"
+                    :class="
+                      activeSectionPerClass[cls.class_id] === sec.class_section_id
+                        ? 'bg-white/20 text-white'
+                        : 'bg-purple-500/10 text-bx-primary'
+                    "
+                  >
+                    {{ sec.enrolled_count }}
+                  </span>
+                </button>
+              </div>
+
+              <!-- Quick Batch Action Button if students in this class/system are selected -->
+              <div v-if="selectedEnrollmentIds.length > 0" class="flex items-center gap-2">
+                <button
+                  @click="openBatchTransferModal"
+                  class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-bx-primary hover:bg-bx-primary-hover text-white flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                >
+                  <ArrowLeftRight class="w-3.5 h-3.5" />
+                  <span>نقل الطلاب المحددين ({{ selectedEnrollmentIds.length }})</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Empty guide when no section is active in this class -->
+            <div
+              v-if="!activeSectionPerClass[cls.class_id]"
+              class="py-9 px-4 text-center text-bx-muted"
+            >
+              <div class="w-10 h-10 rounded-full bg-purple-500/5 text-bx-primary flex items-center justify-center mx-auto mb-2 border border-purple-500/10">
+                <School class="w-5 h-5 opacity-50" />
+              </div>
+              <p class="text-xs font-bold text-bx-title/80">انقر على إحدى الشعب أعلاه لعرض قائمة طلابها</p>
+              <p class="text-[11px] text-bx-muted mt-0.5">يتم جلب بيانات كل شعبة بشكل مستقل عند طلبها فقط</p>
             </div>
 
             <!-- Active Section Students Table -->
@@ -956,7 +1256,12 @@ onMounted(async () => {
               :key="`sec-${sec.class_section_id}`"
               v-show="activeSectionPerClass[cls.class_id] === sec.class_section_id"
             >
-              <div v-if="sec.students.length === 0" class="py-12 text-center text-bx-muted text-xs font-medium">
+              <div v-if="(sec as any).isLoading" class="py-12 text-center text-bx-muted">
+                <Loader2 class="w-6 h-6 mx-auto animate-spin mb-2 text-bx-primary" />
+                <span class="text-xs font-bold">جاري تحميل بيانات طلاب {{ sec.section_name }}...</span>
+              </div>
+
+              <div v-else-if="sec.students.length === 0" class="py-12 text-center text-bx-muted text-xs font-medium">
                 لا يوجد طلاب مسكنين في {{ sec.section_name }}.
               </div>
 
@@ -964,6 +1269,29 @@ onMounted(async () => {
                 <table class="w-full text-start border-collapse text-xs">
                   <thead>
                     <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
+                      <!-- Checkbox column for entire section selection -->
+                      <th class="py-3 px-3 text-center w-12 border-e border-[#B4AED8]/50 dark:border-white/10">
+                        <div class="flex items-center justify-center">
+                          <button
+                            type="button"
+                            role="checkbox"
+                            :aria-checked="isSectionAllSelected(sec.students) ? 'true' : isSectionPartiallySelected(sec.students) ? 'mixed' : 'false'"
+                            @click="toggleSelectAllSection(sec.students)"
+                            class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-2xs hover:scale-105 active:scale-95 shrink-0"
+                            :class="[
+                              isSectionAllSelected(sec.students)
+                                ? 'bg-bx-primary border-bx-primary text-white shadow-xs'
+                                : isSectionPartiallySelected(sec.students)
+                                  ? 'bg-bx-primary border-bx-primary text-white shadow-xs'
+                                  : 'border-[#B4AED8] dark:border-white/30 bg-white dark:bg-slate-800 hover:border-bx-primary'
+                            ]"
+                            title="تحديد أو إلغاء تحديد كل طلاب الشعبة"
+                          >
+                            <Check v-if="isSectionAllSelected(sec.students)" class="w-3.5 h-3.5 stroke-[3]" />
+                            <Minus v-else-if="isSectionPartiallySelected(sec.students)" class="w-3.5 h-3.5 stroke-[3]" />
+                          </button>
+                        </div>
+                      </th>
                       <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
                       <th class="py-3 px-4 font-bold text-start w-32 border-e border-[#B4AED8]/50 dark:border-white/10">الرمز الموحد</th>
                       <th class="py-3 px-4 font-bold text-start min-w-[220px] border-e border-[#B4AED8]/50 dark:border-white/10">
@@ -978,12 +1306,6 @@ onMounted(async () => {
                           <span>رقم الجلوس</span>
                         </div>
                       </th>
-                      <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">
-                        <div class="flex items-center justify-center gap-1.5">
-                          <CheckCircle2 class="w-3.5 h-3.5 text-bx-primary" />
-                          <span>الحالة الأكاديمية</span>
-                        </div>
-                      </th>
                       <th class="py-3 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
                     </tr>
                   </thead>
@@ -991,8 +1313,33 @@ onMounted(async () => {
                     <tr
                       v-for="(st, idx) in sec.students"
                       :key="st.enrollment_id"
-                      class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
+                      :class="[
+                        'transition-colors duration-150 group',
+                        selectedEnrollmentIds.includes(st.enrollment_id)
+                          ? 'bg-purple-500/[0.08] dark:bg-purple-900/20'
+                          : 'hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02]'
+                      ]"
                     >
+                      <!-- Checkbox column for individual student -->
+                      <td class="py-3 px-3 text-center border-e border-[#B4AED8]/50 dark:border-white/10">
+                        <div class="flex items-center justify-center">
+                          <button
+                            type="button"
+                            role="checkbox"
+                            :aria-checked="selectedEnrollmentIds.includes(st.enrollment_id)"
+                            @click="toggleSelectStudent(st.enrollment_id)"
+                            class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-2xs hover:scale-105 active:scale-95 shrink-0"
+                            :class="[
+                              selectedEnrollmentIds.includes(st.enrollment_id)
+                                ? 'bg-bx-primary border-bx-primary text-white shadow-xs'
+                                : 'border-[#B4AED8] dark:border-white/30 bg-white dark:bg-slate-800 group-hover:border-bx-primary'
+                            ]"
+                            :title="`تحديد الطالب ${st.student_name}`"
+                          >
+                            <Check v-if="selectedEnrollmentIds.includes(st.enrollment_id)" class="w-3.5 h-3.5 stroke-[3]" />
+                          </button>
+                        </div>
+                      </td>
                       <td class="py-3 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
                         {{ idx + 1 }}
                       </td>
@@ -1014,16 +1361,6 @@ onMounted(async () => {
                           {{ st.seating_number }}
                         </span>
                         <span v-else class="text-bx-muted font-bold text-xs">—</span>
-                      </td>
-                      <td class="py-3 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                        <span
-                          :class="[
-                            'inline-block px-3 py-0.5 rounded-full text-[11px] font-bold border',
-                            getStatusBadge(st.status).bg
-                          ]"
-                        >
-                          {{ getStatusBadge(st.status).label }}
-                        </span>
                       </td>
                       <td class="py-3 px-4 text-center whitespace-nowrap last:border-e-0">
                         <div class="flex items-center justify-center gap-1.5">
@@ -1412,13 +1749,16 @@ onMounted(async () => {
                     : bulkForm.selected_student_ids.push(s.id)
                 "
               >
-                <input
-                  type="checkbox"
-                  :value="s.id"
-                  v-model="bulkForm.selected_student_ids"
-                  class="rounded text-bx-primary focus:ring-bx-primary cursor-pointer"
-                  @click.stop
-                />
+                <div
+                  class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 shrink-0 shadow-2xs"
+                  :class="[
+                    bulkForm.selected_student_ids.includes(s.id)
+                      ? 'bg-bx-primary border-bx-primary text-white shadow-xs'
+                      : 'border-[#B4AED8] dark:border-white/30 bg-white dark:bg-slate-800 group-hover:border-bx-primary'
+                  ]"
+                >
+                  <Check v-if="bulkForm.selected_student_ids.includes(s.id)" class="w-3.5 h-3.5 stroke-[3]" />
+                </div>
                 <span class="font-bold text-bx-title">{{ s.full_name }}</span>
                 <span class="text-bx-muted font-mono text-[11px]">({{ s.user_code }})</span>
               </div>
@@ -1539,6 +1879,152 @@ onMounted(async () => {
           </div>
         </div>
       </div>
+
+      <!-- 🔄 Batch Transfer Modal -->
+      <div
+        v-if="showBatchTransferModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+        dir="rtl"
+      >
+        <div class="bg-[var(--bx-surface-solid)] rounded-3xl border border-[#B4AED8] dark:border-white/[0.12] shadow-2xl max-w-lg w-full p-6 space-y-4 font-sans">
+          <div class="flex items-center justify-between border-b border-[#B4AED8]/40 dark:border-white/10 pb-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-bold">
+                <ArrowLeftRight class="w-5 h-5" />
+              </div>
+              <div>
+                <h3 class="text-sm font-black text-bx-title">نقل الطلاب المحددين إلى صف أو شعبة أخرى</h3>
+                <p class="text-[11px] text-bx-muted">تم تحديد {{ selectedEnrollmentIds.length }} طالب للنقل الجماعي</p>
+              </div>
+            </div>
+            <button @click="showBatchTransferModal = false" class="text-bx-muted hover:text-bx-title cursor-pointer text-xs font-bold p-1">✕</button>
+          </div>
+
+          <div
+            v-if="batchTransferError"
+            class="p-3.5 bg-rose-500/[0.08] dark:bg-rose-950/50 border border-rose-400/40 text-rose-600 dark:text-rose-400 rounded-2xl text-xs flex items-center gap-2.5 font-bold"
+          >
+            <AlertCircle class="w-4 h-4 flex-shrink-0" />
+            <span>{{ batchTransferError }}</span>
+          </div>
+
+          <!-- List of Selected Students -->
+          <div class="space-y-1.5">
+            <label class="block text-[11px] font-bold text-bx-title">الطلاب المحددين للنقل ({{ selectedStudentsInfo.length }}):</label>
+            <div class="max-h-32 overflow-y-auto p-2.5 rounded-2xl bg-purple-500/[0.02] border border-[#B4AED8]/40 dark:border-white/10 flex flex-wrap gap-1.5">
+              <span
+                v-for="st in selectedStudentsInfo"
+                :key="st.enrollment_id"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20"
+              >
+                <span>{{ st.student_name }}</span>
+                <span class="text-[10px] text-bx-muted font-mono">({{ st.student_code }})</span>
+                <button
+                  type="button"
+                  @click="toggleSelectStudent(st.enrollment_id)"
+                  class="text-bx-muted hover:text-rose-500 cursor-pointer text-xs ml-0.5 leading-none"
+                  title="إلغاء تحديد هذا الطالب"
+                >
+                  ×
+                </button>
+              </span>
+            </div>
+          </div>
+
+          <!-- Target Class & Target Section Selectors -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label class="block text-[11px] font-bold text-bx-title mb-1.5">
+                1. الصف الدراسي المستهدف <span class="text-rose-500">*</span>
+              </label>
+              <TaqniyaSelect
+                v-model="batchTransferClassId"
+                :options="batchTransferClassOptions"
+                placeholder="اختر الصف..."
+                :icon="School"
+                full-width
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-bx-title mb-1.5">
+                2. الشعبة الدراسية المستهدفة <span class="text-rose-500">*</span>
+              </label>
+              <TaqniyaSelect
+                v-model="batchTransferSectionId"
+                :options="batchTransferSectionOptions"
+                :placeholder="!batchTransferClassId ? 'اختر الصف أولاً...' : batchTransferSectionOptions.length === 0 ? 'لا توجد شعب' : 'اختر الشعبة...'"
+                :disabled="!batchTransferClassId || batchTransferSectionOptions.length === 0"
+                :icon="GraduationCap"
+                full-width
+              />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#B4AED8]/40 dark:border-white/10">
+            <button
+              type="button"
+              @click="showBatchTransferModal = false"
+              class="px-5 py-2 rounded-full text-xs font-bold border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] cursor-pointer transition"
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              :disabled="batchTransferSubmitting || selectedEnrollmentIds.length === 0 || !batchTransferSectionId"
+              @click="handleBatchTransferSubmit"
+              class="px-6 py-2 rounded-full text-xs font-bold bg-bx-primary hover:bg-bx-primary-hover text-white transition cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-sm"
+            >
+              <Loader2 v-if="batchTransferSubmitting" class="w-4 h-4 animate-spin" />
+              <span>تأكيد نقل {{ selectedEnrollmentIds.length }} طلاب</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⚡ Floating Bottom Action Bar for Selected Students -->
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="transform translate-y-8 opacity-0"
+        enter-to-class="transform translate-y-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="transform translate-y-0 opacity-100"
+        leave-to-class="transform translate-y-8 opacity-0"
+      >
+        <div
+          v-if="selectedEnrollmentIds.length > 0"
+          class="fixed bottom-6 inset-x-0 mx-auto max-w-xl z-40 px-4"
+          dir="rtl"
+        >
+          <div class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-bx-primary/30 shadow-2xl p-3 px-5 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-bx-primary/10 text-bx-primary flex items-center justify-center font-bold">
+                <CheckSquare class="w-5 h-5" />
+              </div>
+              <div>
+                <p class="text-xs font-black text-bx-title">
+                  تم تحديد <span class="text-bx-primary font-mono text-sm font-black">{{ selectedEnrollmentIds.length }}</span> طالب
+                </p>
+                <p class="text-[10px] text-bx-muted">يمكنك نقل الطلاب المحددين إلى أي صف أو شعبة أخرى دفعة واحدة</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                @click="selectedEnrollmentIds = []"
+                class="px-3 py-1.5 rounded-full text-xs font-bold text-bx-muted hover:text-bx-title border border-[#B4AED8]/50 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                إلغاء التحديد
+              </button>
+              <button
+                @click="openBatchTransferModal"
+                class="px-4 py-1.5 rounded-full text-xs font-bold bg-bx-primary hover:bg-bx-primary-hover text-white flex items-center gap-2 shadow-md transition cursor-pointer"
+              >
+                <ArrowLeftRight class="w-3.5 h-3.5" />
+                <span>نقل إلى صف أو شعبة</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </div>
   </TaqniyaErrorBoundary>
 </template>

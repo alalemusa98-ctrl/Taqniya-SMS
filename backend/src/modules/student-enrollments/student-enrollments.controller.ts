@@ -41,6 +41,15 @@ export class StudentEnrollmentsController {
     return this.enrollmentsService.findAll(query, user);
   }
 
+  @Get('class-counts')
+  @Roles(RoleType.admin, RoleType.teacher)
+  async getClassCounts(
+    @Query('academic_year_id') academicYearId?: string,
+  ) {
+    const yearIdNum = academicYearId ? Number(academicYearId) : undefined;
+    return this.enrollmentsService.getClassCounts(yearIdNum);
+  }
+
   @Post()
   @Roles(RoleType.admin)
   @HttpCode(HttpStatus.CREATED)

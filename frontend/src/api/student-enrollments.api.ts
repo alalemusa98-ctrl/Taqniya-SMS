@@ -135,9 +135,22 @@ export interface DeleteEnrollmentResponse {
   message: string;
 }
 
+export interface ClassCountItem {
+  class_id: number;
+  count: number;
+}
+
+export interface ClassCountsResponse {
+  success: boolean;
+  data: ClassCountItem[];
+}
+
 export const studentEnrollmentsApi = {
   getEnrollmentsMatrix: (params?: GetEnrollmentsParams, signal?: AbortSignal) =>
     deduplicatedGet<EnrollmentMatrixResponse>('/student-enrollments', { params, signal }),
+
+  getClassCounts: (params?: { academic_year_id?: number }, signal?: AbortSignal) =>
+    deduplicatedGet<ClassCountsResponse>('/student-enrollments/class-counts', { params, signal }),
 
   getStudentEnrollmentsHistory: (studentId: number, signal?: AbortSignal) =>
     deduplicatedGet<StudentEnrollmentHistoryResponse>(`/students/${studentId}/enrollments`, {

@@ -174,6 +174,49 @@ export class StudentEnrollmentsService {
   }
 
   /**
+   * Fast Aggregate: GET /api/v1/student-enrollments/class-counts
+   * Returns enrolled student counts grouped strictly by class_id for the active or requested academic year
+   */
+  async getClassCounts(academicYearId?: number) {
+    let yearId = academicYearId;
+    if (!yearId) {
+      const activeYear = await this.prisma.academicYear.findFirst({
+        where: { is_active: 1, deleted_at: null },
+        orderBy: { id: 'desc' },
+      });
+      if (activeYear) {
+        yearId = Number(activeYear.id);
+      }
+    }
+
+    if (!yearId) {
+      return {
+        success: true,
+        data: [],
+      };
+    }
+
+    const counts = await this.prisma.studentEnrollment.groupBy({
+      by: ['class_id'],
+      _count: {
+        id: true,
+      },
+      where: {
+        academic_year_id: BigInt(yearId),
+        deleted_at: null,
+      },
+    });
+
+    return {
+      success: true,
+      data: counts.map((c) => ({
+        class_id: Number(c.class_id),
+        count: c._count.id,
+      })),
+    };
+  }
+
+  /**
    * Operation 1.2: GET /api/v1/students/:student_id/enrollments
    * Returns historical academic progression from student_transcripts and active student_enrollments
    */
