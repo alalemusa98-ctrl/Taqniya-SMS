@@ -8,7 +8,7 @@ defineProps<{
 
 <template>
   <div
-    class="w-full h-full min-h-[92px] rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.04] dark:bg-emerald-950/20 dark:border-emerald-500/20 shadow-2xs overflow-hidden flex flex-col justify-center"
+    class="w-full h-full min-h-[78px] rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.04] dark:bg-emerald-950/20 dark:border-emerald-500/20 shadow-2xs overflow-hidden flex flex-col justify-center"
   >
     <div class="flex flex-col items-center justify-center h-full w-full gap-2 px-2.5 py-3 text-center">
       <!-- Subject Name -->
