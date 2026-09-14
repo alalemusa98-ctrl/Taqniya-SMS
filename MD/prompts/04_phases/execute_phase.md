@@ -1,6 +1,6 @@
 # 🤖 Prompt: Execute Phase
 
-> **phase_05_timetables_a:** `Governance Dispatcher & Phase Execution Orchestrator`
+> **phase_05_timetables_b:** `Governance Dispatcher & Phase Execution Orchestrator`
 
 > **Purpose:**
 > يُستخدم هذا الموجّه لتسليم المرحلة الوظيفية المعتمدة، وسياقها، ومتطلباتها، وقيودها، ومعايير قبولها إلى **محرك التنفيذ المعتمد (Configured Execution Engine)** بعد التأكد من جاهزية جميع المتطلبات السابقة.
