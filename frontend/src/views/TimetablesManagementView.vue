@@ -2,20 +2,16 @@
 import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue';
 import {
   Plus,
-  Search,
   Calendar,
   Clock,
-  UserCheck,
-  Edit2,
-  Trash2,
   Loader2,
   AlertCircle,
-  Save,
   BarChart3,
   School,
   CheckCircle2,
   TrendingUp,
-  BookOpen,
+  Save,
+  Trash2,
 } from 'lucide-vue-next';
 import {
   timetablesApi,
@@ -35,6 +31,9 @@ import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
+import TimetableSlotCard from '../components/timetables/TimetableSlotCard.vue';
+import TimetableEmptySlot from '../components/timetables/TimetableEmptySlot.vue';
+import TeacherSlotCard from '../components/timetables/TeacherSlotCard.vue';
 
 // 1. Lazy loaded Drawer
 const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
@@ -455,6 +454,13 @@ async function submitDrawer() {
 function promptDeleteSlot(slot: TimetableSlotItem) {
   slotToDelete.value = slot;
   showDeleteModal.value = true;
+}
+
+function handleUnassignFromDrawer() {
+  if (!slotToEdit.value) return;
+  const currentSlot = slotToEdit.value;
+  showDrawer.value = false;
+  promptDeleteSlot(currentSlot);
 }
 
 async function confirmDeleteSlot() {
@@ -895,76 +901,21 @@ onMounted(async () => {
                       :key="period.id"
                       class="p-2 border-e border-bx-divider align-top h-28 min-w-[140px]"
                     >
-                      <!-- Scheduled Slot Card -->
-                      <div
+                      <!-- Scheduled Slot Component -->
+                      <TimetableSlotCard
                         v-if="getSlotFor(day.id, period.id)"
-                        class="h-full min-h-[96px] rounded-2xl p-3 flex flex-col justify-between border transition-all duration-200 bg-gradient-to-b from-purple-500/[0.08] via-purple-500/[0.04] to-transparent dark:from-purple-950/40 dark:via-purple-950/20 dark:to-transparent border-purple-500/25 hover:border-bx-primary hover:shadow-md shadow-2xs group relative"
-                      >
-                        <div>
-                          <!-- Subject Name & Badge -->
-                          <div class="flex items-center justify-between gap-1 mb-1.5">
-                            <div class="flex items-center gap-1.5 min-w-0">
-                              <BookOpen class="w-3.5 h-3.5 text-bx-primary shrink-0" />
-                              <span class="font-black text-xs text-bx-title font-display truncate" :title="getSlotFor(day.id, period.id)?.subject_name">
-                                {{ getSlotFor(day.id, period.id)?.subject_name }}
-                              </span>
-                            </div>
-                          </div>
+                        :slot-data="getSlotFor(day.id, period.id)!"
+                        :is-admin="isAdmin"
+                        @edit="openEditDrawer($event, day.id)"
+                        @delete="promptDeleteSlot($event)"
+                      />
 
-                          <!-- Teacher Name Badge -->
-                          <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white/80 dark:bg-black/40 border border-purple-500/15 text-[11px] font-semibold text-bx-muted max-w-full truncate shadow-2xs">
-                            <UserCheck class="w-3 h-3 text-bx-primary shrink-0" />
-                            <span class="truncate">{{ getSlotFor(day.id, period.id)?.teacher_name }}</span>
-                          </div>
-                        </div>
-
-                        <!-- Action Controls (Admin Only - Floating elegant pill) -->
-                        <div
-                          v-if="isAdmin"
-                          class="flex items-center justify-end gap-1.5 pt-1.5 mt-1.5 border-t border-purple-500/15 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                        >
-                          <button
-                            @click.stop="openEditDrawer(getSlotFor(day.id, period.id)!, day.id)"
-                            type="button"
-                            class="p-1.5 rounded-lg text-bx-muted hover:text-bx-primary bg-white/90 dark:bg-gray-800/90 hover:bg-purple-50 dark:hover:bg-purple-950/60 shadow-xs border border-bx-border/60 transition-all cursor-pointer"
-                            title="تعديل الحصة"
-                          >
-                            <Edit2 class="w-3 h-3" />
-                          </button>
-                          <button
-                            @click.stop="promptDeleteSlot(getSlotFor(day.id, period.id)!)"
-                            type="button"
-                            class="p-1.5 rounded-lg text-bx-muted hover:text-red-600 bg-white/90 dark:bg-gray-800/90 hover:bg-red-50 dark:hover:bg-red-950/60 shadow-xs border border-bx-border/60 transition-all cursor-pointer"
-                            title="إلغاء الحصة"
-                          >
-                            <Trash2 class="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <!-- Empty Slot (Admin: Entire Box is Clickable) -->
-                      <button
-                        v-else-if="isAdmin"
-                        type="button"
-                        @click="openCreateDrawer(day.id, period.id)"
-                        class="w-full h-full min-h-[96px] rounded-2xl border-2 border-dashed border-[#B4AED8]/50 hover:border-bx-primary bg-purple-500/[0.015] hover:bg-purple-500/[0.07] dark:hover:bg-purple-950/25 transition-all duration-200 flex flex-col items-center justify-center gap-1.5 p-2.5 cursor-pointer group shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-bx-primary/30"
-                        title="انقر في أي مكان لتسكين حصة في هذا الموعد"
-                      >
-                        <div class="w-7 h-7 rounded-full bg-purple-500/10 text-bx-primary flex items-center justify-center group-hover:scale-110 group-hover:bg-bx-primary group-hover:text-white transition-all duration-200 shadow-2xs">
-                          <Plus class="w-4 h-4 transition-transform group-hover:rotate-90 duration-300" />
-                        </div>
-                        <span class="text-xs font-bold text-bx-muted group-hover:text-bx-primary transition-colors duration-200">
-                          + تسكين
-                        </span>
-                      </button>
-
-                      <!-- Empty Slot (Non-admin: Static placeholder) -->
-                      <div
+                      <!-- Empty Slot Component (Full Box Clickable) -->
+                      <TimetableEmptySlot
                         v-else
-                        class="w-full h-full min-h-[96px] rounded-2xl border border-dashed border-bx-border/50 bg-gray-50/40 dark:bg-white/[0.01] flex items-center justify-center text-[11px] font-medium text-bx-muted/50 select-none"
-                      >
-                        شاغر
-                      </div>
+                        :is-admin="isAdmin"
+                        @click="openCreateDrawer(day.id, period.id)"
+                      />
                     </td>
                   </tr>
                 </template>
@@ -987,26 +938,15 @@ onMounted(async () => {
                       :key="period.id"
                       class="p-2 border-e border-bx-divider align-top h-28 min-w-[140px]"
                     >
-                      <div
+                      <TeacherSlotCard
                         v-if="getTeacherSlotFor(day.id, period.id)"
-                        class="h-full min-h-[96px] rounded-2xl p-3 flex flex-col justify-between border bg-gradient-to-b from-emerald-500/[0.08] via-emerald-500/[0.04] to-transparent dark:from-emerald-950/40 dark:via-emerald-950/20 border-emerald-500/25 shadow-2xs hover:shadow-md transition-all duration-200"
-                      >
-                        <div>
-                          <div class="flex items-center gap-1.5 mb-1.5">
-                            <BookOpen class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span class="font-black text-xs text-emerald-900 dark:text-emerald-300 font-display truncate">
-                              {{ getTeacherSlotFor(day.id, period.id)?.subject_name }}
-                            </span>
-                          </div>
-                          <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white/80 dark:bg-black/40 border border-emerald-500/15 text-[11px] font-semibold text-emerald-800 dark:text-emerald-400">
-                            <School class="w-3 h-3 text-emerald-600 shrink-0" />
-                            <span>{{ getTeacherSlotFor(day.id, period.id)?.class_name }} - {{ getTeacherSlotFor(day.id, period.id)?.section_name }}</span>
-                          </div>
-                        </div>
-                      </div>
+                        :subject-name="getTeacherSlotFor(day.id, period.id)?.subject_name"
+                        :class-name="getTeacherSlotFor(day.id, period.id)?.class_name"
+                        :section-name="getTeacherSlotFor(day.id, period.id)?.section_name"
+                      />
                       <div
                         v-else
-                        class="w-full h-full min-h-[96px] rounded-2xl border border-dashed border-bx-border/50 bg-gray-50/40 dark:bg-white/[0.01] flex items-center justify-center text-[11px] font-medium text-bx-muted/50 select-none"
+                        class="w-full h-full min-h-[92px] rounded-2xl border border-dashed border-bx-border/40 bg-gray-50/40 dark:bg-white/[0.01] flex items-center justify-center text-[11px] font-medium text-bx-muted/50 select-none"
                       >
                         فراغ
                       </div>
@@ -1086,23 +1026,38 @@ onMounted(async () => {
           </div>
 
           <!-- Actions -->
-          <div class="pt-4 border-t border-bx-divider flex items-center justify-end gap-2.5">
+          <div class="pt-4 border-t border-bx-divider flex items-center justify-between gap-2.5">
+            <!-- Unassign Slot Button (Edit Mode Only) -->
             <button
+              v-if="drawerMode === 'edit' && slotToEdit"
               type="button"
-              @click="showDrawer = false"
-              class="px-4 py-2 rounded-full border border-bx-border text-xs font-bold text-bx-title hover:bg-purple-500/[0.04] transition-colors"
+              @click="handleUnassignFromDrawer"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-red-300 dark:border-red-500/40 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+              title="فك هذه الحصة وإفراغ الموعد بالجدول"
             >
-              إلغاء
+              <Trash2 class="w-3.5 h-3.5" />
+              <span>فك الحصة</span>
             </button>
-            <button
-              type="submit"
-              :disabled="isSubmitting"
-              class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-bx-primary hover:bg-bx-primary-hover text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
-              <Save v-else class="w-3.5 h-3.5" />
-              <span>{{ drawerMode === 'create' ? 'تسكين الحصة الآن' : 'تحديث الحصة' }}</span>
-            </button>
+            <div v-else></div>
+
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                @click="showDrawer = false"
+                class="px-4 py-2 rounded-full border border-bx-border text-xs font-bold text-bx-title hover:bg-purple-500/[0.04] transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                :disabled="isSubmitting"
+                class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-bx-primary hover:bg-bx-primary-hover text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
+                <Save v-else class="w-3.5 h-3.5" />
+                <span>{{ drawerMode === 'create' ? 'تسكين الحصة الآن' : 'تحديث الحصة' }}</span>
+              </button>
+            </div>
           </div>
         </form>
       </TaqniyaDrawer>
