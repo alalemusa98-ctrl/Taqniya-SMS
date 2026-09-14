@@ -16,6 +16,7 @@ import {
   School,
   Clock,
   Calendar,
+  BookOpen,
   Menu,
   X,
 } from 'lucide-vue-next';
@@ -108,6 +109,12 @@ const academicGroup: NavDropdownItem[] = [
     to: '/timetables',
     description: 'إدارة وتوزيع الحصص المدرسية، مصفوفة الشعب، وتدقيق الشواغر',
     icon: Calendar,
+  },
+  {
+    label: 'الواجبات المدرسية',
+    to: '/homework',
+    description: 'متابعة وإدارة التكاليف المنزلية والملازم ومواعيد التسليم',
+    icon: BookOpen,
   },
 ];
 

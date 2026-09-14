@@ -14,6 +14,7 @@ import { GuardianStudentsModule } from './modules/guardian-students/guardian-stu
 import { StudentEnrollmentsModule } from './modules/student-enrollments/student-enrollments.module.js';
 import { PeriodSlotsModule } from './modules/period-slots/period-slots.module.js';
 import { TimetablesModule } from './modules/timetables/timetables.module.js';
+import { AssignmentsModule } from './modules/assignments/assignments.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -43,6 +44,7 @@ import { AppService } from './app.service.js';
     StudentEnrollmentsModule,
     PeriodSlotsModule,
     TimetablesModule,
+    AssignmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
