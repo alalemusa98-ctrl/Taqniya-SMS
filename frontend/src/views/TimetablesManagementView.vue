@@ -10,10 +10,12 @@ import {
   Trash2,
   Loader2,
   AlertCircle,
-  AlertTriangle,
   Save,
   BarChart3,
   School,
+  CheckCircle2,
+  TrendingUp,
+  BookOpen,
 } from 'lucide-vue-next';
 import {
   timetablesApi,
@@ -31,8 +33,10 @@ import { teachersApi, type Teacher } from '../api/teachers.api';
 import { useAuthStore } from '../stores/auth.store';
 import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
+import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
+import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
 
-// 1. Lazy loaded UI components
+// 1. Lazy loaded Drawer
 const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
 
 const authStore = useAuthStore();
@@ -40,7 +44,7 @@ const toast = useToast();
 
 const isAdmin = computed(() => authStore.user?.role_type === 'admin');
 
-// 2. Main View Modes
+// 2. View Mode Switcher
 const activeViewTab = ref<'sections' | 'teachers'>('sections');
 const isAuditMode = ref(false);
 
@@ -57,17 +61,17 @@ const classesStructure = ref<TimetableClassInfo[]>([]);
 const auditData = ref<TimetableClassAuditInfo[]>([]);
 const totalUnscheduledSlots = ref<number>(0);
 
-// Selected Section & Matrix Grid
+// Selected Section & Matrix
 const selectedSectionId = ref<number | null>(null);
 const selectedSectionInfo = ref<{ class_name: string; section_name: string } | null>(null);
 const sectionTimetable = ref<DayTimetableGroup[]>([]);
 
-// Period Slots & Teaching Assignments for Form
+// Periods, Assignments & Teachers
 const periodSlots = ref<PeriodSlot[]>([]);
 const availableAssignments = ref<AssignmentItem[]>([]);
 const teachersList = ref<Teacher[]>([]);
 
-// Teacher View State
+// Teacher Timetable View
 const selectedTeacherId = ref<number | null>(null);
 const teacherTimetableData = ref<TeacherTimetableResponse['data'] | null>(null);
 
@@ -102,7 +106,7 @@ const showDeleteModal = ref(false);
 const slotToDelete = ref<TimetableSlotItem | null>(null);
 const isDeleting = ref(false);
 
-// Day of week options
+// Days of week
 const daysOfWeekOptions: { id: DayOfWeek; name: string }[] = [
   { id: 'sunday', name: 'الأحد' },
   { id: 'monday', name: 'الإثنين' },
@@ -112,7 +116,63 @@ const daysOfWeekOptions: { id: DayOfWeek; name: string }[] = [
   { id: 'saturday', name: 'السبت' },
 ];
 
-// Computed: Filtered Classes Structure
+const daySelectOptions: TaqniyaSelectOption[] = daysOfWeekOptions.map((d) => ({
+  value: d.id,
+  label: d.name,
+}));
+
+// Active Academic Year object
+const activeAcademicYear = computed(() => {
+  return academicYears.value.find((y) => y.id === selectedYearId.value) || academicYears.value[0];
+});
+
+// Dropdown Options
+const yearOptions = computed<TaqniyaSelectOption[]>(() =>
+  academicYears.value.map((y) => ({
+    value: y.id,
+    label: `${y.name} ${y.is_active === 1 ? '(النشط)' : ''}`,
+  })),
+);
+
+const classFilterOptions = computed<TaqniyaSelectOption[]>(() => [
+  { value: 'all', label: 'كافة الصفوف الدراسية' },
+  ...classesStructure.value.map((c) => ({
+    value: c.class_id,
+    label: c.class_name,
+  })),
+]);
+
+const teacherSelectOptions = computed<TaqniyaSelectOption[]>(() =>
+  teachersList.value.map((t) => ({
+    value: t.id,
+    label: `${t.full_name} (${t.user_code})`,
+    subtext: t.specialization || undefined,
+  })),
+);
+
+const formPeriodOptions = computed<TaqniyaSelectOption[]>(() =>
+  teachingPeriods.value.map((p) => ({
+    value: p.id,
+    label: `${p.name} (${p.start_time.substring(0, 5)} - ${p.end_time.substring(0, 5)})`,
+  })),
+);
+
+const formAssignmentOptions = computed<TaqniyaSelectOption[]>(() =>
+  availableAssignments.value.map((asgn) => ({
+    value: asgn.id,
+    label: `${asgn.subject_name} — أ. ${asgn.teacher_name}`,
+    subtext: asgn.teacher_code,
+  })),
+);
+
+// Teaching Periods (non-break)
+const teachingPeriods = computed(() => {
+  return periodSlots.value
+    .filter((p) => p.is_break === 0)
+    .sort((a, b) => a.slot_number - b.slot_number);
+});
+
+// Filtered Classes
 const filteredClasses = computed(() => {
   let list = classesStructure.value;
   if (selectedClassFilter.value !== 'all') {
@@ -129,14 +189,7 @@ const filteredClasses = computed(() => {
   return list;
 });
 
-// Computed: Non-break Period Slots
-const teachingPeriods = computed(() => {
-  return periodSlots.value
-    .filter((p) => p.is_break === 0)
-    .sort((a, b) => a.slot_number - b.slot_number);
-});
-
-// Map of audit stats by class_id and class_section_id
+// Audit Map lookup
 const auditMap = computed(() => {
   const map: Record<number, { classTotalUnscheduled: number; isClassFullyScheduled: boolean; sections: Record<number, any> }> = {};
   for (const c of auditData.value) {
@@ -153,7 +206,32 @@ const auditMap = computed(() => {
   return map;
 });
 
-// Fetch Initial Academic Years & Period Slots
+// KPI Metrics
+const stats = computed(() => {
+  let totalScheduled = 0;
+  for (const d of sectionTimetable.value) {
+    totalScheduled += d.slots.length;
+  }
+
+  let totalSectionsCount = 0;
+  for (const c of classesStructure.value) {
+    totalSectionsCount += c.sections.length;
+  }
+
+  let fullyScheduledCount = 0;
+  for (const c of auditData.value) {
+    if (c.is_fully_scheduled) fullyScheduledCount++;
+  }
+
+  return {
+    totalScheduled,
+    totalSectionsCount,
+    fullyScheduledCount,
+    totalUnscheduled: totalUnscheduledSlots.value,
+  };
+});
+
+// Initial Data Fetching
 async function initData() {
   loading.value = true;
   try {
@@ -174,15 +252,18 @@ async function initData() {
 
     if (selectedYearId.value) {
       await fetchStructure();
+      if (isAdmin.value) {
+        await fetchAuditSilent();
+      }
     }
   } catch (err: any) {
-    toast.error(err?.response?.data?.message || 'حدث خطأ أثناء تحميل البيانات الأساسية.');
+    toast.error(err?.response?.data?.message || 'تعذر تحميل البيانات الأساسية.');
   } finally {
     loading.value = false;
   }
 }
 
-// Fetch Structure (Lightweight mode)
+// Fetch Structure
 async function fetchStructure() {
   if (!selectedYearId.value) return;
   structureLoading.value = true;
@@ -206,6 +287,19 @@ async function fetchStructure() {
   }
 }
 
+// Fetch Audit data in background for KPI and alert indicators
+async function fetchAuditSilent() {
+  try {
+    const res = await timetablesApi.getCompletionStatus({
+      academic_year_id: selectedYearId.value,
+    });
+    if (res.data?.success && res.data?.data) {
+      auditData.value = res.data.data.classes;
+      totalUnscheduledSlots.value = res.data.data.total_unscheduled_school_slots;
+    }
+  } catch (_e) {}
+}
+
 // Select Section & Fetch Matrix (Lazy Loading)
 async function selectSection(sectionId: number, className: string, sectionName: string) {
   selectedSectionId.value = sectionId;
@@ -214,7 +308,7 @@ async function selectSection(sectionId: number, className: string, sectionName: 
   await fetchAssignmentsForSection(sectionId);
 }
 
-// Fetch Timetable Matrix for Selected Section
+// Fetch Section Timetable Matrix
 async function fetchSectionTimetable(sectionId: number) {
   matrixLoading.value = true;
   try {
@@ -230,7 +324,7 @@ async function fetchSectionTimetable(sectionId: number) {
   }
 }
 
-// Fetch Teaching Assignments for selected section to populate Drawer dropdown
+// Fetch Assignments for section
 async function fetchAssignmentsForSection(sectionId: number) {
   try {
     const res = await teachingAssignmentsApi.getAll({
@@ -254,28 +348,16 @@ async function fetchAssignmentsForSection(sectionId: number) {
   }
 }
 
-// Toggle Audit / Completion Status Mode
+// Toggle Audit Mode
 async function toggleAuditMode() {
-  if (!isAuditMode.value) {
-    isAuditMode.value = true;
-    try {
-      const res = await timetablesApi.getCompletionStatus({
-        academic_year_id: selectedYearId.value,
-      });
-      if (res.data?.success && res.data?.data) {
-        auditData.value = res.data.data.classes;
-        totalUnscheduledSlots.value = res.data.data.total_unscheduled_school_slots;
-        toast.success(res.data.message || 'تم تحديث تقرير تدقيق الجداول بنجاح.');
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'تعذر جلب تقرير تدقيق اكتمال الجداول.');
-    }
-  } else {
-    isAuditMode.value = false;
+  isAuditMode.value = !isAuditMode.value;
+  if (isAuditMode.value) {
+    await fetchAuditSilent();
+    toast.success('تم تفعيل وضع تدقيق الجداول وإبراز الشواغر والنواقص.');
   }
 }
 
-// Open Drawer to Schedule or Edit
+// Open Drawer to Schedule
 function openCreateDrawer(day?: DayOfWeek, periodSlotId?: number) {
   drawerMode.value = 'create';
   slotToEdit.value = null;
@@ -308,7 +390,7 @@ function openEditDrawer(slot: TimetableSlotItem, day: DayOfWeek) {
   showDrawer.value = true;
 }
 
-// Submit Drawer (Create / Update)
+// Submit Drawer Form
 async function submitDrawer() {
   formErrors.value = {};
   formErrorMessage.value = null;
@@ -351,13 +433,7 @@ async function submitDrawer() {
     if (selectedSectionId.value) {
       await fetchSectionTimetable(selectedSectionId.value);
     }
-    if (isAuditMode.value) {
-      const auditRes = await timetablesApi.getCompletionStatus({ academic_year_id: selectedYearId.value });
-      if (auditRes.data?.success && auditRes.data?.data) {
-        auditData.value = auditRes.data.data.classes;
-        totalUnscheduledSlots.value = auditRes.data.data.total_unscheduled_school_slots;
-      }
-    }
+    await fetchAuditSilent();
   } catch (err: any) {
     const errorData = err?.response?.data;
     if (err?.response?.status === 409) {
@@ -393,13 +469,7 @@ async function confirmDeleteSlot() {
     if (selectedSectionId.value) {
       await fetchSectionTimetable(selectedSectionId.value);
     }
-    if (isAuditMode.value) {
-      const auditRes = await timetablesApi.getCompletionStatus({ academic_year_id: selectedYearId.value });
-      if (auditRes.data?.success && auditRes.data?.data) {
-        auditData.value = auditRes.data.data.classes;
-        totalUnscheduledSlots.value = auditRes.data.data.total_unscheduled_school_slots;
-      }
-    }
+    await fetchAuditSilent();
   } catch (err: any) {
     toast.error(err?.response?.data?.message || 'تعذر إلغاء الحصة من الجدول.');
   } finally {
@@ -407,7 +477,7 @@ async function confirmDeleteSlot() {
   }
 }
 
-// Teacher Timetable View
+// Teacher View Handlers
 async function loadTeachers() {
   if (teachersList.value.length > 0) return;
   try {
@@ -437,13 +507,13 @@ async function selectTeacher(teacherId: number) {
   }
 }
 
-// Helper: Get slot for day and period in section timetable
+// Lookup Helper: Section slot
 function getSlotFor(dayKey: string, periodSlotId: number): TimetableSlotItem | undefined {
   const dayGroup = sectionTimetable.value.find((d) => d.day_of_week === dayKey);
   return dayGroup?.slots.find((s) => s.period_slot_id === periodSlotId);
 }
 
-// Helper: Get slot for day and period in teacher timetable
+// Lookup Helper: Teacher slot
 function getTeacherSlotFor(dayKey: string, periodSlotId: number) {
   const dayGroup = teacherTimetableData.value?.timetable.find((d) => d.day_of_week === dayKey);
   return dayGroup?.slots.find((s) => s.period_slot_id === periodSlotId);
@@ -455,8 +525,8 @@ watch(selectedYearId, async () => {
   selectedSectionInfo.value = null;
   sectionTimetable.value = [];
   await fetchStructure();
-  if (isAuditMode.value) {
-    await toggleAuditMode();
+  if (isAdmin.value) {
+    await fetchAuditSilent();
   }
 });
 
@@ -473,439 +543,479 @@ onMounted(async () => {
 
 <template>
   <TaqniyaErrorBoundary>
-    <div class="space-y-6 pb-12" dir="rtl">
-      <!-- 1. Header Toolbar -->
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
-        <div class="space-y-1">
-          <div class="flex items-center gap-3">
-            <div class="p-2.5 bg-blue-50 dark:bg-blue-950/50 rounded-xl text-blue-600 dark:text-blue-400">
-              <Calendar class="w-6 h-6" />
-            </div>
-            <div>
-              <h1 class="text-2xl font-bold text-slate-900 dark:text-white">
-                جدول الحصص الأسبوعي
-              </h1>
-              <p class="text-sm text-slate-500 dark:text-slate-400">
-                إدارة وتوزيع الحصص المدرسية، مصفوفة الشعب، وفحص حظر تضارب المعلمين والشعب
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Mode & Action Buttons -->
-        <div class="flex flex-wrap items-center gap-3">
-          <!-- View Switcher -->
-          <div class="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200/60 dark:border-slate-700/60">
-            <button
-              type="button"
-              @click="activeViewTab = 'sections'"
-              class="px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all"
-              :class="activeViewTab === 'sections' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'"
-            >
-              جدول الشُعب الدراسية
-            </button>
-            <button
-              type="button"
-              @click="activeViewTab = 'teachers'"
-              class="px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all"
-              :class="activeViewTab === 'teachers' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'"
-            >
-              جدول المعلمين
-            </button>
-          </div>
-
-          <!-- Audit Mode Toggle (Admin Only) -->
-          <button
-            v-if="isAdmin && activeViewTab === 'sections'"
-            type="button"
-            @click="toggleAuditMode"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm"
-            :class="isAuditMode ? 'bg-amber-500 text-white hover:bg-amber-600 ring-2 ring-amber-400/30' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'"
-          >
-            <BarChart3 class="w-4 h-4" />
-            <span>{{ isAuditMode ? 'إلغاء وضع التدقيق' : '📊 تدقيق اكتمال الجدول والشواغر' }}</span>
-          </button>
-
-          <!-- Add Slot Button (Admin Only) -->
-          <button
-            v-if="isAdmin"
-            type="button"
-            @click="openCreateDrawer()"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition-all shadow-sm"
-          >
-            <Plus class="w-4 h-4" />
-            <span>+ تسكين حصة بالجدول</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 2. Controls & Selectors Bar -->
-      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
-        <!-- Academic Year Selector -->
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-            العام الدراسي
-          </label>
-          <select
-            v-model="selectedYearId"
-            class="w-full px-3.5 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-          >
-            <option v-for="y in academicYears" :key="y.id" :value="y.id">
-              {{ y.name }} {{ y.is_active ? '(العام النشط)' : '' }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Filter By Class (in sections view) -->
-        <div v-if="activeViewTab === 'sections'">
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-            تصفية الصف الدراسي
-          </label>
-          <select
-            v-model="selectedClassFilter"
-            class="w-full px-3.5 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-          >
-            <option value="all">كافة الصفوف الدراسية</option>
-            <option v-for="c in classesStructure" :key="c.class_id" :value="c.class_id">
-              {{ c.class_name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Filter / Search -->
-        <div v-if="activeViewTab === 'sections'">
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-            بحث سريع
-          </label>
-          <div class="relative">
-            <input
-              v-model="search"
-              type="text"
-              placeholder="اسم الصف أو الشعبة..."
-              class="w-full pl-3.5 pr-9 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-            />
-            <Search class="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
-          </div>
-        </div>
-
-        <!-- Teacher Selector (in teachers view) -->
-        <div v-if="activeViewTab === 'teachers'" class="md:col-span-2">
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-            اختر المعلم
-          </label>
-          <select
-            :value="selectedTeacherId"
-            @change="selectTeacher(Number(($event.target as HTMLSelectElement).value))"
-            class="w-full px-3.5 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-          >
-            <option v-for="t in teachersList" :key="t.id" :value="t.id">
-              {{ t.full_name }} ({{ t.specialization || 'عام' }})
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 3. Audit Banner (When Audit Mode is Active) -->
-      <div
-        v-if="isAuditMode && activeViewTab === 'sections'"
-        class="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
-      >
-        <div class="flex items-center gap-3">
-          <div class="p-2 bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 rounded-xl">
-            <AlertTriangle class="w-6 h-6" />
-          </div>
+    <div class="space-y-4 font-sans" dir="rtl">
+      <!-- Unified Container Card (Matching Taqniya Reference Design System) -->
+      <div class="rounded-3xl border border-bx-border bg-bx-surface p-6 sm:p-7 shadow-sm">
+        
+        <!-- 1. Card Header: Title on Right, Controls & Actions on Left -->
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-bx-divider">
+          <!-- Title & Subtitle with Taqniya Brand Accent -->
           <div>
-            <h3 class="font-bold text-amber-900 dark:text-amber-200">
-              وضع تدقيق الجداول والشواغر مفعّل
-            </h3>
-            <p class="text-xs text-amber-700 dark:text-amber-400">
-              يتم إبراز الصفوف والشعب التي تعاني من نقص في الحصص الأسبوعية بشارات تحذيرية برتقالية.
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <span class="w-2.5 h-7 rounded-full bg-bx-primary shrink-0"></span>
+              <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+                جدول الحصص الأسبوعي وتوزيع الشعب
+              </h2>
+              <span
+                v-if="activeAcademicYear"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-xs"
+              >
+                <Calendar class="w-3.5 h-3.5" />
+                <span>العام الدراسي: {{ activeAcademicYear.name }}</span>
+              </span>
+            </div>
+            <p class="text-xs text-bx-muted font-medium mt-1 ms-5">
+              إدارة وتوزيع الحصص المدرسية، مصفوفة الشعب، وفحص حظر تضارب المعلمين والشعب
             </p>
           </div>
-        </div>
-        <div class="flex items-center gap-4 bg-white/80 dark:bg-slate-900/80 px-4 py-2 rounded-xl border border-amber-200 dark:border-amber-800">
-          <span class="text-xs text-slate-500 dark:text-slate-400">إجمالي الحصص الشاغرة بالمدرسة:</span>
-          <span class="text-lg font-black text-amber-600 dark:text-amber-400">{{ totalUnscheduledSlots }} حصة</span>
-        </div>
-      </div>
 
-      <!-- 4. Section Mode: Classes & Sections Cards Grid -->
-      <div v-if="activeViewTab === 'sections'" class="space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-            <School class="w-4 h-4 text-blue-500" />
-            صفوف وشُعب العام الدراسي
-          </h2>
-          <span class="text-xs text-slate-400">اضغط على الشعبة لتحميل جدولها الأسبوعي</span>
+          <!-- Controls: Mode Switcher + Audit Button + Add Button + Search -->
+          <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            <!-- Add Period Button (Admin Only) -->
+            <button
+              v-if="isAdmin"
+              @click="openCreateDrawer()"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer"
+            >
+              <Plus class="w-3.5 h-3.5" />
+              <span>+ تسكين حصة بالجدول</span>
+            </button>
+
+            <!-- Audit Toggle Button (Admin Only) -->
+            <button
+              v-if="isAdmin && activeViewTab === 'sections'"
+              @click="toggleAuditMode"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border shadow-sm"
+              :class="
+                isAuditMode
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 ring-2 ring-amber-400/20'
+                  : 'border-bx-border text-bx-title hover:bg-purple-500/[0.04]'
+              "
+            >
+              <BarChart3 class="w-3.5 h-3.5" />
+              <span>{{ isAuditMode ? 'إلغاء وضع التدقيق' : '📊 تدقيق الشواغر' }}</span>
+            </button>
+
+            <!-- View Mode Switcher Pills -->
+            <div class="flex items-center gap-1.5 p-1 rounded-full border border-bx-border bg-transparent">
+              <button
+                @click="activeViewTab = 'sections'"
+                class="px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                :class="activeViewTab === 'sections' ? 'bg-bx-primary text-white shadow-sm' : 'text-bx-muted hover:text-bx-title'"
+              >
+                <School class="w-3.5 h-3.5" />
+                <span>جدول الشُعب</span>
+              </button>
+              <button
+                @click="activeViewTab = 'teachers'"
+                class="px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                :class="activeViewTab === 'teachers' ? 'bg-bx-primary text-white shadow-sm' : 'text-bx-muted hover:text-bx-title'"
+              >
+                <UserCheck class="w-3.5 h-3.5" />
+                <span>جدول المعلمين</span>
+              </button>
+            </div>
+
+            <!-- Search Input (Pill Shaped) -->
+            <div class="relative flex-1 sm:w-60">
+              <Search class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-bx-muted pointer-events-none" />
+              <input
+                v-model="search"
+                type="text"
+                placeholder="بحث في الصفوف والشعب..."
+                class="w-full pr-10 pl-5 py-2 rounded-full border border-bx-border bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-start"
+              />
+            </div>
+          </div>
         </div>
 
-        <div v-if="structureLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="i in 3" :key="i" class="h-28 rounded-2xl bg-slate-100 dark:bg-slate-800/50 animate-pulse"></div>
+        <!-- 2. KPI Metrics Cards (Section 8 Standard - Exact Taqniya Theme) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 py-6">
+          <TaqniyaKpiCard
+            title="الحصص المسكنة بالشعبة"
+            :value="`${stats.totalScheduled} حصة`"
+            :icon="Calendar"
+            variant="primary"
+            badge-text="الأسبوعية"
+            :badge-icon="TrendingUp"
+            :pulse-badge="true"
+            :progress="100"
+          />
+
+          <TaqniyaKpiCard
+            title="إجمالي الشعب الدراسية"
+            :value="`${stats.totalSectionsCount} شعبة`"
+            :icon="School"
+            variant="blue"
+            badge-text="متاح بالعام"
+            :progress="100"
+          />
+
+          <TaqniyaKpiCard
+            title="الحصص الشاغرة بالمدرسة"
+            :value="`${stats.totalUnscheduled} شاغر`"
+            :icon="Clock"
+            variant="amber"
+            :badge-text="stats.totalUnscheduled > 0 ? 'نواقص ⚠️' : 'مكتمل ✅'"
+            :progress="Math.max(0, 100 - stats.totalUnscheduled * 2)"
+          />
+
+          <TaqniyaKpiCard
+            title="الفترات اليومية المعتمدة"
+            :value="`${teachingPeriods.length} فترات`"
+            :icon="CheckCircle2"
+            variant="emerald"
+            badge-text="غير فسح"
+            :progress="100"
+          />
         </div>
 
-        <div v-else-if="filteredClasses.length === 0" class="text-center py-10 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <School class="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-          <p class="text-sm text-slate-500 dark:text-slate-400">لا توجد صفوف أو شُعب مطابقة للبحث.</p>
+        <!-- 3. Filters Bar: Year & Class / Teacher Selectors -->
+        <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <!-- Academic Year Select -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">العام الدراسي</label>
+              <TaqniyaSelect
+                v-model="selectedYearId"
+                :options="yearOptions"
+                placeholder="اختر العام الدراسي..."
+                full-width
+              />
+            </div>
+
+            <!-- Class Filter (in sections view) -->
+            <div v-if="activeViewTab === 'sections'">
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب الصف الدراسي</label>
+              <TaqniyaSelect
+                v-model="selectedClassFilter"
+                :options="classFilterOptions"
+                placeholder="كافة الصفوف..."
+                full-width
+              />
+            </div>
+
+            <!-- Teacher Select (in teachers view) -->
+            <div v-if="activeViewTab === 'teachers'" class="lg:col-span-2">
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">اختر المعلم لعرض جدوله</label>
+              <TaqniyaSelect
+                v-model="selectedTeacherId"
+                :options="teacherSelectOptions"
+                placeholder="اختر المعلم المكلف..."
+                full-width
+                @update:model-value="(val) => selectTeacher(Number(val))"
+              />
+            </div>
+          </div>
         </div>
 
-        <!-- Class Cards Grid -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div
-            v-for="cls in filteredClasses"
-            :key="cls.class_id"
-            class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-4 rounded-2xl border transition-all shadow-sm"
-            :class="[
-              isAuditMode && auditMap[cls.class_id]?.classTotalUnscheduled > 0
-                ? 'border-amber-400/80 dark:border-amber-500/50 bg-amber-50/20'
-                : isAuditMode
-                ? 'border-emerald-400/80 dark:border-emerald-500/50 bg-emerald-50/20'
-                : 'border-slate-200/80 dark:border-slate-800/80 hover:border-blue-400/50',
-            ]"
-          >
-            <!-- Card Header -->
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                <h3 class="font-bold text-slate-900 dark:text-white text-sm">
-                  {{ cls.class_name }}
-                </h3>
+        <!-- 4. Section View: Classes & Sections Cards -->
+        <div v-if="activeViewTab === 'sections'" class="mb-6 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-bx-muted flex items-center gap-1.5">
+              <School class="w-3.5 h-3.5 text-bx-primary" />
+              <span>صفوف وشعب المدرسة (اختر الشعبة لعرض جدولها):</span>
+            </h3>
+            <span class="text-[11px] text-bx-muted">التحميل عند الطلب (Lazy Load)</span>
+          </div>
+
+          <div v-if="structureLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div v-for="i in 3" :key="i" class="h-24 rounded-2xl bg-purple-500/[0.04] animate-pulse border border-bx-border"></div>
+          </div>
+
+          <div v-else-if="filteredClasses.length === 0" class="text-center py-8 bg-purple-500/[0.02] rounded-2xl border border-bx-border">
+            <School class="w-8 h-8 text-bx-muted mx-auto mb-2 opacity-50" />
+            <p class="text-xs text-bx-muted">لا توجد صفوف أو شعب مطابقة للبحث.</p>
+          </div>
+
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div
+              v-for="cls in filteredClasses"
+              :key="cls.class_id"
+              class="p-3.5 rounded-2xl border transition-all"
+              :class="[
+                isAuditMode && auditMap[cls.class_id]?.classTotalUnscheduled > 0
+                  ? 'border-amber-400/80 bg-amber-500/[0.04]'
+                  : isAuditMode
+                  ? 'border-emerald-400/80 bg-emerald-500/[0.03]'
+                  : 'border-bx-border bg-bx-surface hover:border-bx-primary/40',
+              ]"
+            >
+              <!-- Class Name & Badge -->
+              <div class="flex items-center justify-between mb-2.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-bx-primary"></span>
+                  <span class="font-black text-xs text-bx-title font-display">{{ cls.class_name }}</span>
+                </div>
+
+                <!-- Audit Deficit Badge on Class -->
+                <div v-if="isAuditMode && auditMap[cls.class_id]">
+                  <span
+                    v-if="auditMap[cls.class_id].classTotalUnscheduled > 0"
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                  >
+                    ⚠️ {{ auditMap[cls.class_id].classTotalUnscheduled }} شاغر
+                  </span>
+                  <span
+                    v-else
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                  >
+                    ✅ مكتمل
+                  </span>
+                </div>
               </div>
 
-              <!-- Audit Badge on Class -->
-              <div v-if="isAuditMode && auditMap[cls.class_id]">
-                <span
-                  v-if="auditMap[cls.class_id].classTotalUnscheduled > 0"
-                  class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700"
+              <!-- Sections Buttons (Pills) -->
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="sec in cls.sections"
+                  :key="sec.class_section_id"
+                  @click="selectSection(sec.class_section_id, cls.class_name, sec.section_name)"
+                  type="button"
+                  class="px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5"
+                  :class="[
+                    selectedSectionId === sec.class_section_id
+                      ? 'bg-bx-primary text-white border-bx-primary shadow-xs'
+                      : 'border-bx-border text-bx-muted hover:text-bx-title hover:border-bx-primary/40 bg-transparent',
+                    isAuditMode && auditMap[cls.class_id]?.sections[sec.class_section_id]?.unscheduled_slots_count > 0
+                      ? 'border-amber-400 text-amber-600'
+                      : '',
+                  ]"
                 >
-                  ⚠️ {{ auditMap[cls.class_id].classTotalUnscheduled }} شاغر
-                </span>
-                <span
-                  v-else
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300"
-                >
-                  ✅ مكتمل
-                </span>
+                  <span>{{ sec.section_name }}</span>
+                  <span
+                    v-if="isAuditMode && auditMap[cls.class_id]?.sections[sec.class_section_id]"
+                    class="text-[9px] px-1 rounded-full font-mono"
+                    :class="
+                      auditMap[cls.class_id]?.sections[sec.class_section_id]?.unscheduled_slots_count > 0
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-emerald-100 text-emerald-800'
+                    "
+                  >
+                    {{
+                      auditMap[cls.class_id]?.sections[sec.class_section_id]?.unscheduled_slots_count > 0
+                        ? `-${auditMap[cls.class_id]?.sections[sec.class_section_id]?.unscheduled_slots_count}`
+                        : '✓'
+                    }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Timetable Matrix Grid (Standard Taqniya Table Layout) -->
+        <div class="rounded-3xl border border-bx-border overflow-hidden bg-bx-surface shadow-xs">
+          <!-- Matrix Card Header -->
+          <div class="p-4 sm:p-5 bg-purple-500/[0.03] dark:bg-white/[0.02] border-b border-bx-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-2xl bg-purple-500/10 text-bx-primary flex items-center justify-center border border-purple-500/20 shadow-xs">
+                <Clock class="w-4 h-4" />
+              </div>
+              <div>
+                <h3 class="text-sm sm:text-base font-black text-bx-title font-display">
+                  {{
+                    activeViewTab === 'sections'
+                      ? selectedSectionInfo
+                        ? `مصفوفة الحصص: ${selectedSectionInfo.class_name} — ${selectedSectionInfo.section_name}`
+                        : 'يرجى اختيار شعبة لعرض جدولها'
+                      : teacherTimetableData
+                      ? `مصفوفة جدول المعلم: ${teacherTimetableData.teacher_name}`
+                      : 'يرجى اختيار معلم لعرض جدوله'
+                  }}
+                </h3>
+                <p v-if="activeViewTab === 'sections' && selectedSectionInfo" class="text-[11px] text-bx-muted font-medium mt-0.5">
+                  انقر على أي مربع فارغ لتسكين حصة مباشرة، أو مرر فوق الحصة لتعديلها أو إلغائها
+                </p>
               </div>
             </div>
 
-            <!-- Sections Buttons -->
-            <div class="flex flex-wrap gap-2">
+            <div v-if="activeViewTab === 'sections' && selectedSectionId && isAdmin">
               <button
-                v-for="sec in cls.sections"
-                :key="sec.class_section_id"
-                type="button"
-                @click="selectSection(sec.class_section_id, cls.class_name, sec.section_name)"
-                class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border flex items-center gap-1.5"
-                :class="[
-                  selectedSectionId === sec.class_section_id
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-400/30'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100',
-                  isAuditMode && auditMap[cls.class_id]?.sections[sec.class_section_id]?.unscheduled_slots_count > 0
-                    ? 'border-amber-400 text-amber-700 dark:text-amber-300'
-                    : '',
-                ]"
+                @click="openCreateDrawer()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-bx-primary bg-purple-500/10 hover:bg-bx-primary hover:text-white border border-purple-500/30 transition-all duration-200 cursor-pointer shadow-2xs"
               >
-                <span>{{ sec.section_name }}</span>
-                <!-- Section Deficit Badge in Audit Mode -->
-                <span
-                  v-if="isAuditMode && auditMap[cls.class_id]?.sections[sec.class_section_id]"
-                  class="text-[10px] px-1.5 py-0.2 rounded-md font-bold"
-                  :class="
-                    auditMap[cls.class_id]?.sections[sec.class_section_id]?.unscheduled_slots_count > 0
-                      ? 'bg-amber-200/80 text-amber-900'
-                      : 'bg-emerald-200/80 text-emerald-900'
-                  "
-                >
-                  {{
-                    auditMap[cls.class_id]?.sections[sec.class_section_id]?.unscheduled_slots_count > 0
-                      ? `-${auditMap[cls.class_id]?.sections[sec.class_section_id]?.unscheduled_slots_count} ⚠️`
-                      : '✓'
-                  }}
-                </span>
+                <Plus class="w-3.5 h-3.5" />
+                <span>تسكين حصة جديدة للشعبة</span>
               </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- 5. Weekly Timetable Matrix Section -->
-      <div class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm overflow-hidden">
-        <!-- Matrix Header -->
-        <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/50">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center">
-              <Clock class="w-5 h-5" />
-            </div>
-            <div>
-              <h3 class="font-bold text-slate-900 dark:text-white text-base">
-                {{
-                  activeViewTab === 'sections'
-                    ? selectedSectionInfo
-                      ? `${selectedSectionInfo.class_name} — ${selectedSectionInfo.section_name}`
-                      : 'اختر شعبة دراسية'
-                    : teacherTimetableData
-                    ? `جدول المعلم: ${teacherTimetableData.teacher_name}`
-                    : 'اختر معلماً لعرض جدوله'
-                }}
-              </h3>
-              <p class="text-xs text-slate-400">
-                مصفوفة توزيع الحصص الأسبوعية المنظمة بالأيام والفترات الزمنية
-              </p>
-            </div>
+          <!-- Loading State -->
+          <div v-if="matrixLoading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
+            <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
+            <span class="text-xs font-bold">جاري تحميل مصفوفة الجدول الأسبوعي...</span>
           </div>
 
-          <div v-if="activeViewTab === 'sections' && selectedSectionId && isAdmin">
-            <button
-              type="button"
-              @click="openCreateDrawer()"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all border border-blue-200 dark:border-blue-800"
-            >
-              <Plus class="w-3.5 h-3.5" />
-              تسكين حصة جديدة بالشعبة
-            </button>
-          </div>
-        </div>
-
-        <!-- Matrix Content / Table Grid -->
-        <div class="p-4 overflow-x-auto">
-          <div v-if="matrixLoading" class="p-12 text-center">
-            <Loader2 class="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
-            <p class="text-sm text-slate-400">جاري تحميل مصفوفة الجدول الأسبوعي...</p>
-          </div>
-
-          <table v-else class="w-full border-collapse min-w-[750px]">
-            <thead>
-              <tr class="border-b border-slate-200 dark:border-slate-800">
-                <th class="p-3 text-right text-xs font-bold text-slate-500 dark:text-slate-400 w-28 bg-slate-50/50 dark:bg-slate-800/30 rounded-r-xl">
-                  اليوم / الحصة
-                </th>
-                <th
-                  v-for="period in teachingPeriods"
-                  :key="period.id"
-                  class="p-3 text-center text-xs font-bold text-slate-600 dark:text-slate-300 border-r border-slate-100 dark:border-slate-800/60"
-                >
-                  <div class="font-bold">{{ period.name }}</div>
-                  <div class="text-[10px] text-slate-400 font-mono mt-0.5">
-                    {{ period.start_time?.slice(0, 5) }} - {{ period.end_time?.slice(0, 5) }}
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Section Timetable Rows -->
-              <template v-if="activeViewTab === 'sections'">
-                <tr
-                  v-for="day in daysOfWeekOptions"
-                  :key="day.id"
-                  class="border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/40 dark:hover:bg-slate-800/20 transition-colors"
-                >
-                  <!-- Day Label -->
-                  <td class="p-3 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50/30 dark:bg-slate-800/20">
-                    {{ day.name }}
-                  </td>
-
-                  <!-- Period Cells -->
-                  <td
+          <!-- Table Content -->
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-start border-collapse min-w-[800px]">
+              <thead>
+                <tr class="bg-purple-500/[0.03] dark:bg-white/[0.02] border-b border-bx-border text-bx-muted text-xs">
+                  <th class="py-3.5 px-4 font-black text-start w-32 border-e border-bx-divider font-display text-bx-title">
+                    <div class="flex items-center gap-1.5">
+                      <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>اليوم / الحصة</span>
+                    </div>
+                  </th>
+                  <th
                     v-for="period in teachingPeriods"
                     :key="period.id"
-                    class="p-2.5 border-r border-slate-100 dark:border-slate-800/60 align-top h-24 min-w-[130px]"
+                    class="py-3.5 px-3 font-bold text-center border-e border-bx-divider min-w-[140px]"
                   >
-                    <!-- Scheduled Slot Cell -->
-                    <div
-                      v-if="getSlotFor(day.id, period.id)"
-                      class="h-full bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-xl p-2.5 flex flex-col justify-between group transition-all hover:shadow-md"
-                    >
-                      <div>
-                        <div class="font-bold text-xs text-blue-950 dark:text-blue-200 line-clamp-1">
-                          {{ getSlotFor(day.id, period.id)?.subject_name }}
-                        </div>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1 line-clamp-1">
-                          <UserCheck class="w-3 h-3 text-blue-500 shrink-0" />
-                          <span>{{ getSlotFor(day.id, period.id)?.teacher_name }}</span>
-                        </div>
-                      </div>
-
-                      <!-- Action Buttons (Admin Only) -->
-                      <div
-                        v-if="isAdmin"
-                        class="flex items-center justify-end gap-1.5 mt-2 pt-1 border-t border-blue-100 dark:border-blue-900/60 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <button
-                          type="button"
-                          @click="openEditDrawer(getSlotFor(day.id, period.id)!, day.id)"
-                          class="p-1 rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-100/50 dark:hover:bg-blue-900/50 transition-colors"
-                          title="تعديل الحصة"
-                        >
-                          <Edit2 class="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          @click="promptDeleteSlot(getSlotFor(day.id, period.id)!)"
-                          class="p-1 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
-                          title="إلغاء الحصة"
-                        >
-                          <Trash2 class="w-3 h-3" />
-                        </button>
-                      </div>
+                    <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-500/10 text-bx-primary text-xs font-black font-display mb-1 border border-purple-500/15">
+                      {{ period.name }}
                     </div>
+                    <div class="text-[11px] text-bx-muted font-mono tracking-tight flex items-center justify-center gap-1">
+                      <Clock class="w-3 h-3 opacity-60" />
+                      <span>{{ period.start_time.substring(0, 5) }} - {{ period.end_time.substring(0, 5) }}</span>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-bx-divider text-xs font-medium text-bx-title">
+                <!-- Section View Rows -->
+                <template v-if="activeViewTab === 'sections'">
+                  <tr
+                    v-for="day in daysOfWeekOptions"
+                    :key="day.id"
+                    class="hover:bg-purple-500/[0.015] dark:hover:bg-white/[0.01] transition-colors duration-150"
+                  >
+                    <!-- Day Title Column -->
+                    <td class="py-4 px-4 font-black font-display text-bx-title whitespace-nowrap border-e border-bx-divider bg-purple-500/[0.02] text-start align-middle">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-bx-primary shadow-2xs"></span>
+                        <span class="text-sm font-black font-display">{{ day.name }}</span>
+                      </div>
+                    </td>
 
-                    <!-- Empty Slot Cell -->
-                    <div
-                      v-else
-                      class="h-full rounded-xl border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center p-2 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/50"
+                    <!-- Periods Slots Columns -->
+                    <td
+                      v-for="period in teachingPeriods"
+                      :key="period.id"
+                      class="p-2 border-e border-bx-divider align-top h-28 min-w-[140px]"
                     >
+                      <!-- Scheduled Slot Card -->
+                      <div
+                        v-if="getSlotFor(day.id, period.id)"
+                        class="h-full min-h-[96px] rounded-2xl p-3 flex flex-col justify-between border transition-all duration-200 bg-gradient-to-b from-purple-500/[0.08] via-purple-500/[0.04] to-transparent dark:from-purple-950/40 dark:via-purple-950/20 dark:to-transparent border-purple-500/25 hover:border-bx-primary hover:shadow-md shadow-2xs group relative"
+                      >
+                        <div>
+                          <!-- Subject Name & Badge -->
+                          <div class="flex items-center justify-between gap-1 mb-1.5">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                              <BookOpen class="w-3.5 h-3.5 text-bx-primary shrink-0" />
+                              <span class="font-black text-xs text-bx-title font-display truncate" :title="getSlotFor(day.id, period.id)?.subject_name">
+                                {{ getSlotFor(day.id, period.id)?.subject_name }}
+                              </span>
+                            </div>
+                          </div>
+
+                          <!-- Teacher Name Badge -->
+                          <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white/80 dark:bg-black/40 border border-purple-500/15 text-[11px] font-semibold text-bx-muted max-w-full truncate shadow-2xs">
+                            <UserCheck class="w-3 h-3 text-bx-primary shrink-0" />
+                            <span class="truncate">{{ getSlotFor(day.id, period.id)?.teacher_name }}</span>
+                          </div>
+                        </div>
+
+                        <!-- Action Controls (Admin Only - Floating elegant pill) -->
+                        <div
+                          v-if="isAdmin"
+                          class="flex items-center justify-end gap-1.5 pt-1.5 mt-1.5 border-t border-purple-500/15 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                        >
+                          <button
+                            @click.stop="openEditDrawer(getSlotFor(day.id, period.id)!, day.id)"
+                            type="button"
+                            class="p-1.5 rounded-lg text-bx-muted hover:text-bx-primary bg-white/90 dark:bg-gray-800/90 hover:bg-purple-50 dark:hover:bg-purple-950/60 shadow-xs border border-bx-border/60 transition-all cursor-pointer"
+                            title="تعديل الحصة"
+                          >
+                            <Edit2 class="w-3 h-3" />
+                          </button>
+                          <button
+                            @click.stop="promptDeleteSlot(getSlotFor(day.id, period.id)!)"
+                            type="button"
+                            class="p-1.5 rounded-lg text-bx-muted hover:text-red-600 bg-white/90 dark:bg-gray-800/90 hover:bg-red-50 dark:hover:bg-red-950/60 shadow-xs border border-bx-border/60 transition-all cursor-pointer"
+                            title="إلغاء الحصة"
+                          >
+                            <Trash2 class="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Empty Slot (Admin: Entire Box is Clickable) -->
                       <button
-                        v-if="isAdmin"
+                        v-else-if="isAdmin"
                         type="button"
                         @click="openCreateDrawer(day.id, period.id)"
-                        class="text-[11px] font-medium text-slate-400 hover:text-blue-600 flex items-center gap-1 transition-colors"
+                        class="w-full h-full min-h-[96px] rounded-2xl border-2 border-dashed border-[#B4AED8]/50 hover:border-bx-primary bg-purple-500/[0.015] hover:bg-purple-500/[0.07] dark:hover:bg-purple-950/25 transition-all duration-200 flex flex-col items-center justify-center gap-1.5 p-2.5 cursor-pointer group shadow-2xs hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-bx-primary/30"
+                        title="انقر في أي مكان لتسكين حصة في هذا الموعد"
                       >
-                        <Plus class="w-3 h-3" />
-                        <span>تسكين</span>
-                      </button>
-                      <span v-else class="text-[10px] text-slate-300 dark:text-slate-600">شاغر</span>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-
-              <!-- Teacher Timetable Rows -->
-              <template v-else>
-                <tr
-                  v-for="day in daysOfWeekOptions"
-                  :key="day.id"
-                  class="border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/40 dark:hover:bg-slate-800/20 transition-colors"
-                >
-                  <td class="p-3 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50/30 dark:bg-slate-800/20">
-                    {{ day.name }}
-                  </td>
-                  <td
-                    v-for="period in teachingPeriods"
-                    :key="period.id"
-                    class="p-2.5 border-r border-slate-100 dark:border-slate-800/60 align-top h-24 min-w-[130px]"
-                  >
-                    <div
-                      v-if="getTeacherSlotFor(day.id, period.id)"
-                      class="h-full bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl p-2.5 flex flex-col justify-between"
-                    >
-                      <div>
-                        <div class="font-bold text-xs text-emerald-950 dark:text-emerald-200 line-clamp-1">
-                          {{ getTeacherSlotFor(day.id, period.id)?.subject_name }}
+                        <div class="w-7 h-7 rounded-full bg-purple-500/10 text-bx-primary flex items-center justify-center group-hover:scale-110 group-hover:bg-bx-primary group-hover:text-white transition-all duration-200 shadow-2xs">
+                          <Plus class="w-4 h-4 transition-transform group-hover:rotate-90 duration-300" />
                         </div>
-                        <div class="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 flex items-center gap-1 line-clamp-1">
-                          <School class="w-3 h-3 text-emerald-600 shrink-0" />
-                          <span>{{ getTeacherSlotFor(day.id, period.id)?.class_name }} - {{ getTeacherSlotFor(day.id, period.id)?.section_name }}</span>
+                        <span class="text-xs font-bold text-bx-muted group-hover:text-bx-primary transition-colors duration-200">
+                          + تسكين
+                        </span>
+                      </button>
+
+                      <!-- Empty Slot (Non-admin: Static placeholder) -->
+                      <div
+                        v-else
+                        class="w-full h-full min-h-[96px] rounded-2xl border border-dashed border-bx-border/50 bg-gray-50/40 dark:bg-white/[0.01] flex items-center justify-center text-[11px] font-medium text-bx-muted/50 select-none"
+                      >
+                        شاغر
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+
+                <!-- Teacher View Rows -->
+                <template v-else>
+                  <tr
+                    v-for="day in daysOfWeekOptions"
+                    :key="day.id"
+                    class="hover:bg-emerald-500/[0.015] dark:hover:bg-white/[0.01] transition-colors duration-150"
+                  >
+                    <td class="py-4 px-4 font-black font-display text-bx-title whitespace-nowrap border-e border-bx-divider bg-emerald-500/[0.02] text-start align-middle">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-600 shadow-2xs"></span>
+                        <span class="text-sm font-black font-display">{{ day.name }}</span>
+                      </div>
+                    </td>
+                    <td
+                      v-for="period in teachingPeriods"
+                      :key="period.id"
+                      class="p-2 border-e border-bx-divider align-top h-28 min-w-[140px]"
+                    >
+                      <div
+                        v-if="getTeacherSlotFor(day.id, period.id)"
+                        class="h-full min-h-[96px] rounded-2xl p-3 flex flex-col justify-between border bg-gradient-to-b from-emerald-500/[0.08] via-emerald-500/[0.04] to-transparent dark:from-emerald-950/40 dark:via-emerald-950/20 border-emerald-500/25 shadow-2xs hover:shadow-md transition-all duration-200"
+                      >
+                        <div>
+                          <div class="flex items-center gap-1.5 mb-1.5">
+                            <BookOpen class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span class="font-black text-xs text-emerald-900 dark:text-emerald-300 font-display truncate">
+                              {{ getTeacherSlotFor(day.id, period.id)?.subject_name }}
+                            </span>
+                          </div>
+                          <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white/80 dark:bg-black/40 border border-emerald-500/15 text-[11px] font-semibold text-emerald-800 dark:text-emerald-400">
+                            <School class="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{{ getTeacherSlotFor(day.id, period.id)?.class_name }} - {{ getTeacherSlotFor(day.id, period.id)?.section_name }}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div v-else class="h-full rounded-xl border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center">
-                      <span class="text-[10px] text-slate-300 dark:text-slate-600">فراغ</span>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+                      <div
+                        v-else
+                        class="w-full h-full min-h-[96px] rounded-2xl border border-dashed border-bx-border/50 bg-gray-50/40 dark:bg-white/[0.01] flex items-center justify-center text-[11px] font-medium text-bx-muted/50 select-none"
+                      >
+                        فراغ
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -915,12 +1025,13 @@ onMounted(async () => {
         @close="showDrawer = false"
         :title="drawerMode === 'create' ? 'تسكين حصة جديدة بالجدول الأسبوعي' : 'تعديل وتحديث موعد الحصة'"
         :subtitle="selectedSectionInfo ? `${selectedSectionInfo.class_name} — ${selectedSectionInfo.section_name}` : ''"
+        :icon="Calendar"
       >
-        <form @submit.prevent="submitDrawer" class="space-y-5 p-1">
+        <form @submit.prevent="submitDrawer" class="space-y-4 p-1">
           <!-- General Form Error Banner -->
           <div
             v-if="formErrorMessage"
-            class="p-3.5 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800/80 rounded-xl text-red-600 dark:text-red-300 text-xs flex items-start gap-2"
+            class="p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-600 dark:text-red-400 text-xs flex items-start gap-2"
           >
             <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
             <span>{{ formErrorMessage }}</span>
@@ -928,71 +1039,65 @@ onMounted(async () => {
 
           <!-- Day of Week -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label class="block text-xs font-bold text-bx-title mb-1.5">
               يوم الحصة في الأسبوع <span class="text-red-500">*</span>
             </label>
-            <select
+            <TaqniyaSelect
               v-model="formData.day_of_week"
-              class="w-full px-3.5 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-            >
-              <option v-for="d in daysOfWeekOptions" :key="d.id" :value="d.id">
-                {{ d.name }}
-              </option>
-            </select>
+              :options="daySelectOptions"
+              placeholder="اختر اليوم..."
+              full-width
+            />
           </div>
 
           <!-- Period Slot -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label class="block text-xs font-bold text-bx-title mb-1.5">
               الحصة اليومية والتوقيت <span class="text-red-500">*</span>
             </label>
-            <select
+            <TaqniyaSelect
               v-model="formData.period_slot_id"
-              class="w-full px-3.5 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-            >
-              <option v-for="p in teachingPeriods" :key="p.id" :value="p.id">
-                {{ p.name }} ({{ p.start_time?.slice(0, 5) }} - {{ p.end_time?.slice(0, 5) }})
-              </option>
-            </select>
+              :options="formPeriodOptions"
+              placeholder="اختر توقيت الحصة..."
+              full-width
+            />
             <p v-if="formErrors.period_slot_id" class="text-xs text-red-500 mt-1">
               {{ formErrors.period_slot_id }}
             </p>
           </div>
 
-          <!-- Teaching Assignment (Subject + Teacher) -->
+          <!-- Teaching Assignment -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label class="block text-xs font-bold text-bx-title mb-1.5">
               المادة والمعلم المكلف <span class="text-red-500">*</span>
             </label>
-            <select
+            <TaqniyaSelect
               v-model="formData.teaching_assignment_id"
-              class="w-full px-3.5 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-            >
-              <option v-for="asgn in availableAssignments" :key="asgn.id" :value="asgn.id">
-                {{ asgn.subject_name }} — أ. {{ asgn.teacher_name }}
-              </option>
-            </select>
+              :options="formAssignmentOptions"
+              placeholder="اختر المادة والمعلم..."
+              full-width
+            />
             <p v-if="formErrors.teaching_assignment_id" class="text-xs text-red-500 mt-1">
               {{ formErrors.teaching_assignment_id }}
             </p>
-            <p class="text-[11px] text-slate-400 mt-1">
-              💡 الربط التلقائي: يتم جلب المعلم المكلف بتدريس المادة في هذه الشعبة مباشرة من سجلات التكليفات.
+            <p class="text-[11px] text-bx-muted mt-1.5 leading-relaxed">
+              💡 <strong>الربط التلقائي:</strong> يتم جلب المعلم المكلف بتدريس المادة في هذه الشعبة مباشرة من سجلات التكليفات دون حاجة لاختيار المعلم يدوياً.
             </p>
           </div>
 
-          <!-- Submit Button -->
-          <div class="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
+          <!-- Actions -->
+          <div class="pt-4 border-t border-bx-divider flex items-center justify-end gap-2.5">
             <button
               type="button"
               @click="showDrawer = false"
-              class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              class="px-4 py-2 rounded-full border border-bx-border text-xs font-bold text-bx-title hover:bg-purple-500/[0.04] transition-colors"
             >
               إلغاء
             </button>
             <button
               type="submit"
               :disabled="isSubmitting"
-              class="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-all shadow-sm"
+              class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-bx-primary hover:bg-bx-primary-hover text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
             >
               <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
               <Save v-else class="w-3.5 h-3.5" />
@@ -1007,28 +1112,28 @@ onMounted(async () => {
         v-if="showDeleteModal"
         class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
       >
-        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 max-w-md w-full shadow-xl space-y-4">
+        <div class="bg-bx-surface rounded-3xl border border-bx-border p-6 max-w-md w-full shadow-xl space-y-4 font-sans" dir="rtl">
           <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-xl bg-red-100 dark:bg-red-950/50 text-red-600">
+            <div class="p-2.5 rounded-2xl bg-red-500/10 text-red-600">
               <Trash2 class="w-6 h-6" />
             </div>
             <div>
-              <h3 class="font-bold text-slate-900 dark:text-white">إلغاء وتفريغ الحصة من الجدول</h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400">تأكيد حذف الحصة وإخلاء الفترة الزمنية بالشعبة</p>
+              <h3 class="font-black text-sm text-bx-title font-display">إلغاء وتفريغ الحصة من الجدول</h3>
+              <p class="text-xs text-bx-muted">تأكيد حذف الحصة وإخلاء الفترة الزمنية بالشعبة</p>
             </div>
           </div>
 
-          <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs space-y-1 text-slate-600 dark:text-slate-300">
-            <div><strong>المادة:</strong> {{ slotToDelete?.subject_name }}</div>
-            <div><strong>المعلم:</strong> {{ slotToDelete?.teacher_name }}</div>
-            <div><strong>الحصة:</strong> {{ slotToDelete?.period_name }}</div>
+          <div class="p-3 bg-purple-500/[0.03] border border-bx-border rounded-2xl text-xs space-y-1.5 text-bx-title">
+            <div><span class="text-bx-muted">المادة:</span> <strong>{{ slotToDelete?.subject_name }}</strong></div>
+            <div><span class="text-bx-muted">المعلم:</span> <strong>{{ slotToDelete?.teacher_name }}</strong></div>
+            <div><span class="text-bx-muted">الحصة:</span> <strong>{{ slotToDelete?.period_name }}</strong></div>
           </div>
 
-          <div class="flex items-center justify-end gap-3 pt-2">
+          <div class="flex items-center justify-end gap-2.5 pt-2">
             <button
               type="button"
               @click="showDeleteModal = false"
-              class="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              class="px-4 py-2 text-xs font-bold rounded-full border border-bx-border text-bx-title hover:bg-purple-500/[0.04] transition-colors"
             >
               تراجع
             </button>
@@ -1036,10 +1141,10 @@ onMounted(async () => {
               type="button"
               @click="confirmDeleteSlot"
               :disabled="isDeleting"
-              class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-50 transition-all"
+              class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-full disabled:opacity-50 transition-all cursor-pointer shadow-sm"
             >
               <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
-              <span>تأكيد الحذف</span>
+              <span>تأكيد الإلغاء</span>
             </button>
           </div>
         </div>
