@@ -150,17 +150,27 @@ const totalClassesCount = computed(() => classesData.value.length);
 // Fetch Initial Data
 const loadInitialData = async () => {
   try {
-    const res = await academicApi.getYears();
-    if (res.data && Array.isArray(res.data)) {
-      academicYears.value = res.data;
-      const activeYear = res.data.find((y: any) => y.is_active === 1) || res.data[0];
+    const [yearsRes, termsRes] = await Promise.all([
+      academicApi.getYears(),
+      academicApi.getTerms().catch(() => ({ data: { data: [] } })),
+    ]);
+
+    if (yearsRes.data && Array.isArray(yearsRes.data)) {
+      academicYears.value = yearsRes.data;
+      const activeYear = yearsRes.data.find((y: any) => y.is_active === 1) || yearsRes.data[0];
       if (activeYear) {
         selectedYearId.value = activeYear.id;
         currentYearName.value = activeYear.name;
       }
     }
+
+    const termsList = termsRes.data?.data || termsRes.data || [];
+    if (Array.isArray(termsList) && termsList.length > 0) {
+      selectedTermId.value = termsList[0].id;
+      currentTermName.value = termsList[0].name;
+    }
   } catch (err: any) {
-    console.error('Failed to fetch academic years', err);
+    console.error('Failed to fetch academic years or terms', err);
   }
 
   // Load Teaching Assignments for dropdown

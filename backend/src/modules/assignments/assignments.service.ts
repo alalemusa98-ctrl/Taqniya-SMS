@@ -466,104 +466,141 @@ export class AssignmentsService {
       });
     }
 
-    // Role check: if teacher, ensure they own the teaching_assignment
+    // 1. Resolve teaching assignment
+    const teachingAssignment = await this.prisma.teachingAssignment.findUnique({
+      where: { id: BigInt(dto.teaching_assignment_id) },
+      include: {
+        class_section: true,
+        academic_year: true,
+        teacher: true,
+        subject: true,
+      },
+    });
+
+    if (!teachingAssignment || teachingAssignment.deleted_at !== null) {
+      throw new NotFoundException('إسناد التدريس المحدد غير موجود أو ملغي.');
+    }
+
+    // 2. Role check: if teacher, ensure they own this teaching_assignment
     if (currentUser?.role_type === RoleType.teacher) {
       const teacher = await this.prisma.teacher.findUnique({
         where: { user_id: BigInt(currentUser.id) },
       });
-      if (!teacher) {
-        throw new ForbiddenException(
-          'غير مصرح لك بنشر واجب لشعبة أو مادة غير موكلة إليك.',
-        );
-      }
-
-      const teachingAssignment =
-        await this.prisma.teachingAssignment.findFirst({
-          where: {
-            id: BigInt(dto.teaching_assignment_id),
-            teacher_id: teacher.id,
-            class_section_id: BigInt(dto.class_section_id),
-            deleted_at: null,
-          },
-        });
-
-      if (!teachingAssignment) {
+      if (!teacher || teacher.id !== teachingAssignment.teacher_id) {
         throw new ForbiddenException(
           'غير مصرح لك بنشر واجب لشعبة أو مادة غير موكلة إليك.',
         );
       }
     }
 
-    const created = await this.prisma.assignment.create({
-      data: {
-        academic_year_id: BigInt(dto.academic_year_id),
-        academic_term_id: BigInt(dto.academic_term_id),
-        class_section_id: BigInt(dto.class_section_id),
-        teaching_assignment_id: BigInt(dto.teaching_assignment_id),
-        created_by_user_id: BigInt(currentUser.id),
-        title: dto.title,
-        description: dto.description || null,
-        attachments: dto.attachments || [],
-        assigned_date: assignedDate,
-        due_date: dueDate,
-      },
-      include: {
-        teaching_assignment: {
-          include: {
-            subject: true,
-            teacher: true,
-          },
+    // 3. Resolve Academic Year and Section from teaching assignment
+    const academicYearId = teachingAssignment.academic_year_id;
+    const classSectionId = teachingAssignment.class_section_id;
+
+    // 4. Resolve Academic Term ID
+    let targetTermId: bigint | null = null;
+    if (dto.academic_term_id) {
+      const termCheck = await this.prisma.academicTerm.findUnique({
+        where: { id: BigInt(dto.academic_term_id) },
+      });
+      if (termCheck && termCheck.deleted_at === null) {
+        targetTermId = termCheck.id;
+      }
+    }
+    if (!targetTermId) {
+      const defaultTerm = await this.prisma.academicTerm.findFirst({
+        where: { deleted_at: null },
+        orderBy: { id: 'asc' },
+      });
+      if (defaultTerm) {
+        targetTermId = defaultTerm.id;
+      } else {
+        throw new UnprocessableEntityException('لا يوجد فصل دراسي متاح في المنظومة.');
+      }
+    }
+
+    const safeAttachments = Array.isArray(dto.attachments)
+      ? JSON.parse(JSON.stringify(dto.attachments))
+      : [];
+
+    try {
+      const created = await this.prisma.assignment.create({
+        data: {
+          academic_year_id: academicYearId,
+          academic_term_id: targetTermId,
+          class_section_id: classSectionId,
+          teaching_assignment_id: BigInt(dto.teaching_assignment_id),
+          created_by_user_id: BigInt(currentUser.id),
+          title: dto.title,
+          description: dto.description || null,
+          attachments: safeAttachments,
+          assigned_date: assignedDate,
+          due_date: dueDate,
         },
-        class_section: {
-          include: {
-            class: true,
-            section: true,
+        include: {
+          teaching_assignment: {
+            include: {
+              subject: true,
+              teacher: true,
+            },
           },
+          class_section: {
+            include: {
+              class: true,
+              section: true,
+            },
+          },
+          creator: true,
         },
-        creator: true,
-      },
-    });
+      });
 
-    await this.auditService.log({
-      userId: BigInt(currentUser.id),
-      action: 'ASSIGNMENT_CREATED',
-      entityType: 'assignments',
-      entityId: created.id,
-      oldValues: null,
-      newValues: {
-        title: created.title,
-        class_section_id: Number(created.class_section_id),
-        due_date: dto.due_date,
-      },
-      ipAddress: ipAddress || null,
-      userAgent: userAgent || null,
-    });
+      await this.auditService.log({
+        userId: BigInt(currentUser.id),
+        action: 'ASSIGNMENT_CREATED',
+        entityType: 'assignments',
+        entityId: created.id,
+        oldValues: null,
+        newValues: {
+          title: created.title,
+          class_section_id: Number(created.class_section_id),
+          due_date: dto.due_date,
+        },
+        ipAddress: ipAddress || null,
+        userAgent: userAgent || null,
+      });
 
-    const attachments = (created.attachments as any[]) || [];
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const aStatus =
-      created.due_date >= new Date(todayStr) ? 'active' : 'expired';
+      const attachments = (created.attachments as any[]) || [];
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const aStatus =
+        created.due_date >= new Date(todayStr) ? 'active' : 'expired';
 
-    return {
-      success: true,
-      message: 'تم إنشاء ونشر الواجب المدرسي بنجاح.',
-      data: {
-        id: Number(created.id),
-        academic_year_id: Number(created.academic_year_id),
-        academic_term_id: Number(created.academic_term_id),
-        class_section_id: Number(created.class_section_id),
-        teaching_assignment_id: Number(created.teaching_assignment_id),
-        subject_name: created.teaching_assignment.subject.name,
-        teacher_name: created.teaching_assignment.teacher.full_name,
-        title: created.title,
-        description: created.description,
-        assigned_date: created.assigned_date.toISOString().slice(0, 10),
-        due_date: created.due_date.toISOString().slice(0, 10),
-        status: aStatus,
-        attachments,
-        created_at: created.created_at.toISOString(),
-      },
-    };
+      return {
+        success: true,
+        message: 'تم إنشاء ونشر الواجب المدرسي بنجاح.',
+        data: {
+          id: Number(created.id),
+          academic_year_id: Number(created.academic_year_id),
+          academic_term_id: Number(created.academic_term_id),
+          class_section_id: Number(created.class_section_id),
+          teaching_assignment_id: Number(created.teaching_assignment_id),
+          subject_name: created.teaching_assignment.subject.name,
+          teacher_name: created.teaching_assignment.teacher.full_name,
+          title: created.title,
+          description: created.description,
+          assigned_date: created.assigned_date.toISOString().slice(0, 10),
+          due_date: created.due_date.toISOString().slice(0, 10),
+          status: aStatus,
+          attachments,
+          created_at: created.created_at.toISOString(),
+        },
+      };
+    } catch (err: any) {
+      console.error('Error creating assignment:', err);
+      throw new UnprocessableEntityException({
+        success: false,
+        message: err.message || 'فشل حفظ الواجب المدرسي.',
+      });
+    }
   }
 
   /**

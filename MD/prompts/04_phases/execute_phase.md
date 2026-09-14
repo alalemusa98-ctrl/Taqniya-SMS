@@ -44,6 +44,7 @@
 │  ├── Validation mechanisms                                   │
 │  ├── Testing conventions                                     │
 │  ├── Naming conventions                                      │
+│  ├── Frontend implementation conventions                     │
 │  └── Technology-specific implementation rules               │
 └──────────────────────────────┬──────────────────────────────┘
                                │
@@ -179,6 +180,7 @@ The Agent MUST identify:
 * Communication architecture/mode if declared.
 * Applicable framework-specific profiles.
 * Applicable technology-specific architecture rules.
+* Applicable frontend implementation rules.
 
 If the required Technology Profile cannot be resolved:
 
@@ -201,7 +203,8 @@ Its responsibility is to:
 5. Deliver that context to the configured Execution Engine.
 6. Enforce Taqniya's non-negotiable boundaries.
 7. Prevent unauthorized architectural or database drift.
-8. Require independent verification after implementation.
+8. Prevent frontend design and componentization drift.
+9. Require independent verification after implementation.
 
 ---
 
@@ -230,44 +233,26 @@ The Agent MUST NOT independently mandate:
 
 These rules belong to the **resolved Technology Profile** or the project's declared architecture.
 
-For example:
+The same principle applies to frontend technology.
 
-```text
-Repository Pattern
-```
+Taqniya Core MUST NOT assume:
 
-must NOT be considered universally required.
+* Vue.
+* React.
+* Angular.
+* Svelte.
+* Blade.
+* JSX.
+* Specific CSS framework.
+* Specific component library.
 
-Instead:
-
-```text
-stack.yaml
-      ↓
-Technology Profile
-      ↓
-Architecture Rules
-      ↓
-Execution Engine
-```
-
-determines whether Repository is:
-
-```text
-REQUIRED
-OPTIONAL
-DISABLED
-NOT APPLICABLE
-```
-
-The Execution Engine MUST follow the resolved Technology Profile.
+The framework defines the **governance outcome**, while the Technology Profile defines the technology-specific implementation mechanism.
 
 ---
 
 # 5. Canonical Governance Sources
 
 The Agent MUST assemble the execution context from the following sources.
-
----
 
 ## 5.1 Phase Specifications
 
@@ -325,8 +310,9 @@ These establish universal project governance such as:
 * Database governance.
 * Non-destructive evolution.
 * Universal data integrity rules.
-* Design governance where applicable.
+* Design governance.
 * AI execution protocol.
+* Component reuse and design integrity where declared as universal governance.
 
 ---
 
@@ -336,7 +322,7 @@ Read the Technology Profile selected by the project stack.
 
 The Technology Profile is authoritative for technology-specific implementation methodology.
 
-It may define, depending on the selected stack:
+It may define:
 
 ```text
 Architecture style
@@ -352,23 +338,20 @@ Testing conventions
 Naming conventions
 Directory conventions
 Dependency rules
-Framework-specific security rules
-Framework-specific performance rules
+Frontend component conventions
+Frontend state management
+Frontend routing conventions
+Frontend styling conventions
+Framework-specific UI conventions
 ```
 
-The Agent MUST NOT duplicate these rules inside this prompt.
-
-The Agent MUST resolve and pass them to the Execution Engine.
+The Agent MUST NOT duplicate these technology-specific rules inside this prompt.
 
 ---
 
 # 6. Resolved Governance Payload
 
 The Agent MUST construct a logical **Resolved Governance Payload**.
-
-The payload consists of the following layers.
-
----
 
 ## 6.1 Layer A — Phase Contract
 
@@ -453,8 +436,8 @@ The Execution Engine MUST preserve:
 * Authorization rules.
 * RBAC boundaries.
 * Ownership checks.
-* Tenant isolation.
-* Input validation requirements.
+* Tenant isolation where applicable.
+* Input validation.
 * IDOR prevention.
 * Sensitive-data protection.
 * Audit requirements.
@@ -463,7 +446,7 @@ Security requirements are governance constraints and MUST NOT be weakened by the
 
 ---
 
-## 6.5 Layer E — Design & Frontend Contract
+# 6.5 Layer E — Design & Frontend Contract
 
 Include:
 
@@ -472,7 +455,42 @@ PROJECT/MD/design_rules.md
 PROJECT/MD/frontend_capabilities.yaml
 ```
 
-The Execution Engine MUST implement the UI according to the active project design system and enabled capabilities.
+and all applicable frontend-specific phase specifications.
+
+The Execution Engine MUST treat the approved Design System as an implementation constraint, not as optional visual guidance.
+
+The Frontend Contract includes, where applicable:
+
+```text
+Design tokens
+Typography
+Spacing
+Sizing
+Colors
+Borders
+Radius
+Icons
+Buttons
+Inputs
+Forms
+Tables
+Cards
+Modals
+Dialogs
+Navigation
+Tabs
+Badges
+Alerts
+Loading states
+Empty states
+Error states
+Responsive behavior
+RTL behavior
+Accessibility
+Interaction patterns
+Component reuse
+Composition rules
+```
 
 Capability states MUST be respected:
 
@@ -487,7 +505,7 @@ The exact implementation technique remains the responsibility of the Technology 
 
 ---
 
-## 6.6 Layer F — Technology Contract
+# 6.6 Layer F — Technology Contract
 
 The Technology Contract is loaded from the resolved Technology Profile.
 
@@ -508,6 +526,9 @@ File organization
 Naming conventions
 Dependency injection
 Framework-specific architecture
+Frontend architecture
+Frontend component structure
+Styling methodology
 ```
 
 These are examples only.
@@ -584,19 +605,6 @@ native
 
 may be used as the deterministic fallback where permitted by the framework.
 
-The resolved engine may be:
-
-```text
-superpowers
-claude_code
-antigravity
-codex
-custom
-native
-```
-
-or another engine explicitly supported by the framework.
-
 ---
 
 # 9. Execution Engine Responsibility
@@ -630,8 +638,9 @@ It MAY:
 * Modify approved source files.
 * Create required tests.
 * Modify required tests.
-* Register routes or framework configuration when explicitly required by the approved phase.
+* Register routes or framework configuration when explicitly required.
 * Perform implementation-specific configuration changes when allowed by the Technology Profile.
+* Create new frontend components when the component governance below permits their creation.
 
 It MUST NOT:
 
@@ -646,6 +655,9 @@ It MUST NOT:
 * Disable required capabilities.
 * Enable disabled capabilities without authorization.
 * Modify framework governance files to make implementation easier.
+* Create duplicate frontend components merely because creating a new component is easier.
+* Replace an approved existing component with an ad-hoc implementation.
+* bypass the project's Design System.
 
 ---
 
@@ -719,9 +731,9 @@ It MUST NOT:
 * Change business calculations.
 * Change state transition rules.
 * Bypass validation.
-* bypass authorization.
+* Bypass authorization.
 * Create alternative workflows that contradict the specification.
-* silently reinterpret ambiguous business rules.
+* Silently reinterpret ambiguous business rules.
 
 If an ambiguity is discovered:
 
@@ -740,7 +752,7 @@ It MUST verify, according to the project's actual architecture:
 * Authentication.
 * Authorization.
 * Ownership.
-* Tenant isolation.
+* Tenant isolation where applicable.
 * Resource access boundaries.
 * Input validation.
 * State transition authorization.
@@ -753,20 +765,630 @@ The implementation method may differ between technologies, but the security outc
 
 # 15. Frontend & Design Integrity
 
-Where the phase contains frontend work, the Execution Engine MUST:
+Where the phase contains frontend work, the Execution Engine MUST NOT treat the frontend as free-form visual implementation.
 
-1. Read `design_rules.md`.
-2. Read active frontend capability states.
-3. Read the Technology Profile's frontend implementation rules.
-4. Implement the required visual and UX behavior.
-5. Avoid disabled capabilities.
-6. Preserve RTL requirements where declared.
-7. Preserve responsive requirements.
-8. Preserve accessibility requirements.
+The frontend MUST be implemented as a direct realization of:
 
-The Agent MUST NOT dictate a framework-specific implementation technique here.
+```text
+Approved Design Rules
+        +
+Approved Phase Frontend Specification
+        +
+Existing Design System
+        +
+Existing Reusable Components
+        +
+Resolved Frontend Technology Rules
+```
 
-The Technology Profile determines HOW the selected frontend technology implements these requirements.
+The Agent MUST perform the following sequence before and during implementation:
+
+```text
+READ
+  ↓
+UNDERSTAND
+  ↓
+INVENTORY EXISTING UI
+  ↓
+SEARCH FOR REUSABLE COMPONENTS
+  ↓
+REUSE / EXTEND / CREATE
+  ↓
+IMPLEMENT COMPONENT
+  ↓
+INTEGRATE COMPONENT
+  ↓
+VERIFY DESIGN COMPLIANCE
+```
+
+The Agent MUST NOT skip the existing UI inventory and component discovery stages.
+
+---
+
+# 15.1 Frontend Design System Is Mandatory
+
+If the project contains an approved Design System, it is mandatory.
+
+The Agent MUST use the project's existing:
+
+```text
+Design Tokens
+Components
+Patterns
+Layouts
+UI primitives
+Interaction patterns
+Typography rules
+Spacing rules
+Responsive rules
+RTL rules
+Accessibility rules
+```
+
+where applicable.
+
+The Agent MUST NOT create a visually equivalent but independently styled implementation when an approved design-system element already exists.
+
+For example, if an existing Button component satisfies the requirement:
+
+```text
+USE EXISTING BUTTON
+```
+
+The Agent MUST NOT create:
+
+```text
+CustomButton
+PageButton
+ActionButton
+LocalButton
+SpecialButton
+```
+
+merely because the new page requires a slightly different appearance.
+
+The preferred solution is:
+
+```text
+Existing Component
+        ↓
+Props / Variant / Configuration
+        ↓
+Required UI
+```
+
+or, where appropriate:
+
+```text
+Existing Component
+        ↓
+Extend Existing Component
+        ↓
+Required UI
+```
+
+---
+
+# 15.2 Mandatory Component Discovery — Reuse Before Create
+
+Before creating ANY new frontend component, the Agent MUST search the existing project.
+
+The search MUST cover the complete relevant frontend source tree, including where applicable:
+
+```text
+components/
+ui/
+shared/
+common/
+layouts/
+features/
+modules/
+pages/
+views/
+widgets/
+patterns/
+design-system/
+```
+
+The exact directories depend on the active Technology Profile.
+
+The Agent MUST search for:
+
+* Exact component names.
+* Similar component names.
+* Similar visual structures.
+* Similar interactions.
+* Similar data presentation.
+* Similar forms.
+* Similar states.
+* Existing variants.
+* Existing composition patterns.
+
+The Agent MUST NOT rely only on filename matching.
+
+The Agent MUST inspect the actual component implementation when determining whether reuse is possible.
+
+---
+
+# 15.3 Component Decision Protocol
+
+For every significant frontend UI element, the Agent MUST follow:
+
+```text
+                    UI REQUIREMENT
+                          │
+                          ▼
+                Does suitable component exist?
+                     /           \
+                   YES            NO
+                   │               │
+                   ▼               ▼
+                 REUSE       Does related component exist?
+                                  /       \
+                                YES        NO
+                                │           │
+                                ▼           ▼
+                              EXTEND      CREATE
+                                            │
+                                            ▼
+                                      IMPLEMENT FIRST
+                                            │
+                                            ▼
+                                          USE
+```
+
+The decision rules are mandatory:
+
+### Case A — Existing Suitable Component
+
+```text
+REUSE
+```
+
+The Agent MUST use the existing component.
+
+Creating a duplicate implementation is prohibited.
+
+### Case B — Existing Related Component
+
+```text
+EXTEND
+```
+
+If the existing component is conceptually responsible for the requested behavior but lacks a capability, the Agent SHOULD extend it rather than create a parallel component.
+
+Extension is preferred when it:
+
+* Preserves the component's responsibility.
+* Does not introduce unrelated complexity.
+* Maintains backward compatibility where required.
+* Improves legitimate reuse.
+
+### Case C — No Suitable Component
+
+```text
+CREATE
+```
+
+The Agent MAY create a new component.
+
+However, the new component MUST be created **before** implementing the consuming page/section.
+
+The required order is:
+
+```text
+1. Define component boundary.
+2. Create component.
+3. Define its reusable interface.
+4. Implement the component.
+5. Verify the component.
+6. Integrate it into the page/section.
+7. Verify page-level composition.
+```
+
+---
+
+# 15.4 Component-First Implementation Rule
+
+When a new frontend section represents a reusable UI responsibility and no suitable existing component exists:
+
+> **The component MUST be created first and the page MUST consume it.**
+
+The Agent MUST NOT:
+
+```text
+Create Page
+   ↓
+Write complete UI directly in Page
+   ↓
+Leave UI page-local
+```
+
+Instead:
+
+```text
+Determine Component Boundary
+          ↓
+Create Component
+          ↓
+Implement Component
+          ↓
+Use Component in Page
+```
+
+This applies to significant reusable UI structures such as, where applicable:
+
+```text
+Forms
+Tables
+Data cards
+Search sections
+Filter sections
+Dialogs
+Modals
+Drawers
+Tabs
+Navigation sections
+Status displays
+Entity selectors
+Complex form fields
+Repeated information blocks
+Reusable empty states
+Reusable loading states
+Reusable error states
+```
+
+The exact classification remains dependent on the project's architecture and Design System.
+
+---
+
+# 15.5 No Fake Components
+
+Creating a component merely to satisfy the existence of a component file is prohibited.
+
+A component is NOT considered valid merely because:
+
+```text
+<Component />
+```
+
+exists.
+
+The actual reusable UI responsibility MUST live inside the component.
+
+The consuming page MUST NOT contain a duplicated implementation of the component's internal UI.
+
+The following is prohibited:
+
+```text
+Component:
+    Empty wrapper
+
+Page:
+    Contains the actual UI
+```
+
+The following is required:
+
+```text
+Component:
+    Owns the UI structure
+    Owns the relevant presentation behavior
+    Exposes a reusable interface
+
+Page:
+    Composes and supplies data/configuration
+```
+
+A component that only wraps page-local markup without creating a meaningful reusable boundary SHALL be considered a **componentization violation**.
+
+---
+
+# 15.6 Component Creation Justification
+
+Whenever the Agent creates a new frontend component, it MUST internally establish the following justification:
+
+```text
+COMPONENT CREATION JUSTIFICATION
+
+Component:
+Location:
+Purpose:
+
+Existing Components Searched:
+Potential Matching Components:
+Potential Related Components:
+
+Decision:
+[REUSE | EXTEND | CREATE]
+
+If CREATE:
+Why existing component is insufficient:
+Why extension is inappropriate:
+Why a new reusable boundary is justified:
+
+Public Interface:
+Props / Inputs:
+Outputs / Events:
+Slots / Composition:
+Variants:
+States:
+
+Expected Reuse:
+Current Consumer:
+Potential Future Consumers:
+```
+
+The Agent MUST NOT create a new component solely because:
+
+* It is faster.
+* It is easier.
+* The current page is unique.
+* Copy/paste is convenient.
+* The existing component requires understanding.
+* The existing component is located in another directory.
+* The Agent prefers another implementation style.
+
+---
+
+# 15.7 No Duplicate UI Implementations
+
+The Agent MUST actively prevent duplication.
+
+Before implementing a new UI structure, search for equivalent or similar implementations.
+
+Examples include:
+
+```text
+Two different Button implementations
+Two different Modal implementations
+Two different Search bars
+Two different Table wrappers
+Two different Empty states
+Two different Loading states
+Two different Confirmation dialogs
+Two different Status badges
+Two different Form field implementations
+Two different Page headers
+Two different Card structures
+```
+
+If duplication is discovered:
+
+```text
+STOP
+ ↓
+Compare existing implementations
+ ↓
+Determine canonical implementation
+ ↓
+Reuse or consolidate where permitted
+```
+
+The Agent MUST NOT automatically create another implementation.
+
+---
+
+# 15.8 Page-Level Responsibility Rule
+
+Pages, views, screens, or equivalent top-level frontend artifacts SHOULD primarily be responsible for:
+
+```text
+Composition
+Data orchestration
+Page-level state
+Navigation
+Authorization-aware presentation
+API interaction orchestration
+Layout composition
+```
+
+Reusable visual and interaction responsibilities SHOULD live in components according to the project's architecture.
+
+The Agent MUST avoid turning a page into a large monolithic UI implementation when the same responsibility can reasonably be represented as a reusable component.
+
+This does NOT mean that every HTML/UI element requires a component.
+
+The objective is:
+
+> **Meaningful componentization, not componentization for its own sake.**
+
+---
+
+# 15.9 Design Fidelity Rule
+
+The Agent MUST implement the approved design rather than creating an approximate visual interpretation.
+
+Before implementation, the Agent MUST identify applicable:
+
+```text
+Typography
+Font sizes
+Font weights
+Line heights
+Spacing
+Dimensions
+Colors
+Borders
+Radius
+Icons
+Component variants
+Layout
+Alignment
+Responsive behavior
+RTL behavior
+Interaction states
+Loading states
+Empty states
+Error states
+Accessibility
+```
+
+The Agent MUST prefer existing Design Tokens and Components over locally invented values.
+
+The Agent MUST NOT introduce arbitrary values when an approved token or component already exists.
+
+For example, if the Design System defines spacing tokens, the Agent MUST use those tokens instead of introducing unrelated page-specific spacing values.
+
+---
+
+# 15.10 Visual Consistency Rule
+
+A new frontend section MUST visually belong to the existing application.
+
+The Agent MUST preserve the established visual language.
+
+It MUST NOT independently introduce:
+
+* A new button style.
+* A new card style.
+* A new radius system.
+* A new spacing scale.
+* A new typography hierarchy.
+* A new color interpretation.
+* A new icon style.
+* A new table style.
+* A new form style.
+* A new modal style.
+
+unless explicitly required by approved design documentation.
+
+The fact that a new design looks "better" according to the Agent's personal preference is NOT sufficient justification for deviating from the approved Design System.
+
+---
+
+# 15.11 Frontend Responsive / RTL / Accessibility Integrity
+
+Where applicable, the Agent MUST preserve:
+
+```text
+Responsive behavior
+RTL direction
+Keyboard accessibility
+Focus states
+Semantic structure
+Screen-reader compatibility
+Touch usability
+Error visibility
+Loading feedback
+Empty-state behavior
+```
+
+These are functional UI requirements, not optional cosmetic enhancements.
+
+The Agent MUST NOT sacrifice them merely to reproduce a visual appearance.
+
+---
+
+# 15.12 Frontend State Completeness
+
+For every applicable interactive or data-driven UI, the Agent MUST consider:
+
+```text
+Initial state
+Loading state
+Success state
+Empty state
+Error state
+Disabled state
+Validation state
+Unauthorized state
+Forbidden state
+Retry state
+```
+
+Only states required by the approved specification need to be implemented.
+
+The Agent MUST NOT invent undocumented product behavior.
+
+---
+
+# 15.13 Frontend API Contract Integrity
+
+When the frontend consumes an API:
+
+```text
+Frontend
+   ↓
+Approved API Contract
+   ↓
+Backend
+```
+
+The Agent MUST NOT invent response fields, status semantics, or error structures.
+
+If `routes.md` is the project's Network SSoT, the frontend MUST follow it exactly.
+
+The Agent MUST NOT compensate for an API mismatch by silently inventing frontend-side assumptions.
+
+If the API contract is insufficient:
+
+> 🛑 STOP and report the contract gap where correctness depends on it.
+
+---
+
+# 15.14 Frontend Implementation Verification
+
+Before considering frontend implementation complete, the Execution Engine MUST verify:
+
+```text
+[ ] Phase frontend requirements implemented
+[ ] Approved design rules followed
+[ ] Existing components searched
+[ ] Existing components reused where applicable
+[ ] Related components extended where appropriate
+[ ] New components created only when justified
+[ ] New components created before page integration
+[ ] New components are actually consumed
+[ ] No fake components created
+[ ] No duplicate UI implementation introduced
+[ ] Design tokens reused
+[ ] Existing patterns reused
+[ ] Responsive behavior preserved
+[ ] RTL behavior preserved where required
+[ ] Accessibility preserved where required
+[ ] Loading states implemented where required
+[ ] Empty states implemented where required
+[ ] Error states implemented where required
+[ ] API contract respected
+[ ] Frontend capabilities respected
+[ ] Page remains focused on composition/orchestration
+[ ] No undocumented UI behavior introduced
+```
+
+A frontend phase MUST NOT be considered locally complete if these checks have not been evaluated.
+
+---
+
+# 15.15 Frontend Evidence Requirement
+
+When reporting frontend implementation completion, the Execution Engine MUST be able to identify:
+
+```text
+Requirement
+    ↓
+Frontend Specification
+    ↓
+Component / Page
+    ↓
+Exact Implementation Location
+    ↓
+Existing Component Reuse or New Component Decision
+    ↓
+API Integration where applicable
+    ↓
+Verification Evidence
+```
+
+The Agent MUST NOT claim:
+
+```text
+"Design implemented"
+```
+
+merely because a page renders.
+
+It must establish that the page follows the approved design and component governance.
 
 ---
 
@@ -791,6 +1413,19 @@ MVC
 REST API
 GraphQL
 ORM
+```
+
+Likewise, the Agent MUST NOT assume that every frontend project uses:
+
+```text
+Components directory
+Pages directory
+Views directory
+Hooks
+Composables
+Stores
+Specific CSS architecture
+Specific component library
 ```
 
 The actual architecture is resolved from:
@@ -834,34 +1469,41 @@ The final execution flow is:
             Build Governance Payload
                            │
                            ▼
-              ┌──────────────────────┐
-              │  WHAT                │
-              │  Taqniya Governance  │
-              └──────────┬───────────┘
-                         │
-                         ▼
-              ┌──────────────────────┐
-              │  HOW                 │
-              │ Technology Profile   │
-              └──────────┬───────────┘
-                         │
-                         ▼
-              ┌──────────────────────┐
-              │ EXECUTION             │
-              │ Execution Engine      │
-              └──────────┬───────────┘
-                         │
-                         ▼
-                  Code Implementation
-                         │
-                         ▼
-                Engine Self-Verification
-                         │
-                         ▼
-                  HARD STOP
-                         │
-                         ▼
-              review_phase.md
+                 IMPLEMENTATION
+                           │
+             ┌─────────────┴─────────────┐
+             │                           │
+             ▼                           ▼
+         BACKEND                     FRONTEND
+             │                           │
+             │                    Read Design Rules
+             │                           │
+             │                    Inventory Existing UI
+             │                           │
+             │                    Search Components
+             │                           │
+             │              ┌────────────┴────────────┐
+             │              │                         │
+             │           REUSE / EXTEND           CREATE
+             │              │                         │
+             │              │                  Create Component
+             │              │                         │
+             │              │                  Implement Component
+             │              │                         │
+             │              └────────────┬────────────┘
+             │                           │
+             │                    Integrate in Page
+             │                           │
+             └───────────────┬───────────┘
+                             │
+                             ▼
+                   Engine Self-Verification
+                             │
+                             ▼
+                        HARD STOP
+                             │
+                             ▼
+                    review_phase.md
 ```
 
 ---
@@ -882,6 +1524,26 @@ When the Execution Engine considers implementation complete, it MUST provide:
 * Deferred items.
 * Any deviations discovered.
 * Any unresolved issues.
+
+### Frontend Implementation Summary
+
+Where frontend work exists, additionally report:
+
+```text
+Frontend pages/screens implemented:
+Frontend components reused:
+Frontend components extended:
+Frontend components created:
+Frontend component creation justifications:
+Existing components searched:
+Design System elements reused:
+Design deviations:
+Responsive considerations:
+RTL considerations:
+Accessibility considerations:
+Frontend API integrations:
+Frontend states implemented:
+```
 
 The Execution Engine MUST NOT declare the phase officially `COMPLETED` merely because its local implementation succeeded.
 
@@ -920,6 +1582,8 @@ The review process is responsible for determining whether the phase actually sat
 * Database compliance.
 * Architecture compliance.
 * Design compliance.
+* Frontend component governance.
+* Frontend reuse governance.
 * Testing requirements.
 * Acceptance criteria.
 * Definition of Done.
@@ -970,8 +1634,21 @@ The approved phase has been implemented according to:
 3. Approved Database Blueprint
 4. Project Security Rules
 5. Project Design Rules
-6. Resolved Technology Profile
-7. Configured Execution Engine
+6. Frontend Component Governance
+7. Resolved Technology Profile
+8. Configured Execution Engine
+
+Frontend Governance Verification:
+
+- Existing components were searched before creating new components.
+- Existing suitable components were reused where applicable.
+- Related components were extended where appropriate.
+- New components were created only when justified.
+- New components were implemented before page integration.
+- New components are actually consumed by their target pages/sections.
+- No fake componentization was introduced.
+- No known duplicate UI implementation was intentionally created.
+- Approved design rules and design-system constraints were preserved.
 
 Independent verification is now required.
 
@@ -1004,6 +1681,7 @@ This prompt MUST preserve the following permanent contract:
 │ • Design Governance                                        │
 │ • Phase Scope                                              │
 │ • Acceptance Criteria                                      │
+│ • Frontend Reuse Governance                                │
 └───────────────────────────┬────────────────────────────────┘
                             │
                             ▼
@@ -1019,7 +1697,8 @@ This prompt MUST preserve the following permanent contract:
 │ • Validation                                               │
 │ • Testing                                                  │
 │ • File Structure                                           │
-│ • Naming                                                  │
+│ • Naming                                                   │
+│ • Frontend Technology Implementation                       │
 └───────────────────────────┬────────────────────────────────┘
                             │
                             ▼
@@ -1040,12 +1719,72 @@ This prompt MUST preserve the following permanent contract:
                        CODEBASE
 ```
 
-### Non-Negotiable Principle
+### Permanent Frontend Contract
 
-> **Taqniya Core governs the contract.**
->
-> **Technology Profiles govern technology-specific implementation.**
->
-> **Execution Engines govern execution methodology.**
->
-> **No layer may silently assume or impose responsibilities belonging to another layer.**
+```text
+                 APPROVED DESIGN
+                       │
+                       ▼
+              EXISTING DESIGN SYSTEM
+                       │
+                       ▼
+              EXISTING COMPONENTS
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+         Suitable             Related
+             │                   │
+             ▼                   ▼
+           REUSE               EXTEND
+             │                   │
+             └─────────┬─────────┘
+                       │
+                       ▼
+                 No suitable
+                  component
+                       │
+                       ▼
+                     CREATE
+                       │
+                       ▼
+              IMPLEMENT COMPONENT
+                       │
+                       ▼
+                 VERIFY IT
+                       │
+                       ▼
+               USE IN PAGE
+                       │
+                       ▼
+              VERIFY COMPOSITION
+```
+
+### Non-Negotiable Frontend Rules
+
+```text
+REUSE BEFORE CREATE
+
+EXTEND BEFORE DUPLICATE
+
+CREATE COMPONENT BEFORE PAGE INTEGRATION
+
+IMPLEMENT COMPONENT BEFORE CONSUMING IT
+
+NO FAKE COMPONENTS
+
+NO DUPLICATE UI IMPLEMENTATIONS
+
+NO PAGE-LEVEL REIMPLEMENTATION OF EXISTING COMPONENTS
+
+NO ARBITRARY DESIGN SYSTEM
+
+NO UNAUTHORIZED VISUAL DEVIATION
+
+NO UNDOCUMENTED FRONTEND BEHAVIOR
+
+NO COMPLETION CLAIM WITHOUT FRONTEND GOVERNANCE VERIFICATION
+```
+
+> **The frontend is part of the system architecture and product implementation, not merely a visual layer.**
+
+> **A functionally correct frontend that violates the approved Design System, duplicates existing components, or bypasses component reuse is NOT considered a correct implementation.**

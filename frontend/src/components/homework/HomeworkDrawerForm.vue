@@ -10,6 +10,8 @@ import {
   Loader2,
   Calendar,
   FileText,
+  UploadCloud,
+  Link2,
 } from 'lucide-vue-next';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../ui/TaqniyaSelect.vue';
 import type { HomeworkAttachment, HomeworkItem, HomeworkDetailData } from '../../api/homework.api';
@@ -57,7 +59,11 @@ const form = ref<{
 const errors = ref<Record<string, string>>({});
 const generalError = ref<string | null>(null);
 
-// New attachment input state
+// Attachment Mode ('upload' | 'link')
+const attachmentMode = ref<'upload' | 'link'>('upload');
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+// New URL Link input state
 const newAttachmentName = ref('');
 const newAttachmentUrl = ref('');
 
@@ -78,6 +84,7 @@ watch(
       generalError.value = null;
       newAttachmentName.value = '';
       newAttachmentUrl.value = '';
+      attachmentMode.value = 'upload';
 
       if (props.mode === 'edit' && props.itemToEdit) {
         const it = props.itemToEdit as any;
@@ -121,12 +128,52 @@ watch(
   },
 );
 
-const addAttachment = () => {
-  if (!newAttachmentName.value.trim() || !newAttachmentUrl.value.trim()) return;
-  form.value.attachments.push({
-    name: newAttachmentName.value.trim(),
-    url: newAttachmentUrl.value.trim(),
+// Format file size
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+// Handle Direct File Upload from Device
+const triggerFilePicker = () => {
+  fileInputRef.value?.click();
+};
+
+const handleFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  if (!target.files || target.files.length === 0) return;
+
+  Array.from(target.files).forEach((file) => {
+    form.value.attachments.push({
+      name: file.name,
+      url: `/uploads/assignments/${encodeURIComponent(file.name)}`,
+      size: formatFileSize(file.size),
+      type: file.type || file.name.split('.').pop() || 'file',
+    });
   });
+
+  // Reset input so user can pick the same file again if desired
+  target.value = '';
+};
+
+// Handle External URL Link Addition
+const addUrlAttachment = () => {
+  if (!newAttachmentName.value.trim() && !newAttachmentUrl.value.trim()) return;
+
+  let url = newAttachmentUrl.value.trim();
+  if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
+    url = `https://${url}`;
+  }
+
+  const name = newAttachmentName.value.trim() || url || 'رابط مرفق';
+
+  form.value.attachments.push({
+    name,
+    url: url || '#',
+    type: 'link',
+  });
+
   newAttachmentName.value = '';
   newAttachmentUrl.value = '';
 };
@@ -280,7 +327,7 @@ const close = () => {
         </div>
       </div>
 
-      <!-- Attachments Section -->
+      <!-- Attachments Section (Dual Mode: Direct File Upload & External Link) -->
       <div class="pt-2 border-t border-[#B4AED8]/50 dark:border-white/[0.06] space-y-3">
         <div class="flex items-center justify-between">
           <label class="text-xs font-bold text-bx-title flex items-center gap-1.5">
@@ -288,59 +335,121 @@ const close = () => {
             <span>المرفقات والملازم الدراسية</span>
           </label>
           <span class="text-[11px] text-bx-muted font-bold">
-            {{ form.attachments.length }} مرفق
+            {{ form.attachments.length }} مرفقات مضافة
           </span>
         </div>
 
-        <!-- Add Attachment Sub-form -->
-        <div class="p-3.5 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] space-y-2.5">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <!-- Mode Switcher Tabs (File Upload vs External Link) -->
+        <div class="flex items-center gap-1 p-1 rounded-xl bg-purple-500/[0.05] dark:bg-white/[0.03] border border-[#B4AED8]/40 dark:border-white/[0.06]">
+          <button
+            type="button"
+            @click="attachmentMode = 'upload'"
+            class="flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            :class="attachmentMode === 'upload' ? 'bg-bx-primary text-white shadow-xs' : 'text-bx-muted hover:text-bx-title'"
+          >
+            <UploadCloud class="w-3.5 h-3.5" />
+            <span>رفع ملف من الجهاز</span>
+          </button>
+
+          <button
+            type="button"
+            @click="attachmentMode = 'link'"
+            class="flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            :class="attachmentMode === 'link' ? 'bg-bx-primary text-white shadow-xs' : 'text-bx-muted hover:text-bx-title'"
+          >
+            <Link2 class="w-3.5 h-3.5" />
+            <span>إرفاق رابط خارجي</span>
+          </button>
+        </div>
+
+        <!-- Hidden Native File Input -->
+        <input
+          ref="fileInputRef"
+          type="file"
+          multiple
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.txt"
+          class="hidden"
+          @change="handleFileSelect"
+        />
+
+        <!-- 1. Upload from Device Zone -->
+        <div
+          v-if="attachmentMode === 'upload'"
+          @click="triggerFilePicker"
+          class="p-5 rounded-2xl border-2 border-dashed border-[#B4AED8] dark:border-white/[0.14] hover:border-bx-primary bg-purple-500/[0.02] hover:bg-purple-500/[0.05] transition-all cursor-pointer text-center space-y-2 group"
+        >
+          <div class="w-10 h-10 rounded-full bg-purple-500/10 text-bx-primary flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+            <UploadCloud class="w-5 h-5" />
+          </div>
+          <div>
+            <span class="text-xs font-bold text-bx-title block group-hover:text-bx-primary transition-colors">
+              انقر لاختيار ملفات وملازم من جهازك
+            </span>
+            <span class="text-[11px] text-bx-muted block mt-0.5">
+              يدعم ملفات PDF، Word، Excel، والصور التوضيحية
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. External Link Input Box -->
+        <div
+          v-else
+          class="p-3.5 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] space-y-2.5"
+        >
+          <div class="space-y-2">
             <input
               v-model="newAttachmentName"
               type="text"
-              placeholder="اسم الملف (مثال: ملزمة الدرس.pdf)"
-              class="px-3.5 py-2 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary text-start"
+              placeholder="اسم المرفق أو المستند (مثال: ملزمة الفصل الأول)"
+              class="w-full px-3.5 py-2 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary text-start"
             />
             <input
               v-model="newAttachmentUrl"
-              type="url"
-              placeholder="رابط التحميل (URL)"
-              class="px-3.5 py-2 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary text-start"
+              type="text"
+              @keydown.enter.prevent="addUrlAttachment"
+              placeholder="الرابط الخارجي (مثال: drive.google.com/file/...)"
+              class="w-full px-3.5 py-2 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary text-start"
             />
           </div>
           <div class="flex justify-end">
             <button
               type="button"
-              @click="addAttachment"
-              :disabled="!newAttachmentName.trim() || !newAttachmentUrl.trim()"
-              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-purple-500/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-purple-500/20 text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
+              @click="addUrlAttachment"
+              :disabled="!newAttachmentUrl.trim() && !newAttachmentName.trim()"
+              class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover transition-all disabled:opacity-40 cursor-pointer shadow-xs"
             >
               <Plus class="w-3.5 h-3.5" />
-              <span>إدراج المرفق</span>
+              <span>إدراج الرابط</span>
             </button>
           </div>
         </div>
 
-        <!-- Attachments List -->
-        <div v-if="form.attachments.length > 0" class="space-y-2">
+        <!-- Attachments List Preview -->
+        <div v-if="form.attachments.length > 0" class="space-y-2 pt-1">
           <div
             v-for="(att, idx) in form.attachments"
             :key="idx"
-            class="flex items-center justify-between p-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)]"
+            class="flex items-center justify-between p-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] shadow-2xs"
           >
-            <div class="flex items-center gap-2 overflow-hidden">
-              <FileText class="w-4 h-4 text-bx-primary shrink-0" />
+            <div class="flex items-center gap-2.5 overflow-hidden">
+              <div class="w-7 h-7 rounded-lg bg-purple-500/10 text-bx-primary flex items-center justify-center shrink-0">
+                <FileText v-if="att.type !== 'link'" class="w-4 h-4" />
+                <Link2 v-else class="w-4 h-4" />
+              </div>
               <div class="truncate">
                 <span class="text-xs font-bold text-bx-title block truncate">{{ att.name }}</span>
-                <span class="text-[10px] text-bx-muted font-mono block truncate">{{ att.url }}</span>
+                <div class="flex items-center gap-2 text-[10px] text-bx-muted">
+                  <span v-if="att.size">{{ att.size }}</span>
+                  <span v-if="att.type" class="uppercase font-mono font-semibold">{{ att.type }}</span>
+                </div>
               </div>
             </div>
 
             <button
               type="button"
               @click="removeAttachment(idx)"
-              class="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer shrink-0"
-              title="حذف المرفق"
+              class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer shrink-0"
+              title="إزالة المرفق"
             >
               <Trash2 class="w-4 h-4" />
             </button>
