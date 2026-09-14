@@ -15,6 +15,7 @@ import {
   HeartHandshake,
   School,
   Clock,
+  Calendar,
   Menu,
   X,
 } from 'lucide-vue-next';
@@ -101,6 +102,12 @@ const academicGroup: NavDropdownItem[] = [
     to: '/period-slots',
     description: 'ضبط المخطط الزمني ومواعيد الحصص والفسح لليوم المدرسي',
     icon: Clock,
+  },
+  {
+    label: 'جدول الحصص الأسبوعي',
+    to: '/timetables',
+    description: 'إدارة وتوزيع الحصص المدرسية، مصفوفة الشعب، وتدقيق الشواغر',
+    icon: Calendar,
   },
 ];
 

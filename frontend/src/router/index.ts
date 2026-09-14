@@ -14,6 +14,7 @@ const StudentsManagementView = () => import('../views/StudentsManagementView.vue
 const StudentEnrollmentsView = () => import('../views/StudentEnrollmentsView.vue');
 const GuardiansManagementView = () => import('../views/GuardiansManagementView.vue');
 const PeriodSlotsManagementView = () => import('../views/PeriodSlotsManagementView.vue');
+const TimetablesManagementView = () => import('../views/TimetablesManagementView.vue');
 
 const routes = [
   {
@@ -77,6 +78,12 @@ const routes = [
         path: 'period-slots',
         name: 'period-slots',
         component: PeriodSlotsManagementView,
+        meta: { roles: ['admin', 'teacher', 'student', 'parent'] },
+      },
+      {
+        path: 'timetables',
+        name: 'timetables',
+        component: TimetablesManagementView,
         meta: { roles: ['admin', 'teacher', 'student', 'parent'] },
       },
       {

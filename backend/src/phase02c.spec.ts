@@ -69,10 +69,16 @@ describe('Phase 02-C: Class Terms, Sections & Curriculum (TDD Verification)', ()
     );
     testClassId = classRes.data.id;
 
+    const lastTerm = await prisma.academicTerm.findFirst({
+      orderBy: { term_number: 'desc' },
+      select: { term_number: true },
+    });
+    const baseNumber = (lastTerm?.term_number ?? 0) + 1;
+
     const termRes1 = await termsService.create(
       {
         name: `Term1-02C-${Date.now()}`,
-        term_number: Math.floor(Math.random() * 40) + 10,
+        term_number: baseNumber,
       },
       testAdminId,
     );
@@ -81,7 +87,7 @@ describe('Phase 02-C: Class Terms, Sections & Curriculum (TDD Verification)', ()
     const termRes2 = await termsService.create(
       {
         name: `Term2-02C-${Date.now()}`,
-        term_number: Math.floor(Math.random() * 40) + 60,
+        term_number: baseNumber + 1,
       },
       testAdminId,
     );
