@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, defineAsyncComponent } from 'vue';
 import {
-  X,
-  Plus,
-  Trash2,
   Save,
   BookOpen,
   AlertCircle,
-  FileText,
+  Plus,
+  Trash2,
   Paperclip,
+  Loader2,
+  Calendar,
+  FileText,
 } from 'lucide-vue-next';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../ui/TaqniyaSelect.vue';
 import type { HomeworkAttachment, HomeworkItem, HomeworkDetailData } from '../../api/homework.api';
 import type { AssignmentItem } from '../../api/teaching-assignments.api';
+
+const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
 
 const props = defineProps<{
   modelValue: boolean;
@@ -178,220 +181,195 @@ const close = () => {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="modelValue"
-      class="fixed inset-0 z-50 overflow-hidden flex justify-end"
-      role="dialog"
-      aria-modal="true"
-    >
-      <!-- Backdrop -->
+  <TaqniyaDrawer
+    :is-open="modelValue"
+    :title="mode === 'create' ? 'إنشاء وتكليف واجب جديد' : 'تعديل بيانات الواجب المدرسي'"
+    :subtitle="mode === 'create' ? 'تكليف الطلاب وإرفاق الملازم والمواعيد' : 'تحديث التفاصيل ومواعيد الاستحقاق'"
+    :icon="BookOpen"
+    max-width="max-w-[540px]"
+    @close="close"
+  >
+    <form id="homeworkForm" @submit.prevent="handleSubmit" class="space-y-5">
+      <!-- General Alert if any -->
       <div
-        class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300"
-        @click="close"
-      />
+        v-if="generalError"
+        class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2.5 text-xs text-rose-600 dark:text-rose-400 font-bold"
+      >
+        <AlertCircle class="w-4 h-4 shrink-0" />
+        <span>{{ generalError }}</span>
+      </div>
 
-      <!-- Drawer Content -->
-      <div class="relative z-10 w-full max-w-lg bg-white dark:bg-slate-900 shadow-2xl flex flex-col h-full overflow-hidden border-s border-slate-200 dark:border-slate-800 transition-transform duration-300">
-        <!-- Header -->
-        <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-              <BookOpen class="w-5 h-5" />
-            </div>
-            <div>
-              <h3 class="text-base font-black text-slate-800 dark:text-slate-100 font-display">
-                {{ mode === 'create' ? 'إنشاء ونشر واجب جديد' : 'تعديل بيانات الواجب المدرسي' }}
-              </h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                {{ mode === 'create' ? 'تكليف الطلاب وإرفاق الملازم والمواعيد' : 'تحديث التفاصيل ومواعيد الاستحقاق' }}
-              </p>
-            </div>
-          </div>
+      <!-- Teaching Assignment Selector -->
+      <div>
+        <label class="block text-xs font-bold text-bx-title mb-1.5">
+          المادة والشعبة المسندة <span class="text-rose-500">*</span>
+        </label>
+        <TaqniyaSelect
+          v-model="form.teaching_assignment_id"
+          :options="teachingAssignmentOptions"
+          placeholder="اختر المادة والشعبة المسندة..."
+          searchable
+          full-width
+        />
+        <span v-if="errors.teaching_assignment_id" class="text-[11px] text-rose-500 mt-1 block font-bold">
+          {{ errors.teaching_assignment_id }}
+        </span>
+      </div>
 
-          <button
-            type="button"
-            @click="close"
-            class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X class="w-5 h-5" />
-          </button>
+      <!-- Title Field -->
+      <div>
+        <label class="block text-xs font-bold text-bx-title mb-1.5">
+          عنوان الواجب / النشاط <span class="text-rose-500">*</span>
+        </label>
+        <input
+          v-model="form.title"
+          type="text"
+          placeholder="مثال: حل تمارين الوحدة الثالثة صفحة 45"
+          class="w-full px-4 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-start"
+        />
+        <span v-if="errors.title" class="text-[11px] text-rose-500 mt-1 block font-bold">
+          {{ errors.title }}
+        </span>
+      </div>
+
+      <!-- Description Textarea -->
+      <div>
+        <label class="block text-xs font-bold text-bx-title mb-1.5">
+          التفاصيل والتعليمات الإرشادية (اختياري)
+        </label>
+        <textarea
+          v-model="form.description"
+          rows="3"
+          placeholder="اكتب التوجيهات أو الملاحظات التي تود توجيهها للطلاب..."
+          class="w-full px-4 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all resize-none text-start"
+        />
+      </div>
+
+      <!-- Dates Grid: Assigned Date & Due Date -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div>
+          <label class="block text-xs font-bold text-bx-title mb-1.5 flex items-center gap-1.5">
+            <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+            <span>تاريخ النشر والتكليف</span>
+            <span class="text-rose-500">*</span>
+          </label>
+          <input
+            v-model="form.assigned_date"
+            type="date"
+            class="w-full px-4 py-2 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title focus:outline-none focus:border-bx-primary transition-all"
+          />
+          <span v-if="errors.assigned_date" class="text-[11px] text-rose-500 mt-1 block font-bold">
+            {{ errors.assigned_date }}
+          </span>
         </div>
 
-        <!-- Form Body -->
-        <form @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto p-6 space-y-5">
-          <!-- General Alert if any -->
-          <div
-            v-if="generalError"
-            class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/50 flex items-center gap-2.5 text-xs text-rose-700 dark:text-rose-300"
-          >
-            <AlertCircle class="w-4 h-4 shrink-0" />
-            <span>{{ generalError }}</span>
-          </div>
-
-          <!-- Teaching Assignment Selector -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-black text-slate-700 dark:text-slate-300 block">
-              المادة والشعبة المكلفة <span class="text-rose-500">*</span>
-            </label>
-            <TaqniyaSelect
-              v-model="form.teaching_assignment_id"
-              :options="teachingAssignmentOptions"
-              placeholder="اختر المادة والشعبة المسندة..."
-              searchable
-            />
-            <span v-if="errors.teaching_assignment_id" class="text-[11px] text-rose-500 block font-medium">
-              {{ errors.teaching_assignment_id }}
-            </span>
-          </div>
-
-          <!-- Title Field -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-black text-slate-700 dark:text-slate-300 block">
-              عنوان وموضوع الواجب <span class="text-rose-500">*</span>
-            </label>
-            <input
-              v-model="form.title"
-              type="text"
-              maxlength="200"
-              placeholder="مثال: حل تمارين ص 45 - الجبر"
-              class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 transition-colors"
-              :class="errors.title ? 'border-rose-300 dark:border-rose-800' : 'border-slate-200 dark:border-slate-700'"
-            />
-            <span v-if="errors.title" class="text-[11px] text-rose-500 block font-medium">
-              {{ errors.title }}
-            </span>
-          </div>
-
-          <!-- Dates Row -->
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Assigned Date -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-black text-slate-700 dark:text-slate-300 block">
-                تاريخ النشر <span class="text-rose-500">*</span>
-              </label>
-              <input
-                v-model="form.assigned_date"
-                type="date"
-                class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-              />
-              <span v-if="errors.assigned_date" class="text-[11px] text-rose-500 block font-medium">
-                {{ errors.assigned_date }}
-              </span>
-            </div>
-
-            <!-- Due Date -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-black text-slate-700 dark:text-slate-300 block">
-                تاريخ الاستحقاق <span class="text-rose-500">*</span>
-              </label>
-              <input
-                v-model="form.due_date"
-                type="date"
-                :min="form.assigned_date"
-                class="w-full px-3.5 py-2.5 text-xs rounded-xl border bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                :class="errors.due_date ? 'border-rose-300 dark:border-rose-800' : 'border-slate-200 dark:border-slate-700'"
-              />
-              <span v-if="errors.due_date" class="text-[11px] text-rose-500 block font-medium">
-                {{ errors.due_date }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Description / Instructions -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-black text-slate-700 dark:text-slate-300 block">
-              التعليمات والتفاصيل الإرشادية
-            </label>
-            <textarea
-              v-model="form.description"
-              rows="3"
-              placeholder="اكتب أي ملاحظات أو إرشادات للطلاب..."
-              class="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 transition-colors resize-none"
-            />
-          </div>
-
-          <!-- Attachments Manager -->
-          <div class="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Paperclip class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                المرفقات والملازم ({{ form.attachments.length }})
-              </label>
-            </div>
-
-            <!-- Existing list -->
-            <div v-if="form.attachments.length > 0" class="space-y-2">
-              <div
-                v-for="(att, idx) in form.attachments"
-                :key="idx"
-                class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between gap-2"
-              >
-                <div class="flex items-center gap-2 min-w-0">
-                  <FileText class="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate" :title="att.name">
-                    {{ att.name }}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  @click="removeAttachment(idx)"
-                  class="text-rose-500 hover:text-rose-700 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                >
-                  <Trash2 class="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            <!-- Add new attachment inputs -->
-            <div class="p-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-2 bg-slate-50/30 dark:bg-slate-800/20">
-              <input
-                v-model="newAttachmentName"
-                type="text"
-                placeholder="اسم الملف (مثال: ملزمة الواجب.pdf)"
-                class="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
-              />
-              <div class="flex gap-2">
-                <input
-                  v-model="newAttachmentUrl"
-                  type="url"
-                  placeholder="رابط الملف (URL)"
-                  class="flex-1 px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
-                />
-                <button
-                  type="button"
-                  @click="addAttachment"
-                  class="px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus class="w-3.5 h-3.5" />
-                  إضافة
-                </button>
-              </div>
-            </div>
-          </div>
-        </form>
-
-        <!-- Footer Actions -->
-        <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            @click="close"
-            class="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            إلغاء
-          </button>
-          <button
-            type="button"
-            @click="handleSubmit"
-            :disabled="isSubmitting"
-            class="px-5 py-2 text-xs font-black rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-          >
-            <div v-if="isSubmitting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            <Save v-else class="w-3.5 h-3.5" />
-            {{ mode === 'create' ? 'نشر الواجب' : 'حفظ التعديلات' }}
-          </button>
+        <div>
+          <label class="block text-xs font-bold text-bx-title mb-1.5 flex items-center gap-1.5">
+            <Calendar class="w-3.5 h-3.5 text-rose-500" />
+            <span>آخر موعد للتسليم (الاستحقاق)</span>
+            <span class="text-rose-500">*</span>
+          </label>
+          <input
+            v-model="form.due_date"
+            type="date"
+            class="w-full px-4 py-2 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title focus:outline-none focus:border-bx-primary transition-all"
+          />
+          <span v-if="errors.due_date" class="text-[11px] text-rose-500 mt-1 block font-bold">
+            {{ errors.due_date }}
+          </span>
         </div>
       </div>
-    </div>
-  </Teleport>
+
+      <!-- Attachments Section -->
+      <div class="pt-2 border-t border-[#B4AED8]/50 dark:border-white/[0.06] space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-bx-title flex items-center gap-1.5">
+            <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
+            <span>المرفقات والملازم الدراسية</span>
+          </label>
+          <span class="text-[11px] text-bx-muted font-bold">
+            {{ form.attachments.length }} مرفق
+          </span>
+        </div>
+
+        <!-- Add Attachment Sub-form -->
+        <div class="p-3.5 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] space-y-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input
+              v-model="newAttachmentName"
+              type="text"
+              placeholder="اسم الملف (مثال: ملزمة الدرس.pdf)"
+              class="px-3.5 py-2 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary text-start"
+            />
+            <input
+              v-model="newAttachmentUrl"
+              type="url"
+              placeholder="رابط التحميل (URL)"
+              class="px-3.5 py-2 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary text-start"
+            />
+          </div>
+          <div class="flex justify-end">
+            <button
+              type="button"
+              @click="addAttachment"
+              :disabled="!newAttachmentName.trim() || !newAttachmentUrl.trim()"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-purple-500/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-purple-500/20 text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
+            >
+              <Plus class="w-3.5 h-3.5" />
+              <span>إدراج المرفق</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Attachments List -->
+        <div v-if="form.attachments.length > 0" class="space-y-2">
+          <div
+            v-for="(att, idx) in form.attachments"
+            :key="idx"
+            class="flex items-center justify-between p-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)]"
+          >
+            <div class="flex items-center gap-2 overflow-hidden">
+              <FileText class="w-4 h-4 text-bx-primary shrink-0" />
+              <div class="truncate">
+                <span class="text-xs font-bold text-bx-title block truncate">{{ att.name }}</span>
+                <span class="text-[10px] text-bx-muted font-mono block truncate">{{ att.url }}</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              @click="removeAttachment(idx)"
+              class="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer shrink-0"
+              title="حذف المرفق"
+            >
+              <Trash2 class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <!-- Drawer Footer -->
+    <template #footer>
+      <div class="flex items-center justify-end gap-2.5">
+        <button
+          type="button"
+          @click="close"
+          class="px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+        >
+          إلغاء
+        </button>
+        <button
+          type="button"
+          @click="handleSubmit"
+          :disabled="isSubmitting"
+          class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-sm"
+        >
+          <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
+          <Save v-else class="w-3.5 h-3.5" />
+          <span>{{ mode === 'create' ? 'نشر الواجب الآن' : 'حفظ التعديلات' }}</span>
+        </button>
+      </div>
+    </template>
+  </TaqniyaDrawer>
 </template>
