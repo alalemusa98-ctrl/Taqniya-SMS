@@ -41,12 +41,15 @@ export class UsersService {
     }
 
     if (query.search) {
-      where.user_code = {
-        contains: query.search,
-      };
+      where.OR = [
+        { user_code: { contains: query.search } },
+        { teacher_profile: { full_name: { contains: query.search } } },
+        { student_profile: { full_name: { contains: query.search } } },
+        { guardian_profile: { full_name: { contains: query.search } } },
+      ];
     }
 
-    const [total, users] = await Promise.all([
+    const [total, users, countsByRole] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
         where,
@@ -60,9 +63,29 @@ export class UsersService {
           is_active: true,
           last_login_at: true,
           created_at: true,
+          teacher_profile: { select: { full_name: true } },
+          student_profile: { select: { full_name: true } },
+          guardian_profile: { select: { full_name: true } },
         },
       }),
+      this.prisma.user.groupBy({
+        by: ['role_type'],
+        where: { deleted_at: null },
+        _count: { id: true },
+      }),
     ]);
+
+    const summaryCounts: Record<string, number> = {
+      total: 0,
+      admin: 0,
+      teacher: 0,
+      student: 0,
+      parent: 0,
+    };
+    for (const c of countsByRole) {
+      summaryCounts[c.role_type] = c._count.id;
+      summaryCounts.total += c._count.id;
+    }
 
     // Grouping into Role-Tree Matrix
     const roleMap: Record<string, { role_type: string; role_title_ar: string; users_count: number; users: any[] }> = {
@@ -73,9 +96,16 @@ export class UsersService {
     };
 
     for (const u of users) {
+      const fullName =
+        u.teacher_profile?.full_name ||
+        u.student_profile?.full_name ||
+        u.guardian_profile?.full_name ||
+        null;
+
       const serialized = {
         id: Number(u.id),
         user_code: u.user_code,
+        full_name: fullName,
         role_type: u.role_type,
         is_active: u.is_active,
         last_login_at: u.last_login_at ? u.last_login_at.toISOString() : null,
@@ -96,6 +126,7 @@ export class UsersService {
       success: true,
       data: {
         role_types,
+        summary_counts: summaryCounts,
       },
       meta: {
         current_page: page,
@@ -118,6 +149,9 @@ export class UsersService {
         created_at: true,
         updated_at: true,
         deleted_at: true,
+        teacher_profile: { select: { full_name: true, phone: true } },
+        student_profile: { select: { full_name: true, phone: true, gender: true } },
+        guardian_profile: { select: { full_name: true, phone: true, relationship: true } },
       },
     });
 
@@ -128,11 +162,25 @@ export class UsersService {
       });
     }
 
+    const fullName =
+      user.teacher_profile?.full_name ||
+      user.student_profile?.full_name ||
+      user.guardian_profile?.full_name ||
+      null;
+
+    const phone =
+      user.teacher_profile?.phone ||
+      user.student_profile?.phone ||
+      user.guardian_profile?.phone ||
+      null;
+
     return {
       success: true,
       data: {
         id: Number(user.id),
         user_code: user.user_code,
+        full_name: fullName,
+        phone,
         role_type: user.role_type,
         is_active: user.is_active,
         last_login_at: user.last_login_at ? user.last_login_at.toISOString() : null,

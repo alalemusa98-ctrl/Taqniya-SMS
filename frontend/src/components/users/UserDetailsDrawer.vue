@@ -124,14 +124,25 @@ onUnmounted(() => {
                       {{ userDetails.is_active === 1 ? 'نشط' : 'معطل' }}
                     </span>
                   </div>
-                  <p class="text-2xl font-black font-mono text-bx-title tracking-wider">
-                    {{ userDetails.user_code }}
-                  </p>
-                  <div class="pt-2 flex items-center gap-2">
-                    <span class="text-xs text-bx-muted font-bold">الدور الأساسي:</span>
-                    <span class="px-2.5 py-0.5 rounded-lg bg-bx-primary/10 border border-bx-primary/25 text-bx-primary text-xs font-black font-mono">
-                      {{ userDetails.role_type.toUpperCase() }}
-                    </span>
+                  <div>
+                    <h4 v-if="userDetails.full_name" class="text-base font-black text-bx-title mb-1">
+                      {{ userDetails.full_name }}
+                    </h4>
+                    <p class="text-xl font-black font-mono text-bx-primary tracking-wider">
+                      {{ userDetails.user_code }}
+                    </p>
+                  </div>
+                  <div class="pt-2 flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs text-bx-muted font-bold">الدور:</span>
+                      <span class="px-2.5 py-0.5 rounded-lg bg-bx-primary/10 border border-bx-primary/25 text-bx-primary text-xs font-black font-mono">
+                        {{ userDetails.role_type.toUpperCase() }}
+                      </span>
+                    </div>
+                    <div v-if="userDetails.phone" class="flex items-center gap-1.5 text-xs text-bx-muted font-mono font-bold">
+                      <span>الهاتف:</span>
+                      <span class="text-bx-title">{{ userDetails.phone }}</span>
+                    </div>
                   </div>
                 </div>
 

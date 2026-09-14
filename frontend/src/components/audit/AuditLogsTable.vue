@@ -1,10 +1,28 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { auditApi } from '../../api/users.api';
-import { Eye, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import {
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Shield,
+  Users,
+  GraduationCap,
+  ShieldAlert,
+  TrendingUp,
+  RotateCcw,
+  Filter,
+} from 'lucide-vue-next';
 import AuditDiffDrawer from './AuditDiffDrawer.vue';
 import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
+import TaqniyaKpiCard from '../ui/TaqniyaKpiCard.vue';
 import { formatDateTime } from '../../utils/formatters';
+import {
+  getActionInfo,
+  getEntityInfo,
+  ACTION_FILTER_OPTIONS,
+  ENTITY_FILTER_OPTIONS,
+} from '../../utils/audit-dictionary';
 
 const logs = ref<any[]>([]);
 const meta = ref<any>({ current_page: 1, per_page: 15, total: 0, total_pages: 1 });
@@ -15,24 +33,51 @@ const filterEntity = ref('');
 const fromDate = ref('');
 const toDate = ref('');
 
-const actionOptions = [
-  { value: '', label: 'كافة العمليات' },
-  { value: 'login', label: 'تسجيل دخول' },
-  { value: 'logout', label: 'تسجيل خروج' },
-  { value: 'user_activated', label: 'تفعيل حساب' },
-  { value: 'user_deactivated', label: 'تعطيل حساب' },
-  { value: 'password_change', label: 'تغيير كلمة مرور' },
-  { value: 'admin_reset_password', label: 'إعادة تعيين من الإدارة' },
-];
-
-const entityOptions = [
-  { value: '', label: 'كافة الكيانات' },
-  { value: 'User', label: 'المستخدمون (User)' },
-  { value: 'PersonalAccessToken', label: 'الجلسات (Token)' },
-];
-
 const selectedLog = ref<any>(null);
 const isDiffDrawerOpen = ref(false);
+
+// KPI counts computed from current data
+const usersActivityCount = computed(() => {
+  return logs.value.filter((l) =>
+    ['login', 'logout', 'user_activated', 'user_deactivated', 'password_change', 'admin_reset_password'].includes(
+      l.action,
+    ),
+  ).length;
+});
+
+const academicActivityCount = computed(() => {
+  return logs.value.filter(
+    (l) =>
+      l.action.includes('enroll') ||
+      l.action.includes('ASSIGNMENT') ||
+      l.action.includes('teacher') ||
+      l.action.includes('student') ||
+      l.action.includes('academic') ||
+      l.action.includes('slot'),
+  ).length;
+});
+
+const securityAlertsCount = computed(() => {
+  return logs.value.filter(
+    (l) =>
+      l.action.includes('blocked') ||
+      l.action.includes('failed') ||
+      l.action === 'user_deactivated' ||
+      l.action === 'admin_reset_password',
+  ).length;
+});
+
+const hasActiveFilters = computed(() => {
+  return Boolean(filterAction.value || filterEntity.value || fromDate.value || toDate.value);
+});
+
+const resetFilters = async () => {
+  filterAction.value = '';
+  filterEntity.value = '';
+  fromDate.value = '';
+  toDate.value = '';
+  await loadLogs(1);
+};
 
 const loadLogs = async (page = 1) => {
   isLoading.value = true;
@@ -64,104 +109,232 @@ const openDiff = (log: any) => {
   selectedLog.value = log;
   isDiffDrawerOpen.value = true;
 };
-
-const getActionBadge = (action: string) => {
-  switch (action) {
-    case 'login':
-      return { text: 'دخول', class: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30' };
-    case 'logout':
-      return { text: 'خروج', class: 'bg-slate-500/10 text-slate-600 border-slate-500/30' };
-    case 'password_change':
-    case 'admin_reset_password':
-      return { text: 'تغيير كلمة المرور', class: 'bg-amber-500/10 text-amber-600 border-amber-500/30' };
-    case 'user_activated':
-      return { text: 'تفعيل حساب', class: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' };
-    case 'user_deactivated':
-      return { text: 'تعطيل حساب', class: 'bg-rose-500/10 text-rose-600 border-rose-500/30' };
-    default:
-      return { text: action, class: 'bg-slate-500/10 text-slate-600 border-slate-500/30' };
-  }
-};
 </script>
 
 <template>
   <div class="space-y-6" dir="rtl">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-      <div>
-        <h2 class="font-display font-black text-2xl sm:text-3xl text-bx-title">سجلات التدقيق الأمني</h2>
-        <p class="text-xs text-bx-muted font-bold mt-1">
-          تتبع العمليات الحساسة ومقارنة الفروقات لضمان الشفافية والأمان
-        </p>
-      </div>
-
-      <!-- Filters with TaqniyaSelect -->
-      <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-        <TaqniyaSelect
-          v-model="filterAction"
-          :options="actionOptions"
-          @update:model-value="loadLogs(1)"
-        />
-
-        <TaqniyaSelect
-          v-model="filterEntity"
-          :options="entityOptions"
-          @update:model-value="loadLogs(1)"
-        />
+    <!-- Header with Taqniya Brand Accent -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="w-2.5 h-7 rounded-full bg-bx-primary shrink-0"></span>
+        <div>
+          <h2 class="font-display font-black text-2xl sm:text-3xl text-bx-title">سجلات التدقيق الأمني</h2>
+          <p class="text-xs text-bx-muted font-bold mt-1">
+            مراقبة العمليات الحساسة، تتبع تغييرات البيانات ومقارنة الفروقات لضمان النزاهة والموثوقية
+          </p>
+        </div>
       </div>
     </div>
 
-    <!-- Table Card -->
-    <div class="bx-card bg-[var(--bx-surface-solid)] overflow-hidden">
+    <!-- 8. KPI & Metrics Ribbon (Exact Framework Section 8 Standard) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Card 1: Total Recorded Operations -->
+      <TaqniyaKpiCard
+        title="إجمالي العمليات المسجلة"
+        :value="meta.total"
+        :icon="Shield"
+        variant="primary"
+        badge-text="أمان النظام"
+        :badge-icon="TrendingUp"
+        :pulse-badge="true"
+        :progress="100"
+      />
+
+      <!-- Card 2: User Account Activities -->
+      <TaqniyaKpiCard
+        title="حركات المستخدمين"
+        :value="`${usersActivityCount} حركة`"
+        :icon="Users"
+        variant="blue"
+        badge-text="جلسات وحسابات"
+        :badge-icon="TrendingUp"
+        :progress="100"
+      />
+
+      <!-- Card 3: Academic Operations -->
+      <TaqniyaKpiCard
+        title="تسكين وإسناد أكاديمي"
+        :value="`${academicActivityCount} حركة`"
+        :icon="GraduationCap"
+        variant="emerald"
+        badge-text="العمليات الأكاديمية"
+        :badge-icon="TrendingUp"
+        :progress="100"
+      />
+
+      <!-- Card 4: Security Alerts & Sensitive Operations -->
+      <TaqniyaKpiCard
+        title="تنبيهات وإجراءات حساسة"
+        :value="`${securityAlertsCount} تنبيه`"
+        :icon="ShieldAlert"
+        :variant="securityAlertsCount > 0 ? 'amber' : 'emerald'"
+        :badge-text="securityAlertsCount > 0 ? 'بحاجة لمتابعة' : 'الأمان مستقر'"
+        :badge-icon="TrendingUp"
+        :pulse-badge="securityAlertsCount > 0"
+        :progress="securityAlertsCount > 0 ? 50 : 100"
+      />
+    </div>
+
+    <!-- Filter Ribbon (Taqniya Filter Box) -->
+    <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-bx-border space-y-3.5 shadow-2xs">
+      <div class="flex items-center justify-between gap-2 border-b border-bx-divider pb-2.5">
+        <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
+          <Filter class="w-4 h-4 text-bx-primary shrink-0" />
+          <span>تصفية سجلات التدقيق حسب نوع الحركة والجهة المتأثرة</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div v-if="hasActiveFilters" class="flex items-center gap-2 text-[11px] text-bx-primary font-bold">
+            <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
+            <span>فلاتر البحث مفعلة</span>
+          </div>
+          <button
+            @click="resetFilters"
+            class="inline-flex items-center gap-1 text-[11px] text-bx-muted hover:text-bx-primary transition-colors cursor-pointer font-bold"
+          >
+            <RotateCcw class="w-3 h-3" />
+            <span>إعادة ضبط</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <!-- Action Filter with Human Names -->
+        <div>
+          <label class="block text-[11px] font-bold text-bx-muted mb-1">نوع الحركة أو الإجراء</label>
+          <TaqniyaSelect
+            v-model="filterAction"
+            :options="ACTION_FILTER_OPTIONS"
+            placeholder="كافة العمليات..."
+            full-width
+            @update:model-value="loadLogs(1)"
+          />
+        </div>
+
+        <!-- Entity Filter with Human Names -->
+        <div>
+          <label class="block text-[11px] font-bold text-bx-muted mb-1">الجهة أو الكيان المتأثر</label>
+          <TaqniyaSelect
+            v-model="filterEntity"
+            :options="ENTITY_FILTER_OPTIONS"
+            placeholder="كافة الكيانات..."
+            full-width
+            @update:model-value="loadLogs(1)"
+          />
+        </div>
+
+        <!-- Date Range Filter -->
+        <div class="flex items-center gap-2">
+          <div class="flex-1">
+            <label class="block text-[11px] font-bold text-bx-muted mb-1">من تاريخ</label>
+            <input
+              v-model="fromDate"
+              type="date"
+              class="w-full px-3 py-2 rounded-xl text-xs border border-bx-border bg-bx-surface text-bx-title focus:outline-none focus:border-bx-primary transition"
+              @change="loadLogs(1)"
+            />
+          </div>
+          <div class="flex-1">
+            <label class="block text-[11px] font-bold text-bx-muted mb-1">إلى تاريخ</label>
+            <input
+              v-model="toDate"
+              type="date"
+              class="w-full px-3 py-2 rounded-xl text-xs border border-bx-border bg-bx-surface text-bx-title focus:outline-none focus:border-bx-primary transition"
+              @change="loadLogs(1)"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Card with Full Design Token Styling -->
+    <div class="bx-card bg-bx-surface border border-bx-border rounded-2xl overflow-hidden shadow-xs">
       <div class="overflow-x-auto">
         <table class="w-full text-start text-xs">
           <thead>
-            <tr class="text-bx-muted bg-[var(--bx-table-header)] border-b border-bx-border">
-              <th class="py-3 px-4 font-black text-start">#</th>
-              <th class="py-3 px-4 font-black text-start">المستخدم المنفذ</th>
-              <th class="py-3 px-4 font-black text-start">نوع الحركة</th>
-              <th class="py-3 px-4 font-black text-start">الكيان المتأثر</th>
-              <th class="py-3 px-4 font-black text-start">عنوان IP</th>
-              <th class="py-3 px-4 font-black text-start">تاريخ الحركة</th>
-              <th class="py-3 px-4 font-black text-end">التفاصيل</th>
+            <tr class="text-bx-muted bg-bx-table-header border-b border-bx-divider">
+              <th class="py-3.5 px-4 font-black text-start">#</th>
+              <th class="py-3.5 px-4 font-black text-start">المستخدم المنفذ</th>
+              <th class="py-3.5 px-4 font-black text-start">نوع الحركة أو العملية</th>
+              <th class="py-3.5 px-4 font-black text-start">الجهة المتأثرة</th>
+              <th class="py-3.5 px-4 font-black text-start">عنوان IP</th>
+              <th class="py-3.5 px-4 font-black text-start">تاريخ الحركة</th>
+              <th class="py-3.5 px-4 font-black text-end">التفاصيل والفروقات</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-bx-divider">
             <tr v-if="isLoading">
-              <td colspan="7" class="py-12 text-center text-bx-muted">
-                <div class="w-6 h-6 border-2 border-bx-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                جاري استدعاء سجلات التدقيق...
+              <td colspan="7" class="py-14 text-center text-bx-muted">
+                <div class="w-7 h-7 border-2 border-bx-primary border-t-transparent rounded-full animate-spin mx-auto mb-2.5"></div>
+                <span>جاري استدعاء سجلات التدقيق الأمني...</span>
               </td>
             </tr>
 
             <tr v-else-if="logs.length === 0">
-              <td colspan="7" class="py-12 text-center text-bx-muted font-bold">
-                لا توجد سجلات تدقيق مسجلة حتى الآن.
+              <td colspan="7" class="py-14 text-center text-bx-muted font-bold">
+                <div class="w-10 h-10 rounded-2xl bg-purple-500/10 text-bx-primary flex items-center justify-center mx-auto mb-2 font-black">
+                  <Shield class="w-5 h-5" />
+                </div>
+                <p class="text-bx-title">لا توجد سجلات تدقيق تطابق محددات البحث</p>
+                <p class="text-[11px] text-bx-muted mt-1">جرب تغيير نوع الحركة أو إعادة ضبط الفلاتر.</p>
               </td>
             </tr>
 
-            <tr v-else v-for="log in logs" :key="log.id" class="hover:bg-[var(--bx-row-hover)] transition-colors">
-              <td class="py-3.5 px-4 font-mono font-bold text-bx-muted">{{ log.id }}</td>
-              <td class="py-3.5 px-4 font-black font-mono text-bx-title">
-                {{ log.user_code || 'نظام آلي' }}
+            <tr
+              v-else
+              v-for="log in logs"
+              :key="log.id"
+              class="hover:bg-bx-row-hover transition-colors"
+            >
+              <td class="py-3.5 px-4 font-mono font-bold text-bx-muted">
+                #{{ log.id }}
               </td>
+
+              <!-- User Code -->
+              <td class="py-3.5 px-4 font-black font-mono text-bx-title">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-bx-primary/60"></span>
+                  <span>{{ log.user_code || 'النظام المركزي' }}</span>
+                </div>
+              </td>
+
+              <!-- Human Action Badge -->
               <td class="py-3.5 px-4">
-                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black border" :class="getActionBadge(log.action).class">
-                  {{ getActionBadge(log.action).text }}
+                <span
+                  class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black border transition-all"
+                  :class="getActionInfo(log.action).badgeClass"
+                >
+                  {{ getActionInfo(log.action).text }}
                 </span>
               </td>
-              <td class="py-3.5 px-4 font-mono font-bold text-bx-text">
-                {{ log.entity_type }} <span v-if="log.entity_id" class="text-bx-muted">#{{ log.entity_id }}</span>
+
+              <!-- Human Entity Info -->
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-bx-title text-xs">
+                    {{ getEntityInfo(log.entity_type).label }}
+                  </span>
+                  <span v-if="log.entity_id" class="text-bx-muted font-mono text-[10.5px]">
+                    #{{ log.entity_id }}
+                  </span>
+                </div>
               </td>
-              <td class="py-3.5 px-4 font-mono text-bx-muted text-[11px] font-bold">{{ log.ip_address || '—' }}</td>
+
+              <!-- IP Address -->
+              <td class="py-3.5 px-4 font-mono text-bx-muted text-[11px] font-bold">
+                {{ log.ip_address || '—' }}
+              </td>
+
+              <!-- Timestamp -->
               <td class="py-3.5 px-4 text-bx-muted text-[11px] font-bold font-mono">
                 {{ formatDateTime(log.created_at) }}
               </td>
+
+              <!-- Actions Button -->
               <td class="py-3.5 px-4 text-end">
                 <button
                   @click="openDiff(log)"
-                  class="bx-icon-btn p-1.5 rounded-xl border border-bx-border hover:border-bx-primary text-bx-muted hover:text-bx-primary transition-all cursor-pointer"
-                  title="مقارنة الفروقات"
+                  class="p-1.5 rounded-xl border border-bx-border hover:border-bx-primary text-bx-muted hover:text-bx-primary transition-all cursor-pointer shadow-2xs hover:bg-purple-500/10 active:scale-95"
+                  title="مقارنة الفروقات والتغييرات"
                 >
                   <Eye class="w-4 h-4" />
                 </button>
@@ -172,22 +345,29 @@ const getActionBadge = (action: string) => {
       </div>
 
       <!-- Pagination Footer -->
-      <div v-if="meta.total_pages > 1" class="p-4 border-t border-bx-border flex items-center justify-between text-xs text-bx-muted font-bold">
+      <div
+        v-if="meta.total_pages > 1"
+        class="p-4 border-t border-bx-divider flex items-center justify-between text-xs text-bx-muted font-bold bg-purple-500/[0.01]"
+      >
         <div>
-          صفحة <span class="text-bx-title font-black">{{ meta.current_page }}</span> من <span class="text-bx-title font-black">{{ meta.total_pages }}</span> (إجمالي {{ meta.total }} سجل)
+          صفحة <span class="text-bx-title font-black">{{ meta.current_page }}</span> من
+          <span class="text-bx-title font-black">{{ meta.total_pages }}</span> (إجمالي
+          {{ meta.total }} سجل)
         </div>
         <div class="flex items-center gap-2">
           <button
             @click="loadLogs(meta.current_page - 1)"
             :disabled="meta.current_page <= 1"
-            class="bx-icon-btn p-1.5 rounded-xl border border-bx-border disabled:opacity-30 hover:border-bx-primary cursor-pointer"
+            class="p-1.5 rounded-xl border border-bx-border disabled:opacity-30 hover:border-bx-primary cursor-pointer transition text-bx-title"
+            title="الصفحة السابقة"
           >
             <ChevronRight class="w-4 h-4" />
           </button>
           <button
             @click="loadLogs(meta.current_page + 1)"
             :disabled="meta.current_page >= meta.total_pages"
-            class="bx-icon-btn p-1.5 rounded-xl border border-bx-border disabled:opacity-30 hover:border-bx-primary cursor-pointer"
+            class="p-1.5 rounded-xl border border-bx-border disabled:opacity-30 hover:border-bx-primary cursor-pointer transition text-bx-title"
+            title="الصفحة التالية"
           >
             <ChevronLeft class="w-4 h-4" />
           </button>

@@ -10,11 +10,6 @@ import {
   Code2,
   CheckCircle2,
   Info,
-  FileText,
-  UserCheck,
-  KeyRound,
-  Shield,
-  Layers,
 } from 'lucide-vue-next';
 import { formatDateTime } from '../../utils/formatters';
 
@@ -27,14 +22,231 @@ const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
+import { academicApi } from '../../api/academic.api';
+import { teachersApi } from '../../api/teachers.api';
+import { studentsApi } from '../../api/students.api';
+import { guardiansApi } from '../../api/guardians.api';
+import { periodSlotsApi } from '../../api/period-slots.api';
+import {
+  getActionInfo,
+  getEntityInfo,
+  getFieldMeta,
+  formatFieldValue,
+  parseIdArray,
+} from '../../utils/audit-dictionary';
+
 const showTechnicalJson = ref(false);
+
+const refClassSections = ref<Map<number, string>>(new Map());
+const refClasses = ref<Map<number, string>>(new Map());
+const refYears = ref<Map<number, string>>(new Map());
+const refTerms = ref<Map<number, string>>(new Map());
+const refStages = ref<Map<number, string>>(new Map());
+const refSubjects = ref<Map<number, string>>(new Map());
+const refTeachers = ref<Map<number, string>>(new Map());
+const refStudents = ref<Map<number, string>>(new Map());
+const refGuardians = ref<Map<number, string>>(new Map());
+const refPeriodSlots = ref<Map<number, string>>(new Map());
+let referencesLoaded = false;
+
+const loadReferences = async () => {
+  if (referencesLoaded) return;
+  try {
+    const [
+      yearsRes,
+      termsRes,
+      stagesRes,
+      classesRes,
+      sectionsRes,
+      subjectsRes,
+      teachersRes,
+      studentsRes,
+      guardiansRes,
+      slotsRes,
+    ] = await Promise.allSettled([
+      academicApi.getYears({ per_page: 100 }),
+      academicApi.getTerms(),
+      academicApi.getStages(),
+      academicApi.getClasses({ per_page: 100 }),
+      academicApi.getClassSections({ per_page: 100 }),
+      academicApi.getSubjects({ per_page: 100 }),
+      teachersApi.getTeachers({ per_page: 300 }),
+      studentsApi.getStudents({ per_page: 500 }),
+      guardiansApi.getGuardians({ per_page: 300 }),
+      periodSlotsApi.getPeriodSlots({ per_page: 100 }),
+    ]);
+
+    if (yearsRes.status === 'fulfilled') {
+      const items = yearsRes.value.data?.data || yearsRes.value.data || [];
+      for (const y of items) {
+        refYears.value.set(Number(y.id), y.name);
+      }
+    }
+
+    if (termsRes.status === 'fulfilled') {
+      const items = termsRes.value.data?.data || termsRes.value.data || [];
+      for (const t of items) {
+        refTerms.value.set(Number(t.id), t.name);
+      }
+    }
+
+    if (stagesRes.status === 'fulfilled') {
+      const items = stagesRes.value.data?.data || stagesRes.value.data || [];
+      for (const s of items) {
+        refStages.value.set(Number(s.id), s.name);
+      }
+    }
+
+    if (classesRes.status === 'fulfilled') {
+      const items = classesRes.value.data?.data || classesRes.value.data || [];
+      for (const c of items) {
+        refClasses.value.set(Number(c.id), c.name);
+      }
+    }
+
+    if (sectionsRes.status === 'fulfilled') {
+      const groupedClasses = sectionsRes.value.data?.data?.classes || sectionsRes.value.data?.classes || [];
+      for (const cls of groupedClasses) {
+        for (const sec of cls.sections || []) {
+          refClassSections.value.set(Number(sec.id), `${cls.class_name} — شعبة (${sec.name})`);
+        }
+      }
+    }
+
+    if (subjectsRes.status === 'fulfilled') {
+      const items = subjectsRes.value.data?.data || subjectsRes.value.data || [];
+      for (const s of items) {
+        refSubjects.value.set(Number(s.id), s.name);
+      }
+    }
+
+    if (teachersRes.status === 'fulfilled') {
+      const items = teachersRes.value.data?.data || teachersRes.value.data || [];
+      for (const t of items) {
+        refTeachers.value.set(Number(t.id), t.full_name);
+      }
+    }
+
+    if (studentsRes.status === 'fulfilled') {
+      const items = studentsRes.value.data?.data || studentsRes.value.data || [];
+      for (const st of items) {
+        refStudents.value.set(Number(st.id), st.full_name);
+      }
+    }
+
+    if (guardiansRes.status === 'fulfilled') {
+      const items = guardiansRes.value.data?.data || guardiansRes.value.data || [];
+      for (const g of items) {
+        refGuardians.value.set(Number(g.id), g.full_name);
+      }
+    }
+
+    if (slotsRes.status === 'fulfilled') {
+      const items = slotsRes.value.data?.data || slotsRes.value.data || [];
+      for (const slot of items) {
+        const timePart = slot.start_time ? ` (${slot.start_time} - ${slot.end_time})` : '';
+        refPeriodSlots.value.set(Number(slot.id), `${slot.name || `الحصة ${slot.slot_number}`}${timePart}`);
+      }
+    }
+
+    referencesLoaded = true;
+  } catch (e) {
+    console.error('Failed to load audit references:', e);
+  }
+};
+
+const fetchMissingEntities = async (log: any) => {
+  if (!log) return;
+  const values = { ...(log.old_values || {}), ...(log.new_values || {}) };
+
+  // 1. Missing Students
+  const rawStudentIds = [
+    ...(values.student_id ? [values.student_id] : []),
+    ...(values.student_ids ? parseIdArray(values.student_ids) : []),
+    ...(values.selected_student_ids ? parseIdArray(values.selected_student_ids) : []),
+  ];
+  const missingStudentIds = rawStudentIds
+    .map((x) => Number(x))
+    .filter((id) => !isNaN(id) && id > 0 && !refStudents.value.has(id));
+
+  if (missingStudentIds.length > 0) {
+    await Promise.allSettled(
+      missingStudentIds.map(async (id) => {
+        try {
+          const res = await studentsApi.getStudentById(id);
+          const student = res.data?.data || res.data;
+          if (student?.full_name) {
+            refStudents.value.set(id, student.full_name);
+          }
+        } catch {
+          // ignore not found or network errors
+        }
+      }),
+    );
+  }
+
+  // 2. Missing Teachers
+  const rawTeacherIds = [
+    ...(values.teacher_id ? [values.teacher_id] : []),
+    ...(values.teacher_ids ? parseIdArray(values.teacher_ids) : []),
+    ...(values.selected_teacher_ids ? parseIdArray(values.selected_teacher_ids) : []),
+  ];
+  const missingTeacherIds = rawTeacherIds
+    .map((x) => Number(x))
+    .filter((id) => !isNaN(id) && id > 0 && !refTeachers.value.has(id));
+
+  if (missingTeacherIds.length > 0) {
+    await Promise.allSettled(
+      missingTeacherIds.map(async (id) => {
+        try {
+          const res = await teachersApi.getTeacherById(id);
+          const teacher = res.data?.data || res.data;
+          if (teacher?.full_name) {
+            refTeachers.value.set(id, teacher.full_name);
+          }
+        } catch {
+          // ignore
+        }
+      }),
+    );
+  }
+
+  // 3. Missing Guardians
+  const rawGuardianIds = [
+    ...(values.guardian_id ? [values.guardian_id] : []),
+    ...(values.guardian_ids ? parseIdArray(values.guardian_ids) : []),
+  ];
+  const missingGuardianIds = rawGuardianIds
+    .map((x) => Number(x))
+    .filter((id) => !isNaN(id) && id > 0 && !refGuardians.value.has(id));
+
+  if (missingGuardianIds.length > 0) {
+    await Promise.allSettled(
+      missingGuardianIds.map(async (id) => {
+        try {
+          const res = await guardiansApi.getGuardianById(id);
+          const guardian = res.data?.data || res.data;
+          if (guardian?.full_name) {
+            refGuardians.value.set(id, guardian.full_name);
+          }
+        } catch {
+          // ignore
+        }
+      }),
+    );
+  }
+};
 
 watch(
   () => props.isOpen,
-  (open) => {
+  async (open) => {
     if (open) {
       document.body.style.overflow = 'hidden';
       showTechnicalJson.value = false;
+      await loadReferences();
+      if (props.log) {
+        await fetchMissingEntities(props.log);
+      }
     } else {
       document.body.style.overflow = '';
     }
@@ -42,124 +254,93 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => props.log,
+  async (newLog) => {
+    if (newLog && props.isOpen) {
+      await fetchMissingEntities(newLog);
+    }
+  },
+);
+
 onUnmounted(() => {
   document.body.style.overflow = '';
 });
 
-// Translation & Human Formatting
-const formatActionText = (action: string) => {
-  switch (action) {
-    case 'login':
-      return { text: 'تسجيل دخول ناجح', class: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-900/50' };
-    case 'logout':
-      return { text: 'تسجيل خروج من النظام', class: 'text-slate-600 bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700' };
-    case 'user_activated':
-      return { text: 'تفعيل حساب المستخدم', class: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/50' };
-    case 'user_deactivated':
-      return { text: 'إيقاف حساب المستخدم وإلغاء الجلسات', class: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/50' };
-    case 'password_change':
-      return { text: 'تغيير كلمة المرور ذاتياً', class: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50' };
-    case 'admin_reset_password':
-      return { text: 'إعادة تعيين كلمة المرور من الإدارة', class: 'text-purple-600 bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-900/50' };
-    default:
-      return { text: action, class: 'text-slate-700 bg-slate-100 dark:bg-slate-800 border-slate-200' };
+const areValuesEqual = (a: any, b: any): boolean => {
+  if (a === b) return true;
+  if ((a === null || a === undefined || a === '') && (b === null || b === undefined || b === '')) {
+    return true;
   }
+  if (typeof a === 'number' && typeof b === 'string' && !isNaN(Number(b))) {
+    return a === Number(b);
+  }
+  if (typeof b === 'number' && typeof a === 'string' && !isNaN(Number(a))) {
+    return Number(a) === b;
+  }
+  if (typeof a === 'object' && typeof b === 'object' && a !== null && b !== null) {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+  return String(a ?? '').trim() === String(b ?? '').trim();
 };
 
-const formatEntityText = (entity: string) => {
-  switch (entity) {
-    case 'User':
-      return 'حساب مستخدم';
-    case 'PersonalAccessToken':
-      return 'جلسة مصادقة (Token)';
-    default:
-      return entity;
-  }
-};
-
-const getFieldMeta = (key: string) => {
-  switch (key) {
-    case 'is_active':
-      return { label: 'حالة الحساب', icon: UserCheck, desc: 'تغيير حالة تفعيل الحساب' };
-    case 'reason':
-      return { label: 'سبب الإجراء', icon: FileText, desc: 'السبب المدون للتعديل' };
-    case 'role_type':
-      return { label: 'نوع الدور والصلاحية', icon: Shield, desc: 'الدور المؤسسي للحساب' };
-    case 'password':
-    case 'new_password':
-    case 'password_hash':
-      return { label: 'كلمة المرور', icon: KeyRound, desc: 'تحديث بيانات الحماية' };
-    case 'user_code':
-      return { label: 'الرمز المؤسسي', icon: Layers, desc: 'معرف تسجيل الدخول' };
-    case 'last_login_at':
-      return { label: 'توقيت آخر دخول', icon: Clock, desc: 'سجل نشاط المستخدم' };
-    default:
-      return { label: key, icon: Info, desc: 'تعديل حقل بالنظام' };
-  }
-};
-
-const formatFieldValue = (key: string, val: any): { text: string; badgeClass?: string; isMuted?: boolean } => {
-  if (val === null || val === undefined || val === '') {
-    return { text: 'لا يوجد / غير محدد', isMuted: true };
-  }
-
-  if (key === 'is_active') {
-    if (val === 1 || val === true || val === '1') {
-      return {
-        text: 'نشط (متاح للدخول)',
-        badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-black',
-      };
-    }
-    return {
-      text: 'معطل وموقوف (ممنوع من الدخول)',
-      badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 font-black',
-    };
-  }
-
-  if (key === 'role_type') {
-    const roles: Record<string, string> = {
-      admin: 'مدير نظام',
-      teacher: 'معلم',
-      student: 'طالب',
-      parent: 'ولي أمر',
-    };
-    return {
-      text: roles[val] || val,
-      badgeClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30 font-black',
-    };
-  }
-
-  if (key.includes('password')) {
-    return {
-      text: '•••••••• (تم التشفير بأمان)',
-      badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-black',
-    };
-  }
-
-  if (typeof val === 'boolean') {
-    return { text: val ? 'نعم' : 'لا' };
-  }
-
-  if (typeof val === 'object') {
-    return { text: JSON.stringify(val) };
-  }
-
-  return { text: String(val) };
-};
+const ignoredKeys = new Set(['created_at', 'updated_at', 'deleted_at']);
 
 const changesList = computed(() => {
   if (!props.log) return [];
   const oldVals = props.log.old_values || {};
   const newVals = props.log.new_values || {};
 
-  const keys = Array.from(new Set([...Object.keys(oldVals), ...Object.keys(newVals)]));
+  const allKeys = Array.from(new Set([...Object.keys(oldVals), ...Object.keys(newVals)]));
 
-  return keys.map((key) => {
+  // Only keep keys where values actually changed or were newly set/removed
+  const changedKeys = allKeys.filter((key) => {
+    if (ignoredKeys.has(key)) return false;
+
+    const hasOld = key in oldVals && oldVals[key] !== null && oldVals[key] !== undefined;
+    const hasNew = key in newVals && newVals[key] !== null && newVals[key] !== undefined;
+
+    // Both exist: check for actual change
+    if (hasOld && hasNew) {
+      return !areValuesEqual(oldVals[key], newVals[key]);
+    }
+
+    // Only in old (cleared value)
+    if (hasOld && !hasNew) {
+      return oldVals[key] !== '' && oldVals[key] !== null;
+    }
+
+    // Only in new (newly assigned value)
+    if (!hasOld && hasNew) {
+      return newVals[key] !== '' && newVals[key] !== null;
+    }
+
+    return false;
+  });
+
+  const lookupRefs = {
+    classSections: refClassSections.value,
+    classes: refClasses.value,
+    years: refYears.value,
+    terms: refTerms.value,
+    stages: refStages.value,
+    subjects: refSubjects.value,
+    teachers: refTeachers.value,
+    students: refStudents.value,
+    guardians: refGuardians.value,
+    periodSlots: refPeriodSlots.value,
+  };
+
+  return changedKeys.map((key) => {
     const hasOld = key in oldVals;
     const hasNew = key in newVals;
     const meta = getFieldMeta(key);
-    const oldFormatted = hasOld ? formatFieldValue(key, oldVals[key]) : { text: 'لم تكن مسجلة مسبقاً', isMuted: true };
-    const newFormatted = hasNew ? formatFieldValue(key, newVals[key]) : { text: 'تمت إزالتها', isMuted: true };
+    const oldFormatted = hasOld
+      ? formatFieldValue(key, oldVals[key], oldVals, lookupRefs)
+      : { text: 'لم تكن مسجلة مسبقاً', isMuted: true };
+    const newFormatted = hasNew
+      ? formatFieldValue(key, newVals[key], newVals, lookupRefs)
+      : { text: 'تمت إزالتها', isMuted: true };
 
     return {
       key,
@@ -191,10 +372,10 @@ const changesList = computed(() => {
           style="right: 0 !important; left: auto !important;"
         >
           <div
-            class="w-screen max-w-[640px] h-full bg-[var(--bx-surface-solid)] border-s-2 border-bx-border shadow-2xl flex flex-col justify-between overflow-hidden"
+            class="w-screen max-w-[640px] h-full bg-bx-surface border-s-2 border-bx-border shadow-2xl flex flex-col justify-between overflow-hidden"
           >
             <!-- Fixed Header (Compact) -->
-            <div class="px-5 py-4 sm:px-6 border-b border-bx-border shrink-0 flex items-center justify-between bg-[var(--bx-surface-solid)]">
+            <div class="px-5 py-4 sm:px-6 border-b border-bx-border shrink-0 flex items-center justify-between bg-bx-surface">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-black border border-bx-primary/20 shadow-sm">
                   <ShieldAlert class="w-5 h-5" />
@@ -216,14 +397,14 @@ const changesList = computed(() => {
             <!-- Scrollable Content Body -->
             <div class="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 bx-drawer-scroll">
               <!-- Action Summary Banner -->
-              <div v-if="log" class="p-4 rounded-2xl border flex items-center justify-between gap-4" :class="formatActionText(log.action).class">
+              <div v-if="log" class="p-4 rounded-2xl border flex items-center justify-between gap-4" :class="getActionInfo(log.action).badgeClass">
                 <div class="flex items-center gap-3">
                   <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-white/70 dark:bg-black/30 shadow-xs">
                     <CheckCircle2 class="w-5 h-5" />
                   </div>
                   <div>
                     <span class="text-[11px] font-bold block opacity-75">الإجراء الذي تم تنفيذه:</span>
-                    <h4 class="text-sm font-black font-display">{{ formatActionText(log.action).text }}</h4>
+                    <h4 class="text-sm font-black font-display">{{ getActionInfo(log.action).text }}</h4>
                   </div>
                 </div>
                 <span class="font-mono text-xs font-black px-2.5 py-1 rounded-xl bg-white/80 dark:bg-black/40 border border-current/20">
@@ -232,7 +413,7 @@ const changesList = computed(() => {
               </div>
 
               <!-- Metadata Overview Grid -->
-              <div v-if="log" class="p-5 rounded-2xl bg-[var(--bx-table-header)] border border-bx-border grid grid-cols-2 gap-4 text-xs">
+              <div v-if="log" class="p-5 rounded-2xl bg-bx-table-header border border-bx-border grid grid-cols-2 gap-4 text-xs">
                 <div>
                   <span class="text-bx-muted font-bold block mb-1">المستخدم المنفذ:</span>
                   <div class="flex items-center gap-1.5">
@@ -243,7 +424,7 @@ const changesList = computed(() => {
                 <div>
                   <span class="text-bx-muted font-bold block mb-1">الجهة المتأثرة:</span>
                   <span class="font-bold text-bx-title">
-                    {{ formatEntityText(log.entity_type) }} <span class="text-bx-muted font-mono">(رقم: #{{ log.entity_id || 'عام' }})</span>
+                    {{ getEntityInfo(log.entity_type).label }} <span class="text-bx-muted font-mono">(رقم: #{{ log.entity_id || 'عام' }})</span>
                   </span>
                 </div>
 
@@ -282,7 +463,7 @@ const changesList = computed(() => {
                   <div
                     v-for="item in changesList"
                     :key="item.key"
-                    class="p-4 rounded-2xl border border-bx-border bg-[var(--bx-surface-solid)] shadow-xs space-y-3"
+                    class="p-4 rounded-2xl border border-bx-border bg-bx-surface shadow-xs space-y-3"
                   >
                     <!-- Field Header -->
                     <div class="flex items-center justify-between border-b border-bx-border/50 pb-2">
@@ -292,7 +473,6 @@ const changesList = computed(() => {
                         </div>
                         <div>
                           <span class="font-bold text-xs text-bx-title">{{ item.label }}</span>
-                          <span class="text-[10px] text-bx-muted font-mono block">{{ item.key }}</span>
                         </div>
                       </div>
                     </div>
@@ -350,7 +530,7 @@ const changesList = computed(() => {
                 </div>
 
                 <!-- Case 2: No modified fields (e.g. Login / Logout activity) -->
-                <div v-else class="p-5 text-center rounded-2xl bg-[var(--bx-table-header)] border border-bx-border space-y-1 text-xs">
+                <div v-else class="p-5 text-center rounded-2xl bg-bx-table-header border border-bx-border space-y-1 text-xs">
                   <Info class="w-6 h-6 text-bx-muted mx-auto mb-2 opacity-60" />
                   <p class="font-bold text-bx-title">لا توجد قيم محددة تم تعديلها في هذا السجل</p>
                   <p class="text-[11px] text-bx-muted">
