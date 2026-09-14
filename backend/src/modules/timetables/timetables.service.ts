@@ -424,10 +424,9 @@ export class TimetablesService {
         class_section_id: BigInt(dto.class_section_id),
         day_of_week: dto.day_of_week,
         period_slot_id: BigInt(dto.period_slot_id),
-        deleted_at: null,
       },
     });
-    if (existingSectionSlot) {
+    if (existingSectionSlot && !existingSectionSlot.deleted_at) {
       throw new ConflictException(
         'تعارض في الجدول: الشعبة مرتبطة بحصة أخرى في نفس اليوم والتوقيت (uq_timetable_section_slot).',
       );
@@ -451,32 +450,43 @@ export class TimetablesService {
       );
     }
 
-    // 5. Create slot
-    const newSlot = await this.prisma.timetableSlot.create({
-      data: {
-        academic_year_id: BigInt(dto.academic_year_id),
-        class_section_id: BigInt(dto.class_section_id),
-        day_of_week: dto.day_of_week,
-        period_slot_id: BigInt(dto.period_slot_id),
-        teaching_assignment_id: BigInt(dto.teaching_assignment_id),
-      },
-      include: {
-        academic_year: true,
-        period_slot: true,
-        class_section: {
-          include: {
-            class: true,
-            section: true,
-          },
-        },
-        teaching_assignment: {
-          include: {
-            subject: true,
-            teacher: true,
-          },
+    // 5. Create or restore slot
+    const includeQuery = {
+      academic_year: true,
+      period_slot: true,
+      class_section: {
+        include: {
+          class: true,
+          section: true,
         },
       },
-    });
+      teaching_assignment: {
+        include: {
+          subject: true,
+          teacher: true,
+        },
+      },
+    };
+
+    const newSlot = existingSectionSlot
+      ? await this.prisma.timetableSlot.update({
+          where: { id: existingSectionSlot.id },
+          data: {
+            teaching_assignment_id: BigInt(dto.teaching_assignment_id),
+            deleted_at: null,
+          },
+          include: includeQuery,
+        })
+      : await this.prisma.timetableSlot.create({
+          data: {
+            academic_year_id: BigInt(dto.academic_year_id),
+            class_section_id: BigInt(dto.class_section_id),
+            day_of_week: dto.day_of_week,
+            period_slot_id: BigInt(dto.period_slot_id),
+            teaching_assignment_id: BigInt(dto.teaching_assignment_id),
+          },
+          include: includeQuery,
+        });
 
     // 6. Audit log
     await this.auditService.log({
@@ -587,14 +597,18 @@ export class TimetablesService {
         class_section_id: classSectionId,
         day_of_week: dayOfWeek,
         period_slot_id: periodSlotId,
-        deleted_at: null,
         NOT: { id: BigInt(id) },
       },
     });
-    if (sectionCollision) {
+    if (sectionCollision && !sectionCollision.deleted_at) {
       throw new ConflictException(
         'تعارض في الجدول: الشعبة مرتبطة بحصة أخرى في نفس اليوم والتوقيت (uq_timetable_section_slot).',
       );
+    }
+    if (sectionCollision && sectionCollision.deleted_at) {
+      await this.prisma.timetableSlot.delete({
+        where: { id: sectionCollision.id },
+      });
     }
 
     // Check teacher collision

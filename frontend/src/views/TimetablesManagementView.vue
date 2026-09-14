@@ -105,14 +105,13 @@ const showDeleteModal = ref(false);
 const slotToDelete = ref<TimetableSlotItem | null>(null);
 const isDeleting = ref(false);
 
-// Days of week
+// Days of week (Standard 5 school days: Sunday to Thursday)
 const daysOfWeekOptions: { id: DayOfWeek; name: string }[] = [
   { id: 'sunday', name: 'الأحد' },
   { id: 'monday', name: 'الإثنين' },
   { id: 'tuesday', name: 'الثلاثاء' },
   { id: 'wednesday', name: 'الأربعاء' },
   { id: 'thursday', name: 'الخميس' },
-  { id: 'saturday', name: 'السبت' },
 ];
 
 const daySelectOptions: TaqniyaSelectOption[] = daysOfWeekOptions.map((d) => ({

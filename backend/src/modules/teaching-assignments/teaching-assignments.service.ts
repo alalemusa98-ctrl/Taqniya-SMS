@@ -359,25 +359,32 @@ export class TeachingAssignmentsService {
         academic_year_id: BigInt(dto.academic_year_id),
         class_section_id: BigInt(dto.class_section_id),
         subject_id: BigInt(dto.subject_id),
-        deleted_at: null,
       },
     });
 
-    if (existing) {
+    if (existing && !existing.deleted_at) {
       throw new ConflictException(
         'تعارض في الإسناد: هذه المادة مسندة بالفعل لمعلم آخر في هذه الشعبة خلال العام الدراسي الحالي (uq_teaching_assignment).',
       );
     }
 
-    // 3. Create Teaching Assignment atomically
-    const created = await this.prisma.teachingAssignment.create({
-      data: {
-        academic_year_id: BigInt(dto.academic_year_id),
-        class_section_id: BigInt(dto.class_section_id),
-        subject_id: BigInt(dto.subject_id),
-        teacher_id: BigInt(dto.teacher_id),
-      },
-    });
+    // 3. Create or Reactivate Teaching Assignment
+    const created = existing
+      ? await this.prisma.teachingAssignment.update({
+          where: { id: existing.id },
+          data: {
+            teacher_id: BigInt(dto.teacher_id),
+            deleted_at: null,
+          },
+        })
+      : await this.prisma.teachingAssignment.create({
+          data: {
+            academic_year_id: BigInt(dto.academic_year_id),
+            class_section_id: BigInt(dto.class_section_id),
+            subject_id: BigInt(dto.subject_id),
+            teacher_id: BigInt(dto.teacher_id),
+          },
+        });
 
     // 4. Audit Log
     await this.auditService.log({
