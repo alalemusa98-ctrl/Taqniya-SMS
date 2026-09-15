@@ -661,78 +661,107 @@ export class AssignmentsService {
     }
 
     const updateData: any = {};
-    if (dto.academic_year_id !== undefined)
-      updateData.academic_year_id = BigInt(dto.academic_year_id);
-    if (dto.academic_term_id !== undefined)
-      updateData.academic_term_id = BigInt(dto.academic_term_id);
-    if (dto.class_section_id !== undefined)
-      updateData.class_section_id = BigInt(dto.class_section_id);
-    if (dto.teaching_assignment_id !== undefined)
-      updateData.teaching_assignment_id = BigInt(dto.teaching_assignment_id);
     if (dto.title !== undefined) updateData.title = dto.title;
     if (dto.description !== undefined) updateData.description = dto.description;
-    if (dto.attachments !== undefined) updateData.attachments = dto.attachments;
+    if (dto.attachments !== undefined) {
+      updateData.attachments = Array.isArray(dto.attachments)
+        ? JSON.parse(JSON.stringify(dto.attachments))
+        : [];
+    }
     if (dto.assigned_date !== undefined) updateData.assigned_date = assignedDate;
     if (dto.due_date !== undefined) updateData.due_date = dueDate;
 
-    const updated = await this.prisma.assignment.update({
-      where: { id: BigInt(id) },
-      data: updateData,
-      include: {
-        teaching_assignment: {
-          include: {
-            subject: true,
-            teacher: true,
+    // Safe teaching assignment resolution if changed
+    if (
+      dto.teaching_assignment_id !== undefined &&
+      Number(dto.teaching_assignment_id) !== Number(assignment.teaching_assignment_id)
+    ) {
+      const ta = await this.prisma.teachingAssignment.findUnique({
+        where: { id: BigInt(dto.teaching_assignment_id) },
+      });
+      if (ta && ta.deleted_at === null) {
+        updateData.teaching_assignment_id = ta.id;
+        updateData.class_section_id = ta.class_section_id;
+        updateData.academic_year_id = ta.academic_year_id;
+      }
+    }
+
+    // Safe academic term check
+    if (dto.academic_term_id !== undefined) {
+      const termCheck = await this.prisma.academicTerm.findUnique({
+        where: { id: BigInt(dto.academic_term_id) },
+      });
+      if (termCheck && termCheck.deleted_at === null) {
+        updateData.academic_term_id = termCheck.id;
+      }
+    }
+
+    try {
+      const updated = await this.prisma.assignment.update({
+        where: { id: BigInt(id) },
+        data: updateData,
+        include: {
+          teaching_assignment: {
+            include: {
+              subject: true,
+              teacher: true,
+            },
           },
+          creator: true,
         },
-        creator: true,
-      },
-    });
+      });
 
-    await this.auditService.log({
-      userId: BigInt(currentUser.id),
-      action: 'ASSIGNMENT_UPDATED',
-      entityType: 'assignments',
-      entityId: updated.id,
-      oldValues: {
-        title: assignment.title,
-        due_date: assignment.due_date.toISOString().slice(0, 10),
-      },
-      newValues: {
-        title: updated.title,
-        due_date: updated.due_date.toISOString().slice(0, 10),
-      },
-      ipAddress: ipAddress || null,
-      userAgent: userAgent || null,
-    });
+      await this.auditService.log({
+        userId: BigInt(currentUser.id),
+        action: 'ASSIGNMENT_UPDATED',
+        entityType: 'assignments',
+        entityId: updated.id,
+        oldValues: {
+          title: assignment.title,
+          due_date: assignment.due_date.toISOString().slice(0, 10),
+        },
+        newValues: {
+          title: updated.title,
+          due_date: updated.due_date.toISOString().slice(0, 10),
+        },
+        ipAddress: ipAddress || null,
+        userAgent: userAgent || null,
+      });
 
-    const attachments = (updated.attachments as any[]) || [];
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const aStatus =
-      updated.due_date >= new Date(todayStr) ? 'active' : 'expired';
+      const attachments = (updated.attachments as any[]) || [];
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const aStatus =
+        updated.due_date >= new Date(todayStr) ? 'active' : 'expired';
 
-    return {
-      success: true,
-      message: 'تم تحديث بيانات الواجب المدرسي بنجاح.',
-      data: {
-        id: Number(updated.id),
-        academic_year_id: Number(updated.academic_year_id),
-        academic_term_id: Number(updated.academic_term_id),
-        class_section_id: Number(updated.class_section_id),
-        teaching_assignment_id: Number(updated.teaching_assignment_id),
-        subject_name: updated.teaching_assignment.subject.name,
-        teacher_name: updated.teaching_assignment.teacher.full_name,
-        title: updated.title,
-        description: updated.description,
-        assigned_date: updated.assigned_date.toISOString().slice(0, 10),
-        due_date: updated.due_date.toISOString().slice(0, 10),
-        status: aStatus,
-        attachments,
-        updated_at: updated.updated_at
-          ? updated.updated_at.toISOString()
-          : null,
-      },
-    };
+      return {
+        success: true,
+        message: 'تم تحديث بيانات الواجب المدرسي بنجاح.',
+        data: {
+          id: Number(updated.id),
+          academic_year_id: Number(updated.academic_year_id),
+          academic_term_id: Number(updated.academic_term_id),
+          class_section_id: Number(updated.class_section_id),
+          teaching_assignment_id: Number(updated.teaching_assignment_id),
+          subject_name: updated.teaching_assignment.subject.name,
+          teacher_name: updated.teaching_assignment.teacher.full_name,
+          title: updated.title,
+          description: updated.description,
+          assigned_date: updated.assigned_date.toISOString().slice(0, 10),
+          due_date: updated.due_date.toISOString().slice(0, 10),
+          status: aStatus,
+          attachments,
+          updated_at: updated.updated_at
+            ? updated.updated_at.toISOString()
+            : null,
+        },
+      };
+    } catch (err: any) {
+      console.error('Error updating assignment:', err);
+      throw new UnprocessableEntityException({
+        success: false,
+        message: err.message || 'فشل تحديث بيانات الواجب المدرسي.',
+      });
+    }
   }
 
   /**

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, defineAsyncComponent } from 'vue';
+import { ref, computed, watch, defineAsyncComponent, onMounted, onUnmounted } from 'vue';
 import {
   Save,
   BookOpen,
@@ -15,6 +15,11 @@ import {
   Presentation,
   UploadCloud,
   Link2,
+  Eye,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  X,
 } from 'lucide-vue-next';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../ui/TaqniyaSelect.vue';
 import type { HomeworkAttachment, HomeworkItem, HomeworkDetailData } from '../../api/homework.api';
@@ -138,6 +143,27 @@ const formatFileSize = (bytes: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+// Image check helper
+const isImageAttachment = (att: HomeworkAttachment): boolean => {
+  const name = (att.name || '').toLowerCase();
+  const type = (att.type || '').toLowerCase();
+  const url = (att.url || '').toLowerCase();
+
+  return (
+    name.endsWith('.jpg') ||
+    name.endsWith('.jpeg') ||
+    name.endsWith('.png') ||
+    name.endsWith('.webp') ||
+    name.endsWith('.gif') ||
+    name.endsWith('.svg') ||
+    name.endsWith('.bmp') ||
+    type.includes('image') ||
+    url.startsWith('data:image/') ||
+    url.startsWith('blob:') ||
+    url.match(/\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i) !== null
+  );
+};
+
 // Handle Direct File Upload from Device
 const triggerFilePicker = () => {
   fileInputRef.value?.click();
@@ -148,9 +174,19 @@ const handleFileSelect = (event: Event) => {
   if (!target.files || target.files.length === 0) return;
 
   Array.from(target.files).forEach((file) => {
+    const isImg = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name);
+    let previewUrl = `/uploads/assignments/${encodeURIComponent(file.name)}`;
+    if (isImg && typeof URL !== 'undefined' && URL.createObjectURL) {
+      try {
+        previewUrl = URL.createObjectURL(file);
+      } catch (e) {
+        // fallback
+      }
+    }
+
     form.value.attachments.push({
       name: file.name,
-      url: `/uploads/assignments/${encodeURIComponent(file.name)}`,
+      url: previewUrl,
       size: formatFileSize(file.size),
       type: file.type || file.name.split('.').pop() || 'file',
     });
@@ -185,18 +221,85 @@ const removeAttachment = (idx: number) => {
   form.value.attachments.splice(idx, 1);
 };
 
+// Lightbox Preview State for Form
+const previewImage = ref<HomeworkAttachment | null>(null);
+const zoomLevel = ref(1);
+const rotation = ref(0);
+
+const openPreview = (att: HomeworkAttachment) => {
+  if (isImageAttachment(att) && att.url) {
+    previewImage.value = att;
+    zoomLevel.value = 1;
+    rotation.value = 0;
+  } else if (att.url && (att.url.startsWith('http') || att.url.startsWith('/'))) {
+    window.open(att.url, '_blank', 'noopener,noreferrer');
+  }
+};
+
+const closePreview = () => {
+  previewImage.value = null;
+  zoomLevel.value = 1;
+  rotation.value = 0;
+};
+
+const zoomIn = () => {
+  if (zoomLevel.value < 3) {
+    zoomLevel.value = Math.min(3, +(zoomLevel.value + 0.25).toFixed(2));
+  }
+};
+
+const zoomOut = () => {
+  if (zoomLevel.value > 0.5) {
+    zoomLevel.value = Math.max(0.5, +(zoomLevel.value - 0.25).toFixed(2));
+  }
+};
+
+const resetZoom = () => {
+  zoomLevel.value = 1;
+  rotation.value = 0;
+};
+
+const rotateImage = () => {
+  rotation.value = (rotation.value + 90) % 360;
+};
+
+// Keyboard listener for ESC
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && previewImage.value) {
+    closePreview();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+});
+
 // Attachment type meta (Icon, Badge, Color)
 const getAttachmentMeta = (att: HomeworkAttachment) => {
   const name = (att.name || '').toLowerCase();
   const type = (att.type || '').toLowerCase();
   const url = (att.url || '').toLowerCase();
 
+  if (isImageAttachment(att)) {
+    return {
+      icon: ImageIcon,
+      label: 'صورة توضيحية',
+      colorClass: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20',
+      tagColor: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
+      isImage: true,
+    };
+  }
   if (type === 'link' || (!name.includes('.') && url.startsWith('http'))) {
     return {
       icon: Link2,
       label: 'رابط خارجي',
       colorClass: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
       tagColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+      isImage: false,
     };
   }
   if (name.endsWith('.pdf') || type.includes('pdf')) {
@@ -205,6 +308,7 @@ const getAttachmentMeta = (att: HomeworkAttachment) => {
       label: 'مستند PDF',
       colorClass: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20',
       tagColor: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30',
+      isImage: false,
     };
   }
   if (
@@ -219,6 +323,7 @@ const getAttachmentMeta = (att: HomeworkAttachment) => {
       label: 'جدول Excel',
       colorClass: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
       tagColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+      isImage: false,
     };
   }
   if (
@@ -232,6 +337,7 @@ const getAttachmentMeta = (att: HomeworkAttachment) => {
       label: 'مستند Word',
       colorClass: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20',
       tagColor: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
+      isImage: false,
     };
   }
   if (
@@ -245,22 +351,7 @@ const getAttachmentMeta = (att: HomeworkAttachment) => {
       label: 'عرض تقديمي PPT',
       colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
       tagColor: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
-    };
-  }
-  if (
-    name.endsWith('.jpg') ||
-    name.endsWith('.jpeg') ||
-    name.endsWith('.png') ||
-    name.endsWith('.webp') ||
-    name.endsWith('.gif') ||
-    name.endsWith('.svg') ||
-    type.includes('image')
-  ) {
-    return {
-      icon: ImageIcon,
-      label: 'صورة توضيحية',
-      colorClass: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20',
-      tagColor: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
+      isImage: false,
     };
   }
 
@@ -269,6 +360,7 @@ const getAttachmentMeta = (att: HomeworkAttachment) => {
     label: 'ملف مرفق',
     colorClass: 'text-bx-primary bg-purple-500/10 border-purple-500/20',
     tagColor: 'bg-purple-500/10 text-bx-primary border-purple-500/30',
+    isImage: false,
   };
 };
 
@@ -519,17 +611,36 @@ const close = () => {
           <div
             v-for="(att, idx) in form.attachments"
             :key="idx"
-            class="flex items-center justify-between p-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] shadow-2xs"
+            class="flex items-center justify-between p-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] shadow-2xs group"
           >
-            <div class="flex items-center gap-2.5 overflow-hidden">
+            <div
+              class="flex items-center gap-2.5 overflow-hidden cursor-pointer"
+              @click="openPreview(att)"
+              :title="isImageAttachment(att) ? 'معاينة الصورة' : 'معاينة المرفق'"
+            >
+              <!-- Thumbnail for images or Type Icon -->
               <div
+                v-if="isImageAttachment(att) && att.url"
+                class="w-8 h-8 rounded-lg overflow-hidden border border-purple-500/30 bg-purple-500/10 shrink-0 relative group-hover:scale-105 transition-transform flex items-center justify-center"
+              >
+                <img
+                  :src="att.url"
+                  :alt="att.name"
+                  class="w-full h-full object-cover"
+                  @error="(e: any) => { e.target.style.display = 'none'; }"
+                />
+              </div>
+
+              <div
+                v-else
                 class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
                 :class="getAttachmentMeta(att).colorClass"
               >
                 <component :is="getAttachmentMeta(att).icon" class="w-4 h-4" />
               </div>
+
               <div class="truncate">
-                <span class="text-xs font-bold text-bx-title block truncate">{{ att.name }}</span>
+                <span class="text-xs font-bold text-bx-title block truncate group-hover:text-bx-primary transition-colors">{{ att.name }}</span>
                 <div class="flex items-center gap-2 text-[10px] text-bx-muted">
                   <span
                     class="px-1.5 py-0.2 rounded border font-semibold text-[9px]"
@@ -542,14 +653,25 @@ const close = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              @click="removeAttachment(idx)"
-              class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer shrink-0"
-              title="إزالة المرفق"
-            >
-              <Trash2 class="w-4 h-4" />
-            </button>
+            <!-- Action buttons: Preview & Delete -->
+            <div class="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                @click="openPreview(att)"
+                class="p-1.5 text-bx-primary hover:bg-purple-500/10 rounded-lg transition-colors cursor-pointer"
+                :title="isImageAttachment(att) ? 'معاينة الصورة' : 'معاينة الرابط'"
+              >
+                <Eye class="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                @click="removeAttachment(idx)"
+                class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                title="إزالة المرفق"
+              >
+                <Trash2 class="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -578,4 +700,109 @@ const close = () => {
       </div>
     </template>
   </TaqniyaDrawer>
+
+  <!-- Image Preview Lightbox Modal for Form -->
+  <Teleport to="body">
+    <Transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="opacity-0 scale-95"
+      enter-to-class="opacity-100 scale-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="opacity-100 scale-100"
+      leave-to-class="opacity-0 scale-95"
+    >
+      <div
+        v-if="previewImage"
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md"
+        @click.self="closePreview"
+      >
+        <div
+          class="relative w-full max-w-4xl max-h-[92vh] bg-slate-950/95 border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-white"
+          dir="rtl"
+        >
+          <!-- Header -->
+          <div class="flex flex-wrap items-center justify-between px-5 py-3.5 border-b border-white/10 bg-white/[0.02] gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30 shrink-0">
+                <ImageIcon class="w-5 h-5" />
+              </div>
+              <div class="truncate">
+                <h4 class="font-bold text-sm text-white truncate">
+                  {{ previewImage.name }}
+                </h4>
+                <p class="text-[11px] text-slate-400">
+                  معاينة الصورة • {{ previewImage.size || 'حجم أصلي' }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                @click="zoomIn"
+                class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
+                title="تكبير"
+              >
+                <ZoomIn class="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                @click="zoomOut"
+                class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
+                title="تصغير"
+              >
+                <ZoomOut class="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                @click="rotateImage"
+                class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
+                title="تدوير"
+              >
+                <RotateCw class="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                @click="resetZoom"
+                class="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-mono font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
+                title="إعادة ضبط"
+              >
+                {{ Math.round(zoomLevel * 100) }}%
+              </button>
+              <button
+                type="button"
+                @click="closePreview"
+                class="p-2 rounded-xl bg-white/10 hover:bg-rose-500 text-slate-300 hover:text-white transition-all cursor-pointer ml-1"
+                title="إغلاق (Esc)"
+              >
+                <X class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Image Canvas -->
+          <div
+            class="flex-1 overflow-auto p-4 flex items-center justify-center min-h-[350px] max-h-[calc(90vh-120px)] bg-black/50 relative select-none"
+            @dblclick="resetZoom"
+          >
+            <img
+              :src="previewImage.url"
+              :alt="previewImage.name"
+              class="max-w-full max-h-full object-contain rounded-xl transition-transform duration-200 shadow-2xl cursor-zoom-in"
+              :style="{
+                transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,
+              }"
+            />
+          </div>
+
+          <!-- Footer tip -->
+          <div class="px-5 py-2.5 bg-black/60 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400">
+            <span>انقر مرتين لإعادة الحجم الأصلي</span>
+            <span>اضغط Esc أو انقر بالخارج للإغلاق</span>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
