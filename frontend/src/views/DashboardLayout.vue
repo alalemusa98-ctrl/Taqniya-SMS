@@ -18,6 +18,7 @@ import {
   Calendar,
   BookOpen,
   CalendarCheck,
+  CalendarDays,
   Menu,
   X,
 } from 'lucide-vue-next';
@@ -122,6 +123,12 @@ const academicGroup: NavDropdownItem[] = [
     to: '/quizzes',
     description: 'جدولة ونشر مواعيد الاختبارات والتطبيقات الشهرية والمرفقات',
     icon: CalendarCheck,
+  },
+  {
+    label: 'جدول الامتحانات الرسمية',
+    to: '/official-exams',
+    description: 'جدولة ونشر مواعيد الامتحانات النصفية والنهائية ومرفقاتها',
+    icon: CalendarDays,
   },
 ];
 

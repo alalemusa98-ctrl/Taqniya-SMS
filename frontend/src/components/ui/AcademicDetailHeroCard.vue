@@ -6,19 +6,27 @@ import {
   UserCheck,
   Clock,
   GraduationCap,
+  Calendar,
 } from 'lucide-vue-next';
 
-const props = defineProps<{
-  type: 'quiz' | 'homework';
-  title: string;
-  subjectName: string;
-  className?: string;
-  sectionName?: string;
-  teacherName: string;
-  recordId: number;
-  targetDate?: string;
-  status?: 'active' | 'expired' | string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    type?: 'quiz' | 'homework' | 'exam';
+    title: string;
+    subjectName: string;
+    className?: string;
+    sectionName?: string;
+    teacherName?: string;
+    recordId?: number;
+    targetDate?: string;
+    status?: 'active' | 'expired' | string;
+  }>(),
+  {
+    type: 'exam',
+    teacherName: 'إدارة المدرسة والكنترول',
+    recordId: 1,
+  },
+);
 
 // Dynamic Countdown and Timing Status calculation
 const countdownInfo = computed(() => {
@@ -26,7 +34,7 @@ const countdownInfo = computed(() => {
     if (props.status === 'expired') {
       return { label: 'منتهي الصلاحية', isUrgent: false, isPast: true };
     }
-    return { label: 'ساري للتسليم', isUrgent: false, isPast: false };
+    return { label: 'ساري', isUrgent: false, isPast: false };
   }
 
   const today = new Date();
@@ -42,19 +50,19 @@ const countdownInfo = computed(() => {
     const pastDays = Math.abs(diffDays);
     const dayText = pastDays === 1 ? 'يوم واحد' : pastDays === 2 ? 'يومين' : `${pastDays} أيام`;
     return {
-      label: `منتهي (منذ ${dayText})`,
+      label: `انتهى (منذ ${dayText})`,
       isUrgent: false,
       isPast: true,
     };
   } else if (diffDays === 0) {
     return {
-      label: props.type === 'quiz' ? 'موعد الاختبار اليوم!' : 'مستحق اليوم!',
+      label: props.type === 'exam' ? 'موعد الامتحان اليوم!' : props.type === 'quiz' ? 'موعد الاختبار اليوم!' : 'مستحق اليوم!',
       isUrgent: true,
       isPast: false,
     };
   } else if (diffDays === 1) {
     return {
-      label: props.type === 'quiz' ? 'موعد الاختبار غداً' : 'مستحق غداً',
+      label: props.type === 'exam' ? 'موعد الامتحان غداً' : props.type === 'quiz' ? 'موعد الاختبار غداً' : 'مستحق غداً',
       isUrgent: true,
       isPast: false,
     };
@@ -87,7 +95,7 @@ const countdownInfo = computed(() => {
       <!-- Subject, Class, Section (Clean Typography) -->
       <div class="flex items-center gap-2 flex-wrap">
         <span class="inline-flex items-center gap-1.5 text-xs font-black text-bx-primary">
-          <component :is="type === 'quiz' ? GraduationCap : BookOpen" class="w-4 h-4 text-bx-primary" />
+          <component :is="type === 'exam' ? Calendar : type === 'quiz' ? GraduationCap : BookOpen" class="w-4 h-4 text-bx-primary" />
           <span>{{ subjectName }}</span>
         </span>
 
@@ -124,13 +132,13 @@ const countdownInfo = computed(() => {
     <div class="flex items-start gap-4 pt-1 relative z-10">
       <!-- Icon Avatar -->
       <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-purple-500/15 text-bx-primary border border-purple-500/25 flex items-center justify-center shrink-0 shadow-xs">
-        <component :is="type === 'quiz' ? GraduationCap : BookOpen" class="w-7 h-7 stroke-[1.8]" />
+        <component :is="type === 'exam' ? Calendar : type === 'quiz' ? GraduationCap : BookOpen" class="w-7 h-7 stroke-[1.8]" />
       </div>
 
       <!-- Title & Label -->
       <div class="min-w-0 flex-1 space-y-1">
         <span class="text-[11px] font-bold text-bx-muted block">
-          {{ type === 'quiz' ? 'عنوان الاختبار / التطبيق الدوري:' : 'عنوان الواجب / النشاط المنزلي:' }}
+          {{ type === 'exam' ? 'المادة المقررة للامتحان الرسمي:' : type === 'quiz' ? 'عنوان الاختبار / التطبيق الدوري:' : 'عنوان الواجب / النشاط المنزلي:' }}
         </span>
         <h2 class="text-base sm:text-xl font-black text-bx-title font-display leading-snug">
           {{ title }}
@@ -142,13 +150,13 @@ const countdownInfo = computed(() => {
     <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.08] flex items-center justify-between gap-3 text-xs flex-wrap relative z-10">
       <div class="inline-flex items-center gap-2 bg-purple-500/5 dark:bg-white/[0.03] px-3 py-1.5 rounded-xl border border-[#B4AED8]/40 dark:border-white/[0.06]">
         <UserCheck class="w-3.5 h-3.5 text-bx-primary" />
-        <span class="text-bx-muted">{{ type === 'quiz' ? 'المعلم المشرف:' : 'المعلم المسؤول:' }}</span>
+        <span class="text-bx-muted">{{ type === 'exam' ? 'الإشراف والكنترول:' : type === 'quiz' ? 'المعلم المشرف:' : 'المعلم المسؤول:' }}</span>
         <span class="font-bold text-bx-title">{{ teacherName }}</span>
       </div>
 
       <div class="inline-flex items-center gap-1.5 font-mono text-[11px] text-bx-muted bg-[var(--bx-surface-solid)] px-2.5 py-1 rounded-lg border border-[#B4AED8]/40 dark:border-white/[0.06] shadow-2xs">
         <span class="text-bx-primary font-bold">#</span>
-        <span>{{ type === 'quiz' ? 'سجل رقم' : 'تكليف رقم' }} {{ recordId }}</span>
+        <span>{{ type === 'exam' ? 'امتحان رسمي رقم' : type === 'quiz' ? 'سجل رقم' : 'تكليف رقم' }} {{ recordId }}</span>
       </div>
     </div>
   </div>
