@@ -244,10 +244,10 @@ const downloadFile = (att: HomeworkAttachment) => {
 <template>
   <TaqniyaDrawer
     :is-open="modelValue"
-    :title="homework ? `تفاصيل الواجب: ${homework.title}` : 'تفاصيل الواجب المدرسي'"
-    :subtitle="homework ? `المادة: ${homework.subject_name} • المعلم: ${homework.teacher_name}` : ''"
+    title="تفاصيل وبطاقة الواجب المدرسي"
+    :subtitle="homework ? `${homework.subject_name} • ${homework.class_name || ''}` : ''"
     :icon="BookOpen"
-    max-width="max-w-[560px]"
+    max-width="max-w-2xl"
     @close="close"
   >
     <!-- Loading State -->
@@ -263,18 +263,18 @@ const downloadFile = (att: HomeworkAttachment) => {
         <!-- Ambient Background Accent Glow -->
         <div class="absolute -top-12 -left-12 w-36 h-36 bg-bx-primary/10 rounded-full blur-2xl pointer-events-none"></div>
 
-        <!-- Top Meta Row: Subject & Class Badges + Status Badge -->
+        <!-- Top Meta Row: Subject & Class Text Hierarchy (No Badges) + Status Badge -->
         <div class="flex items-center justify-between gap-3 flex-wrap relative z-10">
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-bx-primary text-white shadow-xs">
-              <BookOpen class="w-3.5 h-3.5" />
+            <span class="inline-flex items-center gap-1.5 text-xs font-black text-bx-primary">
+              <BookOpen class="w-4 h-4 text-bx-primary" />
               <span>{{ homework.subject_name }}</span>
             </span>
 
-            <span class="h-4 w-px bg-[#B4AED8]/70 dark:bg-white/20 hidden sm:inline-block"></span>
+            <span v-if="'section_name' in homework || 'class_name' in homework" class="text-[#B4AED8] dark:text-white/20 font-light">/</span>
 
-            <span v-if="'section_name' in homework || 'class_name' in homework" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
-              <School class="w-3.5 h-3.5" />
+            <span v-if="'section_name' in homework || 'class_name' in homework" class="inline-flex items-center gap-1.5 text-xs font-bold text-bx-muted">
+              <School class="w-3.5 h-3.5 text-bx-muted" />
               <span>{{ ('class_name' in homework ? homework.class_name + ' • ' : '') + homework.section_name }}</span>
             </span>
           </div>
@@ -459,29 +459,31 @@ const downloadFile = (att: HomeworkAttachment) => {
               </div>
             </div>
 
-            <!-- Action Buttons: Preview & Download (Circle Action Buttons) -->
-            <div class="flex items-center gap-2 shrink-0">
-              <!-- Preview Button -->
-              <button
-                type="button"
-                @click="openPreview(att)"
-                class="w-9 h-9 rounded-full border border-purple-500/20 bg-purple-500/5 hover:bg-bx-primary text-bx-primary hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
-                :title="isImageAttachment(att) ? 'معاينة الصورة' : 'فتح المرفق'"
-              >
-                <Eye class="w-4 h-4" />
-              </button>
+              <!-- Action Buttons (Circle buttons matching quizzes) -->
+              <div class="flex items-center gap-1.5 shrink-0">
+                <!-- Image Preview Modal trigger -->
+                <button
+                  v-if="isImageAttachment(att)"
+                  type="button"
+                  @click="openPreview(att)"
+                  class="w-9 h-9 rounded-full border border-purple-500/20 bg-purple-500/5 hover:bg-bx-primary text-bx-primary hover:text-white transition-all duration-150 flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                  title="معاينة وتكبير الصورة"
+                >
+                  <Eye class="w-4 h-4" />
+                </button>
 
-              <!-- Download Button -->
-              <button
-                v-if="!isImageAttachment(att) || (att.url || att.file_url)"
-                type="button"
-                @click="downloadFile(att)"
-                class="w-9 h-9 rounded-full border border-bx-primary/20 bg-bx-primary/5 hover:bg-bx-primary text-bx-primary hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
-                :title="`تحميل ملف: ${att.name || att.file_name}`"
-              >
-                <Download class="w-4 h-4" />
-              </button>
-            </div>
+                <!-- Download / External Link -->
+                <a
+                  :href="att.file_url || att.url"
+                  :download="att.file_name || att.name"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="w-9 h-9 rounded-full border border-bx-primary/20 bg-bx-primary/5 hover:bg-bx-primary text-bx-primary hover:text-white transition-all duration-150 flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                  :title="getAttachmentMeta(att).isImage ? 'تحميل الصورة الأصلية' : 'تحميل المرفق أو فتح الرابط'"
+                >
+                  <Download class="w-4 h-4" />
+                </a>
+              </div>
           </div>
         </div>
       </div>

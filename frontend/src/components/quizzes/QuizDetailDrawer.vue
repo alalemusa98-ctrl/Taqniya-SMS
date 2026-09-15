@@ -250,20 +250,22 @@ onUnmounted(() => {
           <!-- Ambient Background Accent Glow -->
           <div class="absolute -top-12 -left-12 w-36 h-36 bg-bx-primary/10 rounded-full blur-2xl pointer-events-none"></div>
 
-          <!-- Top Meta Row: Subject & Class Badges + Countdown Badge -->
+          <!-- Top Meta Row: Subject & Class Text Hierarchy (No Badges) + Countdown Status -->
           <div class="flex items-center justify-between gap-3 flex-wrap relative z-10">
-            <!-- Subject, Class, Section Badges -->
+            <!-- Subject, Class, Section (Clean Typography) -->
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-bx-primary text-white shadow-xs">
-                <BookOpen class="w-3.5 h-3.5" />
+              <span class="inline-flex items-center gap-1.5 text-xs font-black text-bx-primary">
+                <BookOpen class="w-4 h-4 text-bx-primary" />
                 <span>{{ quiz.subject_name }}</span>
               </span>
 
-              <span class="h-4 w-px bg-[#B4AED8]/70 dark:bg-white/20 hidden sm:inline-block"></span>
+              <span class="text-[#B4AED8] dark:text-white/20 font-light">/</span>
 
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
-                <School class="w-3.5 h-3.5" />
-                <span>{{ quiz.class_name }} • {{ quiz.section_name }}</span>
+              <span class="inline-flex items-center gap-1.5 text-xs font-bold text-bx-muted">
+                <School class="w-3.5 h-3.5 text-bx-muted" />
+                <span>{{ quiz.class_name }}</span>
+                <span class="text-bx-muted/60">•</span>
+                <span>{{ quiz.section_name }}</span>
               </span>
             </div>
 
