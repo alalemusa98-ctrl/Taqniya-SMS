@@ -93,6 +93,9 @@ const classBoardData = ref<{
 // Teacher Schedule Data
 const teacherExams = ref<OfficialExam[]>([]);
 
+// Lifecycle / Initialization Guard
+const isInitialized = ref(false);
+
 // Drawer & Modal States
 const isDrawerOpen = ref<boolean>(false);
 const drawerMode = ref<'create' | 'edit'>('create');
@@ -226,9 +229,9 @@ async function loadInitialContext() {
       // Auto find active term for this initial class
       const classTermsList = allClassAcademicTerms.value;
       const classGroup = classTermsList.find((g: any) => Number(g.class_id) === Number(classes.value[0].id));
-      if (classGroup && classGroup.terms) {
-        const activeTerm = classGroup.terms.find((t: any) => Number(t.is_active) === 1);
-        if (activeTerm) {
+      if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
+        const activeTerm = classGroup.terms.find((t: any) => Number(t.is_active) === 1 || t.is_active === true);
+        if (activeTerm && activeTerm.academic_term_id) {
           selectedTermId.value = Number(activeTerm.academic_term_id);
         }
       }
@@ -238,15 +241,18 @@ async function loadInitialContext() {
     }
   } catch (err) {
     console.error('Failed to load academic context:', err);
+  } finally {
+    isInitialized.value = true;
   }
 }
 
 async function fetchOfficialExams() {
+  if (!isInitialized.value) return;
   loading.value = true;
   try {
     if (isStudentOrParent.value && selectedClassId.value) {
       // Student/Parent fetch
-      const res = await officialExamsApi.getByClass(selectedClassId.value, selectedTermId.value || undefined);
+      const res = await officialExamsApi.getByClass(Number(selectedClassId.value), selectedTermId.value || undefined);
       classBoardData.value = res.data.data;
     } else if (isTeacher.value) {
       // Teacher fetch using user ID
@@ -272,10 +278,14 @@ async function fetchOfficialExams() {
       hierarchicalClasses.value = res.data.data.classes || [];
       totalRecords.value = res.data.meta?.total || 0;
 
-      // Also if class board tab is active, fetch class board
+      // Also if class board tab is active, fetch class board defensively
       if (selectedClassId.value) {
-        const boardRes = await officialExamsApi.getByClass(selectedClassId.value, selectedTermId.value || undefined);
-        classBoardData.value = boardRes.data.data;
+        try {
+          const boardRes = await officialExamsApi.getByClass(Number(selectedClassId.value), selectedTermId.value || undefined);
+          classBoardData.value = boardRes.data.data;
+        } catch (boardErr) {
+          console.warn('Could not fetch auxiliary class board data:', boardErr);
+        }
       }
     }
   } catch (err: any) {
@@ -288,6 +298,7 @@ async function fetchOfficialExams() {
 
 // Watch when Class Filter changes to automatically select Active Year & Active Term for that class
 watch(selectedClassId, (newClassId) => {
+  if (!isInitialized.value) return;
   if (newClassId) {
     const classIdNum = Number(newClassId);
     const classTermsList = Array.isArray(allClassAcademicTerms.value)
@@ -311,7 +322,9 @@ watch(selectedClassId, (newClassId) => {
 watch(
   [selectedYearId, selectedTermId, selectedClassId, selectedExamType, selectedExamDate, currentPage],
   () => {
-    fetchOfficialExams();
+    if (isInitialized.value) {
+      fetchOfficialExams();
+    }
   },
 );
 

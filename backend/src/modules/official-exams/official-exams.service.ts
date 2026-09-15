@@ -161,7 +161,7 @@ export class OfficialExamsService {
 
     const ids = idRows.map((r) => r.id);
 
-    const exams = ids.length
+    const examsRaw = ids.length
       ? await this.prisma.officialExam.findMany({
           where: { id: { in: ids } },
           include: {
@@ -170,9 +170,11 @@ export class OfficialExamsService {
             class: true,
             subject: true,
           },
-          orderBy,
         })
       : [];
+
+    const examMap = new Map(examsRaw.map((e) => [e.id.toString(), e]));
+    const exams = ids.map((id) => examMap.get(id.toString())!).filter(Boolean);
 
     const formattedItems = exams.map((exam) => {
       const attachments = (exam.attachments as any[]) || [];
@@ -345,17 +347,27 @@ export class OfficialExamsService {
       where.academic_term_id = BigInt(termId);
     }
 
-    const exams = await this.prisma.officialExam.findMany({
+    const idRecords = await this.prisma.officialExam.findMany({
       where,
-      include: {
-        academic_year: true,
-        academic_term: true,
-        subject: true,
-      },
-      orderBy: {
-        exam_date: 'asc',
-      },
+      select: { id: true },
+      orderBy: [{ exam_date: 'asc' }, { id: 'asc' }],
     });
+
+    const targetIds = idRecords.map((r) => r.id);
+
+    const examsRaw = targetIds.length
+      ? await this.prisma.officialExam.findMany({
+          where: { id: { in: targetIds } },
+          include: {
+            academic_year: true,
+            academic_term: true,
+            subject: true,
+          },
+        })
+      : [];
+
+    const examMap = new Map(examsRaw.map((e) => [e.id.toString(), e]));
+    const exams = targetIds.map((id) => examMap.get(id.toString())!).filter(Boolean);
 
     const examTypesMap = new Map<string, any>();
 
@@ -472,18 +484,28 @@ export class OfficialExamsService {
       where.academic_term_id = BigInt(termId);
     }
 
-    const exams = await this.prisma.officialExam.findMany({
+    const idRecords = await this.prisma.officialExam.findMany({
       where,
-      include: {
-        academic_year: true,
-        academic_term: true,
-        class: true,
-        subject: true,
-      },
-      orderBy: {
-        exam_date: 'asc',
-      },
+      select: { id: true },
+      orderBy: [{ exam_date: 'asc' }, { id: 'asc' }],
     });
+
+    const targetIds = idRecords.map((r) => r.id);
+
+    const examsRaw = targetIds.length
+      ? await this.prisma.officialExam.findMany({
+          where: { id: { in: targetIds } },
+          include: {
+            academic_year: true,
+            academic_term: true,
+            class: true,
+            subject: true,
+          },
+        })
+      : [];
+
+    const examMap = new Map(examsRaw.map((e) => [e.id.toString(), e]));
+    const exams = targetIds.map((id) => examMap.get(id.toString())!).filter(Boolean);
 
     const formattedExams = exams.map((exam) => {
       const attachments = (exam.attachments as any[]) || [];
