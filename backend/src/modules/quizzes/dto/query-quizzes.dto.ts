@@ -4,6 +4,8 @@ import { Type } from 'class-transformer';
 export enum QuizStatusFilter {
   upcoming = 'upcoming',
   completed = 'completed',
+  active = 'active',
+  expired = 'expired',
   all = 'all',
 }
 
@@ -49,7 +51,7 @@ export class QueryQuizzesDto {
 
   @IsOptional()
   @IsEnum(QuizStatusFilter)
-  status?: QuizStatusFilter = QuizStatusFilter.upcoming;
+  status?: QuizStatusFilter;
 
   @IsOptional()
   @IsString()

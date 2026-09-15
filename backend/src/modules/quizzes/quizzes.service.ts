@@ -229,13 +229,23 @@ export class QuizzesService {
       where.quiz_date = new Date(query.quiz_date);
     }
 
-    // Status filter: upcoming / completed
+    // Status filter: upcoming / active vs completed / expired
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    if (query.status === QuizStatusFilter.upcoming) {
+    if (
+      query.status === QuizStatusFilter.upcoming ||
+      query.status === QuizStatusFilter.active ||
+      (query.status as any) === 'upcoming' ||
+      (query.status as any) === 'active'
+    ) {
       where.quiz_date = { gte: today };
-    } else if (query.status === QuizStatusFilter.completed) {
+    } else if (
+      query.status === QuizStatusFilter.completed ||
+      query.status === QuizStatusFilter.expired ||
+      (query.status as any) === 'completed' ||
+      (query.status as any) === 'expired'
+    ) {
       where.quiz_date = { lt: today };
     }
 

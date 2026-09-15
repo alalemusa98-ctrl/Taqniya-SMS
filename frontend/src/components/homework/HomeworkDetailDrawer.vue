@@ -13,16 +13,15 @@ import {
   Link2,
   Edit2,
   Loader2,
-  School,
   Sparkles,
   Eye,
   ZoomIn,
   ZoomOut,
   RotateCw,
   X,
-  UserCheck,
 } from 'lucide-vue-next';
 import type { HomeworkDetailData, HomeworkAttachment } from '../../api/homework.api';
+import AcademicDetailHeroCard from '../ui/AcademicDetailHeroCard.vue';
 
 const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
 
@@ -258,74 +257,18 @@ const downloadFile = (att: HomeworkAttachment) => {
 
     <!-- Content State -->
     <div v-else-if="homework" class="space-y-5" dir="rtl">
-      <!-- 1. Hero Header Card (With Enhanced Visual Dividers & Structure) -->
-      <div class="relative overflow-hidden p-5 sm:p-6 rounded-3xl border border-[#B4AED8] dark:border-white/[0.1] bg-gradient-to-br from-purple-500/[0.08] via-purple-500/[0.03] to-[var(--bx-surface-solid)] shadow-sm space-y-4">
-        <!-- Ambient Background Accent Glow -->
-        <div class="absolute -top-12 -left-12 w-36 h-36 bg-bx-primary/10 rounded-full blur-2xl pointer-events-none"></div>
-
-        <!-- Top Meta Row: Subject & Class Text Hierarchy (No Badges) + Status Badge -->
-        <div class="flex items-center justify-between gap-3 flex-wrap relative z-10">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="inline-flex items-center gap-1.5 text-xs font-black text-bx-primary">
-              <BookOpen class="w-4 h-4 text-bx-primary" />
-              <span>{{ homework.subject_name }}</span>
-            </span>
-
-            <span v-if="'section_name' in homework || 'class_name' in homework" class="text-[#B4AED8] dark:text-white/20 font-light">/</span>
-
-            <span v-if="'section_name' in homework || 'class_name' in homework" class="inline-flex items-center gap-1.5 text-xs font-bold text-bx-muted">
-              <School class="w-3.5 h-3.5 text-bx-muted" />
-              <span>{{ ('class_name' in homework ? homework.class_name + ' • ' : '') + homework.section_name }}</span>
-            </span>
-          </div>
-
-          <!-- Status Badge -->
-          <span
-            class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold border shadow-xs"
-            :class="
-              homework.status === 'active'
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30'
-            "
-          >
-            <Clock class="w-3.5 h-3.5" />
-            <span>{{ homework.status === 'active' ? 'ساري للتسليم' : 'منتهي الصلاحية' }}</span>
-          </span>
-        </div>
-
-        <!-- Visual Subtle Gradient Divider 1 -->
-        <div class="h-px w-full bg-gradient-to-r from-transparent via-[#B4AED8]/60 dark:via-white/10 to-transparent"></div>
-
-        <!-- Main Content Showcase: Avatar Icon + Title -->
-        <div class="flex items-start gap-4 pt-1 relative z-10">
-          <!-- Icon Avatar -->
-          <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-purple-500/15 text-bx-primary border border-purple-500/25 flex items-center justify-center shrink-0 shadow-xs">
-            <BookOpen class="w-7 h-7 stroke-[1.8]" />
-          </div>
-
-          <!-- Title -->
-          <div class="min-w-0 flex-1 space-y-1">
-            <span class="text-[11px] font-bold text-bx-muted block">عنوان الواجب / النشاط المنزلي:</span>
-            <h2 class="text-base sm:text-xl font-black text-bx-title font-display leading-snug">
-              {{ homework.title }}
-            </h2>
-          </div>
-        </div>
-
-        <!-- Visual Subtle Gradient Divider 2 & Supervisor Meta Footer -->
-        <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.08] flex items-center justify-between gap-3 text-xs flex-wrap relative z-10">
-          <div class="inline-flex items-center gap-2 bg-purple-500/5 dark:bg-white/[0.03] px-3 py-1.5 rounded-xl border border-[#B4AED8]/40 dark:border-white/[0.06]">
-            <UserCheck class="w-3.5 h-3.5 text-bx-primary" />
-            <span class="text-bx-muted">المعلم المسؤول:</span>
-            <span class="font-bold text-bx-title">{{ homework.teacher_name }}</span>
-          </div>
-
-          <div class="inline-flex items-center gap-1.5 font-mono text-[11px] text-bx-muted bg-[var(--bx-surface-solid)] px-2.5 py-1 rounded-lg border border-[#B4AED8]/40 dark:border-white/[0.06] shadow-2xs">
-            <span class="text-bx-primary font-bold">#</span>
-            <span>تكليف رقم {{ homework.id }}</span>
-          </div>
-        </div>
-      </div>
+      <!-- 1. Hero Header Card Component -->
+      <AcademicDetailHeroCard
+        type="homework"
+        :title="homework.title"
+        :subject-name="homework.subject_name"
+        :class-name="'class_name' in homework ? homework.class_name : undefined"
+        :section-name="'section_name' in homework ? homework.section_name : undefined"
+        :teacher-name="homework.teacher_name"
+        :record-id="homework.id"
+        :target-date="homework.due_date"
+        :status="homework.status"
+      />
 
       <!-- 2. Dates Section (With Section Divider) -->
       <div class="space-y-3">

@@ -173,8 +173,8 @@ const teacherOptions = computed<TaqniyaSelectOption[]>(() => {
 // 5. Status Filter Options
 const statusOptions: TaqniyaSelectOption[] = [
   { value: 'all', label: 'كافة الحالات' },
-  { value: 'upcoming', label: 'الاختبارات القادمة والمجدولة' },
-  { value: 'completed', label: 'الاختبارات المنجزة والسابقة' },
+  { value: 'upcoming', label: 'الاختبارات القادمة (السارية)' },
+  { value: 'completed', label: 'الاختبارات السابقة (المنتهية)' },
 ];
 
 // When Class Filter changes, reset dependent Section and Subject filters
@@ -390,7 +390,11 @@ const fetchQuizzes = async (page = 1) => {
     if (appliedSectionFilter.value !== 'all') params.class_section_id = Number(appliedSectionFilter.value);
     if (appliedSubjectFilter.value !== 'all') params.subject_id = Number(appliedSubjectFilter.value);
     if (appliedTeacherFilter.value !== 'all') params.teacher_id = Number(appliedTeacherFilter.value);
-    if (appliedStatusFilter.value !== 'all') params.status = appliedStatusFilter.value;
+    if (appliedStatusFilter.value && appliedStatusFilter.value !== 'all') {
+      params.status = appliedStatusFilter.value;
+    } else {
+      params.status = 'all';
+    }
     if (appliedQuizDate.value) params.quiz_date = appliedQuizDate.value;
 
     const res = await quizzesApi.getAll(params);
