@@ -10,6 +10,9 @@ import {
   Loader2,
   Calendar,
   FileText,
+  FileSpreadsheet,
+  Image as ImageIcon,
+  Presentation,
   UploadCloud,
   Link2,
 } from 'lucide-vue-next';
@@ -180,6 +183,93 @@ const addUrlAttachment = () => {
 
 const removeAttachment = (idx: number) => {
   form.value.attachments.splice(idx, 1);
+};
+
+// Attachment type meta (Icon, Badge, Color)
+const getAttachmentMeta = (att: HomeworkAttachment) => {
+  const name = (att.name || '').toLowerCase();
+  const type = (att.type || '').toLowerCase();
+  const url = (att.url || '').toLowerCase();
+
+  if (type === 'link' || (!name.includes('.') && url.startsWith('http'))) {
+    return {
+      icon: Link2,
+      label: 'رابط خارجي',
+      colorClass: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+      tagColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+    };
+  }
+  if (name.endsWith('.pdf') || type.includes('pdf')) {
+    return {
+      icon: FileText,
+      label: 'مستند PDF',
+      colorClass: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20',
+      tagColor: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30',
+    };
+  }
+  if (
+    name.endsWith('.xls') ||
+    name.endsWith('.xlsx') ||
+    name.endsWith('.csv') ||
+    type.includes('sheet') ||
+    type.includes('excel')
+  ) {
+    return {
+      icon: FileSpreadsheet,
+      label: 'جدول Excel',
+      colorClass: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+      tagColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    };
+  }
+  if (
+    name.endsWith('.doc') ||
+    name.endsWith('.docx') ||
+    type.includes('word') ||
+    type.includes('document')
+  ) {
+    return {
+      icon: FileText,
+      label: 'مستند Word',
+      colorClass: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20',
+      tagColor: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
+    };
+  }
+  if (
+    name.endsWith('.ppt') ||
+    name.endsWith('.pptx') ||
+    type.includes('presentation') ||
+    type.includes('powerpoint')
+  ) {
+    return {
+      icon: Presentation,
+      label: 'عرض تقديمي PPT',
+      colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
+      tagColor: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    };
+  }
+  if (
+    name.endsWith('.jpg') ||
+    name.endsWith('.jpeg') ||
+    name.endsWith('.png') ||
+    name.endsWith('.webp') ||
+    name.endsWith('.gif') ||
+    name.endsWith('.svg') ||
+    type.includes('image')
+  ) {
+    return {
+      icon: ImageIcon,
+      label: 'صورة توضيحية',
+      colorClass: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20',
+      tagColor: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
+    };
+  }
+
+  return {
+    icon: FileText,
+    label: 'ملف مرفق',
+    colorClass: 'text-bx-primary bg-purple-500/10 border-purple-500/20',
+    tagColor: 'bg-purple-500/10 text-bx-primary border-purple-500/30',
+  };
 };
 
 const validate = (): boolean => {
@@ -432,15 +522,22 @@ const close = () => {
             class="flex items-center justify-between p-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] shadow-2xs"
           >
             <div class="flex items-center gap-2.5 overflow-hidden">
-              <div class="w-7 h-7 rounded-lg bg-purple-500/10 text-bx-primary flex items-center justify-center shrink-0">
-                <FileText v-if="att.type !== 'link'" class="w-4 h-4" />
-                <Link2 v-else class="w-4 h-4" />
+              <div
+                class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
+                :class="getAttachmentMeta(att).colorClass"
+              >
+                <component :is="getAttachmentMeta(att).icon" class="w-4 h-4" />
               </div>
               <div class="truncate">
                 <span class="text-xs font-bold text-bx-title block truncate">{{ att.name }}</span>
                 <div class="flex items-center gap-2 text-[10px] text-bx-muted">
-                  <span v-if="att.size">{{ att.size }}</span>
-                  <span v-if="att.type" class="uppercase font-mono font-semibold">{{ att.type }}</span>
+                  <span
+                    class="px-1.5 py-0.2 rounded border font-semibold text-[9px]"
+                    :class="getAttachmentMeta(att).tagColor"
+                  >
+                    {{ getAttachmentMeta(att).label }}
+                  </span>
+                  <span v-if="att.size" class="font-mono">{{ att.size }}</span>
                 </div>
               </div>
             </div>
