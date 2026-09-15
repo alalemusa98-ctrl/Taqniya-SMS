@@ -440,7 +440,7 @@ export class OfficialExamsService {
         message: 'تم جلب جدول الامتحانات الرسمية لمواد المعلم بنجاح.',
         data: {
           teacher_id: Number(teacher.id),
-          teacher_name: `${teacher.first_name} ${teacher.last_name}`,
+          teacher_name: teacher.full_name,
           exams: [],
         },
       };
@@ -495,7 +495,7 @@ export class OfficialExamsService {
       message: 'تم جلب جدول الامتحانات الرسمية لمواد المعلم بنجاح.',
       data: {
         teacher_id: Number(teacher.id),
-        teacher_name: `${teacher.first_name} ${teacher.last_name}`,
+        teacher_name: teacher.full_name,
         exams: formattedExams,
       },
     };
