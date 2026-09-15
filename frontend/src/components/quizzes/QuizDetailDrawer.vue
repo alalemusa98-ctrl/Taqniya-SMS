@@ -17,6 +17,11 @@ import {
   ZoomOut,
   RotateCw,
   X,
+  GraduationCap,
+  BookOpen,
+  School,
+  UserCheck,
+  Sparkles,
 } from 'lucide-vue-next';
 import type { QuizDetailData, QuizAttachment } from '../../api/quizzes.api';
 
@@ -173,6 +178,8 @@ const countdownInfo = computed(() => {
     return { label: 'موعد الاختبار اليوم!', isUrgent: true, isPast: false };
   } else if (diffDays === 1) {
     return { label: 'موعد الاختبار غداً', isUrgent: true, isPast: false };
+  } else if (diffDays === 2) {
+    return { label: 'متبقي يومان', isUrgent: false, isPast: false };
   } else {
     return { label: `متبقي ${diffDays} أيام`, isUrgent: false, isPast: false };
   }
@@ -226,6 +233,8 @@ onUnmounted(() => {
     <TaqniyaDrawer
       :is-open="modelValue"
       title="تفاصيل وبطاقة الاختبار الدوري"
+      :subtitle="quiz ? `${quiz.subject_name} • ${quiz.class_name}` : ''"
+      :icon="GraduationCap"
       max-width="max-w-2xl"
       @close="close"
     >
@@ -236,22 +245,32 @@ onUnmounted(() => {
       </div>
 
       <div v-else-if="quiz" class="space-y-6 text-start" dir="rtl">
-        <!-- 1. Header Card Banner -->
-        <div class="p-5 rounded-2xl border border-[#B4AED8] dark:border-white/[0.1] bg-purple-500/[0.04] dark:bg-white/[0.02] space-y-3">
-          <div class="flex items-center justify-between gap-3 flex-wrap">
-            <div class="flex items-center gap-2">
-              <span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
-                {{ quiz.subject_name }}
+        <!-- 1. Hero Header Card (With Enhanced Visual Dividers & Structure) -->
+        <div class="relative overflow-hidden p-5 sm:p-6 rounded-3xl border border-[#B4AED8] dark:border-white/[0.1] bg-gradient-to-br from-purple-500/[0.08] via-purple-500/[0.03] to-[var(--bx-surface-solid)] shadow-sm space-y-4">
+          <!-- Ambient Background Accent Glow -->
+          <div class="absolute -top-12 -left-12 w-36 h-36 bg-bx-primary/10 rounded-full blur-2xl pointer-events-none"></div>
+
+          <!-- Top Meta Row: Subject & Class Badges + Countdown Badge -->
+          <div class="flex items-center justify-between gap-3 flex-wrap relative z-10">
+            <!-- Subject, Class, Section Badges -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-bx-primary text-white shadow-xs">
+                <BookOpen class="w-3.5 h-3.5" />
+                <span>{{ quiz.subject_name }}</span>
               </span>
-              <span class="text-xs text-bx-muted font-bold">
-                {{ quiz.class_name }} • {{ quiz.section_name }}
+
+              <span class="h-4 w-px bg-[#B4AED8]/70 dark:bg-white/20 hidden sm:inline-block"></span>
+
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
+                <School class="w-3.5 h-3.5" />
+                <span>{{ quiz.class_name }} • {{ quiz.section_name }}</span>
               </span>
             </div>
 
-            <!-- Status Badge -->
+            <!-- Countdown / Deadline Status Badge -->
             <span
               v-if="countdownInfo"
-              class="px-3 py-1 rounded-full text-xs font-bold border shadow-2xs"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold border shadow-xs"
               :class="
                 countdownInfo.isPast
                   ? 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20'
@@ -260,76 +279,123 @@ onUnmounted(() => {
                   : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
               "
             >
-              {{ countdownInfo.label }}
+              <Clock class="w-3.5 h-3.5" />
+              <span>{{ countdownInfo.label }}</span>
             </span>
           </div>
 
-          <h2 class="text-base sm:text-lg font-black text-bx-title font-display leading-tight">
-            {{ quiz.title }}
-          </h2>
+          <!-- Visual Subtle Gradient Divider 1 -->
+          <div class="h-px w-full bg-gradient-to-r from-transparent via-[#B4AED8]/60 dark:via-white/10 to-transparent"></div>
 
-          <div class="flex items-center gap-4 text-xs text-bx-muted pt-1">
-            <div class="flex items-center gap-1.5">
-              <span>المعلم المشرف:</span>
+          <!-- Main Content Showcase: Avatar Icon + Title -->
+          <div class="flex items-start gap-4 pt-1 relative z-10">
+            <!-- Icon Avatar -->
+            <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-purple-500/15 text-bx-primary border border-purple-500/25 flex items-center justify-center shrink-0 shadow-xs">
+              <GraduationCap class="w-7 h-7 stroke-[1.8]" />
+            </div>
+
+            <!-- Title -->
+            <div class="min-w-0 flex-1 space-y-1">
+              <span class="text-[11px] font-bold text-bx-muted block">عنوان الاختبار / التطبيق الدوري:</span>
+              <h2 class="text-base sm:text-xl font-black text-bx-title font-display leading-snug">
+                {{ quiz.title }}
+              </h2>
+            </div>
+          </div>
+
+          <!-- Visual Subtle Gradient Divider 2 & Supervisor Meta Footer -->
+          <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.08] flex items-center justify-between gap-3 text-xs flex-wrap relative z-10">
+            <div class="inline-flex items-center gap-2 bg-purple-500/5 dark:bg-white/[0.03] px-3 py-1.5 rounded-xl border border-[#B4AED8]/40 dark:border-white/[0.06]">
+              <UserCheck class="w-3.5 h-3.5 text-bx-primary" />
+              <span class="text-bx-muted">المعلم المشرف:</span>
               <span class="font-bold text-bx-title">{{ quiz.teacher_name }}</span>
             </div>
-          </div>
-        </div>
 
-        <!-- 2. Timing and Academic Dates Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          <div class="p-3.5 rounded-xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-1">
-            <div class="flex items-center gap-1.5 text-xs text-bx-muted font-bold">
-              <Calendar class="w-4 h-4 text-bx-primary" />
-              <span>تاريخ إجراء الاختبار</span>
-            </div>
-            <div class="text-sm font-bold text-bx-title font-mono ps-5">
-              {{ formatDate(quiz.quiz_date) }}
-            </div>
-          </div>
-
-          <div class="p-3.5 rounded-xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-1">
-            <div class="flex items-center gap-1.5 text-xs text-bx-muted font-bold">
-              <Clock class="w-4 h-4 text-bx-primary" />
-              <span>تاريخ الإضافة والنشر</span>
-            </div>
-            <div class="text-sm font-bold text-bx-title font-mono ps-5">
-              {{ formatDate(quiz.created_at) }}
+            <div class="inline-flex items-center gap-1.5 font-mono text-[11px] text-bx-muted bg-[var(--bx-surface-solid)] px-2.5 py-1 rounded-lg border border-[#B4AED8]/40 dark:border-white/[0.06] shadow-2xs">
+              <span class="text-bx-primary font-bold">#</span>
+              <span>سجل رقم {{ quiz.id }}</span>
             </div>
           </div>
         </div>
 
-        <!-- 3. Description & Topics -->
-        <div class="space-y-2">
-          <h4 class="text-xs font-bold text-bx-title flex items-center gap-1.5">
-            <FileText class="w-4 h-4 text-bx-primary" />
-            <span>مواضيع الاختبار والتعليمات والملاحظات</span>
-          </h4>
+        <!-- 2. Timing and Academic Dates Section (With Section Divider) -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
+            <div class="w-2 h-4 rounded-full bg-bx-primary"></div>
+            <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+            <span>الجدول الزمني وموعد الاختبار</span>
+            <div class="h-px flex-1 bg-gradient-to-l from-transparent to-[#B4AED8]/40 dark:to-white/10"></div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div class="p-4 rounded-2xl border border-[#B4AED8]/70 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-1.5 shadow-2xs hover:border-bx-primary/40 transition-colors">
+              <div class="flex items-center gap-2 text-xs text-bx-muted font-bold">
+                <div class="w-6 h-6 rounded-lg bg-purple-500/10 text-bx-primary flex items-center justify-center">
+                  <Calendar class="w-3.5 h-3.5" />
+                </div>
+                <span>تاريخ إجراء الاختبار</span>
+              </div>
+              <div class="text-sm font-black text-bx-title font-mono ps-8">
+                {{ formatDate(quiz.quiz_date) }}
+              </div>
+            </div>
+
+            <div class="p-4 rounded-2xl border border-[#B4AED8]/70 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-1.5 shadow-2xs hover:border-bx-primary/40 transition-colors">
+              <div class="flex items-center gap-2 text-xs text-bx-muted font-bold">
+                <div class="w-6 h-6 rounded-lg bg-purple-500/10 text-bx-primary flex items-center justify-center">
+                  <Clock class="w-3.5 h-3.5" />
+                </div>
+                <span>تاريخ الإضافة والنشر</span>
+              </div>
+              <div class="text-sm font-black text-bx-title font-mono ps-8">
+                {{ formatDate(quiz.created_at) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Description & Notes Section (With Section Divider) -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
+            <div class="w-2 h-4 rounded-full bg-bx-primary"></div>
+            <Sparkles class="w-3.5 h-3.5 text-bx-primary" />
+            <span>محاور الاختبار وملاحظات المراجعة</span>
+            <div class="h-px flex-1 bg-gradient-to-l from-transparent to-[#B4AED8]/40 dark:to-white/10"></div>
+          </div>
+
           <div
             v-if="quiz.description"
-            class="p-4 rounded-xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] text-xs text-bx-title leading-relaxed whitespace-pre-line"
+            class="p-4 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-purple-500/[0.02] text-xs text-bx-title leading-relaxed whitespace-pre-wrap font-medium shadow-2xs"
           >
             {{ quiz.description }}
           </div>
           <div
             v-else
-            class="p-4 rounded-xl border border-[#B4AED8]/40 dark:border-white/[0.06] bg-purple-500/[0.02] text-xs text-bx-muted italic"
+            class="p-4 rounded-2xl border border-dashed border-[#B4AED8]/60 dark:border-white/[0.08] text-xs text-bx-muted text-center"
           >
-            لا توجد تعليمات أو ملاحظات نصية إضافية لهذا الاختبار.
+            لا توجد تعليمات أو ملاحظات إضافية مسجلة لهذا الاختبار
           </div>
         </div>
 
-        <!-- 4. Attachments Section -->
-        <div class="space-y-3 pt-2">
+        <!-- 4. Attachments Section (With Section Divider) -->
+        <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <h4 class="text-xs font-bold text-bx-title flex items-center gap-1.5">
-              <Paperclip class="w-4 h-4 text-bx-primary" />
-              <span>مذكرات وملازم المراجعة المرفقة</span>
-              <span class="text-[11px] font-normal text-bx-muted">({{ attachmentsList.length }})</span>
-            </h4>
+            <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
+              <div class="w-2 h-4 rounded-full bg-bx-primary"></div>
+              <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
+              <span>أوراق العمل ومذكرات المراجعة المرفقة</span>
+              <div class="h-px w-16 bg-gradient-to-l from-transparent to-[#B4AED8]/40 dark:to-white/10"></div>
+            </div>
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
+              {{ attachmentsList.length }} مرفقات
+            </span>
           </div>
 
-          <div v-if="attachmentsList.length > 0" class="space-y-2.5">
+          <div v-if="attachmentsList.length === 0" class="p-6 rounded-2xl border border-dashed border-[#B4AED8]/60 dark:border-white/[0.08] text-center text-xs text-bx-muted">
+            لا توجد مرفقات أو ملازم مرفقة بهذا الاختبار
+          </div>
+
+          <div v-else class="space-y-2.5">
             <div
               v-for="(att, idx) in attachmentsList"
               :key="idx"
@@ -375,45 +441,41 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <!-- Actions: Preview / Download -->
-              <div class="flex items-center gap-2 shrink-0">
+              <!-- Action Buttons (Circle buttons) -->
+              <div class="flex items-center gap-1.5 shrink-0">
+                <!-- Image Preview Modal trigger -->
                 <button
                   v-if="isImageAttachment(att)"
                   type="button"
                   @click="openImageModal(att)"
-                  class="w-9 h-9 rounded-full border border-purple-500/25 bg-purple-500/5 hover:bg-bx-primary text-bx-primary hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
-                  title="تكبير الصورة"
+                  class="w-9 h-9 rounded-full border border-purple-500/20 bg-purple-500/5 hover:bg-bx-primary text-bx-primary hover:text-white transition-all duration-150 flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                  title="معاينة وتكبير الصورة"
                 >
                   <Eye class="w-4 h-4" />
                 </button>
+
+                <!-- Download / External Link -->
                 <a
                   :href="att.file_url || att.url"
+                  :download="att.file_name || att.name"
                   target="_blank"
                   rel="noopener noreferrer"
-                  :download="att.file_name || att.name"
-                  class="w-9 h-9 rounded-full border border-[#B4AED8]/60 dark:border-white/10 hover:border-bx-primary hover:bg-bx-primary text-bx-muted hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
-                  title="فتح أو تحميل المرفق"
+                  class="w-9 h-9 rounded-full border border-bx-primary/20 bg-bx-primary/5 hover:bg-bx-primary text-bx-primary hover:text-white transition-all duration-150 flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                  :title="getAttachmentMeta(att).isImage ? 'تحميل الصورة الأصلية' : 'تحميل المرفق أو فتح الرابط'"
                 >
                   <Download class="w-4 h-4" />
                 </a>
               </div>
             </div>
           </div>
-
-          <div
-            v-else
-            class="p-5 text-center rounded-xl border border-dashed border-[#B4AED8]/50 dark:border-white/[0.08] text-xs text-bx-muted"
-          >
-            لا توجد مذكرات أو ملفات مرفقة بهذا الاختبار.
-          </div>
         </div>
 
         <!-- Footer Actions -->
-        <div class="flex items-center justify-between pt-6 border-t border-[#B4AED8]/60 dark:border-white/10">
+        <div class="flex items-center justify-between gap-3 pt-6 border-t border-[#B4AED8]/60 dark:border-white/10">
           <button
             type="button"
             @click="close"
-            class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+            class="px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
           >
             إغلاق
           </button>
@@ -421,11 +483,11 @@ onUnmounted(() => {
           <button
             v-if="canEdit"
             type="button"
-            @click="emit('edit', quiz); close();"
-            class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer"
+            @click="emit('edit', quiz)"
+            class="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer"
           >
             <Edit2 class="w-3.5 h-3.5" />
-            <span>تعديل الاختبار والمرفقات</span>
+            <span>تعديل بيانات الاختبار</span>
           </button>
         </div>
       </div>

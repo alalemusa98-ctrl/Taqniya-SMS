@@ -258,98 +258,144 @@ const downloadFile = (att: HomeworkAttachment) => {
 
     <!-- Content State -->
     <div v-else-if="homework" class="space-y-5" dir="rtl">
-      <!-- 1. Subject & Status Header Card -->
-      <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-purple-500/[0.03] dark:bg-white/[0.02] space-y-3 shadow-xs">
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold border border-purple-500/20 shrink-0 shadow-2xs">
-              <BookOpen class="w-5 h-5" />
-            </div>
-            <div>
-              <h4 class="font-black text-sm text-bx-title font-display">
-                {{ homework.subject_name }}
-              </h4>
-              <p class="text-xs text-bx-muted font-medium mt-0.5 flex items-center gap-1">
-                <UserCheck class="w-3.5 h-3.5 text-bx-primary" />
-                <span>المعلم المسؤول: {{ homework.teacher_name }}</span>
-              </p>
-            </div>
+      <!-- 1. Hero Header Card (With Enhanced Visual Dividers & Structure) -->
+      <div class="relative overflow-hidden p-5 sm:p-6 rounded-3xl border border-[#B4AED8] dark:border-white/[0.1] bg-gradient-to-br from-purple-500/[0.08] via-purple-500/[0.03] to-[var(--bx-surface-solid)] shadow-sm space-y-4">
+        <!-- Ambient Background Accent Glow -->
+        <div class="absolute -top-12 -left-12 w-36 h-36 bg-bx-primary/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <!-- Top Meta Row: Subject & Class Badges + Status Badge -->
+        <div class="flex items-center justify-between gap-3 flex-wrap relative z-10">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-bx-primary text-white shadow-xs">
+              <BookOpen class="w-3.5 h-3.5" />
+              <span>{{ homework.subject_name }}</span>
+            </span>
+
+            <span class="h-4 w-px bg-[#B4AED8]/70 dark:bg-white/20 hidden sm:inline-block"></span>
+
+            <span v-if="'section_name' in homework || 'class_name' in homework" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
+              <School class="w-3.5 h-3.5" />
+              <span>{{ ('class_name' in homework ? homework.class_name + ' • ' : '') + homework.section_name }}</span>
+            </span>
           </div>
 
           <!-- Status Badge -->
           <span
-            class="text-[11px] font-bold px-3 py-1 rounded-full border shrink-0"
+            class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold border shadow-xs"
             :class="
               homework.status === 'active'
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                 : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30'
             "
           >
-            {{ homework.status === 'active' ? 'ساري للتسليم' : 'منتهي الصلاحية' }}
-          </span>
-        </div>
-
-        <!-- Class / Section Details if available -->
-        <div v-if="'section_name' in homework || 'class_name' in homework" class="flex items-center gap-2 pt-2 border-t border-[#B4AED8]/40 dark:border-white/[0.06]">
-          <span class="text-[11px] font-bold text-bx-muted flex items-center gap-1">
-            <School class="w-3.5 h-3.5 text-bx-primary" />
-            <span>الصف والشعبة:</span>
-          </span>
-          <span class="text-xs font-bold text-bx-title">
-            {{ ('class_name' in homework ? homework.class_name + ' - ' : '') + homework.section_name }}
-          </span>
-        </div>
-      </div>
-
-      <!-- 2. Assignment Title & Instructions Card -->
-      <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-2.5 shadow-xs">
-        <h5 class="text-xs font-bold text-bx-muted flex items-center gap-1.5">
-          <Sparkles class="w-3.5 h-3.5 text-bx-primary" />
-          <span>عنوان التكليف</span>
-        </h5>
-        <h4 class="text-sm font-black text-bx-title leading-snug">
-          {{ homework.title }}
-        </h4>
-
-        <div v-if="homework.description" class="pt-2 border-t border-[#B4AED8]/40 dark:border-white/[0.06]">
-          <h5 class="text-xs font-bold text-bx-muted mb-1">التعليمات والإرشادات:</h5>
-          <p class="text-xs text-bx-title leading-relaxed whitespace-pre-wrap bg-purple-500/[0.02] p-3 rounded-xl border border-[#B4AED8]/30 dark:border-white/[0.04]">
-            {{ homework.description }}
-          </p>
-        </div>
-      </div>
-
-      <!-- 3. Dates Micro KPIs -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="p-3.5 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] text-start space-y-1 shadow-xs">
-          <div class="flex items-center gap-1.5 text-[11px] font-bold text-bx-muted">
-            <Calendar class="w-3.5 h-3.5 text-bx-primary" />
-            <span>تاريخ النشر</span>
-          </div>
-          <span class="text-xs font-mono font-black text-bx-title block">
-            {{ formatDate(homework.assigned_date) }}
-          </span>
-        </div>
-
-        <div class="p-3.5 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] text-start space-y-1 shadow-xs">
-          <div class="flex items-center gap-1.5 text-[11px] font-bold text-rose-500">
             <Clock class="w-3.5 h-3.5" />
-            <span>موعد الاستحقاق</span>
-          </div>
-          <span class="text-xs font-mono font-black text-rose-600 dark:text-rose-400 block">
-            {{ formatDate(homework.due_date) }}
+            <span>{{ homework.status === 'active' ? 'ساري للتسليم' : 'منتهي الصلاحية' }}</span>
           </span>
+        </div>
+
+        <!-- Visual Subtle Gradient Divider 1 -->
+        <div class="h-px w-full bg-gradient-to-r from-transparent via-[#B4AED8]/60 dark:via-white/10 to-transparent"></div>
+
+        <!-- Main Content Showcase: Avatar Icon + Title -->
+        <div class="flex items-start gap-4 pt-1 relative z-10">
+          <!-- Icon Avatar -->
+          <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-purple-500/15 text-bx-primary border border-purple-500/25 flex items-center justify-center shrink-0 shadow-xs">
+            <BookOpen class="w-7 h-7 stroke-[1.8]" />
+          </div>
+
+          <!-- Title -->
+          <div class="min-w-0 flex-1 space-y-1">
+            <span class="text-[11px] font-bold text-bx-muted block">عنوان الواجب / النشاط المنزلي:</span>
+            <h2 class="text-base sm:text-xl font-black text-bx-title font-display leading-snug">
+              {{ homework.title }}
+            </h2>
+          </div>
+        </div>
+
+        <!-- Visual Subtle Gradient Divider 2 & Supervisor Meta Footer -->
+        <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.08] flex items-center justify-between gap-3 text-xs flex-wrap relative z-10">
+          <div class="inline-flex items-center gap-2 bg-purple-500/5 dark:bg-white/[0.03] px-3 py-1.5 rounded-xl border border-[#B4AED8]/40 dark:border-white/[0.06]">
+            <UserCheck class="w-3.5 h-3.5 text-bx-primary" />
+            <span class="text-bx-muted">المعلم المسؤول:</span>
+            <span class="font-bold text-bx-title">{{ homework.teacher_name }}</span>
+          </div>
+
+          <div class="inline-flex items-center gap-1.5 font-mono text-[11px] text-bx-muted bg-[var(--bx-surface-solid)] px-2.5 py-1 rounded-lg border border-[#B4AED8]/40 dark:border-white/[0.06] shadow-2xs">
+            <span class="text-bx-primary font-bold">#</span>
+            <span>تكليف رقم {{ homework.id }}</span>
+          </div>
         </div>
       </div>
 
-      <!-- 4. Attachments List with Expressive Icons & Image Preview & Downloads -->
-      <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] space-y-3 shadow-xs">
+      <!-- 2. Dates Section (With Section Divider) -->
+      <div class="space-y-3">
+        <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
+          <div class="w-2 h-4 rounded-full bg-bx-primary"></div>
+          <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+          <span>مواعيد النشر والاستحقاق</span>
+          <div class="h-px flex-1 bg-gradient-to-l from-transparent to-[#B4AED8]/40 dark:to-white/10"></div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div class="p-4 rounded-2xl border border-[#B4AED8]/70 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] text-start space-y-1.5 shadow-2xs hover:border-bx-primary/40 transition-colors">
+            <div class="flex items-center gap-2 text-xs font-bold text-bx-muted">
+              <div class="w-6 h-6 rounded-lg bg-purple-500/10 text-bx-primary flex items-center justify-center">
+                <Calendar class="w-3.5 h-3.5" />
+              </div>
+              <span>تاريخ النشر والتكليف</span>
+            </div>
+            <div class="text-sm font-black text-bx-title font-mono ps-8">
+              {{ formatDate(homework.assigned_date) }}
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl border border-[#B4AED8]/70 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] text-start space-y-1.5 shadow-2xs hover:border-rose-500/40 transition-colors">
+            <div class="flex items-center gap-2 text-xs font-bold text-rose-500">
+              <div class="w-6 h-6 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                <Clock class="w-3.5 h-3.5" />
+              </div>
+              <span>آخر موعد للتسليم</span>
+            </div>
+            <div class="text-sm font-black text-rose-600 dark:text-rose-400 font-mono ps-8">
+              {{ formatDate(homework.due_date) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Instructions Card (With Section Divider) -->
+      <div class="space-y-3">
+        <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
+          <div class="w-2 h-4 rounded-full bg-bx-primary"></div>
+          <Sparkles class="w-3.5 h-3.5 text-bx-primary" />
+          <span>التعليمات والإرشادات للطلاب</span>
+          <div class="h-px flex-1 bg-gradient-to-l from-transparent to-[#B4AED8]/40 dark:to-white/10"></div>
+        </div>
+
+        <div
+          v-if="homework.description"
+          class="p-4 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-purple-500/[0.02] text-xs text-bx-title leading-relaxed whitespace-pre-wrap font-medium shadow-2xs"
+        >
+          {{ homework.description }}
+        </div>
+        <div
+          v-else
+          class="p-4 rounded-2xl border border-dashed border-[#B4AED8]/60 dark:border-white/[0.08] text-xs text-bx-muted text-center"
+        >
+          لا توجد تعليمات أو ملاحظات إضافية مسجلة لهذا الواجب
+        </div>
+      </div>
+
+      <!-- 4. Attachments Section (With Section Divider) -->
+      <div class="space-y-3">
         <div class="flex items-center justify-between">
-          <h5 class="text-xs font-bold text-bx-title flex items-center gap-1.5">
+          <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
+            <div class="w-2 h-4 rounded-full bg-bx-primary"></div>
             <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
             <span>المرفقات والملازم الدراسية</span>
-          </h5>
-          <span class="text-[11px] text-bx-muted font-bold">
+            <div class="h-px w-16 bg-gradient-to-l from-transparent to-[#B4AED8]/40 dark:to-white/10"></div>
+          </div>
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
             {{ attachmentsList.length }} مرفقات
           </span>
         </div>
