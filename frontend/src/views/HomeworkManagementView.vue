@@ -58,6 +58,7 @@ const allClasses = ref<any[]>([]);
 const allTeachers = ref<Teacher[]>([]);
 const allClassSections = ref<any[]>([]);
 const allClassSubjects = ref<any[]>([]);
+const allClassAcademicTerms = ref<any[]>([]);
 
 // Homework Data Hierarchy
 const classesData = ref<ClassWithHomework[]>([]);
@@ -74,6 +75,7 @@ const availableTeachingAssignments = ref<AssignmentItem[]>([]);
 // Filter States (Draft inputs)
 const searchQuery = ref('');
 const selectedClassFilter = ref<number | string>('all');
+const selectedTermFilter = ref<number | string>('all');
 const selectedSectionFilter = ref<number | string>('all');
 const selectedTeacherFilter = ref<number | string>('all');
 const selectedSubjectFilter = ref<number | string>('all');
@@ -83,6 +85,7 @@ const selectedDueDate = ref('');
 // Applied Filter States
 const appliedSearchQuery = ref('');
 const appliedClassFilter = ref<number | string>('all');
+const appliedTermFilter = ref<number | string>('all');
 const appliedSectionFilter = ref<number | string>('all');
 const appliedTeacherFilter = ref<number | string>('all');
 const appliedSubjectFilter = ref<number | string>('all');
@@ -242,7 +245,9 @@ export interface EnrichedHomeworkRow {
 // Flat list for Datatable presentation
 const allHomeworkRows = computed<EnrichedHomeworkRow[]>(() => {
   const list: EnrichedHomeworkRow[] = [];
-  let idx = (paginationMeta.value.current_page - 1) * paginationMeta.value.per_page + 1;
+  const currPage = Number(paginationMeta.value.current_page || (paginationMeta.value as any).page || 1);
+  const pSize = Number(paginationMeta.value.per_page || 15);
+  let idx = (currPage - 1) * pSize + 1;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -302,13 +307,14 @@ const allHomeworkRows = computed<EnrichedHomeworkRow[]>(() => {
 // Fetch Initial Data
 const loadInitialData = async () => {
   try {
-    const [yearsRes, termsRes, classesRes, teachersRes, classSectionsRes, classSubjectsRes] = await Promise.all([
+    const [yearsRes, termsRes, classesRes, teachersRes, classSectionsRes, classSubjectsRes, classTermsRes] = await Promise.all([
       academicApi.getYears(),
       academicApi.getTerms().catch(() => ({ data: { data: [] } })),
       academicApi.getClasses({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
       teachersApi.getTeachers({ per_page: 200, is_active: 1 }).catch(() => ({ data: { data: [] } })),
       academicApi.getClassSections({ per_page: 200 }).catch(() => ({ data: { data: { classes: [] } } })),
       academicApi.getClassSubjects({ per_page: 100 }).catch(() => ({ data: { data: { classes: [] } } })),
+      academicApi.getClassAcademicTerms({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
     ]);
 
     if (yearsRes.data && Array.isArray(yearsRes.data)) {
@@ -329,6 +335,7 @@ const loadInitialData = async () => {
     allClasses.value = classesRes.data?.data || classesRes.data || [];
     allTeachers.value = teachersRes.data?.data || teachersRes.data || [];
     allClassSubjects.value = classSubjectsRes.data?.data?.classes || classSubjectsRes.data?.data || [];
+    allClassAcademicTerms.value = classTermsRes.data?.data?.classes || classTermsRes.data?.data || [];
 
     // Flatten class sections
     const groupedClasses = classSectionsRes.data?.data?.classes || [];
@@ -387,7 +394,6 @@ const fetchHomework = async (page = 1) => {
   try {
     const params: any = {
       academic_year_id: selectedYearId.value || undefined,
-      academic_term_id: selectedTermId.value || undefined,
       page,
       per_page: paginationMeta.value.per_page,
     };
@@ -1030,6 +1036,7 @@ onMounted(() => {
         :academic-year-id="selectedYearId"
         :academic-term-id="selectedTermId"
         :teachers="allTeachers"
+        :class-academic-terms="allClassAcademicTerms"
         :available-teaching-assignments="availableTeachingAssignments"
         :is-submitting="isSubmitting"
         @submit="handleFormSubmit"

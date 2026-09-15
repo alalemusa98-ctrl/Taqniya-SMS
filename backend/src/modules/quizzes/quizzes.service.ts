@@ -114,9 +114,7 @@ export class QuizzesService {
       deleted_at: null,
     };
 
-    if (term && !query.academic_term_id) {
-      where.academic_term_id = term.id;
-    } else if (query.academic_term_id) {
+    if (query.academic_term_id) {
       where.academic_term_id = BigInt(query.academic_term_id);
     }
 
@@ -666,6 +664,13 @@ export class QuizzesService {
     }
 
     const dataToUpdate: any = {};
+
+    if (dto.academic_year_id !== undefined) {
+      dataToUpdate.academic_year_id = BigInt(dto.academic_year_id);
+    }
+    if (dto.academic_term_id !== undefined) {
+      dataToUpdate.academic_term_id = BigInt(dto.academic_term_id);
+    }
 
     if (dto.title !== undefined) {
       dataToUpdate.title = dto.title.trim();

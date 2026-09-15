@@ -128,13 +128,14 @@ const yearOptions = computed<TaqniyaSelectOption[]>(() =>
   })),
 );
 
-const termOptions = computed<TaqniyaSelectOption[]>(() =>
-  academicTerms.value.map((t: AcademicTermItem) => ({
+const termOptions = computed<TaqniyaSelectOption[]>(() => [
+  { value: '', label: 'كافة الفصول الدراسية' },
+  ...academicTerms.value.map((t: AcademicTermItem) => ({
     value: t.id,
     label: t.name,
     subtext: `فصل رقم ${t.term_number}`,
   })),
-);
+]);
 
 const classOptions = computed<TaqniyaSelectOption[]>(() => [
   { value: '', label: 'كافة الصفوف الدراسية' },
@@ -224,21 +225,8 @@ async function loadInitialContext() {
     const activeYear = academicYears.value.find((y: AcademicYearItem) => y.is_active) || academicYears.value[0];
     if (activeYear) selectedYearId.value = activeYear.id;
 
-    if (classes.value.length > 0) {
-      selectedClassId.value = classes.value[0].id;
-      // Auto find active term for this initial class
-      const classTermsList = allClassAcademicTerms.value;
-      const classGroup = classTermsList.find((g: any) => Number(g.class_id) === Number(classes.value[0].id));
-      if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
-        const activeTerm = classGroup.terms.find((t: any) => Number(t.is_active) === 1 || t.is_active === true);
-        if (activeTerm && activeTerm.academic_term_id) {
-          selectedTermId.value = Number(activeTerm.academic_term_id);
-        }
-      }
-    } else {
-      const activeTerm = academicTerms.value[0];
-      if (activeTerm) selectedTermId.value = activeTerm.id;
-    }
+    selectedClassId.value = '';
+    selectedTermId.value = '';
   } catch (err) {
     console.error('Failed to load academic context:', err);
   } finally {
@@ -316,6 +304,8 @@ watch(selectedClassId, (newClassId) => {
     // Auto set active academic year
     const activeYear = academicYears.value.find((y: AcademicYearItem) => y.is_active) || academicYears.value[0];
     if (activeYear) selectedYearId.value = activeYear.id;
+  } else {
+    selectedTermId.value = '';
   }
 });
 

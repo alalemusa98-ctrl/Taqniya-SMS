@@ -96,9 +96,7 @@ export class AssignmentsService {
       deleted_at: null,
     };
 
-    if (term && !query.academic_term_id) {
-      where.academic_term_id = term.id;
-    } else if (query.academic_term_id) {
+    if (query.academic_term_id) {
       where.academic_term_id = BigInt(query.academic_term_id);
     }
 

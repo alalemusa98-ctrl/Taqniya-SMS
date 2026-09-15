@@ -60,6 +60,7 @@ const allClasses = ref<any[]>([]);
 const allTeachers = ref<Teacher[]>([]);
 const allClassSections = ref<any[]>([]);
 const allClassSubjects = ref<any[]>([]);
+const allClassAcademicTerms = ref<any[]>([]);
 
 // Quizzes Data Hierarchy
 const classesData = ref<ClassWithQuizzes[]>([]);
@@ -243,7 +244,9 @@ export interface EnrichedQuizRow {
 // Flat list for Datatable presentation
 const allQuizzesRows = computed<EnrichedQuizRow[]>(() => {
   const list: EnrichedQuizRow[] = [];
-  let idx = (paginationMeta.value.current_page - 1) * paginationMeta.value.per_page + 1;
+  const currPage = Number(paginationMeta.value?.current_page) || 1;
+  const perPage = Number(paginationMeta.value?.per_page) || 15;
+  let idx = (currPage - 1) * perPage + 1;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -295,13 +298,14 @@ const allQuizzesRows = computed<EnrichedQuizRow[]>(() => {
 // Fetch Initial Metadata
 const loadInitialData = async () => {
   try {
-    const [yearsRes, termsRes, classesRes, teachersRes, classSectionsRes, classSubjectsRes] = await Promise.all([
+    const [yearsRes, termsRes, classesRes, teachersRes, classSectionsRes, classSubjectsRes, classTermsRes] = await Promise.all([
       academicApi.getYears().catch(() => ({ data: { data: [] } })),
       academicApi.getTerms().catch(() => ({ data: { data: [] } })),
       academicApi.getClasses({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
       teachersApi.getTeachers({ per_page: 200, is_active: 1 }).catch(() => ({ data: { data: [] } })),
       academicApi.getClassSections({ per_page: 200 }).catch(() => ({ data: { data: { classes: [] } } })),
       academicApi.getClassSubjects({ per_page: 100 }).catch(() => ({ data: { data: { classes: [] } } })),
+      academicApi.getClassAcademicTerms({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
     ]);
 
     const yData = yearsRes.data?.data || yearsRes.data || [];
@@ -323,6 +327,7 @@ const loadInitialData = async () => {
     allClasses.value = classesRes.data?.data || classesRes.data || [];
     allTeachers.value = teachersRes.data?.data || teachersRes.data || [];
     allClassSubjects.value = classSubjectsRes.data?.data?.classes || classSubjectsRes.data?.data || [];
+    allClassAcademicTerms.value = classTermsRes.data?.data?.classes || classTermsRes.data?.data || [];
 
     // Flatten class sections
     const groupedClasses = classSectionsRes.data?.data?.classes || [];
@@ -836,7 +841,7 @@ onMounted(() => {
                 >
                   <!-- Sequence Counter # -->
                   <td class="py-3.5 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    {{ (paginationMeta.current_page - 1) * paginationMeta.per_page + idx + 1 }}
+                    {{ ((Number(paginationMeta.current_page) || 1) - 1) * (Number(paginationMeta.per_page) || 15) + idx + 1 }}
                   </td>
 
                   <!-- 1. Subject & Teacher (Combined) -->
@@ -997,6 +1002,7 @@ onMounted(() => {
         :academic-year-id="selectedYearId"
         :academic-term-id="selectedTermId"
         :teachers="allTeachers"
+        :class-academic-terms="allClassAcademicTerms"
         :is-submitting="isSubmitting"
         @submit="handleFormSubmit"
       />

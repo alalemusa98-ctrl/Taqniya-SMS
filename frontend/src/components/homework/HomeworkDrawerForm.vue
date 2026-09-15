@@ -38,7 +38,9 @@ const props = defineProps<{
   itemToEdit?: HomeworkDetailData | null;
   academicYearId: number;
   academicTermId?: number | null;
+  classAcademicTerms?: any[];
   teachers?: Teacher[];
+  availableTeachingAssignments?: AssignmentItem[];
   isSubmitting?: boolean;
 }>();
 
@@ -168,6 +170,53 @@ const teacherSubjectOptions = computed<TaqniyaSelectOption[]>(() => {
   }));
 });
 
+// Dynamic Active Term for the SELECTED CLASS (SSoT from Phase 02-C)
+const selectedClassTermsInfo = computed(() => {
+  if (!selectedClassId.value) {
+    return {
+      activeTerm: null,
+      availableTerms: [],
+      hasActiveTerm: false,
+    };
+  }
+
+  const classId = Number(selectedClassId.value);
+
+  // 1. Look in classAcademicTerms (SSoT)
+  const termsList = Array.isArray(props.classAcademicTerms)
+    ? props.classAcademicTerms
+    : (props.classAcademicTerms as any)?.classes || [];
+
+  if (termsList && termsList.length > 0) {
+    const classTermsGroup = termsList.find((g: any) => Number(g.class_id) === classId);
+    if (classTermsGroup && classTermsGroup.terms && classTermsGroup.terms.length > 0) {
+      const activeTerm = classTermsGroup.terms.find((t: any) => Number(t.is_active) === 1 || t.is_active === true);
+      return {
+        activeTerm: activeTerm || null,
+        availableTerms: classTermsGroup.terms,
+        hasActiveTerm: !!activeTerm,
+      };
+    }
+  }
+
+  return {
+    activeTerm: props.academicTermId ? { academic_term_id: props.academicTermId, term_name: 'الفصل النشط' } : null,
+    availableTerms: [],
+    hasActiveTerm: !!props.academicTermId,
+  };
+});
+
+const displayTermName = computed(() => {
+  if (!selectedClassId.value) {
+    return 'حدد الصف الدراسي أولاً لتحديد فترته النشطة';
+  }
+  const termInfo = selectedClassTermsInfo.value.activeTerm;
+  if (termInfo) {
+    return termInfo.term_name || `الفصل الدراسي ${termInfo.academic_term_id}`;
+  }
+  return 'الفصل الدراسي الأول';
+});
+
 // Fetch teacher assignments whenever selectedTeacherId changes
 const fetchTeacherAssignments = async (teacherId: number, isInitialEdit = false) => {
   loadingAssignments.value = true;
@@ -215,6 +264,11 @@ watch(selectedTeacherId, (newTeacherId) => {
 // Handle Class Selection Change
 watch(selectedClassId, (newClassId) => {
   if (newClassId) {
+    const activeTerm = selectedClassTermsInfo.value.activeTerm;
+    if (activeTerm && activeTerm.academic_term_id) {
+      form.value.academic_term_id = Number(activeTerm.academic_term_id);
+    }
+
     if (props.mode === 'create') {
       selectedClassSectionId.value = null;
       selectedAssignmentId.value = null;
