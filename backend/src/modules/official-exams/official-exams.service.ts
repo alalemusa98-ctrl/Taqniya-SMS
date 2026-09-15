@@ -74,6 +74,15 @@ export class OfficialExamsService {
       where.exam_date = new Date(query.exam_date);
     }
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (query.status === 'upcoming') {
+      where.exam_date = { ...(where.exam_date || {}), gte: today };
+    } else if (query.status === 'completed') {
+      where.exam_date = { ...(where.exam_date || {}), lt: today };
+    }
+
     if (query.search) {
       where.OR = [
         {
@@ -178,6 +187,10 @@ export class OfficialExamsService {
 
     const formattedItems = exams.map((exam) => {
       const attachments = (exam.attachments as any[]) || [];
+      const examDateObj = new Date(exam.exam_date);
+      examDateObj.setHours(0, 0, 0, 0);
+      const isUpcoming = examDateObj >= today;
+
       return {
         id: Number(exam.id),
         academic_year_id: Number(exam.academic_year_id),
@@ -194,6 +207,7 @@ export class OfficialExamsService {
         exam_type_ar: this.getExamTypeArabic(exam.exam_type),
         exam_date: exam.exam_date.toISOString().split('T')[0],
         exam_day_name: this.getDayNameArabic(exam.exam_date),
+        status: isUpcoming ? 'upcoming' : 'completed',
         notes: exam.notes,
         attachments_count: attachments.length,
         attachments,
@@ -258,6 +272,7 @@ export class OfficialExamsService {
         academic_term_id: exams[0] ? Number(exams[0].academic_term_id) : null,
         academic_term_name: exams[0]?.academic_term?.name || null,
         classes: classesArray,
+        items: formattedItems,
       },
       meta: {
         current_page: page,

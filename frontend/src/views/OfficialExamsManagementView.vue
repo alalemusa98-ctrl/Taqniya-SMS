@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Plus,
   Search,
+  Filter,
   Eye,
   Pen,
   Trash2,
@@ -66,13 +67,27 @@ const subjects = ref<AcademicSubjectItem[]>([]);
 const allClassSubjects = ref<any[]>([]);
 const allClassAcademicTerms = ref<any[]>([]);
 
-// Filter States
-const selectedClassId = ref<number | null>(null);
+// Active Year State (Managed internally, displayed in hero header)
 const selectedYearId = ref<number>(0);
-const selectedTermId = ref<number>(0);
-const selectedExamType = ref<string>('');
+
+// Draft Filter States
+const selectedClassFilter = ref<number | string>('all');
+const selectedTermFilter = ref<number | string>('all');
+const selectedSubjectFilter = ref<number | string>('all');
+const selectedExamType = ref<string>('all');
+const selectedStatusFilter = ref<'all' | 'upcoming' | 'completed'>('all');
 const selectedExamDate = ref<string>('');
 const searchKeyword = ref<string>('');
+
+// Applied Filter States
+const appliedClassFilter = ref<number | string>('all');
+const appliedTermFilter = ref<number | string>('all');
+const appliedSubjectFilter = ref<number | string>('all');
+const appliedExamType = ref<string>('all');
+const appliedStatusFilter = ref<'all' | 'upcoming' | 'completed'>('all');
+const appliedExamDate = ref<string>('');
+const appliedSearchKeyword = ref<string>('');
+
 const currentPage = ref<number>(1);
 const perPage = ref<number>(15);
 const totalRecords = ref<number>(0);
@@ -95,6 +110,11 @@ const teacherExams = ref<OfficialExam[]>([]);
 
 // Lifecycle / Initialization Guard
 const isInitialized = ref(false);
+
+// Active Academic Year object
+const activeAcademicYear = computed(() => {
+  return academicYears.value.find((y) => y.id === selectedYearId.value) || academicYears.value[0];
+});
 
 // Drawer & Modal States
 const isDrawerOpen = ref<boolean>(false);
@@ -119,19 +139,11 @@ function getErrorMessage(err: any, fallback: string): string {
   return fallback;
 }
 
-// Options
-const yearOptions = computed<TaqniyaSelectOption[]>(() =>
-  academicYears.value.map((y: AcademicYearItem) => ({
-    value: y.id,
-    label: y.name,
-    subtext: y.is_active ? 'العام الحالي' : undefined,
-  })),
-);
-
+// 1. Term Filter Options (Dynamic based on selected class)
 const termOptions = computed<TaqniyaSelectOption[]>(() => {
-  if (!selectedClassId.value) {
+  if (selectedClassFilter.value === 'all') {
     return [
-      { value: '', label: 'كافة الفصول الدراسية' },
+      { value: 'all', label: 'جميع الفصول الدراسية' },
       ...academicTerms.value.map((t: AcademicTermItem) => ({
         value: t.id,
         label: t.name,
@@ -139,14 +151,14 @@ const termOptions = computed<TaqniyaSelectOption[]>(() => {
       })),
     ];
   }
-  const classId = Number(selectedClassId.value);
+  const classId = Number(selectedClassFilter.value);
   const termsList = Array.isArray(allClassAcademicTerms.value)
     ? allClassAcademicTerms.value
     : (allClassAcademicTerms.value as any)?.classes || [];
   const classGroup = termsList.find((g: any) => Number(g.class_id) === classId);
   if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
     return [
-      { value: '', label: 'كافة الفصول للصف المختار' },
+      { value: 'all', label: 'كافة الفصول للصف المختار' },
       ...classGroup.terms.map((t: any) => ({
         value: t.academic_term_id,
         label: t.term_name || `الفصل الدراسي ${t.academic_term_id}`,
@@ -155,7 +167,7 @@ const termOptions = computed<TaqniyaSelectOption[]>(() => {
     ];
   }
   return [
-    { value: '', label: 'كافة الفصول الدراسية' },
+    { value: 'all', label: 'جميع الفصول الدراسية' },
     ...academicTerms.value.map((t: AcademicTermItem) => ({
       value: t.id,
       label: t.name,
@@ -164,8 +176,9 @@ const termOptions = computed<TaqniyaSelectOption[]>(() => {
   ];
 });
 
+// 2. Class Filter Options
 const classOptions = computed<TaqniyaSelectOption[]>(() => [
-  { value: '', label: 'كافة الصفوف الدراسية' },
+  { value: 'all', label: 'جميع الصفوف الدراسية' },
   ...classes.value.map((c: AcademicClassItem) => ({
     value: c.id,
     label: c.name,
@@ -173,12 +186,77 @@ const classOptions = computed<TaqniyaSelectOption[]>(() => [
   })),
 ]);
 
+// 3. Subject Filter Options (Cascading: Dynamic based on selected class)
+const subjectOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (selectedClassFilter.value === 'all') {
+    return [
+      { value: 'all', label: 'جميع المواد التعليمية' },
+      ...subjects.value.map((s: AcademicSubjectItem) => ({
+        value: s.id,
+        label: s.name,
+        description: s.code ? `كود: ${s.code}` : undefined,
+      })),
+    ];
+  }
+  const classId = Number(selectedClassFilter.value);
+  const classObj = allClassSubjects.value.find((c: any) => Number(c.class_id) === classId);
+  const subs: any[] = [];
+  if (classObj && classObj.terms) {
+    classObj.terms.forEach((t: any) => {
+      t.subjects?.forEach((s: any) => {
+        if (!subs.some((existing) => existing.subject_id === s.subject_id)) {
+          subs.push(s);
+        }
+      });
+    });
+  }
+  if (subs.length > 0) {
+    return [
+      { value: 'all', label: 'كافة المواد للصف المختار' },
+      ...subs.map((s) => ({
+        value: s.subject_id,
+        label: s.name,
+        description: s.code ? `كود: ${s.code}` : undefined,
+      })),
+    ];
+  }
+  return [
+    { value: 'all', label: 'جميع المواد التعليمية' },
+    ...subjects.value.map((s: AcademicSubjectItem) => ({
+      value: s.id,
+      label: s.name,
+      description: s.code ? `كود: ${s.code}` : undefined,
+    })),
+  ];
+});
+
+// 4. Exam Type Filter Options
 const examTypeFilterOptions: TaqniyaSelectOption[] = [
-  { value: '', label: 'كافة أنواع الامتحانات' },
+  { value: 'all', label: 'كافة أنواع الامتحانات' },
   { value: 'midterm', label: 'امتحانات نصفية (Midterm)' },
   { value: 'final', label: 'امتحانات نهائية (Final)' },
   { value: 'second_round', label: 'امتحانات الدور الثاني (Second Round)' },
 ];
+
+// 5. Status Filter Options
+const statusOptions: TaqniyaSelectOption[] = [
+  { value: 'all', label: 'كافة الحالات' },
+  { value: 'upcoming', label: 'الامتحانات القادمة (السارية)' },
+  { value: 'completed', label: 'الامتحانات السابقة (المنتهية)' },
+];
+
+// Check if any filters are active
+const hasActiveFilters = computed(() => {
+  return (
+    appliedSearchKeyword.value.trim() !== '' ||
+    appliedClassFilter.value !== 'all' ||
+    appliedTermFilter.value !== 'all' ||
+    appliedSubjectFilter.value !== 'all' ||
+    appliedExamType.value !== 'all' ||
+    appliedStatusFilter.value !== 'all' ||
+    appliedExamDate.value !== ''
+  );
+});
 
 // KPI Computations from hierarchicalClasses (SSoT)
 const kpiStats = computed(() => {
@@ -205,13 +283,53 @@ const kpiStats = computed(() => {
   };
 });
 
-// Flat array derived strictly from hierarchicalClasses
-const flatExamRows = computed(() => {
-  const rows: any[] = [];
+// Flat array with countdown and status derived strictly from hierarchicalClasses
+export interface EnrichedOfficialExamRow {
+  id: number;
+  class_id: number;
+  class_name: string;
+  grade_level?: number;
+  exam_type: 'midterm' | 'final' | 'second_round';
+  exam_type_ar?: string;
+  subject_id: number;
+  subject_name: string;
+  exam_date: string;
+  status: 'upcoming' | 'completed';
+  countdownInfo: { label: string; isUrgent: boolean; isPast: boolean } | null;
+  attachments_count: number;
+  created_at?: string;
+  raw: any;
+}
+
+const flatExamRows = computed<EnrichedOfficialExamRow[]>(() => {
+  const rows: EnrichedOfficialExamRow[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   hierarchicalClasses.value.forEach((cls) => {
     cls.exam_types?.forEach((et: any) => {
       const subjectList = et.subjects || et.exams || [];
       subjectList.forEach((sub: any) => {
+        let cdInfo: { label: string; isUrgent: boolean; isPast: boolean } | null = null;
+        if (sub.exam_date) {
+          const eDate = new Date(sub.exam_date);
+          eDate.setHours(0, 0, 0, 0);
+          const diffTime = eDate.getTime() - today.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays < 0) {
+            cdInfo = { label: `تم إجراؤه منذ ${Math.abs(diffDays)} يوم`, isUrgent: false, isPast: true };
+          } else if (diffDays === 0) {
+            cdInfo = { label: 'موعد الامتحان اليوم!', isUrgent: true, isPast: false };
+          } else if (diffDays === 1) {
+            cdInfo = { label: 'موعد الامتحان غداً', isUrgent: true, isPast: false };
+          } else {
+            cdInfo = { label: `متبقي ${diffDays} أيام`, isUrgent: false, isPast: false };
+          }
+        }
+
+        const isUpcoming = sub.exam_date ? new Date(sub.exam_date).setHours(0, 0, 0, 0) >= today.getTime() : true;
+
         rows.push({
           id: sub.id,
           class_id: cls.class_id,
@@ -222,8 +340,11 @@ const flatExamRows = computed(() => {
           subject_id: sub.subject_id,
           subject_name: sub.subject_name,
           exam_date: sub.exam_date,
+          status: sub.status || (isUpcoming ? 'upcoming' : 'completed'),
+          countdownInfo: cdInfo,
           attachments_count: sub.attachments_count || 0,
           created_at: sub.created_at,
+          raw: sub,
         });
       });
     });
@@ -252,8 +373,10 @@ async function loadInitialContext() {
     const activeYear = academicYears.value.find((y: AcademicYearItem) => y.is_active) || academicYears.value[0];
     if (activeYear) selectedYearId.value = activeYear.id;
 
-    selectedClassId.value = '';
-    selectedTermId.value = '';
+    selectedClassFilter.value = 'all';
+    appliedClassFilter.value = 'all';
+    selectedTermFilter.value = 'all';
+    appliedTermFilter.value = 'all';
   } catch (err) {
     console.error('Failed to load academic context:', err);
   } finally {
@@ -261,42 +384,54 @@ async function loadInitialContext() {
   }
 }
 
-async function fetchOfficialExams() {
+async function fetchOfficialExams(page = 1) {
   if (!isInitialized.value) return;
+  currentPage.value = page;
   loading.value = true;
   try {
-    if (isStudentOrParent.value && selectedClassId.value) {
+    if (isStudentOrParent.value && appliedClassFilter.value !== 'all') {
       // Student/Parent fetch
-      const res = await officialExamsApi.getByClass(Number(selectedClassId.value), selectedTermId.value || undefined);
+      const res = await officialExamsApi.getByClass(
+        Number(appliedClassFilter.value),
+        appliedTermFilter.value !== 'all' ? Number(appliedTermFilter.value) : undefined,
+      );
       classBoardData.value = res.data.data;
     } else if (isTeacher.value) {
       // Teacher fetch using user ID
       const teacherId = authStore.user?.id || 1;
       const res = await officialExamsApi.getByTeacher(
         teacherId,
-        selectedTermId.value || undefined,
+        appliedTermFilter.value !== 'all' ? Number(appliedTermFilter.value) : undefined,
       );
       teacherExams.value = res.data.data.exams;
     } else {
       // Admin / Manager fetch
-      const res = await officialExamsApi.getAll({
-        academic_year_id: selectedYearId.value || undefined,
-        academic_term_id: selectedTermId.value || undefined,
-        class_id: selectedClassId.value ? Number(selectedClassId.value) : undefined,
-        exam_type: selectedExamType.value || undefined,
-        exam_date: selectedExamDate.value || undefined,
-        search: searchKeyword.value || undefined,
+      const params: any = {
         page: currentPage.value,
         per_page: perPage.value,
-      });
+      };
+
+      if (selectedYearId.value) params.academic_year_id = selectedYearId.value;
+      if (appliedTermFilter.value !== 'all') params.academic_term_id = Number(appliedTermFilter.value);
+      if (appliedClassFilter.value !== 'all') params.class_id = Number(appliedClassFilter.value);
+      if (appliedSubjectFilter.value !== 'all') params.subject_id = Number(appliedSubjectFilter.value);
+      if (appliedExamType.value !== 'all') params.exam_type = appliedExamType.value;
+      if (appliedStatusFilter.value !== 'all') params.status = appliedStatusFilter.value;
+      if (appliedExamDate.value) params.exam_date = appliedExamDate.value;
+      if (appliedSearchKeyword.value.trim()) params.search = appliedSearchKeyword.value.trim();
+
+      const res = await officialExamsApi.getAll(params);
 
       hierarchicalClasses.value = res.data.data.classes || [];
       totalRecords.value = res.data.meta?.total || 0;
 
-      // Also if class board tab is active, fetch class board defensively
-      if (selectedClassId.value) {
+      // Also if class board tab is active and specific class is selected, fetch class board defensively
+      if (appliedClassFilter.value !== 'all') {
         try {
-          const boardRes = await officialExamsApi.getByClass(Number(selectedClassId.value), selectedTermId.value || undefined);
+          const boardRes = await officialExamsApi.getByClass(
+            Number(appliedClassFilter.value),
+            appliedTermFilter.value !== 'all' ? Number(appliedTermFilter.value) : undefined,
+          );
           classBoardData.value = boardRes.data.data;
         } catch (boardErr) {
           console.warn('Could not fetch auxiliary class board data:', boardErr);
@@ -311,11 +446,13 @@ async function fetchOfficialExams() {
   }
 }
 
-// Watch when Class Filter changes to automatically select Active Year & Active Term for that class
-watch(selectedClassId, (newClassId) => {
+// Watch when Class Filter changes to reset subject filter & auto-select active term for that class
+watch(selectedClassFilter, (newClassVal) => {
   if (!isInitialized.value) return;
-  if (newClassId) {
-    const classIdNum = Number(newClassId);
+  selectedSubjectFilter.value = 'all';
+
+  if (newClassVal && newClassVal !== 'all') {
+    const classIdNum = Number(newClassVal);
     const classTermsList = Array.isArray(allClassAcademicTerms.value)
       ? allClassAcademicTerms.value
       : (allClassAcademicTerms.value as any)?.classes || [];
@@ -324,49 +461,48 @@ watch(selectedClassId, (newClassId) => {
     if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
       const activeTerm = classGroup.terms.find((t: any) => Number(t.is_active) === 1 || t.is_active === true);
       if (activeTerm && activeTerm.academic_term_id) {
-        selectedTermId.value = Number(activeTerm.academic_term_id);
+        selectedTermFilter.value = Number(activeTerm.academic_term_id);
+      } else {
+        selectedTermFilter.value = 'all';
       }
+    } else {
+      selectedTermFilter.value = 'all';
     }
-
-    // Auto set active academic year
-    const activeYear = academicYears.value.find((y: AcademicYearItem) => y.is_active) || academicYears.value[0];
-    if (activeYear) selectedYearId.value = activeYear.id;
   } else {
-    selectedTermId.value = '';
+    selectedTermFilter.value = 'all';
   }
 });
 
-watch(
-  [selectedYearId, selectedTermId, selectedClassId, selectedExamType, selectedExamDate, currentPage],
-  () => {
-    if (isInitialized.value) {
-      fetchOfficialExams();
-    }
-  },
-);
+function applyFilters() {
+  appliedSearchKeyword.value = searchKeyword.value;
+  appliedClassFilter.value = selectedClassFilter.value;
+  appliedTermFilter.value = selectedTermFilter.value;
+  appliedSubjectFilter.value = selectedSubjectFilter.value;
+  appliedExamType.value = selectedExamType.value;
+  appliedStatusFilter.value = selectedStatusFilter.value;
+  appliedExamDate.value = selectedExamDate.value;
 
-let searchTimeout: any = null;
-function handleSearch() {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1;
-    fetchOfficialExams();
-  }, 400);
+  fetchOfficialExams(1);
 }
 
 function resetFilters() {
-  selectedExamType.value = '';
-  selectedExamDate.value = '';
   searchKeyword.value = '';
-  if (classes.value.length > 0) {
-    selectedClassId.value = classes.value[0].id;
-  } else {
-    selectedClassId.value = null;
-  }
-  const activeYear = academicYears.value.find((y: AcademicYearItem) => y.is_active) || academicYears.value[0];
-  if (activeYear) selectedYearId.value = activeYear.id;
-  currentPage.value = 1;
-  fetchOfficialExams();
+  selectedClassFilter.value = 'all';
+  selectedTermFilter.value = 'all';
+  selectedSubjectFilter.value = 'all';
+  selectedExamType.value = 'all';
+  selectedStatusFilter.value = 'all';
+  selectedExamDate.value = '';
+
+  appliedSearchKeyword.value = '';
+  appliedClassFilter.value = 'all';
+  appliedTermFilter.value = 'all';
+  appliedSubjectFilter.value = 'all';
+  appliedExamType.value = 'all';
+  appliedStatusFilter.value = 'all';
+  appliedExamDate.value = '';
+
+  fetchOfficialExams(1);
 }
 
 function openCreateDrawer() {
@@ -539,14 +675,14 @@ onMounted(async () => {
                 <Search class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-bx-muted pointer-events-none" />
                 <input
                   v-model="searchKeyword"
-                  @keydown.enter="handleSearch"
+                  @keydown.enter="applyFilters"
                   type="text"
                   placeholder="بحث في المواد والتعليمات والقاعات..."
                   class="w-full pr-10 pl-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-start"
                 />
               </div>
               <button
-                @click="handleSearch"
+                @click="applyFilters"
                 :disabled="loading"
                 class="h-8 px-3 rounded-full bg-purple-500/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-purple-500/30 dark:border-purple-400/30 text-xs font-bold transition-all cursor-pointer flex items-center justify-center shrink-0"
                 title="بحث فوري (أو اضغط Enter)"
@@ -618,48 +754,54 @@ onMounted(async () => {
           </button>
         </div>
 
-        <!-- 4. Filter Bar (Class First, followed by auto-assigned active Year & Term) -->
+        <!-- 4. Filter Bar (Explicit Filter Controls with Dynamic Subject & Term) -->
         <div v-if="isAdmin" class="p-4 sm:p-5 rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] shadow-xs space-y-4 print:hidden">
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
-            <!-- 1. Class Filter (First) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+            <!-- 1. Class Filter -->
             <div>
               <label class="block text-[11px] font-bold text-bx-title mb-1 flex items-center gap-1.5">
                 <School class="w-3.5 h-3.5 text-bx-primary" />
-                <span>الصف الدراسي:</span>
+                <span>الصف الدراسي</span>
               </label>
               <TaqniyaSelect
-                v-model="selectedClassId"
+                v-model="selectedClassFilter"
                 :options="classOptions"
-                placeholder="اختر الصف الدراسي..."
+                placeholder="كافة الصفوف الدراسية..."
                 searchable
                 full-width
               />
             </div>
 
-            <!-- 2. Year Filter (Auto-Determined) -->
+            <!-- 2. Term Filter (Dynamic based on selected class) -->
             <div>
               <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center gap-1.5">
-                <Calendar class="w-3.5 h-3.5 text-bx-primary" />
-                <span>العام الدراسي:</span>
+                <Clock class="w-3.5 h-3.5 text-bx-primary" />
+                <span>الفصل الدراسي</span>
               </label>
               <TaqniyaSelect
-                v-model="selectedYearId"
-                :options="yearOptions"
-                placeholder="اختر العام الدراسي"
+                v-model="selectedTermFilter"
+                :options="termOptions"
+                placeholder="كافة الفصول الدراسية..."
                 full-width
               />
             </div>
 
-            <!-- 3. Term Filter (Auto-Assigned from Class Active Term) -->
+            <!-- 3. Subject Filter (Cascading: Dynamic based on selected class) -->
             <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center gap-1.5">
-                <Clock class="w-3.5 h-3.5 text-bx-primary" />
-                <span>الفصل الدراسي:</span>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center justify-between">
+                <span class="flex items-center gap-1.5">
+                  <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
+                  <span>المادة التعليمية</span>
+                </span>
+                <span v-if="selectedClassFilter === 'all'" class="text-[10px] text-amber-500 dark:text-amber-400 font-normal">
+                  (عام لكافة الصفوف)
+                </span>
               </label>
               <TaqniyaSelect
-                v-model="selectedTermId"
-                :options="termOptions"
-                placeholder="اختر الفصل الدراسي"
+                v-model="selectedSubjectFilter"
+                :options="subjectOptions"
+                placeholder="كافة المواد التعليمية..."
+                searchable
                 full-width
               />
             </div>
@@ -668,7 +810,7 @@ onMounted(async () => {
             <div>
               <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center gap-1.5">
                 <Layers class="w-3.5 h-3.5 text-bx-primary" />
-                <span>نوع الامتحان:</span>
+                <span>نوع الامتحان</span>
               </label>
               <TaqniyaSelect
                 v-model="selectedExamType"
@@ -678,11 +820,25 @@ onMounted(async () => {
               />
             </div>
 
-            <!-- 5. Exam Date Filter -->
+            <!-- 5. Status Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center gap-1.5">
+                <CheckCircle2 class="w-3.5 h-3.5 text-bx-primary" />
+                <span>حالة الاختبار</span>
+              </label>
+              <TaqniyaSelect
+                v-model="selectedStatusFilter"
+                :options="statusOptions"
+                placeholder="كافة الحالات..."
+                full-width
+              />
+            </div>
+
+            <!-- 6. Exam Date Filter -->
             <div>
               <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center gap-1.5">
                 <Calendar class="w-3.5 h-3.5 text-bx-primary" />
-                <span>تاريخ الامتحان:</span>
+                <span>تاريخ الامتحان</span>
               </label>
               <input
                 v-model="selectedExamDate"
@@ -692,21 +848,34 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Filter Summary & Reset Action -->
-          <div class="flex items-center justify-between gap-3 pt-2 border-t border-[#B4AED8]/40 dark:border-white/[0.06]">
-            <span class="text-xs font-bold text-bx-muted flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>تصفية الامتحانات المعتمدة وفق الصف المختار وفترته النشطة تلقائياً</span>
-            </span>
+          <!-- Filter Action Toolbar -->
+          <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                @click="applyFilters"
+                :disabled="loading"
+                class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+              >
+                <Filter class="w-3.5 h-3.5" />
+                <span>تطبيق التصفية</span>
+              </button>
 
-            <button
-              type="button"
-              @click="resetFilters"
-              class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            >
-              <RotateCcw class="w-3.5 h-3.5 text-bx-primary" />
-              <span>إعادة ضبط الفلاتر</span>
-            </button>
+              <button
+                type="button"
+                @click="resetFilters"
+                :disabled="loading"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] disabled:opacity-50 transition-all cursor-pointer"
+              >
+                <RotateCcw class="w-3.5 h-3.5" />
+                <span>إعادة تعيين الفلاتر</span>
+              </button>
+            </div>
+
+            <div v-if="hasActiveFilters" class="flex items-center gap-2 text-[11px] text-bx-primary font-bold">
+              <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
+              <span>يتم تطبيق فلاتر مخصصة</span>
+            </div>
           </div>
         </div>
 
@@ -780,7 +949,10 @@ onMounted(async () => {
                       </div>
                     </th>
 
-                    <!-- 5. Actions Toolbar -->
+                    <!-- 5. Status Badge -->
+                    <th class="py-3.5 px-4 font-bold text-center w-32 border-e border-[#B4AED8]/50 dark:border-white/10">الحالة</th>
+
+                    <!-- 6. Actions Toolbar -->
                     <th class="py-3.5 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
                   </tr>
                 </thead>
@@ -843,7 +1015,23 @@ onMounted(async () => {
                       <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
                     </td>
 
-                    <!-- 5. Action Buttons Toolbar -->
+                    <!-- 5. Status Badge with Countdown -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <span
+                        class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
+                        :class="
+                          row.countdownInfo?.isPast || row.status === 'completed'
+                            ? 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20'
+                            : row.countdownInfo?.isUrgent
+                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        "
+                      >
+                        {{ row.countdownInfo?.label || (row.status === 'upcoming' ? 'قادم ومجدول' : 'منجز ومكتمل') }}
+                      </span>
+                    </td>
+
+                    <!-- 6. Action Buttons Toolbar -->
                     <td class="py-3.5 px-4 text-center whitespace-nowrap last:border-e-0">
                       <div class="flex items-center justify-center gap-1.5">
                         <!-- View Details Button (Fetches full record with notes & attachments) -->

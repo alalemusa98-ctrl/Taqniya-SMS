@@ -23,6 +23,7 @@ export interface OfficialExam {
   exam_type_ar?: string;
   exam_date: string;
   exam_day_name?: string;
+  status?: 'upcoming' | 'completed';
   notes?: string | null;
   attachments_count?: number;
   attachments?: ExamAttachment[] | null;
@@ -61,6 +62,7 @@ export interface QueryOfficialExamsParams {
   subject_id?: number;
   teacher_id?: number;
   exam_type?: string;
+  status?: string;
   exam_date?: string;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';

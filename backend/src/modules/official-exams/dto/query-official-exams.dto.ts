@@ -42,6 +42,10 @@ export class QueryOfficialExamsDto {
   exam_type?: ExamType;
 
   @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
   @IsDateString()
   exam_date?: string;
 
