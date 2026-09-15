@@ -3,7 +3,6 @@ import { ref, computed, onMounted, watch } from 'vue';
 import {
   Plus,
   BookOpen,
-  Calendar,
   Clock,
   Search,
   Filter,
@@ -13,7 +12,6 @@ import {
   Trash2,
   Loader2,
   TrendingUp,
-  User,
   Eye,
   Edit2,
   Paperclip,
