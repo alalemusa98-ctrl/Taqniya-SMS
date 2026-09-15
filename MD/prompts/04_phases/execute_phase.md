@@ -1,6 +1,6 @@
 # 🤖 Prompt: Execute Phase
 
-> **phase_06_homework:** `Governance Dispatcher & Phase Execution Orchestrator`
+> **phase_07_quizzes:** `Governance Dispatcher & Phase Execution Orchestrator`
 
 > **Purpose:**
 > يُستخدم هذا الموجّه لتسليم المرحلة الوظيفية المعتمدة، وسياقها، ومتطلباتها، وقيودها، ومعايير قبولها إلى **محرك التنفيذ المعتمد (Configured Execution Engine)** بعد التأكد من جاهزية جميع المتطلبات السابقة.

@@ -17,6 +17,7 @@ import {
   Clock,
   Calendar,
   BookOpen,
+  CalendarCheck,
   Menu,
   X,
 } from 'lucide-vue-next';
@@ -43,10 +44,10 @@ watch(() => route.path, () => {
 });
 
 // Click outside of any nav dropdown
-const handleGlobalClick = (event: MouseEvent) => {
+const handleOutsideClick = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
-  if (!target.closest('.nav-dropdown-container')) {
-    activeDropdown.value = null;
+  if (!target.closest('[data-dropdown-container]')) {
+    closeAllDropdowns();
   }
 };
 
@@ -116,6 +117,12 @@ const academicGroup: NavDropdownItem[] = [
     description: 'متابعة وإدارة التكاليف المنزلية والملازم ومواعيد التسليم',
     icon: BookOpen,
   },
+  {
+    label: 'الاختبارات والتطبيقات',
+    to: '/quizzes',
+    description: 'جدولة ونشر مواعيد الاختبارات والتطبيقات الشهرية والمرفقات',
+    icon: CalendarCheck,
+  },
 ];
 
 const systemGroup: NavDropdownItem[] = [
@@ -164,13 +171,13 @@ const handleScroll = () => {
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true });
-  document.addEventListener('click', handleGlobalClick);
+  document.addEventListener('click', handleOutsideClick);
   document.addEventListener('keydown', handleGlobalKeydown);
 });
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
-  document.removeEventListener('click', handleGlobalClick);
+  document.removeEventListener('click', handleOutsideClick);
   document.removeEventListener('keydown', handleGlobalKeydown);
 });
 </script>

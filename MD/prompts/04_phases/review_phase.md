@@ -2,7 +2,7 @@
 
 > **Execution Role:** Independent Quality Gatekeeper & Phase Verification Auditor
 >
-> **Target Specification:** `PROJECT/MD/phases/phase_06_homework` & Implemented Project Codebase
+> **Target Specification:** `PROJECT/MD/phases/phase_07_quizzes` & Implemented Project Codebase
 >
 > **Core Principle:** Independent Verification over Self-Certification.
 >

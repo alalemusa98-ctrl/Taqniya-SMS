@@ -230,6 +230,7 @@ describe('Phase 03-B: Teaching Assignments Registry (TDD Verification)', () => {
     it('TC-ASN-01: Retrieves hierarchical grouped assignments by classes -> sections -> assignments', async () => {
       const result = await assignmentsService.findAll({
         academic_year_id: testYearId,
+        class_id: testClassId,
         page: 1,
         per_page: 15,
       });

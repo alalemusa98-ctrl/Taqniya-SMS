@@ -15,6 +15,7 @@ import { StudentEnrollmentsModule } from './modules/student-enrollments/student-
 import { PeriodSlotsModule } from './modules/period-slots/period-slots.module.js';
 import { TimetablesModule } from './modules/timetables/timetables.module.js';
 import { AssignmentsModule } from './modules/assignments/assignments.module.js';
+import { QuizzesModule } from './modules/quizzes/quizzes.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -45,6 +46,7 @@ import { AppService } from './app.service.js';
     PeriodSlotsModule,
     TimetablesModule,
     AssignmentsModule,
+    QuizzesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

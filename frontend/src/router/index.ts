@@ -16,6 +16,7 @@ const GuardiansManagementView = () => import('../views/GuardiansManagementView.v
 const PeriodSlotsManagementView = () => import('../views/PeriodSlotsManagementView.vue');
 const TimetablesManagementView = () => import('../views/TimetablesManagementView.vue');
 const HomeworkManagementView = () => import('../views/HomeworkManagementView.vue');
+const QuizzesManagementView = () => import('../views/QuizzesManagementView.vue');
 
 const routes = [
   {
@@ -91,6 +92,12 @@ const routes = [
         path: 'homework',
         name: 'homework',
         component: HomeworkManagementView,
+        meta: { roles: ['admin', 'teacher', 'student', 'parent'] },
+      },
+      {
+        path: 'quizzes',
+        name: 'quizzes',
+        component: QuizzesManagementView,
         meta: { roles: ['admin', 'teacher', 'student', 'parent'] },
       },
       {
