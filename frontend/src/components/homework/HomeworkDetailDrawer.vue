@@ -21,19 +21,19 @@ import {
   RotateCw,
   X,
 } from 'lucide-vue-next';
-import type { HomeworkDetailData, HomeworkItem, HomeworkAttachment } from '../../api/homework.api';
+import type { HomeworkDetailData, HomeworkAttachment } from '../../api/homework.api';
 
 const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
 
 const props = defineProps<{
   modelValue: boolean;
-  homework: HomeworkDetailData | HomeworkItem | null;
+  homework: HomeworkDetailData | null;
   loading?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void;
-  (e: 'edit', item: HomeworkDetailData | HomeworkItem): void;
+  (e: 'edit', item: HomeworkDetailData): void;
 }>();
 
 const close = () => {

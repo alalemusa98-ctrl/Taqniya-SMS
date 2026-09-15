@@ -79,10 +79,10 @@ const appliedDueDate = ref('');
 // Drawer & Modal States
 const showFormDrawer = ref(false);
 const formDrawerMode = ref<'create' | 'edit'>('create');
-const itemToEdit = ref<HomeworkItem | HomeworkDetailData | null>(null);
+const itemToEdit = ref<HomeworkDetailData | null>(null);
 
 const showDetailDrawer = ref(false);
-const selectedHomeworkDetail = ref<HomeworkDetailData | HomeworkItem | null>(null);
+const selectedHomeworkDetail = ref<HomeworkDetailData | null>(null);
 const detailLoading = ref(false);
 
 const showDeleteModal = ref(false);
@@ -275,14 +275,24 @@ const handleOpenCreate = () => {
   showFormDrawer.value = true;
 };
 
-const handleOpenEdit = (item: HomeworkItem | HomeworkDetailData) => {
+const handleOpenEdit = async (item: HomeworkItem | HomeworkDetailData) => {
   formDrawerMode.value = 'edit';
-  itemToEdit.value = item;
+  try {
+    const res = await homeworkApi.getById(item.id);
+    if (res.data?.data) {
+      itemToEdit.value = res.data.data;
+      showFormDrawer.value = true;
+      return;
+    }
+  } catch (err: any) {
+    // fallback
+  }
+  itemToEdit.value = item as any;
   showFormDrawer.value = true;
 };
 
 const handleOpenView = async (item: HomeworkItem) => {
-  selectedHomeworkDetail.value = item;
+  selectedHomeworkDetail.value = null;
   showDetailDrawer.value = true;
   detailLoading.value = true;
   try {
@@ -291,7 +301,7 @@ const handleOpenView = async (item: HomeworkItem) => {
       selectedHomeworkDetail.value = res.data.data;
     }
   } catch (err: any) {
-    // Keep local item as fallback
+    // error fallback
   } finally {
     detailLoading.value = false;
   }

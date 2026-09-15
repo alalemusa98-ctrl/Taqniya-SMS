@@ -94,14 +94,6 @@ const deadlineInfo = computed(() => {
       >
         {{ homework.title }}
       </h4>
-
-      <!-- Description preview if available -->
-      <p
-        v-if="homework.description"
-        class="text-xs text-bx-muted line-clamp-2 leading-relaxed"
-      >
-        {{ homework.description }}
-      </p>
     </div>
 
     <!-- Metadata Footer & Actions -->

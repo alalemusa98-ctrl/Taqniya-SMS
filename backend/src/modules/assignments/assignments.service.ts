@@ -291,18 +291,11 @@ export class AssignmentsService {
         subject_name: a.teaching_assignment.subject.name,
         teacher_id: Number(a.teaching_assignment.teacher.id),
         teacher_name: a.teaching_assignment.teacher.full_name,
-        created_by_user_id: Number(a.created_by_user_id),
-        creator_name: a.creator.user_code,
-        creator_role: a.creator.role_type,
         title: a.title,
-        description: a.description,
+        attachments_count: attachments.length,
         assigned_date: a.assigned_date.toISOString().slice(0, 10),
         due_date: a.due_date.toISOString().slice(0, 10),
         status: aStatus,
-        attachments_count: attachments.length,
-        attachments,
-        created_at: a.created_at.toISOString(),
-        updated_at: a.updated_at ? a.updated_at.toISOString() : null,
       });
     }
 

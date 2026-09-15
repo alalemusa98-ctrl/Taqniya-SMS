@@ -9,23 +9,13 @@ export interface HomeworkAttachment {
 
 export interface HomeworkItem {
   id: number;
-  teaching_assignment_id: number;
-  subject_id: number;
   subject_name: string;
-  teacher_id: number;
   teacher_name: string;
-  created_by_user_id: number;
-  creator_name: string;
-  creator_role: string;
   title: string;
-  description: string | null;
+  attachments_count: number;
   assigned_date: string;
   due_date: string;
   status: 'active' | 'expired';
-  attachments_count: number;
-  attachments?: HomeworkAttachment[];
-  created_at: string;
-  updated_at: string | null;
 }
 
 export interface SectionWithHomework {

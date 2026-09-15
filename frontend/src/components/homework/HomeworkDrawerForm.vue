@@ -22,7 +22,7 @@ import {
   X,
 } from 'lucide-vue-next';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../ui/TaqniyaSelect.vue';
-import type { HomeworkAttachment, HomeworkItem, HomeworkDetailData } from '../../api/homework.api';
+import type { HomeworkAttachment, HomeworkDetailData } from '../../api/homework.api';
 import type { AssignmentItem } from '../../api/teaching-assignments.api';
 
 const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
@@ -30,7 +30,7 @@ const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue
 const props = defineProps<{
   modelValue: boolean;
   mode: 'create' | 'edit';
-  itemToEdit?: HomeworkItem | HomeworkDetailData | null;
+  itemToEdit?: HomeworkDetailData | null;
   academicYearId: number;
   academicTermId?: number | null;
   availableTeachingAssignments: AssignmentItem[];
