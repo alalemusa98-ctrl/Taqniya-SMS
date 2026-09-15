@@ -24,6 +24,7 @@ import {
   type PaginationMeta,
 } from '../api/homework.api';
 import { academicApi, type AcademicYearItem } from '../api/academic.api';
+import { teachersApi, type Teacher } from '../api/teachers.api';
 import { teachingAssignmentsApi, type AssignmentItem } from '../api/teaching-assignments.api';
 import { useAuthStore } from '../stores/auth.store';
 import { useToast } from '../composables/useToast';
@@ -52,6 +53,12 @@ const selectedTermId = ref<number | null>(null);
 const currentYearName = ref('');
 const currentTermName = ref('');
 
+// Metadata for cascading filters
+const allClasses = ref<any[]>([]);
+const allTeachers = ref<Teacher[]>([]);
+const allClassSections = ref<any[]>([]);
+const allClassSubjects = ref<any[]>([]);
+
 // Homework Data Hierarchy
 const classesData = ref<ClassWithHomework[]>([]);
 const paginationMeta = ref<PaginationMeta>({
@@ -67,12 +74,18 @@ const availableTeachingAssignments = ref<AssignmentItem[]>([]);
 // Filter States (Draft inputs)
 const searchQuery = ref('');
 const selectedClassFilter = ref<number | string>('all');
+const selectedSectionFilter = ref<number | string>('all');
+const selectedTeacherFilter = ref<number | string>('all');
+const selectedSubjectFilter = ref<number | string>('all');
 const selectedStatusFilter = ref<'all' | 'active' | 'expired'>('all');
 const selectedDueDate = ref('');
 
 // Applied Filter States
 const appliedSearchQuery = ref('');
 const appliedClassFilter = ref<number | string>('all');
+const appliedSectionFilter = ref<number | string>('all');
+const appliedTeacherFilter = ref<number | string>('all');
+const appliedSubjectFilter = ref<number | string>('all');
 const appliedStatusFilter = ref<'all' | 'active' | 'expired'>('all');
 const appliedDueDate = ref('');
 
@@ -94,27 +107,88 @@ const activeAcademicYear = computed(() => {
   return academicYears.value.find((y) => y.id === selectedYearId.value) || academicYears.value[0];
 });
 
-// Class Filter Options
+// 1. Class Filter Options
 const classOptions = computed<TaqniyaSelectOption[]>(() => {
   const opts: TaqniyaSelectOption[] = [{ value: 'all', label: 'جميع الصفوف الدراسية' }];
-  classesData.value.forEach((c) => {
-    opts.push({ value: c.class_id, label: c.class_name });
+  allClasses.value.forEach((c) => {
+    opts.push({ value: c.id, label: c.name });
   });
   return opts;
 });
 
-// Status Filter Options
+// 2. Section Filter Options (Cascading: Dependent on Class Selection)
+const sectionOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (selectedClassFilter.value === 'all') {
+    return [{ value: 'all', label: 'يرجى اختيار الصف أولاً...' }];
+  }
+  const classId = Number(selectedClassFilter.value);
+  const sections = allClassSections.value.filter((s) => s.class_id === classId);
+  return [
+    { value: 'all', label: 'جميع الشُعب الدراسية' },
+    ...sections.map((s) => ({ value: s.id, label: s.name })),
+  ];
+});
+
+// 3. Subject Filter Options (Cascading: Dependent on Class Selection)
+const subjectOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (selectedClassFilter.value === 'all') {
+    return [{ value: 'all', label: 'يرجى اختيار الصف أولاً...' }];
+  }
+  const classId = Number(selectedClassFilter.value);
+  const classObj = allClassSubjects.value.find((c: any) => c.class_id === classId);
+  const subs: any[] = [];
+  if (classObj && classObj.terms) {
+    classObj.terms.forEach((t: any) => {
+      t.subjects?.forEach((s: any) => {
+        if (!subs.some((existing) => existing.subject_id === s.subject_id)) {
+          subs.push(s);
+        }
+      });
+    });
+  }
+  return [
+    { value: 'all', label: 'جميع المواد التعليمية' },
+    ...subs.map((s) => ({
+      value: s.subject_id,
+      label: s.name,
+      description: s.code ? `كود: ${s.code}` : undefined,
+    })),
+  ];
+});
+
+// 4. Teacher Filter Options
+const teacherOptions = computed<TaqniyaSelectOption[]>(() => {
+  return [
+    { value: 'all', label: 'جميع المعلمين / الأساتذة' },
+    ...allTeachers.value.map((t) => ({
+      value: t.id,
+      label: t.full_name,
+      description: t.specialization ? `تخصص: ${t.specialization}` : undefined,
+    })),
+  ];
+});
+
+// 5. Status Filter Options
 const statusOptions: TaqniyaSelectOption[] = [
   { value: 'all', label: 'كافة الحالات' },
   { value: 'active', label: 'الواجبات السارية فقط' },
   { value: 'expired', label: 'الواجبات المنتهية فقط' },
 ];
 
+// When Class Filter changes, reset dependent Section and Subject filters
+watch(selectedClassFilter, () => {
+  selectedSectionFilter.value = 'all';
+  selectedSubjectFilter.value = 'all';
+});
+
 // Active Filter Indicator
 const hasActiveFilters = computed(() => {
   return (
     appliedSearchQuery.value.trim() !== '' ||
     appliedClassFilter.value !== 'all' ||
+    appliedSectionFilter.value !== 'all' ||
+    appliedTeacherFilter.value !== 'all' ||
+    appliedSubjectFilter.value !== 'all' ||
     appliedStatusFilter.value !== 'all' ||
     appliedDueDate.value !== ''
   );
@@ -150,9 +224,13 @@ const totalClassesCount = computed(() => classesData.value.length);
 // Fetch Initial Data
 const loadInitialData = async () => {
   try {
-    const [yearsRes, termsRes] = await Promise.all([
+    const [yearsRes, termsRes, classesRes, teachersRes, classSectionsRes, classSubjectsRes] = await Promise.all([
       academicApi.getYears(),
       academicApi.getTerms().catch(() => ({ data: { data: [] } })),
+      academicApi.getClasses({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
+      teachersApi.getTeachers({ per_page: 200, is_active: 1 }).catch(() => ({ data: { data: [] } })),
+      academicApi.getClassSections({ per_page: 200 }).catch(() => ({ data: { data: { classes: [] } } })),
+      academicApi.getClassSubjects({ per_page: 100 }).catch(() => ({ data: { data: { classes: [] } } })),
     ]);
 
     if (yearsRes.data && Array.isArray(yearsRes.data)) {
@@ -169,11 +247,33 @@ const loadInitialData = async () => {
       selectedTermId.value = termsList[0].id;
       currentTermName.value = termsList[0].name;
     }
+
+    allClasses.value = classesRes.data?.data || classesRes.data || [];
+    allTeachers.value = teachersRes.data?.data || teachersRes.data || [];
+    allClassSubjects.value = classSubjectsRes.data?.data?.classes || classSubjectsRes.data?.data || [];
+
+    // Flatten class sections
+    const groupedClasses = classSectionsRes.data?.data?.classes || [];
+    const flattened: any[] = [];
+    for (const gc of groupedClasses) {
+      if (gc.sections && Array.isArray(gc.sections)) {
+        for (const s of gc.sections) {
+          flattened.push({
+            id: s.id,
+            class_id: gc.class_id,
+            class_name: gc.class_name,
+            section_id: s.section_id,
+            name: s.name,
+          });
+        }
+      }
+    }
+    allClassSections.value = flattened;
   } catch (err: any) {
-    console.error('Failed to fetch academic years or terms', err);
+    console.error('Failed to fetch initial metadata', err);
   }
 
-  // Load Teaching Assignments for dropdown
+  // Load Teaching Assignments for drawer dropdown
   if (canManage.value) {
     try {
       const res = await teachingAssignmentsApi.getAll({
@@ -203,7 +303,7 @@ const loadInitialData = async () => {
   await fetchHomework();
 };
 
-// Fetch Homework List
+// Fetch Homework List with Full Filters
 const fetchHomework = async (page = 1) => {
   loading.value = true;
   try {
@@ -219,6 +319,15 @@ const fetchHomework = async (page = 1) => {
     }
     if (appliedClassFilter.value !== 'all') {
       params.class_id = Number(appliedClassFilter.value);
+    }
+    if (appliedSectionFilter.value !== 'all') {
+      params.class_section_id = Number(appliedSectionFilter.value);
+    }
+    if (appliedTeacherFilter.value !== 'all') {
+      params.teacher_id = Number(appliedTeacherFilter.value);
+    }
+    if (appliedSubjectFilter.value !== 'all') {
+      params.subject_id = Number(appliedSubjectFilter.value);
     }
     if (appliedStatusFilter.value !== 'all') {
       params.status = appliedStatusFilter.value;
@@ -247,6 +356,9 @@ const fetchHomework = async (page = 1) => {
 const applyFilters = () => {
   appliedSearchQuery.value = searchQuery.value;
   appliedClassFilter.value = selectedClassFilter.value;
+  appliedSectionFilter.value = selectedSectionFilter.value;
+  appliedTeacherFilter.value = selectedTeacherFilter.value;
+  appliedSubjectFilter.value = selectedSubjectFilter.value;
   appliedStatusFilter.value = selectedStatusFilter.value;
   appliedDueDate.value = selectedDueDate.value;
   fetchHomework(1);
@@ -255,12 +367,20 @@ const applyFilters = () => {
 const resetFilters = () => {
   searchQuery.value = '';
   selectedClassFilter.value = 'all';
+  selectedSectionFilter.value = 'all';
+  selectedTeacherFilter.value = 'all';
+  selectedSubjectFilter.value = 'all';
   selectedStatusFilter.value = 'all';
   selectedDueDate.value = '';
+
   appliedSearchQuery.value = '';
   appliedClassFilter.value = 'all';
+  appliedSectionFilter.value = 'all';
+  appliedTeacherFilter.value = 'all';
+  appliedSubjectFilter.value = 'all';
   appliedStatusFilter.value = 'all';
   appliedDueDate.value = '';
+
   fetchHomework(1);
 };
 
@@ -458,21 +578,71 @@ onMounted(() => {
           />
         </div>
 
-        <!-- 3. Filters Toolbar -->
+        <!-- 3. Filters Toolbar with Cascading Class/Section/Subject Dependencies -->
         <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6 space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            <!-- 1. Class Filter -->
             <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب الصف الدراسي</label>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">الصف الدراسي</label>
               <TaqniyaSelect
                 v-model="selectedClassFilter"
                 :options="classOptions"
                 placeholder="كافة الصفوف..."
+                searchable
                 full-width
               />
             </div>
 
+            <!-- 2. Section Filter (Cascading: Dependent on Class) -->
             <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب الحالة</label>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center justify-between">
+                <span>الشعبة الدراسية</span>
+                <span v-if="selectedClassFilter === 'all'" class="text-[10px] text-amber-500 dark:text-amber-400 font-normal">
+                  (يتطلب اختيار الصف)
+                </span>
+              </label>
+              <TaqniyaSelect
+                v-model="selectedSectionFilter"
+                :options="sectionOptions"
+                :disabled="selectedClassFilter === 'all'"
+                placeholder="كافة الشُعب..."
+                full-width
+              />
+            </div>
+
+            <!-- 3. Subject Filter (Cascading: Dependent on Class) -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center justify-between">
+                <span>المادة التعليمية</span>
+                <span v-if="selectedClassFilter === 'all'" class="text-[10px] text-amber-500 dark:text-amber-400 font-normal">
+                  (يتطلب اختيار الصف)
+                </span>
+              </label>
+              <TaqniyaSelect
+                v-model="selectedSubjectFilter"
+                :options="subjectOptions"
+                :disabled="selectedClassFilter === 'all'"
+                placeholder="كافة المواد..."
+                searchable
+                full-width
+              />
+            </div>
+
+            <!-- 4. Teacher Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">المعلم / الأستاذ</label>
+              <TaqniyaSelect
+                v-model="selectedTeacherFilter"
+                :options="teacherOptions"
+                placeholder="كافة المعلمين..."
+                searchable
+                full-width
+              />
+            </div>
+
+            <!-- 5. Status Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">حالة الواجب</label>
               <TaqniyaSelect
                 v-model="selectedStatusFilter"
                 :options="statusOptions"
@@ -481,8 +651,9 @@ onMounted(() => {
               />
             </div>
 
+            <!-- 6. Due Date Filter -->
             <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية بحسب تاريخ الاستحقاق</label>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">موعد الاستحقاق</label>
               <input
                 v-model="selectedDueDate"
                 type="date"
