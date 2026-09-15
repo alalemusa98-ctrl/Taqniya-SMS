@@ -2,6 +2,10 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import {
   Calendar,
+  Clock,
+  GraduationCap,
+  Sparkles,
+  TrendingUp,
   Plus,
   Search,
   Eye,
@@ -21,6 +25,7 @@ import {
   ExternalLink,
   RotateCcw,
   CheckCircle2,
+  Loader2,
 } from 'lucide-vue-next';
 import {
   officialExamsApi,
@@ -36,13 +41,16 @@ import {
   type AcademicSubjectItem,
 } from '../api/academic.api';
 import { useAuthStore } from '../stores/auth.store';
+import { useToast } from '../composables/useToast';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
 import TaqniyaDrawer from '../components/ui/TaqniyaDrawer.vue';
 import AcademicDetailHeroCard from '../components/ui/AcademicDetailHeroCard.vue';
 import OfficialExamDrawerForm from '../components/official-exams/OfficialExamDrawerForm.vue';
+import OfficialExamDetailDrawer from '../components/official-exams/OfficialExamDetailDrawer.vue';
 
 const authStore = useAuthStore();
+const toast = useToast();
 const isAdmin = computed(() => authStore.user?.role_type === 'admin');
 const isTeacher = computed(() => authStore.user?.role_type === 'teacher');
 const isStudentOrParent = computed(() => ['student', 'parent'].includes(authStore.user?.role_type || ''));
@@ -55,11 +63,13 @@ const academicYears = ref<AcademicYearItem[]>([]);
 const academicTerms = ref<AcademicTermItem[]>([]);
 const classes = ref<AcademicClassItem[]>([]);
 const subjects = ref<AcademicSubjectItem[]>([]);
+const allClassSubjects = ref<any[]>([]);
+const allClassAcademicTerms = ref<any[]>([]);
 
 // Filter States
+const selectedClassId = ref<number | null>(null);
 const selectedYearId = ref<number>(0);
 const selectedTermId = ref<number>(0);
-const selectedClassId = ref<number | null>(null);
 const selectedExamType = ref<string>('');
 const selectedExamDate = ref<string>('');
 const searchKeyword = ref<string>('');
@@ -98,14 +108,12 @@ const isDeleteModalOpen = ref<boolean>(false);
 const itemToDelete = ref<OfficialExam | null>(null);
 const isDeleting = ref<boolean>(false);
 
-// Toast / Feedback
-const toastMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
-
-function showToast(text: string, type: 'success' | 'error' = 'success') {
-  toastMessage.value = { type, text };
-  setTimeout(() => {
-    toastMessage.value = null;
-  }, 4000);
+function getErrorMessage(err: any, fallback: string): string {
+  const msg = err?.response?.data?.message;
+  if (typeof msg === 'string' && msg.trim() && msg !== 'Internal server error') {
+    return msg;
+  }
+  return fallback;
 }
 
 // Options
@@ -141,36 +149,93 @@ const examTypeFilterOptions: TaqniyaSelectOption[] = [
   { value: 'second_round', label: 'امتحانات الدور الثاني (Second Round)' },
 ];
 
-// KPI Computations
+// KPI Computations from hierarchicalClasses (SSoT)
 const kpiStats = computed(() => {
-  const all = examsList.value;
+  let midtermCount = 0;
+  let finalCount = 0;
+  let secondRoundCount = 0;
+  let totalSubjectsCount = 0;
+
+  hierarchicalClasses.value.forEach((cls) => {
+    cls.exam_types?.forEach((et: any) => {
+      const count = et.total_subjects ?? et.subjects?.length ?? et.exams?.length ?? 0;
+      totalSubjectsCount += count;
+      if (et.exam_type === 'midterm') midtermCount += count;
+      else if (et.exam_type === 'final') finalCount += count;
+      else if (et.exam_type === 'second_round') secondRoundCount += count;
+    });
+  });
+
   return {
-    total: totalRecords.value || all.length,
-    midterm: all.filter((e) => e.exam_type === 'midterm').length,
-    final: all.filter((e) => e.exam_type === 'final').length,
-    second_round: all.filter((e) => e.exam_type === 'second_round').length,
+    total: totalRecords.value || totalSubjectsCount,
+    midterm: midtermCount,
+    final: finalCount,
+    second_round: secondRoundCount,
   };
+});
+
+// Flat array derived strictly from hierarchicalClasses
+const flatExamRows = computed(() => {
+  const rows: any[] = [];
+  hierarchicalClasses.value.forEach((cls) => {
+    cls.exam_types?.forEach((et: any) => {
+      const subjectList = et.subjects || et.exams || [];
+      subjectList.forEach((sub: any) => {
+        rows.push({
+          id: sub.id,
+          class_id: cls.class_id,
+          class_name: cls.class_name,
+          grade_level: cls.grade_level,
+          exam_type: et.exam_type,
+          exam_type_ar: et.exam_type_ar,
+          subject_id: sub.subject_id,
+          subject_name: sub.subject_name,
+          exam_date: sub.exam_date,
+          attachments_count: sub.attachments_count || 0,
+          created_at: sub.created_at,
+        });
+      });
+    });
+  });
+  return rows;
 });
 
 async function loadInitialContext() {
   try {
-    const [yearsRes, termsRes, classesRes, subjectsRes] = await Promise.all([
-      academicApi.getYears(),
+    const [yearsRes, termsRes, classesRes, subjectsRes, classSubjectsRes, classTermsRes] = await Promise.all([
+      academicApi.getYears({ per_page: 100 }),
       academicApi.getTerms(),
-      academicApi.getClasses(),
-      academicApi.getSubjects(),
+      academicApi.getClasses({ per_page: 100 }),
+      academicApi.getSubjects({ per_page: 100 }),
+      academicApi.getClassSubjects({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
+      academicApi.getClassAcademicTerms({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
     ]);
 
-    academicYears.value = yearsRes.data.data;
-    academicTerms.value = termsRes.data.data;
-    classes.value = classesRes.data.data;
-    subjects.value = subjectsRes.data.data;
+    academicYears.value = yearsRes.data.data?.years || yearsRes.data.data || [];
+    academicTerms.value = termsRes.data.data?.terms || termsRes.data.data || [];
+    classes.value = classesRes.data.data?.classes || classesRes.data.data || [];
+    subjects.value = subjectsRes.data.data?.subjects || subjectsRes.data.data || [];
+    allClassSubjects.value = classSubjectsRes.data.data?.classes || classSubjectsRes.data.data || [];
+    allClassAcademicTerms.value = classTermsRes.data.data?.classes || classTermsRes.data.data || [];
 
     const activeYear = academicYears.value.find((y: AcademicYearItem) => y.is_active) || academicYears.value[0];
     if (activeYear) selectedYearId.value = activeYear.id;
 
-    const activeTerm = academicTerms.value[0];
-    if (activeTerm) selectedTermId.value = activeTerm.id;
+    if (classes.value.length > 0) {
+      selectedClassId.value = classes.value[0].id;
+      // Auto find active term for this initial class
+      const classTermsList = allClassAcademicTerms.value;
+      const classGroup = classTermsList.find((g: any) => Number(g.class_id) === Number(classes.value[0].id));
+      if (classGroup && classGroup.terms) {
+        const activeTerm = classGroup.terms.find((t: any) => Number(t.is_active) === 1);
+        if (activeTerm) {
+          selectedTermId.value = Number(activeTerm.academic_term_id);
+        }
+      }
+    } else {
+      const activeTerm = academicTerms.value[0];
+      if (activeTerm) selectedTermId.value = activeTerm.id;
+    }
   } catch (err) {
     console.error('Failed to load academic context:', err);
   }
@@ -205,7 +270,6 @@ async function fetchOfficialExams() {
       });
 
       hierarchicalClasses.value = res.data.data.classes || [];
-      examsList.value = res.data.data.items || [];
       totalRecords.value = res.data.meta?.total || 0;
 
       // Also if class board tab is active, fetch class board
@@ -216,11 +280,33 @@ async function fetchOfficialExams() {
     }
   } catch (err: any) {
     console.error('Failed to fetch official exams:', err);
-    showToast(err?.response?.data?.message || 'تعذر جلب جدول الامتحانات الرسمية.', 'error');
+    toast.error(getErrorMessage(err, 'تعذر جلب جدول الامتحانات الرسمية.'));
   } finally {
     loading.value = false;
   }
 }
+
+// Watch when Class Filter changes to automatically select Active Year & Active Term for that class
+watch(selectedClassId, (newClassId) => {
+  if (newClassId) {
+    const classIdNum = Number(newClassId);
+    const classTermsList = Array.isArray(allClassAcademicTerms.value)
+      ? allClassAcademicTerms.value
+      : (allClassAcademicTerms.value as any)?.classes || [];
+
+    const classGroup = classTermsList.find((g: any) => Number(g.class_id) === classIdNum);
+    if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
+      const activeTerm = classGroup.terms.find((t: any) => Number(t.is_active) === 1 || t.is_active === true);
+      if (activeTerm && activeTerm.academic_term_id) {
+        selectedTermId.value = Number(activeTerm.academic_term_id);
+      }
+    }
+
+    // Auto set active academic year
+    const activeYear = academicYears.value.find((y: AcademicYearItem) => y.is_active) || academicYears.value[0];
+    if (activeYear) selectedYearId.value = activeYear.id;
+  }
+});
 
 watch(
   [selectedYearId, selectedTermId, selectedClassId, selectedExamType, selectedExamDate, currentPage],
@@ -242,7 +328,13 @@ function resetFilters() {
   selectedExamType.value = '';
   selectedExamDate.value = '';
   searchKeyword.value = '';
-  selectedClassId.value = null;
+  if (classes.value.length > 0) {
+    selectedClassId.value = classes.value[0].id;
+  } else {
+    selectedClassId.value = null;
+  }
+  const activeYear = academicYears.value.find((y: AcademicYearItem) => y.is_active) || academicYears.value[0];
+  if (activeYear) selectedYearId.value = activeYear.id;
   currentPage.value = 1;
   fetchOfficialExams();
 }
@@ -253,18 +345,33 @@ function openCreateDrawer() {
   isDrawerOpen.value = true;
 }
 
-function openEditDrawer(exam: OfficialExam) {
+async function openEditDrawer(exam: any) {
   drawerMode.value = 'edit';
-  itemToEdit.value = exam;
+  try {
+    const res = await officialExamsApi.getById(exam.id);
+    itemToEdit.value = res.data.data;
+  } catch {
+    itemToEdit.value = exam;
+  }
   isDrawerOpen.value = true;
 }
 
-function openDetailsDrawer(exam: OfficialExam) {
-  selectedExamDetails.value = exam;
+async function openDetailsDrawer(exam: any) {
+  try {
+    const res = await officialExamsApi.getById(exam.id);
+    selectedExamDetails.value = res.data.data;
+  } catch {
+    selectedExamDetails.value = exam;
+  }
   isDetailsDrawerOpen.value = true;
 }
 
-function openDeleteModal(exam: OfficialExam) {
+function handleEditFromDetails(exam: any) {
+  isDetailsDrawerOpen.value = false;
+  openEditDrawer(exam);
+}
+
+function openDeleteModal(exam: any) {
   itemToDelete.value = exam;
   isDeleteModalOpen.value = true;
 }
@@ -274,15 +381,15 @@ async function handleFormSubmit(payload: any) {
   try {
     if (drawerMode.value === 'create') {
       await officialExamsApi.create(payload);
-      showToast('تمت جدولة الامتحان الرسمي بنجاح.');
+      toast.success('تمت جدولة الامتحان الرسمي بنجاح.');
     } else if (itemToEdit.value) {
       await officialExamsApi.update(itemToEdit.value.id, payload);
-      showToast('تم تحديث موعد الامتحان الرسمي بنجاح.');
+      toast.success('تم تحديث موعد الامتحان الرسمي بنجاح.');
     }
     isDrawerOpen.value = false;
     fetchOfficialExams();
   } catch (err: any) {
-    showToast(err?.response?.data?.message || 'تعذر حفظ موعد الامتحان.', 'error');
+    toast.error(getErrorMessage(err, 'تعذر حفظ موعد الامتحان.'));
   } finally {
     isSubmitting.value = false;
   }
@@ -293,12 +400,12 @@ async function confirmDelete() {
   isDeleting.value = true;
   try {
     await officialExamsApi.delete(itemToDelete.value.id);
-    showToast('تم إلغاء وحذف موعد الامتحان بنجاح.');
+    toast.success('تم إلغاء وحذف موعد الامتحان بنجاح.');
     isDeleteModalOpen.value = false;
     itemToDelete.value = null;
     fetchOfficialExams();
   } catch (err: any) {
-    showToast(err?.response?.data?.message || 'تعذر حذف موعد الامتحان.', 'error');
+    toast.error(getErrorMessage(err, 'تعذر حذف موعد الامتحان.'));
   } finally {
     isDeleting.value = false;
   }
@@ -347,17 +454,6 @@ onMounted(async () => {
 <template>
   <TaqniyaErrorBoundary>
     <div class="space-y-4 font-sans print:p-0 print:m-0" dir="rtl">
-      <!-- Toast Message -->
-      <div
-        v-if="toastMessage"
-        class="fixed bottom-6 left-6 z-50 p-4 rounded-2xl shadow-xl flex items-center gap-3 text-xs font-bold transition-all duration-300 animate-slide-up"
-        :class="toastMessage.type === 'success' ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-rose-600 text-white shadow-rose-600/20'"
-      >
-        <CheckCircle2 v-if="toastMessage.type === 'success'" class="w-4 h-4" />
-        <AlertCircle v-else class="w-4 h-4" />
-        <span>{{ toastMessage.text }}</span>
-      </div>
-
       <!-- Main Unified Container Card -->
       <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm space-y-6">
         
@@ -390,7 +486,7 @@ onMounted(async () => {
               v-if="isStudentOrParent || activeViewTab === 'class_board'"
               type="button"
               @click="printTimetable"
-              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-title hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition shadow-2xs"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-title hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition shadow-2xs cursor-pointer"
             >
               <Printer class="w-3.5 h-3.5 text-bx-primary" />
               <span>طباعة الجدول المعتمد</span>
@@ -431,43 +527,49 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- KPI Statistics (Admin only) -->
+        <!-- 2. KPI Metrics Cards (Exact Taqniya Spatial Theme with Icons and Variant styling) -->
         <div v-if="isAdmin" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:hidden">
           <TaqniyaKpiCard
-            title="إجمالي الامتحانات"
-            :value="kpiStats.total"
-            icon="Calendar"
-            color="brand"
-            subtitle="امتحانات مجدولة ومثبتة"
+            title="إجمالي الامتحانات المسجلة"
+            :value="`${kpiStats.total} امتحان`"
+            subtitle="سجل رسمي مثبت"
+            :icon="Calendar"
+            variant="primary"
+            badge-text="التراكمي"
+            :badge-icon="TrendingUp"
+            :pulse-badge="true"
           />
           <TaqniyaKpiCard
-            title="امتحانات نصفية"
-            :value="kpiStats.midterm"
-            icon="Clock"
-            color="blue"
-            subtitle="امتحانات منتصف الفصل"
+            title="امتحانات نصفية (Midterm)"
+            :value="`${kpiStats.midterm} نصفي`"
+            subtitle="منتصف الفصل الدراسي"
+            :icon="Clock"
+            variant="blue"
+            badge-text="النصفية"
           />
           <TaqniyaKpiCard
-            title="امتحانات نهائية"
-            :value="kpiStats.final"
-            icon="GraduationCap"
-            color="rose"
+            title="امتحانات نهائية (Final)"
+            :value="`${kpiStats.final} نهائي`"
             subtitle="نهاية الفصل الدراسي"
+            :icon="GraduationCap"
+            variant="rose"
+            badge-text="النهائية"
           />
           <TaqniyaKpiCard
             title="امتحانات الدور الثاني"
-            :value="kpiStats.second_round"
-            icon="Sparkles"
-            color="amber"
+            :value="`${kpiStats.second_round} دور ثانٍ`"
             subtitle="الإعادة والتكميلي"
+            :icon="Sparkles"
+            variant="amber"
+            badge-text="التكميلي"
           />
         </div>
 
-        <!-- Admin View Switcher Tabs -->
+        <!-- 3. Admin View Switcher Tabs -->
         <div v-if="isAdmin" class="flex items-center gap-2 p-1 rounded-full bg-purple-500/5 dark:bg-white/[0.03] border border-[#B4AED8]/40 dark:border-white/[0.06] w-fit print:hidden">
           <button
             type="button"
-            class="px-4 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-2"
+            class="px-4 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-2 cursor-pointer"
             :class="activeViewTab === 'matrix' ? 'bg-bx-primary text-white shadow-xs' : 'text-bx-muted hover:text-bx-title'"
             @click="activeViewTab = 'matrix'"
           >
@@ -477,7 +579,7 @@ onMounted(async () => {
 
           <button
             type="button"
-            class="px-4 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-2"
+            class="px-4 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-2 cursor-pointer"
             :class="activeViewTab === 'class_board' ? 'bg-bx-primary text-white shadow-xs' : 'text-bx-muted hover:text-bx-title'"
             @click="activeViewTab = 'class_board'"
           >
@@ -486,52 +588,72 @@ onMounted(async () => {
           </button>
         </div>
 
-        <!-- Filter Bar (Admin) -->
+        <!-- 4. Filter Bar (Class First, followed by auto-assigned active Year & Term) -->
         <div v-if="isAdmin" class="p-4 sm:p-5 rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] shadow-xs space-y-4 print:hidden">
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            <!-- Year -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            <!-- 1. Class Filter (First) -->
             <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">العام الدراسي:</label>
+              <label class="block text-[11px] font-bold text-bx-title mb-1 flex items-center gap-1.5">
+                <School class="w-3.5 h-3.5 text-bx-primary" />
+                <span>الصف الدراسي:</span>
+              </label>
+              <TaqniyaSelect
+                v-model="selectedClassId"
+                :options="classOptions"
+                placeholder="اختر الصف الدراسي..."
+                searchable
+                full-width
+              />
+            </div>
+
+            <!-- 2. Year Filter (Auto-Determined) -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center gap-1.5">
+                <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+                <span>العام الدراسي:</span>
+              </label>
               <TaqniyaSelect
                 v-model="selectedYearId"
                 :options="yearOptions"
                 placeholder="اختر العام الدراسي"
+                full-width
               />
             </div>
 
-            <!-- Term -->
+            <!-- 3. Term Filter (Auto-Assigned from Class Active Term) -->
             <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">الفصل الدراسي:</label>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center gap-1.5">
+                <Clock class="w-3.5 h-3.5 text-bx-primary" />
+                <span>الفصل الدراسي:</span>
+              </label>
               <TaqniyaSelect
                 v-model="selectedTermId"
                 :options="termOptions"
                 placeholder="اختر الفصل الدراسي"
+                full-width
               />
             </div>
 
-            <!-- Class Filter -->
+            <!-- 4. Exam Type Filter -->
             <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">الصف الدراسي:</label>
-              <TaqniyaSelect
-                v-model="selectedClassId"
-                :options="classOptions"
-                placeholder="تصفية بالصف الدراسي"
-              />
-            </div>
-
-            <!-- Exam Type Filter -->
-            <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">نوع الامتحان:</label>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center gap-1.5">
+                <Layers class="w-3.5 h-3.5 text-bx-primary" />
+                <span>نوع الامتحان:</span>
+              </label>
               <TaqniyaSelect
                 v-model="selectedExamType"
                 :options="examTypeFilterOptions"
-                placeholder="تصفية بنوع الامتحان"
+                placeholder="كافة أنواع الامتحانات"
+                full-width
               />
             </div>
 
-            <!-- Exam Date -->
+            <!-- 5. Exam Date Filter -->
             <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">تاريخ الامتحان:</label>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center gap-1.5">
+                <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+                <span>تاريخ الامتحان:</span>
+              </label>
               <input
                 v-model="selectedExamDate"
                 type="date"
@@ -540,14 +662,17 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Search & Reset -->
+          <!-- Filter Summary & Reset Action -->
           <div class="flex items-center justify-between gap-3 pt-2 border-t border-[#B4AED8]/40 dark:border-white/[0.06]">
-            <span class="text-xs font-bold text-bx-muted">تصفية متقدمة للامتحانات والمواد</span>
+            <span class="text-xs font-bold text-bx-muted flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>تصفية الامتحانات المعتمدة وفق الصف المختار وفترته النشطة تلقائياً</span>
+            </span>
 
             <button
               type="button"
               @click="resetFilters"
-              class="px-3.5 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition flex items-center gap-1.5"
+              class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-title hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
               <RotateCcw class="w-3.5 h-3.5 text-bx-primary" />
               <span>إعادة ضبط الفلاتر</span>
@@ -557,146 +682,203 @@ onMounted(async () => {
 
         <!-- Main Content Area -->
 
-        <!-- View 1: Admin Hierarchical Matrix View -->
-        <div v-if="isAdmin && activeViewTab === 'matrix'" class="space-y-6">
+        <!-- View 1: Admin Unified Data Table View -->
+        <div v-if="isAdmin && activeViewTab === 'matrix'" class="space-y-4">
           <!-- Loading State -->
-          <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div v-for="i in 4" :key="i" class="h-48 rounded-3xl bg-purple-500/5 animate-pulse border border-[#B4AED8]/30"></div>
+          <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
+            <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
+            <span class="text-xs font-bold">جاري تحميل جدول الامتحانات الرسمية المعتمد...</span>
           </div>
 
           <!-- Empty State -->
           <div
-            v-else-if="hierarchicalClasses.length === 0"
+            v-else-if="flatExamRows.length === 0"
             class="text-center py-16 px-4 rounded-3xl bg-purple-500/[0.02] border border-dashed border-[#B4AED8] dark:border-white/10"
           >
             <Calendar class="w-12 h-12 mx-auto text-bx-primary/40 mb-3" />
             <h3 class="text-base font-bold text-bx-title">لا توجد امتحانات رسمية مجدولة</h3>
             <p class="text-xs text-bx-muted mt-1 max-w-sm mx-auto">
-              لم يتم العثور على أي موعد امتحان يطابق محددات البحث الحالية. يمكنك البدء بجدولة أول امتحان.
+              لم يتم العثور على أي موعد امتحان رسمي يطابق محددات البحث والفلاتر الحالية. يمكنك البدء بجدولة امتحان جديد.
             </p>
             <button
               type="button"
               @click="openCreateDrawer"
-              class="mt-4 px-5 py-2 rounded-full bg-bx-primary hover:bg-bx-primary-hover text-white text-xs font-bold shadow-sm transition"
+              class="mt-4 px-5 py-2 rounded-full bg-bx-primary hover:bg-bx-primary-hover text-white text-xs font-bold shadow-sm transition cursor-pointer"
             >
               + جدولة امتحان جديد
             </button>
           </div>
 
-          <!-- Classes Groups Matrix -->
-          <div v-else class="space-y-6">
-            <div
-              v-for="classGroup in hierarchicalClasses"
-              :key="classGroup.class_id"
-              class="p-5 sm:p-6 rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] shadow-sm space-y-5"
-            >
-              <!-- Class Header -->
-              <div class="flex items-center justify-between pb-3 border-b border-[#B4AED8]/60 dark:border-white/10">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-2xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold border border-purple-500/20">
-                    <School class="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 class="text-base font-bold font-display text-bx-title">
-                      {{ classGroup.class_name }}
-                    </h2>
-                    <p class="text-xs text-bx-muted">
-                      المستوى الأكاديمي: {{ classGroup.grade_level }}
-                    </p>
-                  </div>
-                </div>
-
-                <span class="text-xs px-3 py-1 rounded-full bg-purple-500/10 text-bx-primary font-bold border border-purple-500/20 shadow-2xs">
-                  {{ classGroup.exam_types.reduce((acc, curr) => acc + curr.count, 0) }} مادة مجدولة
-                </span>
-              </div>
-
-              <!-- Exam Type Sections Inside Class -->
-              <div class="space-y-4">
-                <div
-                  v-for="typeGroup in classGroup.exam_types"
-                  :key="typeGroup.exam_type"
-                  class="space-y-3"
-                >
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="text-xs px-3 py-1 rounded-full border font-bold shadow-2xs"
-                      :class="getExamTypeBadge(typeGroup.exam_type).class"
-                    >
-                      {{ typeGroup.exam_type_ar }}
-                    </span>
-                    <span class="text-xs text-bx-muted font-bold">({{ typeGroup.count }} مواد)</span>
-                  </div>
-
-                  <!-- Exams Grid Cards -->
-                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                    <div
-                      v-for="exam in typeGroup.exams"
-                      :key="exam.id"
-                      class="p-4 rounded-2xl border border-[#B4AED8]/50 dark:border-white/[0.06] bg-purple-500/[0.02] dark:bg-white/[0.01] hover:border-bx-primary/40 transition flex flex-col justify-between gap-3 group shadow-2xs"
-                    >
-                      <div>
-                        <div class="flex items-start justify-between gap-2">
-                          <h4 class="text-sm font-bold text-bx-title flex items-center gap-2">
-                            <BookOpen class="w-4 h-4 text-bx-primary shrink-0" />
-                            <span>{{ exam.subject_name }}</span>
-                          </h4>
-
-                          <span
-                            v-if="exam.attachments_count && exam.attachments_count > 0"
-                            class="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/10 text-bx-primary font-bold border border-purple-500/20 flex items-center gap-1 shrink-0"
-                          >
-                            <Paperclip class="w-3 h-3" />
-                            <span>{{ exam.attachments_count }}</span>
-                          </span>
-                        </div>
-
-                        <div class="mt-2.5 space-y-1.5 text-xs text-bx-muted">
-                          <p class="flex items-center gap-2 font-bold text-bx-title">
-                            <Calendar class="w-3.5 h-3.5 text-bx-primary" />
-                            <span>{{ exam.exam_day_name }} — {{ exam.exam_date }}</span>
-                          </p>
-                          <p v-if="exam.notes" class="text-[11px] text-bx-muted line-clamp-2">
-                            {{ exam.notes }}
-                          </p>
-                        </div>
+          <!-- Unified Datatable Content: Enclosed in a Bordered Card -->
+          <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
+            <div class="overflow-x-auto">
+              <table class="w-full text-start border-collapse text-xs font-sans">
+                <!-- Table Header with Distinct Background and Crisp Dividers -->
+                <thead>
+                  <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
+                    <th class="py-3.5 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
+                    
+                    <!-- 1. Subject & Exam Type -->
+                    <th class="py-3.5 px-4 font-bold text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>المادة المقررة ونوع الامتحان</span>
                       </div>
+                    </th>
 
-                      <!-- Actions -->
-                      <div class="flex items-center justify-between pt-2.5 border-t border-[#B4AED8]/40 dark:border-white/[0.06]">
+                    <!-- 2. Target Class -->
+                    <th class="py-3.5 px-4 font-bold text-start min-w-[150px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <School class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>الصف الدراسي المستهدف</span>
+                      </div>
+                    </th>
+
+                    <!-- 3. Exam Date & Day -->
+                    <th class="py-3.5 px-4 font-bold text-start min-w-[170px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>تاريخ الامتحان</span>
+                      </div>
+                    </th>
+
+                    <!-- 4. Attachments Count Badge -->
+                    <th class="py-3.5 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center justify-center gap-1.5">
+                        <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>المرفقات</span>
+                      </div>
+                    </th>
+
+                    <!-- 5. Actions Toolbar -->
+                    <th class="py-3.5 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
+                  </tr>
+                </thead>
+
+                <!-- Table Body with Crisp Dividers -->
+                <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
+                  <tr
+                    v-for="(row, idx) in flatExamRows"
+                    :key="row.id"
+                    class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
+                  >
+                    <!-- Sequence Counter # -->
+                    <td class="py-3.5 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      {{ (currentPage - 1) * perPage + idx + 1 }}
+                    </td>
+
+                    <!-- 1. Subject & Exam Type -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="space-y-1">
+                        <span
+                          class="font-black text-xs sm:text-sm text-bx-title block leading-snug group-hover:text-bx-primary transition-colors cursor-pointer"
+                          @click="openDetailsDrawer(row)"
+                        >
+                          {{ row.subject_name }}
+                        </span>
+                        <span
+                          class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border shadow-2xs"
+                          :class="getExamTypeBadge(row.exam_type).class"
+                        >
+                          {{ row.exam_type_ar }}
+                        </span>
+                      </div>
+                    </td>
+
+                    <!-- 2. Target Class -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="font-bold text-xs text-bx-title">
+                        <span>{{ row.class_name }}</span>
+                        <span v-if="row.grade_level" class="text-bx-muted mx-1 text-[11px] block font-normal">المستوى: {{ row.grade_level }}</span>
+                      </div>
+                    </td>
+
+                    <!-- 3. Exam Date & Day -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-bx-title">
+                        <Calendar class="w-3.5 h-3.5 text-bx-primary shrink-0" />
+                        <span>{{ row.exam_date }}</span>
+                      </div>
+                    </td>
+
+                    <!-- 4. Attachments Count Badge -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <span
+                        v-if="row.attachments_count && row.attachments_count > 0"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
+                      >
+                        <Paperclip class="w-3.5 h-3.5" />
+                        <span>{{ row.attachments_count }} ملفات</span>
+                      </span>
+                      <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
+                    </td>
+
+                    <!-- 5. Action Buttons Toolbar -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap last:border-e-0">
+                      <div class="flex items-center justify-center gap-1.5">
+                        <!-- View Details Button (Fetches full record with notes & attachments) -->
                         <button
                           type="button"
-                          @click="openDetailsDrawer(exam)"
-                          class="text-xs font-bold text-bx-primary hover:underline flex items-center gap-1"
+                          @click="openDetailsDrawer(row)"
+                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                          title="معاينة التفاصيل الكاملة والمرفقات والقاعة"
                         >
                           <Eye class="w-3.5 h-3.5" />
-                          <span>المعاينة والمرفقات</span>
                         </button>
 
-                        <div class="flex items-center gap-1">
-                          <button
-                            type="button"
-                            @click="openEditDrawer(exam)"
-                            class="w-7 h-7 rounded-lg text-bx-muted hover:text-bx-primary hover:bg-purple-500/10 flex items-center justify-center transition"
-                            title="تعديل الموعد"
-                          >
-                            <Pen class="w-3.5 h-3.5" />
-                          </button>
+                        <!-- Edit Button -->
+                        <button
+                          type="button"
+                          @click="openEditDrawer(row)"
+                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                          title="تعديل موعد وبيانات الامتحان"
+                        >
+                          <Pen class="w-3.5 h-3.5" />
+                        </button>
 
-                          <button
-                            type="button"
-                            @click="openDeleteModal(exam)"
-                            class="w-7 h-7 rounded-lg text-bx-muted hover:text-rose-600 hover:bg-rose-500/10 flex items-center justify-center transition"
-                            title="حذف الامتحان"
-                          >
-                            <Trash2 class="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <!-- Delete Button -->
+                        <button
+                          type="button"
+                          @click="openDeleteModal(row)"
+                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                          title="إلغاء وحذف موعد الامتحان"
+                        >
+                          <Trash2 class="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pagination Footer -->
+          <div
+            v-if="totalRecords > 0 && Math.ceil(totalRecords / perPage) > 1"
+            class="flex items-center justify-between pt-4 border-t border-[#B4AED8]/60 dark:border-white/10 text-xs"
+          >
+            <span class="text-bx-muted font-bold">
+              عرض الصفحة {{ currentPage }} من {{ Math.ceil(totalRecords / perPage) }} (إجمالي {{ totalRecords }} موعد امتحان)
+            </span>
+
+            <div class="flex items-center gap-1.5">
+              <button
+                type="button"
+                :disabled="currentPage <= 1"
+                @click="currentPage--; fetchOfficialExams()"
+                class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                السابق
+              </button>
+              <button
+                type="button"
+                :disabled="currentPage >= Math.ceil(totalRecords / perPage)"
+                @click="currentPage++; fetchOfficialExams()"
+                class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                التالي
+              </button>
             </div>
           </div>
         </div>
@@ -839,117 +1021,12 @@ onMounted(async () => {
       </div>
 
       <!-- Exam Details Drawer (For all roles) -->
-      <TaqniyaDrawer
-        :is-open="isDetailsDrawerOpen"
-        title="تفاصيل الامتحان الرسمي والمرفقات"
-        subtitle="دليل المراجعة، جدول المواصفات، والتعليمات المعتمدة"
-        max-width="max-w-[540px]"
-        @close="isDetailsDrawerOpen = false"
-      >
-        <div v-if="selectedExamDetails" class="space-y-6 font-sans" dir="rtl">
-          <!-- Reusable Academic Hero Card -->
-          <AcademicDetailHeroCard
-            type="exam"
-            :title="selectedExamDetails.notes || `${selectedExamDetails.exam_type_ar || 'امتحان رسمي'} - ${selectedExamDetails.subject_name}`"
-            :subject-name="selectedExamDetails.subject_name || 'امتحان رسمي'"
-            :class-name="selectedExamDetails.class_name || ''"
-            :target-date="selectedExamDetails.exam_date"
-            :record-id="selectedExamDetails.id"
-            teacher-name="إدارة المدرسة والكنترول"
-          />
-
-          <!-- Exam Specific Info -->
-          <div class="p-4 rounded-2xl bg-purple-500/[0.03] border border-[#B4AED8]/60 dark:border-slate-700/60 space-y-3 text-xs">
-            <div class="flex items-center justify-between">
-              <span class="text-bx-muted font-bold">نوع الامتحان:</span>
-              <span
-                class="px-2.5 py-0.5 rounded-full border font-bold shadow-2xs"
-                :class="getExamTypeBadge(selectedExamDetails.exam_type).class"
-              >
-                {{ selectedExamDetails.exam_type_ar }}
-              </span>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <span class="text-bx-muted font-bold">يوم وتاريخ الامتحان:</span>
-              <span class="font-black text-bx-title">
-                {{ selectedExamDetails.exam_day_name }} — {{ selectedExamDetails.exam_date }}
-              </span>
-            </div>
-
-            <div v-if="selectedExamDetails.notes" class="pt-2 border-t border-[#B4AED8]/40 dark:border-slate-700/60">
-              <span class="text-bx-muted block mb-1 font-bold">التعليمات والإرشادات:</span>
-              <p class="text-bx-title font-medium">
-                {{ selectedExamDetails.notes }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Attachments Section with 48x48 icon style -->
-          <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <h4 class="text-sm font-bold font-display text-bx-title flex items-center gap-2">
-                <Paperclip class="w-4 h-4 text-bx-primary" />
-                <span>المرفقات وجداول المواصفات</span>
-              </h4>
-              <span class="text-xs text-bx-muted font-bold">
-                {{ selectedExamDetails.attachments?.length || 0 }} ملف
-              </span>
-            </div>
-
-            <div
-              v-if="!selectedExamDetails.attachments || selectedExamDetails.attachments.length === 0"
-              class="p-6 rounded-2xl bg-purple-500/[0.02] border border-[#B4AED8]/40 text-center text-xs text-bx-muted font-medium"
-            >
-              لا توجد ملفات مرفقة بهذا الامتحان.
-            </div>
-
-            <div v-else class="space-y-2.5">
-              <div
-                v-for="(att, idx) in selectedExamDetails.attachments"
-                :key="idx"
-                class="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-slate-900 border border-[#B4AED8]/60 dark:border-white/10 hover:border-bx-primary/40 transition group shadow-xs"
-              >
-                <div class="flex items-center gap-3.5 min-w-0">
-                  <div class="w-12 h-12 rounded-2xl bg-purple-500/10 dark:bg-purple-500/15 text-bx-primary flex items-center justify-center shrink-0 border border-purple-500/20 shadow-2xs">
-                    <component :is="getFileIcon(att.file_type)" class="w-6 h-6 stroke-[1.8]" />
-                  </div>
-                  <div class="min-w-0">
-                    <p class="text-xs font-bold text-bx-title truncate">
-                      {{ att.file_name }}
-                    </p>
-                    <p class="text-[11px] text-bx-muted mt-0.5">
-                      <span v-if="att.file_size">{{ formatBytes(att.file_size) }}</span>
-                      <span v-else>مرفق سحابي</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div class="flex items-center gap-1.5 shrink-0">
-                  <a
-                    :href="att.file_url"
-                    target="_blank"
-                    download
-                    class="w-8 h-8 rounded-full bg-purple-500/10 text-bx-primary hover:bg-bx-primary hover:text-white flex items-center justify-center transition shadow-2xs"
-                    title="تحميل الملف"
-                  >
-                    <Download class="w-3.5 h-3.5" />
-                  </a>
-
-                  <a
-                    :href="att.file_url"
-                    target="_blank"
-                    class="w-8 h-8 rounded-full bg-purple-500/10 text-bx-primary hover:bg-bx-primary hover:text-white flex items-center justify-center transition shadow-2xs"
-                    title="فتح الرابط"
-                  >
-                    <ExternalLink class="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </TaqniyaDrawer>
+      <OfficialExamDetailDrawer
+        v-model="isDetailsDrawerOpen"
+        :exam="selectedExamDetails"
+        :can-edit="isAdmin"
+        @edit="handleEditFromDetails"
+      />
 
       <!-- Create / Edit Drawer Form (Admin) -->
       <OfficialExamDrawerForm
@@ -960,6 +1037,8 @@ onMounted(async () => {
         :academic-terms="academicTerms"
         :classes="classes"
         :subjects="subjects"
+        :class-subjects="allClassSubjects"
+        :class-academic-terms="allClassAcademicTerms"
         :active-year-id="selectedYearId"
         :active-term-id="selectedTermId"
         :is-submitting="isSubmitting"

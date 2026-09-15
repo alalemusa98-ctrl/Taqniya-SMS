@@ -179,15 +179,15 @@ export class OfficialExamsService {
       return {
         id: Number(exam.id),
         academic_year_id: Number(exam.academic_year_id),
-        academic_year_name: exam.academic_year.name,
+        academic_year_name: exam.academic_year?.name || '',
         academic_term_id: Number(exam.academic_term_id),
-        academic_term_name: exam.academic_term.name,
+        academic_term_name: exam.academic_term?.name || '',
         class_id: Number(exam.class_id),
-        class_name: exam.class.name,
-        grade_level: exam.class.grade_level,
+        class_name: exam.class?.name || '',
+        grade_level: exam.class?.grade_level || 1,
         subject_id: Number(exam.subject_id),
-        subject_name: exam.subject.name,
-        subject_code: exam.subject.code,
+        subject_name: exam.subject?.name || '',
+        subject_code: exam.subject?.code || '',
         exam_type: exam.exam_type,
         exam_type_ar: this.getExamTypeArabic(exam.exam_type),
         exam_date: exam.exam_date.toISOString().split('T')[0],
@@ -200,7 +200,7 @@ export class OfficialExamsService {
       };
     });
 
-    // Build hierarchical grouping by class and exam_type for dashboard view
+    // Build hierarchical grouping by class and exam_type matching routes.md SSoT
     const classMap = new Map<number, any>();
 
     for (const item of formattedItems) {
@@ -218,13 +218,25 @@ export class OfficialExamsService {
         classGroup.exam_types_map.set(item.exam_type, {
           exam_type: item.exam_type,
           exam_type_ar: item.exam_type_ar,
+          total_subjects: 0,
+          subjects: [],
+          // Keep count & exams for backward compatibility with frontend
           count: 0,
           exams: [],
         });
       }
 
       const examTypeGroup = classGroup.exam_types_map.get(item.exam_type);
+      examTypeGroup.total_subjects += 1;
       examTypeGroup.count += 1;
+      examTypeGroup.subjects.push({
+        id: item.id,
+        subject_id: item.subject_id,
+        subject_name: item.subject_name,
+        exam_date: item.exam_date,
+        attachments_count: item.attachments_count,
+        created_at: item.created_at,
+      });
       examTypeGroup.exams.push(item);
     }
 
@@ -240,16 +252,15 @@ export class OfficialExamsService {
       message: 'تم جلب جدول الامتحانات الرسمية بنجاح.',
       data: {
         academic_year_id: exams[0] ? Number(exams[0].academic_year_id) : null,
-        academic_year_name: exams[0]?.academic_year.name || null,
+        academic_year_name: exams[0]?.academic_year?.name || null,
         academic_term_id: exams[0] ? Number(exams[0].academic_term_id) : null,
-        academic_term_name: exams[0]?.academic_term.name || null,
+        academic_term_name: exams[0]?.academic_term?.name || null,
         classes: classesArray,
-        items: formattedItems,
       },
       meta: {
-        total,
         current_page: page,
         per_page: perPage,
+        total,
         last_page: lastPage,
       },
     };
@@ -286,15 +297,16 @@ export class OfficialExamsService {
       data: {
         id: Number(exam.id),
         academic_year_id: Number(exam.academic_year_id),
-        academic_year_name: exam.academic_year.name,
+        academic_year_name: exam.academic_year?.name || '',
         academic_term_id: Number(exam.academic_term_id),
-        academic_term_name: exam.academic_term.name,
+        academic_term_name: exam.academic_term?.name || '',
+        term_name: exam.academic_term?.name || '',
         class_id: Number(exam.class_id),
-        class_name: exam.class.name,
-        grade_level: exam.class.grade_level,
+        class_name: exam.class?.name || '',
+        grade_level: exam.class?.grade_level || 1,
         subject_id: Number(exam.subject_id),
-        subject_name: exam.subject.name,
-        subject_code: exam.subject.code,
+        subject_name: exam.subject?.name || '',
+        subject_code: exam.subject?.code || '',
         exam_type: exam.exam_type,
         exam_type_ar: this.getExamTypeArabic(exam.exam_type),
         exam_date: exam.exam_date.toISOString().split('T')[0],
@@ -365,25 +377,28 @@ export class OfficialExamsService {
         examTypesMap.set(exam.exam_type, {
           exam_type: exam.exam_type,
           exam_type_ar: this.getExamTypeArabic(exam.exam_type),
+          total_exams: 0,
           count: 0,
           exams: [],
         });
       }
 
       const group = examTypesMap.get(exam.exam_type);
+      group.total_exams += 1;
       group.count += 1;
       group.exams.push(item);
     }
 
     return {
       success: true,
-      message: 'تم جلب جدول امتحانات الصف الدراسي المعتمد بنجاح.',
+      message: 'تم جلب جدول امتحانات الصف الدراسي بنجاح.',
       data: {
         class_id: Number(targetClass.id),
         class_name: targetClass.name,
         grade_level: targetClass.grade_level,
-        academic_year_name: exams[0]?.academic_year.name || null,
-        academic_term_name: exams[0]?.academic_term.name || null,
+        academic_term_id: exams[0] ? Number(exams[0].academic_term_id) : null,
+        academic_term_name: exams[0]?.academic_term?.name || null,
+        academic_year_name: exams[0]?.academic_year?.name || null,
         exam_types: Array.from(examTypesMap.values()),
       },
     };
@@ -441,6 +456,7 @@ export class OfficialExamsService {
         data: {
           teacher_id: Number(teacher.id),
           teacher_name: teacher.full_name,
+          total_exams: 0,
           exams: [],
         },
       };
@@ -496,6 +512,7 @@ export class OfficialExamsService {
       data: {
         teacher_id: Number(teacher.id),
         teacher_name: teacher.full_name,
+        total_exams: formattedExams.length,
         exams: formattedExams,
       },
     };
@@ -601,6 +618,7 @@ export class OfficialExamsService {
         academic_year_name: exam.academic_year.name,
         academic_term_id: Number(exam.academic_term_id),
         academic_term_name: exam.academic_term.name,
+        term_name: exam.academic_term.name,
         class_id: Number(exam.class_id),
         class_name: exam.class.name,
         subject_id: Number(exam.subject_id),
@@ -734,6 +752,7 @@ export class OfficialExamsService {
         academic_year_name: updated.academic_year.name,
         academic_term_id: Number(updated.academic_term_id),
         academic_term_name: updated.academic_term.name,
+        term_name: updated.academic_term.name,
         class_id: Number(updated.class_id),
         class_name: updated.class.name,
         subject_id: Number(updated.subject_id),
