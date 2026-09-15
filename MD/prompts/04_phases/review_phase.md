@@ -327,6 +327,7 @@ The Review Agent MUST NOT:
 * Change business rules.
 * Change database specifications.
 * Change capability policies.
+* Modify, rewrite, or reinterpret an authoritative SSoT in order to make the implementation pass.
 * Invent architecture patterns.
 * Declare a gate PASS without evidence.
 * Treat warnings as failures without contextual justification.
@@ -414,6 +415,115 @@ checklist.md
 ```
 
 ---
+
+
+---
+
+## 7.6 SSoT Precedence & Contract Authority
+
+The Review Agent MUST treat each applicable Single Source of Truth (SSoT) as an **enforcement boundary**, not merely as reference material.
+
+The Review Agent MUST first resolve the authoritative source for each contract before evaluating implementation.
+
+### API / Network SSoT
+
+When `routes.md` exists for the target phase:
+
+```text
+routes.md = Network / API SSoT
+```
+
+It is authoritative for the API contract defined by the project, including where specified:
+
+* Endpoint paths.
+* HTTP methods.
+* Path parameters.
+* Query parameters.
+* Request body structure.
+* Required and optional request fields.
+* Authentication requirements.
+* Authorization requirements.
+* Response JSON structure.
+* Success response structure.
+* Error response structure.
+* Success and error messages.
+* HTTP status codes.
+* Validation error representation.
+* Pagination representation.
+* Resource / serializer shape.
+* API naming conventions.
+* Endpoint-specific behavioral contract.
+
+The Review Agent MUST NOT allow:
+
+* Existing code.
+* Frontend assumptions.
+* Backend preferences.
+* Framework conventions.
+* Agent-generated improvements.
+* "Cleaner" response shapes.
+* Renamed fields.
+* Alternative status codes.
+* Alternative messages.
+
+to override `routes.md`.
+
+### SSoT Conflict Rule
+
+If an implementation differs from an authoritative SSoT:
+
+```text
+SSoT
+  ↓
+Expected Contract
+  ↓
+Actual Implementation
+  ↓
+CONFLICT
+```
+
+The difference MUST be recorded as a concrete finding.
+
+The Review Agent MUST NOT silently reconcile the difference in favor of the implementation.
+
+Unless the project explicitly documents an approved exception/change, an unauthorized SSoT deviation is:
+
+```text
+FAIL
+```
+
+and MUST prevent official phase completion when the affected contract is mandatory.
+
+### SSoT Ambiguity Rule
+
+If the authoritative source itself is contradictory, incomplete, or ambiguous in a way that prevents objective verification:
+
+```text
+BLOCKED
+```
+
+The Review Agent MUST report the exact ambiguity and MUST NOT invent a resolution.
+
+### SSoT Traceability
+
+For each important API contract, the Review Agent SHOULD establish:
+
+```text
+routes.md
+    ↓
+Backend Route / Handler / Equivalent
+    ↓
+Response Construction / Serialization
+    ↓
+Frontend API Client / Consumer
+    ↓
+Frontend State Mapping
+    ↓
+UI Behavior
+```
+
+The implementation passes only when each applicable layer remains consistent with the authoritative contract.
+
 
 ## 7.5 Approved Phase Analysis
 
@@ -762,7 +872,69 @@ PASS | FAIL
 
 ---
 
-# Stage 5 — Design System, UI & UX Compliance
+### 4.5 API / Network SSoT Compliance
+
+When the phase contains API/network behavior, the Review Agent MUST perform an explicit contract comparison against:
+
+```text
+PROJECT/MD/phases/<phase_name>/routes.md
+```
+
+if present.
+
+The Agent MUST verify, at minimum where defined by `routes.md`:
+
+| Contract Dimension | Required Verification |
+| :--- | :--- |
+| Endpoint | Exact path and parameter structure |
+| Method | Exact HTTP method |
+| Request | Exact request shape and required fields |
+| Response | Exact response JSON structure |
+| Messages | Exact approved success/error messages |
+| Status Codes | Exact approved status codes |
+| Validation | Exact documented validation behavior |
+| Authentication | Declared requirement |
+| Authorization | Declared requirement |
+| Pagination | Declared representation |
+| Serialization | Declared resource/data shape |
+
+The Agent MUST inspect the **actual implementation**, not infer compliance from documentation.
+
+Examples of failures include:
+
+```text
+routes.md says 201 → implementation returns 200
+routes.md defines {data: ...} → implementation returns raw object
+routes.md defines field "name" → implementation returns "title"
+routes.md defines error message A → implementation emits message B
+routes.md defines endpoint X → implementation exposes endpoint Y
+```
+
+These are contract deviations even if the application remains functional.
+
+### 4.6 No API Redesign During Review
+
+The Review Agent MUST NOT classify an implementation as compliant because the implemented API is:
+
+* Cleaner.
+* Simpler.
+* More RESTful.
+* More consistent with framework defaults.
+* Easier for the frontend.
+* Easier to serialize.
+* More convenient for the developer.
+
+The approved SSoT remains authoritative unless an explicit approved change is present.
+
+### Result
+
+```text
+PASS | FAIL | N/A | BLOCKED
+```
+
+---
+
+# Stage 5
 
 Applicable only when the phase contains frontend/UI work.
 
@@ -790,6 +962,81 @@ and the active Technology Profile.
 * Disabled states.
 * Form validation states.
 * Accessibility requirements where specified.
+
+### Component Reuse Verification
+
+When frontend/UI work exists, the Review Agent MUST verify that implementation follows the approved component strategy.
+
+The Agent MUST inspect the actual frontend source tree and determine whether:
+
+```text
+Existing suitable component → REUSE
+Existing related component → EXTEND
+No suitable component → CREATE
+```
+
+The following are violations when an existing suitable component was available:
+
+* Duplicating an existing component.
+* Reimplementing an existing visual pattern inside a page.
+* Creating a second component with substantially the same responsibility.
+* Creating a wrapper with the real UI still implemented inside the page.
+* Bypassing the canonical component without documented justification.
+
+### New Component Verification
+
+When a new significant UI section was required, the Review Agent MUST verify that:
+
+```text
+Component Boundary
+      ↓
+Component Implementation
+      ↓
+Component Verification
+      ↓
+Page Integration
+```
+
+was followed.
+
+The page MUST NOT contain a duplicated implementation of the new component.
+
+The Agent MUST distinguish genuine local UI from reusable/significant UI. Taqniya does not require every trivial markup fragment to become a component; however, anti-overengineering MUST NOT be used to justify duplication of an existing or clearly reusable component.
+
+### Design Fidelity Verification
+
+The Agent MUST compare the implemented UI against the approved design system and phase specifications.
+
+The Agent MUST flag unauthorized deviations such as:
+
+* Arbitrary spacing where approved tokens exist.
+* Arbitrary colors where approved tokens exist.
+* Unapproved typography.
+* Unapproved component variants.
+* Different interaction patterns without authorization.
+* Different loading/empty/error states.
+* Unapproved layout changes.
+* Visual redesign of an already approved component.
+
+Functional equivalence does NOT prove design compliance.
+
+### Frontend API Contract Verification
+
+When frontend code consumes an API defined in `routes.md`, the Review Agent MUST verify that the frontend consumes the **documented contract**, not an implementation-invented shape.
+
+Examples:
+
+```text
+routes.md response
+        ↓
+API client typing / parsing
+        ↓
+state mapping
+        ↓
+UI
+```
+
+Any undocumented response transformation that changes the contract, or any frontend assumption based on a different API shape, is a compliance finding.
 
 Do not impose RTL on projects that do not declare RTL.
 
@@ -831,6 +1078,59 @@ where applicable.
 * Tests documented actually exist.
 * Acceptance criteria match reality.
 * No undocumented architectural decisions exist.
+
+### SSoT Synchronization — Mandatory Exactness
+
+For every applicable SSoT, verification MUST be based on **actual implementation parity**, not merely the existence of the document.
+
+For `routes.md`, verify:
+
+```text
+Documented Contract == Implemented Contract == Consumed Contract
+```
+
+The comparison MUST include the full contract surface defined in `routes.md`, not only endpoint names.
+
+A route may therefore fail documentation synchronization even when:
+
+```text
+HTTP 200 is returned
+```
+
+or:
+
+```text
+the frontend appears to work
+```
+
+if the documented response body, status code, message, field names, validation structure, or other defined contract differs.
+
+### Unauthorized Documentation / Implementation Drift
+
+If the code was changed to match a different interpretation of the requirement while `routes.md` remained unchanged:
+
+```text
+FAIL — SSoT / IMPLEMENTATION DRIFT
+```
+
+If the documentation was changed after implementation without an approved specification/change process:
+
+```text
+FAIL — UNAUTHORIZED SSoT CHANGE
+```
+
+The Review Agent MUST report both sides of the mismatch:
+
+```text
+Expected:
+[Exact SSoT contract]
+
+Observed:
+[Exact implementation contract]
+
+Deviation:
+[Exact difference]
+```
 
 ### Important Rule
 
@@ -1035,6 +1335,25 @@ An internal implementation difference is NOT automatically a failure if it remai
 
 # 12. Severity Classification
 
+## SSoT Contract Violation
+
+An unauthorized deviation from a mandatory SSoT is at least:
+
+```text
+HIGH
+```
+
+and MUST be classified as:
+
+```text
+CRITICAL
+```
+
+when it breaks a mandatory API contract, causes incompatible consumers, compromises security/authorization semantics, or prevents the phase from fulfilling its approved network contract.
+
+A cosmetic or non-contractual documentation mismatch may receive a lower severity when justified.
+
+
 Every defect MUST be classified.
 
 ## CRITICAL
@@ -1126,6 +1445,8 @@ ONLY IF:
 * Database drift is zero.
 * Scope requirements are satisfied.
 * Technology Profile compliance is verified.
+* All mandatory SSoTs are satisfied with no unauthorized deviations.
+* API / Network SSoT compliance is verified when `routes.md` applies.
 * Definition of Done is satisfied.
 
 Otherwise:
@@ -1281,6 +1602,34 @@ The Agent MUST generate the following structure:
 
 ---
 
+## 3. API / Network SSoT Compliance
+
+**API SSoT:** `routes.md`
+
+| Endpoint | Method | Expected Contract | Observed Contract | Result | Evidence |
+| :--- | :--- | :--- | :--- | :---: | :--- |
+| `[Endpoint]` | `[METHOD]` | `[Documented contract]` | `[Observed contract]` | PASS/FAIL/BLOCKED | [Evidence] |
+
+### Contract Verification
+
+| Dimension | Result | Evidence |
+| :--- | :---: | :--- |
+| Endpoint paths | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+| HTTP methods | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+| Request shape | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+| Response JSON | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+| Messages | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+| Status codes | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+| Validation | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+| Authentication | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+| Authorization | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+| Pagination | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+| Frontend consumption | PASS/FAIL/N/A/BLOCKED | [Evidence] |
+
+### SSoT Deviations
+
+`[None / List every unauthorized deviation]`
+
 ## 3. Technology Profile Compliance
 
 **Active Technology Profile:**
@@ -1366,7 +1715,22 @@ The Agent MUST generate the following structure:
 
 ---
 
-## 8. Defects
+## 8. Frontend Component & Design Compliance
+
+| Requirement | Result | Evidence |
+| :--- | :---: | :--- |
+| Existing suitable components reused | PASS/FAIL/N/A | [Evidence] |
+| Related components extended where appropriate | PASS/FAIL/N/A | [Evidence] |
+| No duplicate UI implementation | PASS/FAIL/N/A | [Evidence] |
+| New components created before page integration | PASS/FAIL/N/A | [Evidence] |
+| Component interfaces are reusable where required | PASS/FAIL/N/A | [Evidence] |
+| Design tokens respected | PASS/FAIL/N/A | [Evidence] |
+| Approved patterns/components respected | PASS/FAIL/N/A | [Evidence] |
+| Responsive behavior | PASS/FAIL/N/A | [Evidence] |
+| RTL behavior where required | PASS/FAIL/N/A | [Evidence] |
+| Frontend API contract matches `routes.md` | PASS/FAIL/N/A | [Evidence] |
+
+## 9. Defects
 
 | Defect ID | Severity | Stage | Description | Required Remediation |
 | :--- | :--- | :--- | :--- | :--- |
@@ -1378,7 +1742,7 @@ If no defects exist:
 
 ---
 
-## 9. Definition of Done
+## 10. Definition of Done
 
 | Criterion | Result | Evidence |
 | :--- | :---: | :--- |
@@ -1395,7 +1759,7 @@ If no defects exist:
 
 ---
 
-# 10. Final Verdict
+# 11. Final Verdict
 
 ## If All Mandatory Gates Pass
 
@@ -1457,6 +1821,8 @@ The missing prerequisites/evidence must be resolved before independent verificat
 After producing the final verdict, the Review Agent MUST stop.
 
 ## PASS
+
+The Review Agent MUST NOT issue PASS if any mandatory SSoT contract has an unresolved unauthorized deviation.
 
 ```text
 PHASE INDEPENDENTLY VERIFIED

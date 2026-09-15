@@ -474,6 +474,182 @@ Extract:
 
 ---
 
+
+
+# 10.1 API Contract SSoT Gate — `routes.md`
+
+When the target phase exposes, consumes, or modifies an API, `routes.md` is the **authoritative Network Source of Truth (SSoT)** for the API contract.
+
+The Agent MUST treat the API contract as an externally governed contract, not as implementation guidance that may be redesigned during analysis or execution.
+
+## 10.1.1 Exclusive API Contract Authority
+
+For every endpoint in scope, the Agent MUST derive and verify, where documented, all of the following from `routes.md`:
+
+* HTTP method.
+* Exact route/path.
+* Path parameters.
+* Query parameters.
+* Request body structure.
+* Field names and nesting.
+* Required and optional fields.
+* Authentication requirements.
+* Authorization requirements.
+* Response JSON structure.
+* Success payload structure.
+* Error payload structure.
+* Success messages.
+* Error messages.
+* HTTP status codes.
+* Validation response format.
+* Pagination structure.
+* Resource/serializer representation where specified.
+* API versioning conventions.
+
+The Agent MUST NOT replace, simplify, rename, normalize, reinterpret, or redesign an API contract defined by `routes.md`.
+
+If another specification or existing implementation differs from `routes.md`, the difference MUST be reported as a contract conflict. It MUST NOT be silently reconciled.
+
+## 10.1.2 SSoT Precedence
+
+For API-network contract details, use this precedence:
+
+```text
+routes.md
+    ↓
+API Contract
+    ↓
+Backend Implementation
+    ↓
+Frontend API Consumer
+    ↓
+UI / State Mapping
+```
+
+The implementation MUST conform to the approved contract. The implementation MUST NOT become the source of truth merely because it currently behaves differently.
+
+## 10.1.3 API Contract Matrix
+
+The Agent MUST produce an endpoint-level matrix before declaring the phase ready:
+
+| Endpoint | Method | Request Contract | Response Contract | Status Codes | Backend Actual | Frontend Consumer | Result |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `[endpoint]` | `[method]` | `[routes.md]` | `[routes.md]` | `[routes.md]` | `[actual]` | `[actual]` | PASS / CONFLICT / GAP |
+
+The matrix MUST compare the documented contract against the actual implementation wherever implementation already exists.
+
+## 10.1.4 Existing Implementation Verification
+
+The Agent MUST inspect the actual project implementation for API endpoints in scope, including where applicable:
+
+* Route registration.
+* Controllers/handlers.
+* Validation schemas.
+* DTOs/request objects.
+* Services/actions.
+* Serializers/resources.
+* Response builders.
+* Error handlers.
+* Frontend API clients.
+* Frontend adapters/composables/hooks/stores.
+
+The Agent MUST NOT assume that a file or symbol is compliant merely because its name suggests compliance. Actual behavior and contract shape must be inspected.
+
+## 10.1.5 API SSoT Conflict Rules
+
+Any mismatch involving the externally visible API contract MUST be classified explicitly:
+
+```text
+API_CONTRACT_CONFLICT
+```
+
+Examples include:
+
+* Different JSON property names.
+* Different nesting.
+* Different response envelope.
+* Different success/error message.
+* Different status code.
+* Different validation structure.
+* Different pagination structure.
+* Different endpoint path.
+* Different HTTP method.
+* Missing documented response field.
+* Undocumented response field when the project treats the contract as exact.
+* Frontend consuming a shape different from `routes.md`.
+
+An unresolved API contract conflict is **BLOCKING** and the phase MUST NOT be classified as `READY_FOR_EXECUTION`.
+
+## 10.1.6 No API Redesign During Phase Analysis
+
+The Agent MUST NOT propose a replacement API merely because it considers the existing `routes.md` contract:
+
+* less elegant,
+* verbose,
+* inconsistent with a preferred convention,
+* inconvenient for the frontend,
+* inconvenient for the backend, or
+* technically improvable.
+
+Such observations may be reported separately as a non-executing architectural note, but they MUST NOT alter the approved contract.
+
+If `routes.md` itself is ambiguous or internally contradictory, classify the issue as:
+
+```text
+API_SSoT_AMBIGUITY
+```
+
+and require developer clarification before execution.
+
+## 10.1.7 API Contract Propagation
+
+The Agent MUST trace the contract end-to-end:
+
+```text
+routes.md
+   ↓
+Network Contract
+   ↓
+Backend Endpoint
+   ↓
+Response Serialization
+   ↓
+Frontend API Client
+   ↓
+Frontend State / Adapter
+   ↓
+UI Consumption
+```
+
+No layer may silently transform the public contract into a different shape unless that transformation is explicitly documented and does not change the externally governed API contract.
+
+## 10.1.8 API SSoT Readiness Gate
+
+Before `READY_FOR_EXECUTION`, the Agent MUST confirm:
+
+```text
+API_SSoT: PASS
+```
+
+only when:
+
+* All applicable endpoints have been identified.
+* `routes.md` has been read completely for the affected endpoints.
+* Actual backend implementation has been inspected where present.
+* Actual frontend consumption has been inspected where present.
+* Request contracts match.
+* Response contracts match.
+* Status codes match.
+* Messages match.
+* No unresolved API contract conflict exists.
+
+If any of these conditions fail:
+
+```text
+API_SSoT: FAIL
+STATUS: BLOCKED
+```
+
 # 11. Phase Data Specification Analysis
 
 If applicable, inspect:
@@ -908,6 +1084,226 @@ the Agent should identify relevant usage where applicable but MUST NOT invent re
 
 ---
 
+
+
+# 18.1 Frontend Implementation & Component Governance Analysis
+
+When frontend work is applicable, the Agent MUST inspect the **actual frontend source tree** before proposing implementation changes.
+
+The purpose is to determine what already exists and prevent unnecessary duplicate UI implementations.
+
+## 18.1.1 Required Discovery
+
+The Agent MUST inspect, where applicable:
+
+* Existing pages/views/screens.
+* Existing reusable components.
+* Shared layouts.
+* Design-system components.
+* UI primitives.
+* Feature components.
+* Form components.
+* Tables/lists/cards.
+* Navigation components.
+* Feedback components.
+* Loading/empty/error states.
+* Dialogs/modals/drawers.
+* Existing composables/hooks/stores.
+* API clients/adapters.
+* Design tokens.
+* Shared styles.
+* Responsive patterns.
+* RTL patterns.
+* Accessibility patterns.
+
+The Agent MUST search by both **semantic purpose and implementation**, not only by filename.
+
+Example: a requirement for a `StudentSummary` must trigger a search for existing components that already provide the same or substantially similar information presentation, even if they are named `ProfileCard`, `EntityOverview`, `DetailsPanel`, or another unrelated name.
+
+## 18.1.2 Existing Component Inventory
+
+The analysis MUST produce an inventory of relevant existing components:
+
+| Component | Location | Purpose | Current Consumers | Reusable | Related Variants | Assessment |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `[component]` | `[path]` | `[purpose]` | `[pages/features]` | Yes / No | `[variants]` | `[assessment]` |
+
+The Agent MUST distinguish between:
+
+```text
+EXISTS AND SUITABLE
+EXISTS BUT NEEDS EXTENSION
+EXISTS BUT NOT SUITABLE
+DOES NOT EXIST
+```
+
+## 18.1.3 Mandatory Reuse Decision
+
+For every significant frontend UI requirement, the Agent MUST assign exactly one primary decision:
+
+```text
+REUSE
+EXTEND
+CREATE
+N/A
+```
+
+Decision rules:
+
+```text
+Suitable existing component
+        ↓
+      REUSE
+
+Existing component is close but requires a justified capability
+        ↓
+      EXTEND
+
+No suitable existing component and no appropriate extension target
+        ↓
+      CREATE
+```
+
+`CREATE` MUST NOT be the default.
+
+## 18.1.4 Component Reuse Matrix
+
+The Agent MUST produce:
+
+| UI Requirement | Existing Component(s) | Decision | Evidence | Reason |
+| :--- | :--- | :--- | :--- | :--- |
+| `[requirement]` | `[component/path]` | REUSE / EXTEND / CREATE | `[usage/implementation evidence]` | `[reason]` |
+
+If `REUSE` is selected, the analysis MUST identify the component to be consumed.
+
+If `EXTEND` is selected, the analysis MUST explain why extension is preferable to creating a duplicate.
+
+If `CREATE` is selected, the analysis MUST explain why reuse and extension are both insufficient.
+
+## 18.1.5 New Component Justification
+
+Every significant `CREATE` decision MUST include:
+
+* Component name/boundary.
+* Proposed location.
+* Responsibility.
+* Why no suitable component exists.
+* Components searched.
+* Related components considered.
+* Why extension is inappropriate.
+* Public interface/inputs/outputs at the planning level.
+* Expected consumers or reuse potential.
+* Why creating it does not introduce unnecessary abstraction.
+
+If this evidence is missing, the analysis MUST NOT mark the component as approved for creation.
+
+## 18.1.6 Component-First Implementation Blueprint
+
+When a genuinely new component is required, the analysis MUST explicitly plan the execution order as:
+
+```text
+NEW UI REQUIREMENT
+        ↓
+DEFINE COMPONENT BOUNDARY
+        ↓
+CREATE COMPONENT
+        ↓
+IMPLEMENT COMPONENT
+        ↓
+VERIFY COMPONENT
+        ↓
+INTEGRATE INTO PAGE
+        ↓
+VERIFY PAGE COMPOSITION
+```
+
+The Agent MUST NOT plan to implement substantial new UI directly inside the page and extract it later as an afterthought.
+
+This is an analysis rule only. `analyze_phase.md` MUST NOT create the component itself.
+
+## 18.1.7 Page Composition Blueprint
+
+For every affected page/screen, the Agent MUST identify the intended composition:
+
+```text
+Page
+ ├── Existing Layout → REUSE
+ ├── Existing Header → REUSE
+ ├── Existing Filter → REUSE / EXTEND
+ ├── Existing Table → REUSE
+ ├── New Feature Component → CREATE
+ └── Existing Feedback State → REUSE
+```
+
+Pages should primarily compose and orchestrate significant UI components rather than duplicate reusable UI logic.
+
+## 18.1.8 Duplicate UI Detection
+
+The Agent MUST identify existing duplicate or near-duplicate implementations relevant to the phase.
+
+It MUST report:
+
+* Duplicate components.
+* Same UI pattern implemented in multiple locations.
+* Conflicting variants.
+* Page-local copies of shared components.
+* Components that appear reusable but are bypassed by existing pages.
+
+The Agent MUST NOT automatically refactor unrelated duplicates. It only reports their impact on the target phase and identifies the canonical implementation where evidence exists.
+
+## 18.1.9 Design-System Traceability
+
+Every significant frontend requirement MUST be traceable to the approved design system:
+
+```text
+Phase Requirement
+      ↓
+Design Rule / Token / Pattern
+      ↓
+Existing Component
+      ↓
+REUSE / EXTEND / CREATE
+      ↓
+Page Composition
+```
+
+The Agent MUST identify the relevant design tokens, components, patterns, typography, spacing, responsive behavior, RTL rules, and accessibility requirements where applicable.
+
+The Agent MUST NOT invent arbitrary visual rules when an approved design-system rule already exists.
+
+## 18.1.10 Frontend API Contract Traceability
+
+If the frontend consumes an API, each API dependency MUST reference the corresponding endpoint contract from `routes.md`.
+
+The analysis MUST identify:
+
+* Endpoint.
+* Method.
+* Request shape.
+* Response shape.
+* Error shape.
+* Status handling.
+* Frontend consumer.
+* State mapping.
+
+The frontend MUST be planned around the approved API contract, not around an independently invented response shape.
+
+## 18.1.11 Frontend Evidence Requirement
+
+The final analysis MUST contain sufficient evidence for another agent to execute the phase without repeating the entire discovery process.
+
+At minimum, the frontend blueprint MUST identify:
+
+* Affected pages.
+* Existing components to reuse.
+* Components to extend.
+* Components genuinely requiring creation.
+* Component creation order.
+* Relevant design-system sources.
+* API dependencies and their `routes.md` contracts.
+* Required frontend states.
+* Responsive/RTL/accessibility constraints.
+
 # 19. Security & Authorization Analysis
 
 The Agent MUST analyze:
@@ -1203,8 +1599,11 @@ Use only when:
 * Communication architecture is compliant.
 * Security requirements are understood.
 * Frontend policy is compliant where applicable.
+* Frontend component reuse/extension/creation decisions are documented where applicable.
 * Test strategy is defined.
 * Scope boundaries are clear.
+* `API_SSoT: PASS` for API-affecting phases, or `N/A` when no API is involved.
+* No unresolved `API_CONTRACT_CONFLICT` or `API_SSoT_AMBIGUITY` exists.
 
 ---
 
@@ -1449,7 +1848,7 @@ Response
 
 ---
 
-## 13. Data Integrity & Transaction Boundaries
+## 14. Data Integrity & Transaction Boundaries
 
 | Operation     | Related Data        | Transaction Required | Reason   |
 | :------------ | :------------------ | :------------------- | :------- |
@@ -1457,7 +1856,7 @@ Response
 
 ---
 
-## 14. Financial Integrity
+## 15. Financial Integrity
 
 ### Applicable
 
@@ -1477,7 +1876,7 @@ If applicable:
 
 ---
 
-## 15. High-Risk Edge Cases
+## 16. High-Risk Edge Cases
 
 | Risk / Edge Case | Impact              | Mitigation   |
 | :--------------- | :------------------ | :----------- |
@@ -1485,7 +1884,7 @@ If applicable:
 
 ---
 
-## 16. Testing & Verification Strategy
+## 17. Testing & Verification Strategy
 
 ### Unit Tests
 
@@ -1513,7 +1912,7 @@ If applicable:
 
 ---
 
-## 17. Definition of Done
+## 18. Definition of Done
 
 * [ ] [Criterion]
 * [ ] [Criterion]
@@ -1524,7 +1923,7 @@ All criteria MUST be derived from the phase specifications and global project ru
 
 ---
 
-## 18. Final Readiness Decision
+## 19. Final Readiness Decision
 
 ### Status
 
@@ -1558,6 +1957,8 @@ The Agent MUST NOT:
 - Execute tests.
 - Invoke the Execution Engine.
 - Start `execute_phase.md`.
+- Redesign or alter any API contract governed by `routes.md`.
+- Mark an unresolved API SSoT conflict as a warning-only issue.
 
 The developer must explicitly review the analysis.
 

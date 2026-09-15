@@ -185,7 +185,9 @@ export class AssignmentsService {
     }
 
     if (query.due_date) {
-      where.due_date = new Date(query.due_date);
+      const targetDueDate = new Date(query.due_date);
+      targetDueDate.setHours(23, 59, 59, 999);
+      where.due_date = { lte: targetDueDate };
     }
 
     const now = new Date();
@@ -193,9 +195,15 @@ export class AssignmentsService {
     const todayDate = new Date(todayStr);
 
     if (query.status === 'active') {
-      where.due_date = { gte: todayDate };
+      where.due_date = {
+        ...(where.due_date || {}),
+        gte: todayDate,
+      };
     } else if (query.status === 'expired') {
-      where.due_date = { lt: todayDate };
+      where.due_date = {
+        ...(where.due_date || {}),
+        lt: todayDate,
+      };
     }
 
     if (query.search) {

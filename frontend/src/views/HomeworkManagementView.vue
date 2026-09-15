@@ -731,10 +731,11 @@ onMounted(() => {
 
             <!-- 6. Due Date Filter -->
             <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">موعد الاستحقاق</label>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">موعد الاستحقاق (حتى تاريخ)</label>
               <input
                 v-model="selectedDueDate"
                 type="date"
+                title="عرض الواجبات المستحقة في أو قبل هذا اليوم"
                 class="w-full px-4 py-2 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title focus:outline-none focus:border-bx-primary transition-all"
               />
             </div>
