@@ -5,6 +5,11 @@ export interface QuizAttachment {
   file_url: string;
   file_size?: number;
   file_type?: string;
+  // Aliases for unified attachment interface
+  name?: string;
+  url?: string;
+  size?: number;
+  type?: string;
 }
 
 export interface QuizItem {
@@ -125,11 +130,19 @@ export const quizzesApi = {
     const res = await apiClient.get<ApiResponse<QuizHierarchyData>>('/quizzes', { params });
     return res.data;
   },
+  async getAll(params?: GetQuizzesParams): Promise<ApiResponse<QuizHierarchyData>> {
+    const res = await apiClient.get<ApiResponse<QuizHierarchyData>>('/quizzes', { params });
+    return res.data;
+  },
 
   /**
    * 1.2 GET /api/v1/quizzes/:id
    */
   async getQuizById(id: number): Promise<ApiResponse<QuizDetailData>> {
+    const res = await apiClient.get<ApiResponse<QuizDetailData>>(`/quizzes/${id}`);
+    return res.data;
+  },
+  async getById(id: number): Promise<ApiResponse<QuizDetailData>> {
     const res = await apiClient.get<ApiResponse<QuizDetailData>>(`/quizzes/${id}`);
     return res.data;
   },
@@ -141,6 +154,10 @@ export const quizzesApi = {
     const res = await apiClient.post<ApiResponse<any>>('/quizzes', payload);
     return res.data;
   },
+  async create(payload: CreateQuizPayload): Promise<ApiResponse<any>> {
+    const res = await apiClient.post<ApiResponse<any>>('/quizzes', payload);
+    return res.data;
+  },
 
   /**
    * 1.4 PUT /api/v1/quizzes/:id
@@ -149,11 +166,19 @@ export const quizzesApi = {
     const res = await apiClient.put<ApiResponse<any>>(`/quizzes/${id}`, payload);
     return res.data;
   },
+  async update(id: number, payload: UpdateQuizPayload): Promise<ApiResponse<any>> {
+    const res = await apiClient.put<ApiResponse<any>>(`/quizzes/${id}`, payload);
+    return res.data;
+  },
 
   /**
    * 1.5 DELETE /api/v1/quizzes/:id
    */
   async deleteQuiz(id: number): Promise<ApiResponse<any>> {
+    const res = await apiClient.delete<ApiResponse<any>>(`/quizzes/${id}`);
+    return res.data;
+  },
+  async delete(id: number): Promise<ApiResponse<any>> {
     const res = await apiClient.delete<ApiResponse<any>>(`/quizzes/${id}`);
     return res.data;
   },

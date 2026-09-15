@@ -9,7 +9,7 @@ import { AuditService } from '../audit/audit.service.js';
 import { CreateQuizDto } from './dto/create-quiz.dto.js';
 import { UpdateQuizDto } from './dto/update-quiz.dto.js';
 import { QueryQuizzesDto, QuizStatusFilter } from './dto/query-quizzes.dto.js';
-import { RoleType } from '@prisma/client';
+import { RoleType, Prisma } from '@prisma/client';
 
 @Injectable()
 export class QuizzesService {
@@ -542,7 +542,7 @@ export class QuizzesService {
         created_by_user_id: BigInt(currentUser.id),
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
-        attachments: dto.attachments && dto.attachments.length > 0 ? dto.attachments : null,
+        attachments: dto.attachments && dto.attachments.length > 0 ? (dto.attachments as any) : undefined,
         quiz_date: quizDate,
       },
     });
@@ -646,7 +646,7 @@ export class QuizzesService {
       dataToUpdate.description = dto.description ? dto.description.trim() : null;
     }
     if (dto.attachments !== undefined) {
-      dataToUpdate.attachments = dto.attachments && dto.attachments.length > 0 ? dto.attachments : null;
+      dataToUpdate.attachments = dto.attachments && dto.attachments.length > 0 ? (dto.attachments as any) : Prisma.JsonNull;
     }
     if (dto.quiz_date !== undefined) {
       const d = new Date(dto.quiz_date);

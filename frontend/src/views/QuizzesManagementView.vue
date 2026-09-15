@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import {
   Plus,
   Calendar,
+  Clock,
   Search,
   Filter,
   RotateCcw,
+  School,
+  CheckCircle2,
   Trash2,
   Loader2,
+  TrendingUp,
   Eye,
   Edit2,
   Paperclip,
+  FileText,
+  BookOpen,
 } from 'lucide-vue-next';
 import {
   quizzesApi,
@@ -29,6 +35,7 @@ import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
 import QuizDetailDrawer from '../components/quizzes/QuizDetailDrawer.vue';
 import QuizDrawerForm from '../components/quizzes/QuizDrawerForm.vue';
+import QuizEmptyState from '../components/quizzes/QuizEmptyState.vue';
 
 const authStore = useAuthStore();
 const toast = useToast();
@@ -97,7 +104,12 @@ const showDeleteModal = ref(false);
 const itemToDelete = ref<QuizItem | null>(null);
 const isDeleting = ref(false);
 
-// Class Filter Options
+// Active Academic Year object
+const activeAcademicYear = computed(() => {
+  return academicYears.value.find((y) => y.id === selectedYearId.value) || academicYears.value[0];
+});
+
+// 1. Class Filter Options
 const classOptions = computed<TaqniyaSelectOption[]>(() => {
   const opts: TaqniyaSelectOption[] = [{ value: 'all', label: 'جميع الصفوف الدراسية' }];
   allClasses.value.forEach((c) => {
@@ -106,10 +118,10 @@ const classOptions = computed<TaqniyaSelectOption[]>(() => {
   return opts;
 });
 
-// Section Filter Options (Cascading)
+// 2. Section Filter Options (Cascading: Dependent on Class Selection)
 const sectionOptions = computed<TaqniyaSelectOption[]>(() => {
   if (selectedClassFilter.value === 'all') {
-    return [{ value: 'all', label: 'اختر الصف أولاً...' }];
+    return [{ value: 'all', label: 'يرجى اختيار الصف أولاً...' }];
   }
   const classId = Number(selectedClassFilter.value);
   const sections = allClassSections.value.filter((s) => s.class_id === classId);
@@ -119,67 +131,177 @@ const sectionOptions = computed<TaqniyaSelectOption[]>(() => {
   ];
 });
 
-// Teacher Filter Options
-const teacherOptions = computed<TaqniyaSelectOption[]>(() => {
-  const opts: TaqniyaSelectOption[] = [{ value: 'all', label: 'جميع المعلمين' }];
-  allTeachers.value.forEach((t) => {
-    opts.push({ value: t.id, label: t.full_name });
-  });
-  return opts;
+// 3. Subject Filter Options (Cascading: Dependent on Class Selection)
+const subjectOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (selectedClassFilter.value === 'all') {
+    return [{ value: 'all', label: 'يرجى اختيار الصف أولاً...' }];
+  }
+  const classId = Number(selectedClassFilter.value);
+  const classObj = allClassSubjects.value.find((c: any) => c.class_id === classId);
+  const subs: any[] = [];
+  if (classObj && classObj.terms) {
+    classObj.terms.forEach((t: any) => {
+      t.subjects?.forEach((s: any) => {
+        if (!subs.some((existing) => existing.subject_id === s.subject_id)) {
+          subs.push(s);
+        }
+      });
+    });
+  }
+  return [
+    { value: 'all', label: 'جميع المواد التعليمية' },
+    ...subs.map((s) => ({
+      value: s.subject_id,
+      label: s.name,
+      description: s.code ? `كود: ${s.code}` : undefined,
+    })),
+  ];
 });
 
-// Status Filter Options
+// 4. Teacher Filter Options
+const teacherOptions = computed<TaqniyaSelectOption[]>(() => {
+  return [
+    { value: 'all', label: 'جميع المعلمين / الأساتذة' },
+    ...allTeachers.value.map((t) => ({
+      value: t.id,
+      label: t.full_name,
+      description: t.specialization ? `تخصص: ${t.specialization}` : undefined,
+    })),
+  ];
+});
+
+// 5. Status Filter Options
 const statusOptions: TaqniyaSelectOption[] = [
-  { value: 'all', label: 'جميع الحالات' },
-  { value: 'upcoming', label: 'القادمة والمجدولة' },
-  { value: 'completed', label: 'المكتملة والمنفذة' },
+  { value: 'all', label: 'كافة الحالات' },
+  { value: 'upcoming', label: 'الاختبارات القادمة والمجدولة' },
+  { value: 'completed', label: 'الاختبارات المنجزة والسابقة' },
 ];
 
-// Computed KPIs
-const totalQuizzesCount = computed(() => paginationMeta.value.total);
-
-const upcomingQuizzesCount = computed(() => {
-  let count = 0;
-  classesData.value.forEach((c) => {
-    c.sections.forEach((s) => {
-      count += s.quizzes.filter((q) => q.status === 'upcoming').length;
-    });
-  });
-  return count;
+// When Class Filter changes, reset dependent Section and Subject filters
+watch(selectedClassFilter, () => {
+  selectedSectionFilter.value = 'all';
+  selectedSubjectFilter.value = 'all';
 });
 
-const completedQuizzesCount = computed(() => {
-  let count = 0;
-  classesData.value.forEach((c) => {
-    c.sections.forEach((s) => {
-      count += s.quizzes.filter((q) => q.status === 'completed').length;
-    });
-  });
-  return count;
+// Check if any filters are active
+const hasActiveFilters = computed(() => {
+  return (
+    appliedSearchQuery.value.trim() !== '' ||
+    appliedClassFilter.value !== 'all' ||
+    appliedSectionFilter.value !== 'all' ||
+    appliedTeacherFilter.value !== 'all' ||
+    appliedSubjectFilter.value !== 'all' ||
+    appliedStatusFilter.value !== 'all' ||
+    appliedQuizDate.value !== ''
+  );
 });
 
-const totalAttachmentsCount = computed(() => {
+// Overall Quizzes Count KPIs
+const totalUpcomingCount = computed(() => {
   let count = 0;
   classesData.value.forEach((c) => {
     c.sections.forEach((s) => {
       s.quizzes.forEach((q) => {
-        count += q.attachments_count || 0;
+        if (q.status === 'upcoming') count++;
       });
     });
   });
   return count;
 });
 
-// Load Metadata
-const loadMetadata = async () => {
+const totalCompletedCount = computed(() => {
+  let count = 0;
+  classesData.value.forEach((c) => {
+    c.sections.forEach((s) => {
+      s.quizzes.forEach((q) => {
+        if (q.status === 'completed') count++;
+      });
+    });
+  });
+  return count;
+});
+
+const totalClassesCount = computed(() => classesData.value.length);
+
+export interface EnrichedQuizRow {
+  id: number;
+  indexNumber: number;
+  class_id: number;
+  class_name: string;
+  class_section_id: number;
+  section_name: string;
+  subject_name: string;
+  teacher_name: string;
+  title: string;
+  attachments_count: number;
+  quiz_date: string;
+  status: 'upcoming' | 'completed';
+  countdownInfo: { label: string; isUrgent: boolean; isPast: boolean } | null;
+  raw: QuizItem;
+}
+
+// Flat list for Datatable presentation
+const allQuizzesRows = computed<EnrichedQuizRow[]>(() => {
+  const list: EnrichedQuizRow[] = [];
+  let idx = (paginationMeta.value.current_page - 1) * paginationMeta.value.per_page + 1;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  classesData.value.forEach((cls) => {
+    cls.sections.forEach((sec) => {
+      sec.quizzes.forEach((q) => {
+        let cdInfo: { label: string; isUrgent: boolean; isPast: boolean } | null = null;
+        if (q.quiz_date) {
+          const qDate = new Date(q.quiz_date);
+          qDate.setHours(0, 0, 0, 0);
+          const diffTime = qDate.getTime() - today.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays < 0) {
+            cdInfo = { label: `تم إجراؤه منذ ${Math.abs(diffDays)} يوم`, isUrgent: false, isPast: true };
+          } else if (diffDays === 0) {
+            cdInfo = { label: 'موعد الاختبار اليوم!', isUrgent: true, isPast: false };
+          } else if (diffDays === 1) {
+            cdInfo = { label: 'موعد الاختبار غداً', isUrgent: true, isPast: false };
+          } else {
+            cdInfo = { label: `متبقي ${diffDays} أيام`, isUrgent: false, isPast: false };
+          }
+        }
+
+        list.push({
+          id: q.id,
+          indexNumber: idx++,
+          class_id: cls.class_id,
+          class_name: cls.class_name,
+          class_section_id: sec.class_section_id,
+          section_name: sec.section_name,
+          subject_name: q.subject_name,
+          teacher_name: q.teacher_name,
+          title: q.title,
+          attachments_count: q.attachments_count || 0,
+          quiz_date: q.quiz_date,
+          status: q.status,
+          countdownInfo: cdInfo,
+          raw: q,
+        });
+      });
+    });
+  });
+
+  return list;
+});
+
+// Fetch Initial Metadata
+const loadInitialData = async () => {
   try {
-    const [yearsRes, classesRes, teachersRes, sectionsRes, subsRes, taRes] = await Promise.all([
+    const [yearsRes, termsRes, classesRes, teachersRes, classSectionsRes, classSubjectsRes] = await Promise.all([
       academicApi.getYears().catch(() => ({ data: { data: [] } })),
+      academicApi.getTerms().catch(() => ({ data: { data: [] } })),
       academicApi.getClasses({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
       teachersApi.getTeachers({ per_page: 200, is_active: 1 }).catch(() => ({ data: { data: [] } })),
       academicApi.getClassSections({ per_page: 200 }).catch(() => ({ data: { data: { classes: [] } } })),
       academicApi.getClassSubjects({ per_page: 100 }).catch(() => ({ data: { data: { classes: [] } } })),
-      teachingAssignmentsApi.getAll({ per_page: 100 }).catch(() => ({ data: { data: { classes: [] } } })),
     ]);
 
     const yData = yearsRes.data?.data || yearsRes.data || [];
@@ -188,14 +310,22 @@ const loadMetadata = async () => {
       const activeYear = yData.find((y: any) => y.is_active === 1) || yData[0];
       if (activeYear) {
         selectedYearId.value = activeYear.id;
+        currentYearName.value = activeYear.name;
       }
+    }
+
+    const termsList = termsRes.data?.data || termsRes.data || [];
+    if (Array.isArray(termsList) && termsList.length > 0) {
+      selectedTermId.value = termsList[0].id;
+      currentTermName.value = termsList[0].name;
     }
 
     allClasses.value = classesRes.data?.data || classesRes.data || [];
     allTeachers.value = teachersRes.data?.data || teachersRes.data || [];
-    allClassSubjects.value = subsRes.data?.data?.classes || subsRes.data?.data || [];
+    allClassSubjects.value = classSubjectsRes.data?.data?.classes || classSubjectsRes.data?.data || [];
 
-    const groupedClasses = sectionsRes.data?.data?.classes || [];
+    // Flatten class sections
+    const groupedClasses = classSectionsRes.data?.data?.classes || [];
     const flattened: any[] = [];
     for (const gc of groupedClasses) {
       if (gc.sections && Array.isArray(gc.sections)) {
@@ -211,26 +341,38 @@ const loadMetadata = async () => {
       }
     }
     allClassSections.value = flattened;
+  } catch (err: any) {
+    console.error('Failed to fetch initial metadata', err);
+  }
 
-    const taClasses = taRes.data?.data?.classes || [];
-    const flatList: any[] = [];
-    taClasses.forEach((c: any) => {
-      c.sections?.forEach((s: any) => {
-        s.assignments?.forEach((a: any) => {
-          flatList.push({
-            ...a,
-            class_id: c.class_id,
-            class_name: c.class_name,
-            class_section_id: s.class_section_id,
-            section_name: s.section_name,
+  // Load Teaching Assignments for drawer dropdown
+  if (canManage.value) {
+    try {
+      const res = await teachingAssignmentsApi.getAll({
+        academic_year_id: selectedYearId.value || undefined,
+        per_page: 100,
+      });
+      if (res.data?.data?.classes) {
+        const flatAssignments: AssignmentItem[] = [];
+        res.data.data.classes.forEach((c: any) => {
+          c.sections?.forEach((s: any) => {
+            s.assignments?.forEach((a: any) => {
+              flatAssignments.push({
+                ...a,
+                class_section_id: s.class_section_id,
+                section_name: `${c.class_name} - ${s.section_name}`,
+              });
+            });
           });
         });
-      });
-    });
-    availableTeachingAssignments.value = flatList;
-  } catch (err) {
-    console.error('Failed to load quizzes metadata:', err);
+        availableTeachingAssignments.value = flatAssignments;
+      }
+    } catch (err) {
+      console.error('Failed to fetch teaching assignments', err);
+    }
   }
+
+  fetchQuizzes(1);
 };
 
 // Fetch Quizzes List
@@ -240,39 +382,33 @@ const fetchQuizzes = async (page = 1) => {
     const params: any = {
       page,
       per_page: paginationMeta.value.per_page,
-      sort_by: 'quiz_date',
-      sort_order: 'asc',
     };
 
     if (selectedYearId.value) params.academic_year_id = selectedYearId.value;
-    if (selectedTermId.value) params.academic_term_id = selectedTermId.value;
-
     if (appliedSearchQuery.value.trim()) params.search = appliedSearchQuery.value.trim();
     if (appliedClassFilter.value !== 'all') params.class_id = Number(appliedClassFilter.value);
     if (appliedSectionFilter.value !== 'all') params.class_section_id = Number(appliedSectionFilter.value);
+    if (appliedSubjectFilter.value !== 'all') params.subject_id = Number(appliedSubjectFilter.value);
     if (appliedTeacherFilter.value !== 'all') params.teacher_id = Number(appliedTeacherFilter.value);
     if (appliedStatusFilter.value !== 'all') params.status = appliedStatusFilter.value;
     if (appliedQuizDate.value) params.quiz_date = appliedQuizDate.value;
 
-    const res = await quizzesApi.getQuizzes(params);
-
-    if (res.success && res.data) {
-      currentYearName.value = res.data.academic_year_name;
-      currentTermName.value = res.data.academic_term_name;
+    const res = await quizzesApi.getAll(params);
+    if (res.data) {
       classesData.value = res.data.classes || [];
-
       if (res.meta) {
         paginationMeta.value = res.meta;
       }
     }
   } catch (err: any) {
-    console.error('Failed to fetch quizzes:', err);
-    toast.error(err.message || 'حدث خطأ أثناء جلب مصفوفة الاختبارات');
+    const msg = err.response?.data?.message || 'فشل جلب قائمة الاختبارات والتطبيقات';
+    toast.error(msg);
   } finally {
     loading.value = false;
   }
 };
 
+// Apply Filters Action
 const applyFilters = () => {
   appliedSearchQuery.value = searchQuery.value;
   appliedClassFilter.value = selectedClassFilter.value;
@@ -285,6 +421,7 @@ const applyFilters = () => {
   fetchQuizzes(1);
 };
 
+// Reset Filters Action
 const resetFilters = () => {
   searchQuery.value = '';
   selectedClassFilter.value = 'all';
@@ -305,424 +442,533 @@ const resetFilters = () => {
   fetchQuizzes(1);
 };
 
-// Open Create Drawer
-const openCreateDrawer = () => {
+watch(selectedYearId, () => {
+  fetchQuizzes(1);
+});
+
+// Handlers for Drawer & Actions
+const handleOpenCreate = () => {
   formDrawerMode.value = 'create';
   itemToEdit.value = null;
   showFormDrawer.value = true;
 };
 
-// Open Edit Drawer
-const openEditDrawer = async (item: QuizItem | QuizDetailData) => {
+const handleOpenEdit = async (item: QuizItem | QuizDetailData) => {
+  formDrawerMode.value = 'edit';
   try {
-    const res = await quizzesApi.getQuizById(item.id);
-    if (res.success && res.data) {
+    const res = await quizzesApi.getById(item.id);
+    if (res.data) {
       itemToEdit.value = res.data;
-      formDrawerMode.value = 'edit';
-      showDetailDrawer.value = false;
       showFormDrawer.value = true;
+      return;
     }
   } catch (err: any) {
-    toast.error('تعذر جلب تفاصيل الاختبار للتعديل');
+    // fallback
   }
+  itemToEdit.value = item as any;
+  showFormDrawer.value = true;
 };
 
-// Open Detail Drawer
-const openDetailDrawer = async (item: QuizItem) => {
+const handleOpenView = async (item: QuizItem) => {
+  selectedQuizDetail.value = null;
   showDetailDrawer.value = true;
   detailLoading.value = true;
   try {
-    const res = await quizzesApi.getQuizById(item.id);
-    if (res.success && res.data) {
+    const res = await quizzesApi.getById(item.id);
+    if (res.data) {
       selectedQuizDetail.value = res.data;
     }
   } catch (err: any) {
-    toast.error('تعذر جلب تفاصيل ومرفقات الاختبار');
+    // error fallback
   } finally {
     detailLoading.value = false;
   }
 };
 
-// Open Delete Modal
-const openDeleteModal = (item: QuizItem) => {
-  itemToDelete.value = item;
-  showDeleteModal.value = true;
-};
-
-// Confirm Delete
-const confirmDelete = async () => {
-  if (!itemToDelete.value) return;
-  isDeleting.value = true;
-  try {
-    const res = await quizzesApi.deleteQuiz(itemToDelete.value.id);
-    if (res.success) {
-      toast.success(res.message || 'تم حذف الاختبار الدوري بنجاح.');
-      showDeleteModal.value = false;
-      itemToDelete.value = null;
-      fetchQuizzes(paginationMeta.value.current_page);
-    }
-  } catch (err: any) {
-    toast.error(err.response?.data?.message || 'تعذر حذف الاختبار الدوري');
-  } finally {
-    isDeleting.value = false;
-  }
-};
-
-// Form Submit (Create / Edit)
 const handleFormSubmit = async (payload: any) => {
   isSubmitting.value = true;
   try {
     if (formDrawerMode.value === 'create') {
-      const res = await quizzesApi.createQuiz(payload);
-      if (res.success) {
-        toast.success(res.message || 'تم جدولة ونشر الاختبار الدوري بنجاح.');
-        showFormDrawer.value = false;
-        fetchQuizzes(1);
-      }
+      await quizzesApi.create(payload);
+      toast.success('تم جدولة ونشر موعد الاختبار الدوري بنجاح');
     } else if (itemToEdit.value) {
-      const res = await quizzesApi.updateQuiz(itemToEdit.value.id, payload);
-      if (res.success) {
-        toast.success(res.message || 'تم تحديث موعد وتفاصيل الاختبار الدوري بنجاح.');
-        showFormDrawer.value = false;
-        fetchQuizzes(paginationMeta.value.current_page);
-      }
+      await quizzesApi.update(itemToEdit.value.id, payload);
+      toast.success('تم تحديث بيانات ومرفقات الاختبار بنجاح');
     }
+    showFormDrawer.value = false;
+    await fetchQuizzes(paginationMeta.value.current_page);
   } catch (err: any) {
-    toast.error(err.response?.data?.message || 'فشل حفظ بيانات الاختبار');
+    const msg = err.response?.data?.message || 'فشل حفظ بيانات الاختبار';
+    toast.error(msg);
   } finally {
     isSubmitting.value = false;
   }
 };
 
-onMounted(async () => {
-  await loadMetadata();
-  await fetchQuizzes(1);
+const handleOpenDelete = (item: QuizItem) => {
+  itemToDelete.value = item;
+  showDeleteModal.value = true;
+};
+
+const confirmDelete = async () => {
+  if (!itemToDelete.value) return;
+  isDeleting.value = true;
+  try {
+    await quizzesApi.delete(itemToDelete.value.id);
+    toast.success('تم حذف وإلغاء الاختبار الدوري بنجاح');
+    showDeleteModal.value = false;
+    itemToDelete.value = null;
+    await fetchQuizzes(paginationMeta.value.current_page);
+  } catch (err: any) {
+    const msg = err.response?.data?.message || 'فشل حذف الاختبار';
+    toast.error(msg);
+  } finally {
+    isDeleting.value = false;
+  }
+};
+
+onMounted(() => {
+  loadInitialData();
 });
 </script>
 
 <template>
   <TaqniyaErrorBoundary>
-    <div class="space-y-6 pb-12">
-      <!-- Page Header with KPIs -->
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-              المرحلة 07
-            </span>
-            <span class="text-xs text-slate-400 font-medium">
-              {{ currentYearName || 'العام الدراسي النشط' }} • {{ currentTermName || 'الفصل الدراسي الأول' }}
-            </span>
-          </div>
-          <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            جدول ومواعيد الاختبارات والتطبيقات الدورية
-          </h1>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            إدارة وجدولة ونشر الاختبارات والتطبيقات الشهرية ومذكرات المراجعة والمرفقات لكافة الصفوف والشُعب.
-          </p>
-        </div>
-
-        <button
-          v-if="canManage"
-          type="button"
-          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 transition-all duration-200 shrink-0"
-          @click="openCreateDrawer"
-        >
-          <Plus class="w-4 h-4" />
-          <span>+ جدولة اختبار جديد</span>
-        </button>
-      </div>
-
-      <!-- KPI Statistics Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <TaqniyaKpiCard
-          title="إجمالي الاختبارات المجدولة"
-          :value="totalQuizzesCount"
-          subtitle="بالعام والسمستر النشط"
-          icon="Calendar"
-          gradient="indigo"
-        />
-        <TaqniyaKpiCard
-          title="الاختبارات القادمة"
-          :value="upcomingQuizzesCount"
-          subtitle="تتطلب استعداد الطلاب"
-          icon="Clock"
-          gradient="purple"
-        />
-        <TaqniyaKpiCard
-          title="الاختبارات المنجزة"
-          :value="completedQuizzesCount"
-          subtitle="تم إجراؤها في الفصول"
-          icon="CheckCircle2"
-          gradient="emerald"
-        />
-        <TaqniyaKpiCard
-          title="ملازم ونماذج المراجعة"
-          :value="totalAttachmentsCount"
-          subtitle="ملفات ومرفقات دراسية"
-          icon="Paperclip"
-          gradient="blue"
-        />
-      </div>
-
-      <!-- Advanced Filter & Search Bar -->
-      <div class="rounded-2xl bg-white dark:bg-slate-900 p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-            <Filter class="w-4 h-4 text-indigo-500" />
-            <span>خيارات التصفية والبحث المتقدم</span>
-          </div>
-
-          <button
-            type="button"
-            class="text-xs font-semibold text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1 transition-colors"
-            @click="resetFilters"
-          >
-            <RotateCcw class="w-3.5 h-3.5" />
-            <span>إعادة ضبط</span>
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <!-- Text Search -->
-          <div class="relative">
-            <Search class="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="ابحث بعنوان الاختبار أو الموضوع..."
-              class="w-full ps-9 pe-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all placeholder:text-slate-400"
-              @keyup.enter="applyFilters"
-            />
-          </div>
-
-          <!-- Class Selector -->
-          <TaqniyaSelect
-            v-model="selectedClassFilter"
-            :options="classOptions"
-            placeholder="تصفية بالصف الدراسي..."
-            searchable
-          />
-
-          <!-- Section Selector -->
-          <TaqniyaSelect
-            v-model="selectedSectionFilter"
-            :options="sectionOptions"
-            placeholder="تصفية بالشعبة..."
-            searchable
-            :disabled="selectedClassFilter === 'all'"
-          />
-
-          <!-- Teacher Selector -->
-          <TaqniyaSelect
-            v-model="selectedTeacherFilter"
-            :options="teacherOptions"
-            placeholder="تصفية بالمعلم..."
-            searchable
-          />
-
-          <!-- Status Selector -->
-          <TaqniyaSelect
-            v-model="selectedStatusFilter"
-            :options="statusOptions"
-            placeholder="حالة الموعد..."
-          />
-
-          <!-- Quiz Date Picker -->
-          <input
-            v-model="selectedQuizDate"
-            type="date"
-            class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-mono"
-          />
-
-          <!-- Filter Submit Action Button -->
-          <div class="sm:col-span-2 lg:col-span-2 flex items-center gap-2">
-            <button
-              type="button"
-              class="w-full py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition-all"
-              @click="applyFilters"
-            >
-              تطبيق التصفية والبحث
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="loading" class="flex flex-col items-center justify-center py-24 text-slate-400">
-        <Loader2 class="w-10 h-10 animate-spin text-indigo-500 mb-3" />
-        <p class="text-xs font-medium">جاري تحميل مصفوفة الاختبارات والتطبيقات...</p>
-      </div>
-
-      <!-- Empty State -->
-      <div
-        v-else-if="classesData.length === 0"
-        class="rounded-2xl bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 p-12 text-center"
-      >
-        <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
-          <Calendar class="w-8 h-8" />
-        </div>
-        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">
-          لا توجد اختبارات أو تطبيقات دورية مسجلة
-        </h3>
-        <p class="text-xs text-slate-400 max-w-sm mx-auto mt-1 mb-5">
-          لم يتم العثور على أي اختبارات تطابق محددات البحث والفلاتر المختارة بالسمستر الحالي.
-        </p>
-        <button
-          v-if="canManage"
-          type="button"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-all shadow-sm"
-          @click="openCreateDrawer"
-        >
-          <Plus class="w-4 h-4" />
-          <span>جدولة أول اختبار الآن</span>
-        </button>
-      </div>
-
-      <!-- Hierarchical Quizzes Grid: Class -> Sections -> Quizzes -->
-      <div v-else class="space-y-6">
-        <div
-          v-for="cls in classesData"
-          :key="cls.class_id"
-          class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm"
-        >
-          <!-- Class Header Banner -->
-          <div class="px-6 py-4 bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
-                {{ cls.grade_level }}
-              </div>
-              <h2 class="text-sm font-bold text-slate-900 dark:text-white">
-                {{ cls.class_name }}
+    <div class="space-y-4 font-sans" dir="rtl">
+      <!-- Unified Container Card (Matching Taqniya Reference Design System) -->
+      <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
+        
+        <!-- 1. Card Header: Title on Right, Controls & Actions on Left -->
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-[#B4AED8]/60 dark:border-white/10">
+          <!-- Title & Subtitle with Taqniya Brand Accent -->
+          <div>
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <span class="w-2.5 h-7 rounded-full bg-bx-primary shrink-0"></span>
+              <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+                الاختبارات والتطبيقات الدورية
               </h2>
+              <span
+                v-if="activeAcademicYear"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-xs"
+              >
+                <Calendar class="w-3.5 h-3.5" />
+                <span>العام الدراسي النشط: {{ activeAcademicYear.name }}</span>
+              </span>
             </div>
-            <span class="text-xs text-slate-400 font-medium">
-              {{ cls.sections.length }} شُعب دراسية
-            </span>
+            <p class="text-xs text-bx-muted font-medium mt-1 ms-5">
+              جدولة ونشر مواعيد الاختبارات والتطبيقات الشهرية، مذكرات المراجعة والمرفقات لكافة الصفوف والشعب
+            </p>
           </div>
 
-          <!-- Sections Layout -->
-          <div class="p-6 space-y-6">
-            <div
-              v-for="sec in cls.sections"
-              :key="sec.class_section_id"
-              class="space-y-3"
+          <!-- Controls: Add Button + Search Trigger -->
+          <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            <!-- Add Button (Admin / Teacher) -->
+            <button
+              v-if="canManage"
+              type="button"
+              @click="handleOpenCreate"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer"
             >
-              <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                <div class="w-2 h-2 rounded-full bg-indigo-500" />
-                <span>{{ sec.section_name }}</span>
-                <span class="text-[11px] font-normal text-slate-400">
-                  ({{ sec.quizzes.length }} اختبارات)
-                </span>
+              <Plus class="w-3.5 h-3.5" />
+              <span>+ جدولة اختبار جديد</span>
+            </button>
+
+            <!-- Search Input with Search Trigger -->
+            <div class="relative flex-1 sm:w-72 flex items-center gap-1.5">
+              <div class="relative flex-1">
+                <Search class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-bx-muted pointer-events-none" />
+                <input
+                  v-model="searchQuery"
+                  @keydown.enter="applyFilters"
+                  type="text"
+                  placeholder="بحث في عناوين الاختبارات والمواد..."
+                  class="w-full pr-10 pl-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-start"
+                />
               </div>
-
-              <!-- Quizzes Cards Grid inside Section -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div
-                  v-for="quiz in sec.quizzes"
-                  :key="quiz.id"
-                  class="rounded-xl p-4 bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 hover:border-indigo-500/40 hover:shadow-md transition-all duration-200 space-y-3 flex flex-col justify-between group"
-                >
-                  <!-- Card Top: Subject & Status -->
-                  <div class="space-y-2">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20 truncate">
-                        {{ quiz.subject_name }}
-                      </span>
-                      <span
-                        class="px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0"
-                        :class="
-                          quiz.status === 'upcoming'
-                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                        "
-                      >
-                        {{ quiz.status === 'upcoming' ? 'قادم' : 'منجز' }}
-                      </span>
-                    </div>
-
-                    <h3 class="text-xs font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
-                      {{ quiz.title }}
-                    </h3>
-
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                      <span>الأستاذ:</span>
-                      <span class="font-semibold text-slate-700 dark:text-slate-300">{{ quiz.teacher_name }}</span>
-                    </p>
-                  </div>
-
-                  <!-- Card Bottom: Date, Attachments, Actions -->
-                  <div class="pt-3 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs">
-                    <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 font-mono text-[11px]">
-                      <Calendar class="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                      <span>{{ quiz.quiz_date }}</span>
-                    </div>
-
-                    <div class="flex items-center gap-1.5">
-                      <span v-if="quiz.attachments_count" class="text-[11px] text-slate-400 flex items-center gap-0.5 me-1" title="عدد المرفقات">
-                        <Paperclip class="w-3 h-3 text-indigo-500" />
-                        <span>{{ quiz.attachments_count }}</span>
-                      </span>
-
-                      <!-- View Details -->
-                      <button
-                        type="button"
-                        class="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors"
-                        title="معاينة التفاصيل والمرفقات"
-                        @click="openDetailDrawer(quiz)"
-                      >
-                        <Eye class="w-4 h-4" />
-                      </button>
-
-                      <!-- Edit Button (Staff only) -->
-                      <button
-                        v-if="canManage"
-                        type="button"
-                        class="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-white dark:hover:bg-slate-700 transition-colors"
-                        title="تعديل الاختبار"
-                        @click="openEditDrawer(quiz)"
-                      >
-                        <Edit2 class="w-4 h-4" />
-                      </button>
-
-                      <!-- Delete Button (Staff only) -->
-                      <button
-                        v-if="canManage"
-                        type="button"
-                        class="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-white dark:hover:bg-slate-700 transition-colors"
-                        title="إلغاء وحذف الاختبار"
-                        @click="openDeleteModal(quiz)"
-                      >
-                        <Trash2 class="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <button
+                @click="applyFilters"
+                :disabled="loading"
+                class="h-8 px-3 rounded-full bg-purple-500/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-purple-500/30 dark:border-purple-400/30 text-xs font-bold transition-all cursor-pointer flex items-center justify-center shrink-0"
+                title="بحث فوري (أو اضغط Enter)"
+              >
+                <Search class="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- Standard Pagination Footer -->
-        <div class="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-xs">
-          <span class="text-slate-500">
-            إجمالي السجلات: <span class="font-bold text-slate-900 dark:text-white">{{ paginationMeta.total }}</span> • الصفحة {{ paginationMeta.current_page }} من {{ paginationMeta.last_page }}
+        <!-- 2. KPI Metrics Cards (Exact Taqniya Spatial Theme) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 py-6">
+          <TaqniyaKpiCard
+            title="إجمالي الاختبارات المسجلة"
+            :value="`${paginationMeta.total} اختبار`"
+            subtitle="سجل اختبار دوري"
+            :icon="Calendar"
+            variant="primary"
+            badge-text="التراكمي"
+            :badge-icon="TrendingUp"
+            :pulse-badge="true"
+          />
+
+          <TaqniyaKpiCard
+            title="الاختبارات القادمة والمجدولة"
+            :value="`${totalUpcomingCount} قادم`"
+            subtitle="مجدولة خلال الفصل"
+            :icon="Clock"
+            variant="emerald"
+            badge-text="قيد الاستعداد"
+          />
+
+          <TaqniyaKpiCard
+            title="الاختبارات المنفذة والسابقة"
+            :value="`${totalCompletedCount} منجز`"
+            subtitle="تم إجراؤها بالفصول"
+            :icon="CheckCircle2"
+            variant="blue"
+            badge-text="تم إجراؤها"
+          />
+
+          <TaqniyaKpiCard
+            title="الصفوف الدراسية المغطاة"
+            :value="`${totalClassesCount} صف`"
+            subtitle="صف دراسي مسجل"
+            :icon="School"
+            variant="amber"
+          />
+        </div>
+
+        <!-- 3. Filters Toolbar with Cascading Class/Section/Subject Dependencies -->
+        <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            <!-- 1. Class Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">الصف الدراسي</label>
+              <TaqniyaSelect
+                v-model="selectedClassFilter"
+                :options="classOptions"
+                placeholder="كافة الصفوف..."
+                searchable
+                full-width
+              />
+            </div>
+
+            <!-- 2. Section Filter (Cascading: Dependent on Class) -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center justify-between">
+                <span>الشعبة الدراسية</span>
+                <span v-if="selectedClassFilter === 'all'" class="text-[10px] text-amber-500 dark:text-amber-400 font-normal">
+                  (يتطلب اختيار الصف)
+                </span>
+              </label>
+              <TaqniyaSelect
+                v-model="selectedSectionFilter"
+                :options="sectionOptions"
+                :disabled="selectedClassFilter === 'all'"
+                placeholder="كافة الشُعب..."
+                full-width
+              />
+            </div>
+
+            <!-- 3. Subject Filter (Cascading: Dependent on Class) -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center justify-between">
+                <span>المادة التعليمية</span>
+                <span v-if="selectedClassFilter === 'all'" class="text-[10px] text-amber-500 dark:text-amber-400 font-normal">
+                  (يتطلب اختيار الصف)
+                </span>
+              </label>
+              <TaqniyaSelect
+                v-model="selectedSubjectFilter"
+                :options="subjectOptions"
+                :disabled="selectedClassFilter === 'all'"
+                placeholder="كافة المواد..."
+                searchable
+                full-width
+              />
+            </div>
+
+            <!-- 4. Teacher Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">المعلم / الأستاذ</label>
+              <TaqniyaSelect
+                v-model="selectedTeacherFilter"
+                :options="teacherOptions"
+                placeholder="كافة المعلمين..."
+                searchable
+                full-width
+              />
+            </div>
+
+            <!-- 5. Status Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">حالة الاختبار</label>
+              <TaqniyaSelect
+                v-model="selectedStatusFilter"
+                :options="statusOptions"
+                placeholder="كافة الحالات..."
+                full-width
+              />
+            </div>
+
+            <!-- 6. Quiz Date Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">تاريخ إجراء الاختبار</label>
+              <input
+                v-model="selectedQuizDate"
+                type="date"
+                title="عرض الاختبارات في هذا اليوم"
+                class="w-full px-4 py-2 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono"
+              />
+            </div>
+          </div>
+
+          <!-- Filter Action Toolbar -->
+          <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                @click="applyFilters"
+                :disabled="loading"
+                class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+              >
+                <Filter class="w-3.5 h-3.5" />
+                <span>تطبيق التصفية</span>
+              </button>
+
+              <button
+                type="button"
+                @click="resetFilters"
+                :disabled="loading"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] disabled:opacity-50 transition-all cursor-pointer"
+              >
+                <RotateCcw class="w-3.5 h-3.5" />
+                <span>إعادة تعيين الفلاتر</span>
+              </button>
+            </div>
+
+            <div v-if="hasActiveFilters" class="flex items-center gap-2 text-[11px] text-bx-primary font-bold">
+              <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
+              <span>يتم تطبيق فلاتر مخصصة</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Loading State -->
+        <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
+          <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
+          <span class="text-xs font-bold">جاري تحميل كشوفات الاختبارات والتطبيقات المدرسية...</span>
+        </div>
+
+        <!-- 5. Empty State -->
+        <QuizEmptyState
+          v-else-if="classesData.length === 0"
+          :can-create="canManage"
+          @create="handleOpenCreate"
+        />
+
+        <!-- 6. Unified Datatable Content: Enclosed in a Bordered Card -->
+        <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-start border-collapse text-xs">
+              <!-- Table Header with Distinct Background and Crisp Dividers -->
+              <thead>
+                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
+                  <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
+                  
+                  <!-- 1. Subject & Teacher combined -->
+                  <th class="py-3 px-4 font-bold text-start min-w-[190px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>المادة والمعلم</span>
+                    </div>
+                  </th>
+
+                  <!-- 2. Quiz Title -->
+                  <th class="py-3 px-4 font-bold text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <FileText class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>عنوان الاختبار / التطبيق</span>
+                    </div>
+                  </th>
+
+                  <!-- 3. Class & Section -->
+                  <th class="py-3 px-4 font-bold text-start min-w-[150px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <School class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>الصف والشعبة</span>
+                    </div>
+                  </th>
+
+                  <!-- 4. Quiz Date -->
+                  <th class="py-3 px-4 font-bold text-start min-w-[160px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>تاريخ إجراء الاختبار</span>
+                    </div>
+                  </th>
+
+                  <!-- 5. Attachments -->
+                  <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>المرفقات</span>
+                    </div>
+                  </th>
+
+                  <!-- 6. Status -->
+                  <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">الحالة</th>
+                  
+                  <!-- 7. Actions -->
+                  <th class="py-3 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
+                </tr>
+              </thead>
+
+              <!-- Table Body with Crisp Dividers -->
+              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
+                <tr
+                  v-for="(row, idx) in allQuizzesRows"
+                  :key="row.id"
+                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
+                >
+                  <!-- Sequence Counter # -->
+                  <td class="py-3.5 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    {{ (paginationMeta.current_page - 1) * paginationMeta.per_page + idx + 1 }}
+                  </td>
+
+                  <!-- 1. Subject & Teacher (Combined) -->
+                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="space-y-1">
+                      <div>
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
+                          {{ row.subject_name }}
+                        </span>
+                      </div>
+                      <div class="text-xs text-bx-title font-medium">
+                        {{ row.teacher_name }}
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- 2. Quiz Title -->
+                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span
+                      class="font-black text-xs sm:text-sm text-bx-title block leading-snug group-hover:text-bx-primary transition-colors cursor-pointer"
+                      @click="handleOpenView(row.raw)"
+                    >
+                      {{ row.title }}
+                    </span>
+                  </td>
+
+                  <!-- 3. Class & Section -->
+                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="font-bold text-xs text-bx-title">
+                      <span>{{ row.class_name }}</span>
+                      <span class="text-bx-muted mx-1">•</span>
+                      <span class="text-bx-primary">{{ row.section_name }}</span>
+                    </div>
+                  </td>
+
+                  <!-- 4. Quiz Date -->
+                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-bx-title">
+                      <Calendar class="w-3.5 h-3.5 text-bx-primary shrink-0" />
+                      <span>{{ row.quiz_date.slice(0, 10) }}</span>
+                    </div>
+                  </td>
+
+                  <!-- 5. Attachments Count Badge -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span
+                      v-if="row.attachments_count > 0"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
+                    >
+                      <Paperclip class="w-3.5 h-3.5" />
+                      <span>{{ row.attachments_count }} مرفقات</span>
+                    </span>
+                    <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
+                  </td>
+
+                  <!-- 6. Status Badge -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span
+                      class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
+                      :class="
+                        row.countdownInfo?.isPast || row.status === 'completed'
+                          ? 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20'
+                          : row.countdownInfo?.isUrgent
+                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
+                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      "
+                    >
+                      {{ row.countdownInfo?.label || (row.status === 'upcoming' ? 'قادم ومجدول' : 'منجز ومكتمل') }}
+                    </span>
+                  </td>
+
+                  <!-- 7. Action Buttons Toolbar -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap last:border-e-0">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <!-- View Button -->
+                      <button
+                        type="button"
+                        @click="handleOpenView(row.raw)"
+                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                        title="معاينة التفاصيل والمرفقات"
+                      >
+                        <Eye class="w-3.5 h-3.5" />
+                      </button>
+
+                      <!-- Edit Button (Teachers / Admins) -->
+                      <button
+                        v-if="canManage"
+                        type="button"
+                        @click="handleOpenEdit(row.raw)"
+                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                        title="تعديل بيانات الاختبار"
+                      >
+                        <Edit2 class="w-3.5 h-3.5" />
+                      </button>
+
+                      <!-- Delete Button (Teachers / Admins) -->
+                      <button
+                        v-if="canManage"
+                        type="button"
+                        @click="handleOpenDelete(row.raw)"
+                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                        title="حذف الاختبار الدوري"
+                      >
+                        <Trash2 class="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 7. Pagination Footer -->
+        <div
+          v-if="paginationMeta.total > 0 && paginationMeta.last_page > 1"
+          class="flex items-center justify-between pt-6 mt-6 border-t border-[#B4AED8]/60 dark:border-white/10 text-xs"
+        >
+          <span class="text-bx-muted">
+            عرض الصفحة {{ paginationMeta.current_page }} من {{ paginationMeta.last_page }} (إجمالي {{ paginationMeta.total }} اختبار)
           </span>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1.5">
             <button
               type="button"
-              class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              :disabled="paginationMeta.current_page <= 1 || loading"
+              :disabled="paginationMeta.current_page <= 1"
               @click="fetchQuizzes(paginationMeta.current_page - 1)"
+              class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title disabled:opacity-40 hover:bg-[var(--bx-row-hover)] transition-colors cursor-pointer"
             >
               السابق
             </button>
             <button
               type="button"
-              class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              :disabled="paginationMeta.current_page >= paginationMeta.last_page || loading"
+              :disabled="paginationMeta.current_page >= paginationMeta.last_page"
               @click="fetchQuizzes(paginationMeta.current_page + 1)"
+              class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title disabled:opacity-40 hover:bg-[var(--bx-row-hover)] transition-colors cursor-pointer"
             >
               التالي
             </button>
@@ -730,16 +976,16 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Detail Slide-Over Drawer -->
+      <!-- Detail Slide-over Drawer -->
       <QuizDetailDrawer
         v-model="showDetailDrawer"
         :quiz="selectedQuizDetail"
         :loading="detailLoading"
         :can-edit="canManage"
-        @edit="openEditDrawer"
+        @edit="handleOpenEdit"
       />
 
-      <!-- Create / Edit Slide-Over Drawer Form -->
+      <!-- Create / Edit Form Drawer -->
       <QuizDrawerForm
         v-model="showFormDrawer"
         :mode="formDrawerMode"
@@ -751,46 +997,56 @@ onMounted(async () => {
         @submit="handleFormSubmit"
       />
 
-      <!-- Delete Confirmation Modal -->
-      <div
-        v-if="showDeleteModal"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-      >
-        <div class="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-          <div class="w-12 h-12 rounded-2xl bg-red-500/10 text-red-600 flex items-center justify-center mx-auto border border-red-500/20">
-            <Trash2 class="w-6 h-6" />
-          </div>
+      <!-- Delete Confirmation Modal (Matching Project Modal Standard) -->
+      <Teleport to="body">
+        <div
+          v-if="showDeleteModal"
+          class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          dir="rtl"
+        >
+          <div
+            class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            @click="showDeleteModal = false"
+          />
 
-          <div class="text-center space-y-1">
-            <h3 class="text-base font-bold text-slate-900 dark:text-white">
-              تأكيد حذف الاختبار الدوري
-            </h3>
-            <p class="text-xs text-slate-500">
-              هل أنت متأكد من رغبتك في حذف وإلغاء اختبار "<span class="font-semibold text-slate-800 dark:text-slate-200">{{ itemToDelete?.title }}</span>"؟
-            </p>
-          </div>
+          <div class="relative z-10 w-full max-w-sm bg-[var(--bx-surface-solid)] rounded-3xl p-6 shadow-2xl border border-[#B4AED8] dark:border-white/[0.08] space-y-4 text-center">
+            <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto border border-rose-500/20">
+              <Trash2 class="w-6 h-6" />
+            </div>
 
-          <div class="flex items-center gap-3 pt-2">
-            <button
-              type="button"
-              class="flex-1 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              :disabled="isDeleting"
-              @click="showDeleteModal = false"
-            >
-              إلغاء
-            </button>
-            <button
-              type="button"
-              class="flex-1 py-2 text-xs font-bold rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-              :disabled="isDeleting"
-              @click="confirmDelete"
-            >
-              <Loader2 v-if="isDeleting" class="w-4 h-4 animate-spin" />
-              <span>تأكيد الحذف</span>
-            </button>
+            <div class="space-y-1">
+              <h3 class="text-base font-black text-bx-title font-display">
+                حذف الاختبار الدوري
+              </h3>
+              <p class="text-xs text-bx-muted">
+                هل أنت متأكد من رغبتك في حذف وإلغاء هذا الاختبار؟ سيتم إلغاؤه من سجلات الطلاب وأولياء الأمور.
+              </p>
+            </div>
+
+            <div class="flex items-center justify-center gap-2.5 pt-2">
+              <button
+                type="button"
+                @click="showDeleteModal = false"
+                class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                @click="confirmDelete"
+                :disabled="isDeleting"
+                class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
+                <Trash2 v-else class="w-3.5 h-3.5" />
+                <span>نعم، حذف الاختبار</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </Teleport>
     </div>
   </TaqniyaErrorBoundary>
 </template>
