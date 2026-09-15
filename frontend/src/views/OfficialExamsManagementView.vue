@@ -128,14 +128,41 @@ const yearOptions = computed<TaqniyaSelectOption[]>(() =>
   })),
 );
 
-const termOptions = computed<TaqniyaSelectOption[]>(() => [
-  { value: '', label: 'كافة الفصول الدراسية' },
-  ...academicTerms.value.map((t: AcademicTermItem) => ({
-    value: t.id,
-    label: t.name,
-    subtext: `فصل رقم ${t.term_number}`,
-  })),
-]);
+const termOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (!selectedClassId.value) {
+    return [
+      { value: '', label: 'كافة الفصول الدراسية' },
+      ...academicTerms.value.map((t: AcademicTermItem) => ({
+        value: t.id,
+        label: t.name,
+        subtext: `فصل رقم ${t.term_number}`,
+      })),
+    ];
+  }
+  const classId = Number(selectedClassId.value);
+  const termsList = Array.isArray(allClassAcademicTerms.value)
+    ? allClassAcademicTerms.value
+    : (allClassAcademicTerms.value as any)?.classes || [];
+  const classGroup = termsList.find((g: any) => Number(g.class_id) === classId);
+  if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
+    return [
+      { value: '', label: 'كافة الفصول للصف المختار' },
+      ...classGroup.terms.map((t: any) => ({
+        value: t.academic_term_id,
+        label: t.term_name || `الفصل الدراسي ${t.academic_term_id}`,
+        subtext: Number(t.is_active) === 1 || t.is_active === true ? 'الفصل النشط حالياً' : undefined,
+      })),
+    ];
+  }
+  return [
+    { value: '', label: 'كافة الفصول الدراسية' },
+    ...academicTerms.value.map((t: AcademicTermItem) => ({
+      value: t.id,
+      label: t.name,
+      subtext: `فصل رقم ${t.term_number}`,
+    })),
+  ];
+});
 
 const classOptions = computed<TaqniyaSelectOption[]>(() => [
   { value: '', label: 'كافة الصفوف الدراسية' },

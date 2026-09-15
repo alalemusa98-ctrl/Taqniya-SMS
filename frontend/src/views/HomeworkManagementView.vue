@@ -49,7 +49,7 @@ const isSubmitting = ref(false);
 // Academic Years & Structure
 const academicYears = ref<AcademicYearItem[]>([]);
 const selectedYearId = ref<number>(0);
-const selectedTermId = ref<number | null>(null);
+const academicTerms = ref<any[]>([]);
 const currentYearName = ref('');
 const currentTermName = ref('');
 
@@ -110,7 +110,42 @@ const activeAcademicYear = computed(() => {
   return academicYears.value.find((y) => y.id === selectedYearId.value) || academicYears.value[0];
 });
 
-// 1. Class Filter Options
+// 1. Term Filter Options (Dynamic based on selected class)
+const termOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (selectedClassFilter.value === 'all') {
+    return [
+      { value: 'all', label: 'جميع الفصول الدراسية' },
+      ...academicTerms.value.map((t) => ({
+        value: t.id,
+        label: t.name,
+      })),
+    ];
+  }
+  const classId = Number(selectedClassFilter.value);
+  const termsList = Array.isArray(allClassAcademicTerms.value)
+    ? allClassAcademicTerms.value
+    : (allClassAcademicTerms.value as any)?.classes || [];
+  const classGroup = termsList.find((g: any) => Number(g.class_id) === classId);
+  if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
+    return [
+      { value: 'all', label: 'كافة الفصول للصف المختار' },
+      ...classGroup.terms.map((t: any) => ({
+        value: t.academic_term_id,
+        label: t.term_name || `الفصل الدراسي ${t.academic_term_id}`,
+        description: Number(t.is_active) === 1 || t.is_active === true ? 'الفصل النشط حالياً' : undefined,
+      })),
+    ];
+  }
+  return [
+    { value: 'all', label: 'جميع الفصول الدراسية' },
+    ...academicTerms.value.map((t) => ({
+      value: t.id,
+      label: t.name,
+    })),
+  ];
+});
+
+// 2. Class Filter Options
 const classOptions = computed<TaqniyaSelectOption[]>(() => {
   const opts: TaqniyaSelectOption[] = [{ value: 'all', label: 'جميع الصفوف الدراسية' }];
   allClasses.value.forEach((c) => {
@@ -178,10 +213,30 @@ const statusOptions: TaqniyaSelectOption[] = [
   { value: 'expired', label: 'الواجبات المنتهية فقط' },
 ];
 
-// When Class Filter changes, reset dependent Section and Subject filters
-watch(selectedClassFilter, () => {
+// When Class Filter changes, reset dependent Section and Subject filters & auto-select class active term
+watch(selectedClassFilter, (newClassVal) => {
   selectedSectionFilter.value = 'all';
   selectedSubjectFilter.value = 'all';
+
+  if (newClassVal && newClassVal !== 'all') {
+    const classId = Number(newClassVal);
+    const termsList = Array.isArray(allClassAcademicTerms.value)
+      ? allClassAcademicTerms.value
+      : (allClassAcademicTerms.value as any)?.classes || [];
+    const classGroup = termsList.find((g: any) => Number(g.class_id) === classId);
+    if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
+      const activeTerm = classGroup.terms.find((t: any) => Number(t.is_active) === 1 || t.is_active === true);
+      if (activeTerm && activeTerm.academic_term_id) {
+        selectedTermFilter.value = Number(activeTerm.academic_term_id);
+      } else {
+        selectedTermFilter.value = 'all';
+      }
+    } else {
+      selectedTermFilter.value = 'all';
+    }
+  } else {
+    selectedTermFilter.value = 'all';
+  }
 });
 
 // Active Filter Indicator
@@ -189,6 +244,7 @@ const hasActiveFilters = computed(() => {
   return (
     appliedSearchQuery.value.trim() !== '' ||
     appliedClassFilter.value !== 'all' ||
+    appliedTermFilter.value !== 'all' ||
     appliedSectionFilter.value !== 'all' ||
     appliedTeacherFilter.value !== 'all' ||
     appliedSubjectFilter.value !== 'all' ||
@@ -328,7 +384,9 @@ const loadInitialData = async () => {
 
     const termsList = termsRes.data?.data || termsRes.data || [];
     if (Array.isArray(termsList) && termsList.length > 0) {
-      selectedTermId.value = termsList[0].id;
+      academicTerms.value = termsList;
+      selectedTermFilter.value = 'all';
+      appliedTermFilter.value = 'all';
       currentTermName.value = termsList[0].name;
     }
 
@@ -398,6 +456,9 @@ const fetchHomework = async (page = 1) => {
       per_page: paginationMeta.value.per_page,
     };
 
+    if (appliedTermFilter.value && appliedTermFilter.value !== 'all') {
+      params.academic_term_id = Number(appliedTermFilter.value);
+    }
     if (appliedSearchQuery.value.trim()) {
       params.search = appliedSearchQuery.value.trim();
     }
@@ -440,6 +501,7 @@ const fetchHomework = async (page = 1) => {
 const applyFilters = () => {
   appliedSearchQuery.value = searchQuery.value;
   appliedClassFilter.value = selectedClassFilter.value;
+  appliedTermFilter.value = selectedTermFilter.value;
   appliedSectionFilter.value = selectedSectionFilter.value;
   appliedTeacherFilter.value = selectedTeacherFilter.value;
   appliedSubjectFilter.value = selectedSubjectFilter.value;
@@ -451,6 +513,7 @@ const applyFilters = () => {
 const resetFilters = () => {
   searchQuery.value = '';
   selectedClassFilter.value = 'all';
+  selectedTermFilter.value = 'all';
   selectedSectionFilter.value = 'all';
   selectedTeacherFilter.value = 'all';
   selectedSubjectFilter.value = 'all';
@@ -459,6 +522,7 @@ const resetFilters = () => {
 
   appliedSearchQuery.value = '';
   appliedClassFilter.value = 'all';
+  appliedTermFilter.value = 'all';
   appliedSectionFilter.value = 'all';
   appliedTeacherFilter.value = 'all';
   appliedSubjectFilter.value = 'all';
@@ -664,7 +728,7 @@ onMounted(() => {
 
         <!-- 3. Filters Toolbar with Cascading Class/Section/Subject Dependencies -->
         <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6 space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
             <!-- 1. Class Filter -->
             <div>
               <label class="block text-[11px] font-bold text-bx-muted mb-1">الصف الدراسي</label>
@@ -677,7 +741,18 @@ onMounted(() => {
               />
             </div>
 
-            <!-- 2. Section Filter (Cascading: Dependent on Class) -->
+            <!-- 2. Academic Term Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">الفصل الدراسي</label>
+              <TaqniyaSelect
+                v-model="selectedTermFilter"
+                :options="termOptions"
+                placeholder="كافة الفصول..."
+                full-width
+              />
+            </div>
+
+            <!-- 3. Section Filter (Cascading: Dependent on Class) -->
             <div>
               <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center justify-between">
                 <span>الشعبة الدراسية</span>
@@ -694,7 +769,7 @@ onMounted(() => {
               />
             </div>
 
-            <!-- 3. Subject Filter (Cascading: Dependent on Class) -->
+            <!-- 4. Subject Filter (Cascading: Dependent on Class) -->
             <div>
               <label class="block text-[11px] font-bold text-bx-muted mb-1 flex items-center justify-between">
                 <span>المادة التعليمية</span>
@@ -712,7 +787,7 @@ onMounted(() => {
               />
             </div>
 
-            <!-- 4. Teacher Filter -->
+            <!-- 5. Teacher Filter -->
             <div>
               <label class="block text-[11px] font-bold text-bx-muted mb-1">المعلم / الأستاذ</label>
               <TaqniyaSelect
@@ -724,7 +799,7 @@ onMounted(() => {
               />
             </div>
 
-            <!-- 5. Status Filter -->
+            <!-- 6. Status Filter -->
             <div>
               <label class="block text-[11px] font-bold text-bx-muted mb-1">حالة الواجب</label>
               <TaqniyaSelect
@@ -735,7 +810,7 @@ onMounted(() => {
               />
             </div>
 
-            <!-- 6. Due Date Filter -->
+            <!-- 7. Due Date Filter -->
             <div>
               <label class="block text-[11px] font-bold text-bx-muted mb-1">موعد الاستحقاق (حتى تاريخ)</label>
               <input
