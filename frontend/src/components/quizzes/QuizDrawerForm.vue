@@ -18,10 +18,16 @@ import {
   ZoomOut,
   RotateCw,
   X,
+  UserCheck,
+  School,
+  BookOpen,
+  Layers,
 } from 'lucide-vue-next';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../ui/TaqniyaSelect.vue';
 import type { QuizAttachment, QuizDetailData } from '../../api/quizzes.api';
-import type { AssignmentItem } from '../../api/teaching-assignments.api';
+import { teachingAssignmentsApi, type TeacherWorkloadItem } from '../../api/teaching-assignments.api';
+import { teachersApi, type Teacher } from '../../api/teachers.api';
+import { useAuthStore } from '../../stores/auth.store';
 
 const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
 
@@ -31,7 +37,7 @@ const props = defineProps<{
   itemToEdit?: QuizDetailData | null;
   academicYearId: number;
   academicTermId?: number | null;
-  availableTeachingAssignments: AssignmentItem[];
+  teachers?: Teacher[];
   isSubmitting?: boolean;
 }>();
 
@@ -39,6 +45,19 @@ const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void;
   (e: 'submit', payload: any): void;
 }>();
+
+const authStore = useAuthStore();
+const isTeacherRole = computed(() => authStore.user?.role_type === 'teacher');
+
+// Teacher Cascading Selection States
+const localTeachers = ref<Teacher[]>([]);
+const selectedTeacherId = ref<number | null>(null);
+const selectedClassId = ref<number | null>(null);
+const selectedClassSectionId = ref<number | null>(null);
+const selectedAssignmentId = ref<number | null>(null);
+
+const teacherAssignments = ref<TeacherWorkloadItem[]>([]);
+const loadingAssignments = ref(false);
 
 const form = ref<{
   academic_year_id: number;
@@ -71,24 +90,200 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 const newAttachmentName = ref('');
 const newAttachmentUrl = ref('');
 
-// Convert teaching assignments into TaqniyaSelect options
-const teachingAssignmentOptions = computed<TaqniyaSelectOption[]>(() => {
-  return props.availableTeachingAssignments.map((ta: any) => ({
-    value: ta.id,
-    label: `${ta.subject_name} - ${ta.teacher_name} ${ta.section_name ? `(${ta.section_name})` : ''}`,
-    description: `المادة: ${ta.subject_name} | المعلم: ${ta.teacher_name}`,
+// 1. Teacher Options
+const teacherOptions = computed<TaqniyaSelectOption[]>(() => {
+  const list = props.teachers && props.teachers.length > 0 ? props.teachers : localTeachers.value;
+  return list.map((t) => ({
+    value: t.id,
+    label: t.full_name,
+    description: t.specialization ? `تخصص: ${t.specialization}` : (t.user_code ? `كود: ${t.user_code}` : undefined),
   }));
 });
 
+// 2. Class Options (Derived from Teacher's Assignments)
+const teacherClassOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (!selectedTeacherId.value) {
+    return [{ value: '', label: 'يرجى اختيار المعلم أولاً...' }];
+  }
+  if (loadingAssignments.value) {
+    return [{ value: '', label: 'جاري جلب الفصول والصفوف...' }];
+  }
+  if (teacherAssignments.value.length === 0) {
+    return [{ value: '', label: 'لا توجد فصول مسندة لهذا المعلم' }];
+  }
+
+  const uniqueClasses = new Map<number, string>();
+  teacherAssignments.value.forEach((a) => {
+    if (!uniqueClasses.has(a.class_id)) {
+      uniqueClasses.set(a.class_id, a.class_name);
+    }
+  });
+
+  return Array.from(uniqueClasses.entries()).map(([id, name]) => ({
+    value: id,
+    label: name,
+  }));
+});
+
+// 3. Section Options (Derived from Teacher's Assignments for Selected Class)
+const teacherSectionOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (!selectedClassId.value) {
+    return [{ value: '', label: 'يرجى اختيار الصف أولاً...' }];
+  }
+
+  const sectionsForClass = teacherAssignments.value.filter(
+    (a) => a.class_id === Number(selectedClassId.value),
+  );
+
+  const uniqueSections = new Map<number, string>();
+  sectionsForClass.forEach((a) => {
+    if (!uniqueSections.has(a.class_section_id)) {
+      uniqueSections.set(a.class_section_id, a.section_name);
+    }
+  });
+
+  return Array.from(uniqueSections.entries()).map(([id, name]) => ({
+    value: id,
+    label: name,
+  }));
+});
+
+// 4. Subject / Assignment Options (Derived from Teacher's Assignments for Selected Class & Section)
+const teacherSubjectOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (!selectedClassSectionId.value) {
+    return [{ value: '', label: 'يرجى اختيار الشعبة أولاً...' }];
+  }
+
+  const assignmentsForSection = teacherAssignments.value.filter(
+    (a) => a.class_section_id === Number(selectedClassSectionId.value),
+  );
+
+  return assignmentsForSection.map((a) => ({
+    value: a.id,
+    label: a.subject_name,
+    description: a.subject_code ? `كود المادة: ${a.subject_code}` : undefined,
+  }));
+});
+
+// Fetch teacher assignments whenever selectedTeacherId changes
+const fetchTeacherAssignments = async (teacherId: number, isInitialEdit = false) => {
+  loadingAssignments.value = true;
+  try {
+    const res = await teachingAssignmentsApi.getTeacherAssignments(teacherId, {
+      academic_year_id: props.academicYearId || undefined,
+    });
+    const data = (res.data as any)?.data || (res as any)?.data || [];
+    teacherAssignments.value = Array.isArray(data) ? data : [];
+
+    if (!isInitialEdit) {
+      selectedClassId.value = null;
+      selectedClassSectionId.value = null;
+      selectedAssignmentId.value = null;
+      form.value.teaching_assignment_id = 0;
+      form.value.class_section_id = 0;
+
+      // Auto select if only 1 class
+      if (teacherClassOptions.value.length === 1 && teacherClassOptions.value[0].value) {
+        selectedClassId.value = Number(teacherClassOptions.value[0].value);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch assignments for teacher', err);
+    teacherAssignments.value = [];
+  } finally {
+    loadingAssignments.value = false;
+  }
+};
+
+// Handle Teacher Selection Change
+watch(selectedTeacherId, (newTeacherId) => {
+  if (newTeacherId && props.modelValue) {
+    fetchTeacherAssignments(Number(newTeacherId));
+  } else {
+    teacherAssignments.value = [];
+    selectedClassId.value = null;
+    selectedClassSectionId.value = null;
+    selectedAssignmentId.value = null;
+    form.value.teaching_assignment_id = 0;
+    form.value.class_section_id = 0;
+  }
+});
+
+// Handle Class Selection Change
+watch(selectedClassId, (newClassId) => {
+  if (newClassId) {
+    if (props.mode === 'create') {
+      selectedClassSectionId.value = null;
+      selectedAssignmentId.value = null;
+      form.value.teaching_assignment_id = 0;
+      form.value.class_section_id = 0;
+
+      // Auto select if only 1 section in this class
+      const availableSections = teacherAssignments.value.filter(
+        (a) => a.class_id === Number(newClassId),
+      );
+      const uniqueSectionIds = [...new Set(availableSections.map((a) => a.class_section_id))];
+      if (uniqueSectionIds.length === 1) {
+        selectedClassSectionId.value = uniqueSectionIds[0];
+      }
+    }
+  }
+});
+
+// Handle Section Selection Change
+watch(selectedClassSectionId, (newSectionId) => {
+  if (newSectionId) {
+    form.value.class_section_id = Number(newSectionId);
+    if (props.mode === 'create') {
+      selectedAssignmentId.value = null;
+      form.value.teaching_assignment_id = 0;
+
+      // Auto select if only 1 subject assignment in this section
+      const availableSubjects = teacherAssignments.value.filter(
+        (a) => a.class_section_id === Number(newSectionId),
+      );
+      if (availableSubjects.length === 1) {
+        selectedAssignmentId.value = availableSubjects[0].id;
+        form.value.teaching_assignment_id = availableSubjects[0].id;
+      }
+    }
+  }
+});
+
+// Handle Subject Assignment Selection Change
+watch(selectedAssignmentId, (newAssignmentId) => {
+  if (newAssignmentId) {
+    form.value.teaching_assignment_id = Number(newAssignmentId);
+    const found = teacherAssignments.value.find((a) => a.id === Number(newAssignmentId));
+    if (found) {
+      form.value.class_section_id = found.class_section_id;
+    }
+  }
+});
+
+// Drawer Open / Reset handler
 watch(
   () => props.modelValue,
-  (val) => {
+  async (val) => {
     if (val) {
       errors.value = {};
       generalError.value = null;
       newAttachmentName.value = '';
       newAttachmentUrl.value = '';
       attachmentMode.value = 'upload';
+
+      // Load teachers if not passed
+      if ((!props.teachers || props.teachers.length === 0) && localTeachers.value.length === 0) {
+        try {
+          const res = await teachersApi.getTeachers({ per_page: 200, is_active: 1 });
+          const tList = res.data?.data || (res as any).data || [];
+          if (Array.isArray(tList)) {
+            localTeachers.value = tList;
+          }
+        } catch (err) {
+          console.error('Failed to load teachers list', err);
+        }
+      }
 
       if (props.mode === 'edit' && props.itemToEdit) {
         const it = props.itemToEdit as any;
@@ -102,32 +297,44 @@ watch(
           quiz_date: it.quiz_date?.slice(0, 10) || new Date().toISOString().slice(0, 10),
           attachments: Array.isArray(it.attachments) ? JSON.parse(JSON.stringify(it.attachments)) : [],
         };
+
+        if (it.teacher_id) {
+          selectedTeacherId.value = it.teacher_id;
+          await fetchTeacherAssignments(it.teacher_id, true);
+          selectedClassId.value = it.class_id || null;
+          selectedClassSectionId.value = it.class_section_id || null;
+          selectedAssignmentId.value = it.teaching_assignment_id || null;
+        }
       } else {
         form.value = {
           academic_year_id: props.academicYearId || 0,
           academic_term_id: props.academicTermId || 1,
           class_section_id: 0,
-          teaching_assignment_id: props.availableTeachingAssignments[0]?.id || 0,
+          teaching_assignment_id: 0,
           title: '',
           description: '',
           quiz_date: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
           attachments: [],
         };
+
+        selectedTeacherId.value = null;
+        selectedClassId.value = null;
+        selectedClassSectionId.value = null;
+        selectedAssignmentId.value = null;
+        teacherAssignments.value = [];
+
+        // If user is a teacher, pre-select their teacher profile
+        if (isTeacherRole.value && authStore.user) {
+          const list = props.teachers && props.teachers.length > 0 ? props.teachers : localTeachers.value;
+          const myTeacherProfile = list.find((t) => Number(t.user_id) === Number(authStore.user?.id));
+          if (myTeacherProfile) {
+            selectedTeacherId.value = myTeacherProfile.id;
+          }
+        }
       }
     }
   },
   { immediate: true },
-);
-
-// When teaching assignment changes, set class_section_id if available on assignment
-watch(
-  () => form.value.teaching_assignment_id,
-  (newId) => {
-    const found = props.availableTeachingAssignments.find((ta: any) => ta.id === newId) as any;
-    if (found && found.class_section_id) {
-      form.value.class_section_id = found.class_section_id;
-    }
-  },
 );
 
 // Format file size
@@ -250,7 +457,6 @@ const handleFileSelected = (event: Event) => {
   if (!target.files || target.files.length === 0) return;
 
   Array.from(target.files).forEach((file) => {
-    // 15MB limit check
     if (file.size > 15 * 1024 * 1024) {
       generalError.value = `الملف ${file.name} يتجاوز الحد الأقصى المسموح به (15 ميجابايت).`;
       return;
@@ -340,8 +546,17 @@ const handleSubmit = () => {
   errors.value = {};
   generalError.value = null;
 
+  if (!selectedTeacherId.value) {
+    errors.value.teacher_id = 'يرجى اختيار المعلم / الأستاذ';
+  }
+  if (!selectedClassId.value) {
+    errors.value.class_id = 'يرجى اختيار الصف الدراسي';
+  }
+  if (!selectedClassSectionId.value) {
+    errors.value.class_section_id = 'يرجى اختيار الشعبة الدراسية';
+  }
   if (!form.value.teaching_assignment_id) {
-    errors.value.teaching_assignment_id = 'يرجى اختيار إسناد المادة والمعلم';
+    errors.value.teaching_assignment_id = 'يرجى اختيار المادة التعليمية المسندة';
   }
   if (!form.value.title.trim()) {
     errors.value.title = 'يرجى إدخال عنوان الاختبار أو التطبيق';
@@ -387,52 +602,138 @@ const handleSubmit = () => {
           <span>{{ generalError }}</span>
         </div>
 
-        <!-- 1. Teaching Assignment (Subject & Teacher) -->
+        <!-- 1. Teacher Selector (Step 1: On-Select triggers GET /teachers/:id/assignments) -->
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold text-bx-title">
-            المادة التعليمية والمعلم المسند <span class="text-rose-500">*</span>
+          <label class="block text-xs font-bold text-bx-title flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <UserCheck class="w-3.5 h-3.5 text-bx-primary" />
+              <span>1. المعلم / الأستاذ المشرف</span>
+              <span class="text-rose-500">*</span>
+            </div>
+            <span v-if="loadingAssignments" class="text-[11px] text-bx-primary font-bold flex items-center gap-1">
+              <Loader2 class="w-3 h-3 animate-spin" />
+              <span>جاري استعلام الفصول والشعب المسندة...</span>
+            </span>
           </label>
           <TaqniyaSelect
-            v-model="form.teaching_assignment_id"
-            :options="teachingAssignmentOptions"
-            placeholder="اختر المادة والشعبة المستهدفة..."
+            v-model="selectedTeacherId"
+            :options="teacherOptions"
+            placeholder="اختر اسم المعلم لجلب الفصول والشعب المسندة إليه فوراً..."
+            search-placeholder="ابحث باسم المعلم أو التخصص أو الكود..."
             searchable
             full-width
+            :disabled="mode === 'edit'"
           />
-          <p v-if="errors.teaching_assignment_id" class="text-[11px] text-rose-500 font-bold">
-            {{ errors.teaching_assignment_id }}
+          <p v-if="errors.teacher_id" class="text-[11px] text-rose-500 font-bold">
+            {{ errors.teacher_id }}
           </p>
         </div>
 
-        <!-- 2. Quiz Title -->
-        <div class="space-y-1.5">
-          <label class="block text-xs font-bold text-bx-title">
-            عنوان الاختبار / التطبيق الدوري <span class="text-rose-500">*</span>
-          </label>
-          <input
-            v-model="form.title"
-            type="text"
-            placeholder="مثال: تطبيق الرياضيات الأسبوعي - الوحدة الثانية"
-            class="w-full px-4 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all"
-          />
-          <p v-if="errors.title" class="text-[11px] text-rose-500 font-bold">
-            {{ errors.title }}
-          </p>
+        <!-- 2. Cascading Academic Structure Grid (Class, Section, Subject) -->
+        <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] space-y-4">
+          <div class="text-[11px] font-black text-bx-primary flex items-center gap-1.5 pb-2 border-b border-[#B4AED8]/30 dark:border-white/10">
+            <Layers class="w-3.5 h-3.5" />
+            <span>نصاب وتكليف التدريس المسند للمعلم المختار</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- 2.1 Class Selection (Derived from Teacher's Assignments) -->
+            <div class="space-y-1.5">
+              <label class="block text-[11px] font-bold text-bx-title flex items-center gap-1">
+                <School class="w-3.5 h-3.5 text-bx-primary" />
+                <span>2. الصف الدراسي</span>
+                <span class="text-rose-500">*</span>
+              </label>
+              <TaqniyaSelect
+                v-model="selectedClassId"
+                :options="teacherClassOptions"
+                :disabled="!selectedTeacherId || loadingAssignments || teacherAssignments.length === 0"
+                placeholder="اختر الصف..."
+                search-placeholder="ابحث في الصفوف..."
+                searchable
+                full-width
+              />
+              <p v-if="errors.class_id" class="text-[10px] text-rose-500 font-bold">
+                {{ errors.class_id }}
+              </p>
+            </div>
+
+            <!-- 2.2 Section Selection (Derived from Teacher's Assignments in selected class) -->
+            <div class="space-y-1.5">
+              <label class="block text-[11px] font-bold text-bx-title flex items-center gap-1">
+                <Layers class="w-3.5 h-3.5 text-bx-primary" />
+                <span>3. الشعبة الدراسية</span>
+                <span class="text-rose-500">*</span>
+              </label>
+              <TaqniyaSelect
+                v-model="selectedClassSectionId"
+                :options="teacherSectionOptions"
+                :disabled="!selectedClassId || loadingAssignments"
+                placeholder="اختر الشعبة..."
+                search-placeholder="ابحث في الشُعب..."
+                searchable
+                full-width
+              />
+              <p v-if="errors.class_section_id" class="text-[10px] text-rose-500 font-bold">
+                {{ errors.class_section_id }}
+              </p>
+            </div>
+
+            <!-- 2.3 Subject Selection (Derived from Teacher's Assignments in selected section) -->
+            <div class="space-y-1.5">
+              <label class="block text-[11px] font-bold text-bx-title flex items-center gap-1">
+                <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
+                <span>4. المادة التعليمية</span>
+                <span class="text-rose-500">*</span>
+              </label>
+              <TaqniyaSelect
+                v-model="selectedAssignmentId"
+                :options="teacherSubjectOptions"
+                :disabled="!selectedClassSectionId || loadingAssignments"
+                placeholder="اختر المادة..."
+                search-placeholder="ابحث في المواد..."
+                searchable
+                full-width
+              />
+              <p v-if="errors.teaching_assignment_id" class="text-[10px] text-rose-500 font-bold">
+                {{ errors.teaching_assignment_id }}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <!-- 3. Quiz Date (Date picker) -->
-        <div class="space-y-1.5">
-          <label class="block text-xs font-bold text-bx-title">
-            تاريخ إجراء الاختبار / التطبيق <span class="text-rose-500">*</span>
-          </label>
-          <input
-            v-model="form.quiz_date"
-            type="date"
-            class="w-full px-4 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono"
-          />
-          <p v-if="errors.quiz_date" class="text-[11px] text-rose-500 font-bold">
-            {{ errors.quiz_date }}
-          </p>
+        <!-- 3. Quiz Title & Date -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <!-- Quiz Title (Takes 2 cols) -->
+          <div class="sm:col-span-2 space-y-1.5">
+            <label class="block text-xs font-bold text-bx-title">
+              عنوان الاختبار / التطبيق الدوري <span class="text-rose-500">*</span>
+            </label>
+            <input
+              v-model="form.title"
+              type="text"
+              placeholder="مثال: تطبيق الرياضيات الأسبوعي - الوحدة الثانية"
+              class="w-full px-4 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all"
+            />
+            <p v-if="errors.title" class="text-[11px] text-rose-500 font-bold">
+              {{ errors.title }}
+            </p>
+          </div>
+
+          <!-- Quiz Date -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold text-bx-title">
+              تاريخ إجراء الاختبار <span class="text-rose-500">*</span>
+            </label>
+            <input
+              v-model="form.quiz_date"
+              type="date"
+              class="w-full px-4 py-2.5 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono"
+            />
+            <p v-if="errors.quiz_date" class="text-[11px] text-rose-500 font-bold">
+              {{ errors.quiz_date }}
+            </p>
+          </div>
         </div>
 
         <!-- 4. Description & Topics Notes -->
@@ -448,7 +749,7 @@ const handleSubmit = () => {
           ></textarea>
         </div>
 
-        <!-- 5. Attachments Section (Matching Homework Standards) -->
+        <!-- 5. Attachments Section (Upload & Link Modes) -->
         <div class="space-y-3 pt-3 border-t border-[#B4AED8]/50 dark:border-white/[0.08]">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5 text-xs font-bold text-bx-title">
@@ -541,57 +842,60 @@ const handleSubmit = () => {
           </div>
 
           <!-- Attachment Items List -->
-          <div v-if="form.attachments.length > 0" class="space-y-2 pt-2">
+          <div v-if="form.attachments.length > 0" class="space-y-2.5 pt-2">
             <div
               v-for="(att, idx) in form.attachments"
               :key="idx"
-              class="flex items-center justify-between p-2.5 rounded-xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] group hover:border-bx-primary/50 transition-all"
+              class="flex items-center justify-between p-3 rounded-2xl border border-[#B4AED8]/70 dark:border-white/[0.1] bg-[var(--bx-surface-solid)] shadow-xs hover:shadow-md hover:border-bx-primary/60 transition-all group gap-3"
             >
-              <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                <!-- Thumbnail / Icon -->
+              <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                <!-- Large Distinct Thumbnail / Icon (48x48) -->
                 <div
                   v-if="isImageAttachment(att)"
-                  class="w-9 h-9 rounded-lg overflow-hidden border border-purple-500/20 shrink-0 cursor-pointer relative group/thumb"
+                  class="w-12 h-12 rounded-xl overflow-hidden border-2 border-purple-500/30 shrink-0 cursor-pointer relative group/thumb shadow-xs"
                   @click="openImageModal(att)"
+                  title="انقر للمعاينة والتكبير"
                 >
-                  <img :src="att.file_url || att.url" :alt="att.file_name || att.name" class="w-full h-full object-cover" />
-                  <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-white transition-opacity">
-                    <Eye class="w-3.5 h-3.5" />
+                  <img :src="att.file_url || att.url" :alt="att.file_name || att.name" class="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform" />
+                  <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-white transition-opacity backdrop-blur-[1px]">
+                    <Eye class="w-4 h-4" />
                   </div>
                 </div>
                 <div
                   v-else
-                  class="w-9 h-9 rounded-lg border flex items-center justify-center shrink-0"
+                  class="w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 shadow-xs"
                   :class="getAttachmentMeta(att).colorClass"
                 >
-                  <component :is="getAttachmentMeta(att).icon" class="w-4 h-4" />
+                  <component :is="getAttachmentMeta(att).icon" class="w-6 h-6 stroke-[1.8]" />
                 </div>
 
-                <!-- Info -->
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-xs font-bold text-bx-title truncate block">{{ att.file_name || att.name }}</span>
+                <!-- File Meta Details -->
+                <div class="min-w-0 flex-1 space-y-1">
+                  <div class="text-xs font-black text-bx-title truncate block leading-snug" :title="att.file_name || att.name">
+                    {{ att.file_name || att.name }}
+                  </div>
+                  <div class="flex items-center gap-2 flex-wrap">
                     <span
-                      class="px-1.5 py-0.2 rounded text-[9px] font-bold border shrink-0"
+                      class="px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-2xs"
                       :class="getAttachmentMeta(att).tagColor"
                     >
                       {{ getAttachmentMeta(att).label }}
                     </span>
-                  </div>
-                  <div class="text-[10px] text-bx-muted font-mono mt-0.5">
-                    {{ formatFileSize(att.file_size || att.size) }}
+                    <span class="text-[11px] text-bx-muted font-mono">
+                      {{ formatFileSize(att.file_size || att.size) }}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <!-- Delete Attachment -->
+              <!-- Delete Action Button (Premium styled circle button) -->
               <button
                 type="button"
                 @click="removeAttachment(idx)"
-                class="p-1.5 rounded-lg text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                title="حذف المرفق"
+                class="w-9 h-9 rounded-full border border-rose-500/25 bg-rose-500/5 hover:bg-rose-600 text-rose-600 hover:text-white dark:text-rose-400 dark:hover:text-white transition-all duration-150 flex items-center justify-center cursor-pointer shrink-0 shadow-2xs hover:scale-105 active:scale-95"
+                title="حذف هذا المرفق"
               >
-                <Trash2 class="w-3.5 h-3.5" />
+                <Trash2 class="w-4 h-4" />
               </button>
             </div>
           </div>

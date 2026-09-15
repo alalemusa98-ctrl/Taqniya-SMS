@@ -992,7 +992,7 @@ onMounted(() => {
         :item-to-edit="itemToEdit"
         :academic-year-id="selectedYearId"
         :academic-term-id="selectedTermId"
-        :available-teaching-assignments="availableTeachingAssignments"
+        :teachers="allTeachers"
         :is-submitting="isSubmitting"
         @submit="handleFormSubmit"
       />

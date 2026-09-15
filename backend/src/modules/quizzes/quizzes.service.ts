@@ -254,13 +254,47 @@ export class QuizzesService {
     const perPage = query.per_page && query.per_page > 0 ? query.per_page : 15;
     const skip = (page - 1) * perPage;
     const lastPage = Math.ceil(total / perPage) || 1;
-
-    // Fetch quizzes with relationships
-    const quizzes = await this.prisma.quiz.findMany({
+    // Fetch quiz IDs first with minimal projection to prevent MySQL Sort Buffer Overflow (Error 1038) on JSON/TEXT columns
+    const quizIdRecords = await this.prisma.quiz.findMany({
       where,
-      orderBy,
+      select: { id: true },
+      orderBy: query.sort_by === 'id'
+        ? [{ id: query.sort_order === 'desc' ? 'desc' : 'asc' }]
+        : [
+            { quiz_date: query.sort_order === 'desc' ? 'desc' : 'asc' },
+            { id: 'desc' },
+          ],
       skip,
       take: perPage,
+    });
+
+    if (quizIdRecords.length === 0) {
+      return {
+        success: true,
+        message: 'لا توجد اختبارات أو تطبيقات دورية تطابق محددات البحث.',
+        data: {
+          academic_year_id: Number(year.id),
+          academic_year_name: year.name,
+          academic_term_id: term ? Number(term.id) : null,
+          academic_term_name: term ? term.name : '',
+          classes: [],
+        },
+        meta: {
+          total,
+          current_page: page,
+          per_page: perPage,
+          last_page: lastPage,
+        },
+      };
+    }
+
+    const targetIds = quizIdRecords.map((r) => r.id);
+
+    // Fetch full relationships for the target page IDs
+    const quizzesRaw = await this.prisma.quiz.findMany({
+      where: {
+        id: { in: targetIds },
+      },
       include: {
         class_section: {
           include: {
@@ -277,25 +311,9 @@ export class QuizzesService {
       },
     });
 
-    if (quizzes.length === 0) {
-      return {
-        success: true,
-        message: 'لا توجد اختبارات أو تطبيقات دورية تطابق محددات البحث.',
-        data: {
-          academic_year_id: Number(year.id),
-          academic_year_name: year.name,
-          academic_term_id: term ? Number(term.id) : null,
-          academic_term_name: term ? term.name : '',
-          classes: [],
-        },
-        meta: {
-          current_page: page,
-          per_page: perPage,
-          total: 0,
-          last_page: 1,
-        },
-      };
-    }
+    // Re-order quizzes according to targetIds pagination order
+    const quizMap = new Map(quizzesRaw.map((q) => [q.id.toString(), q]));
+    const quizzes = targetIds.map((id) => quizMap.get(id.toString())!).filter(Boolean);
 
     // Build hierarchical structure: Classes -> Sections -> Quizzes
     const classMap = new Map<number, any>();

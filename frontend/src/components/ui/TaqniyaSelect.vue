@@ -257,7 +257,7 @@ const removeOption = (val: string | number) => {
       ]"
     >
       <!-- Quick Fuzzy Search Bar -->
-      <div v-if="searchable && (options?.length || 0) > 5" class="relative">
+      <div v-if="searchable && (options?.length || 0) > 0" class="relative">
         <div class="relative flex items-center">
           <input
             ref="searchInputRef"

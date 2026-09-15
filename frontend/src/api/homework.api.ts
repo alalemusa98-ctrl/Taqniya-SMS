@@ -1,10 +1,14 @@
 import { apiClient, deduplicatedGet } from './client';
 
 export interface HomeworkAttachment {
-  name: string;
-  url: string;
+  name?: string;
+  url?: string;
   size?: string;
   type?: string;
+  file_name?: string;
+  file_url?: string;
+  file_size?: number | string;
+  file_type?: string;
 }
 
 export interface HomeworkItem {

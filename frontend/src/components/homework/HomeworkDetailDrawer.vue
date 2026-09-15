@@ -20,6 +20,7 @@ import {
   ZoomOut,
   RotateCw,
   X,
+  UserCheck,
 } from 'lucide-vue-next';
 import type { HomeworkDetailData, HomeworkAttachment } from '../../api/homework.api';
 
@@ -52,11 +53,20 @@ const attachmentsList = computed<HomeworkAttachment[]>(() => {
   return [];
 });
 
+// Format file size
+const formatFileSize = (bytes?: number | string): string => {
+  if (!bytes) return 'رابط سحابي';
+  if (typeof bytes === 'string') return bytes;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 // Helper to determine if an attachment is an image
 const isImageAttachment = (att: HomeworkAttachment): boolean => {
-  const name = (att.name || '').toLowerCase();
-  const type = (att.type || '').toLowerCase();
-  const url = (att.url || '').toLowerCase();
+  const name = (att.name || att.file_name || '').toLowerCase();
+  const type = (att.type || att.file_type || '').toLowerCase();
+  const url = (att.url || att.file_url || '').toLowerCase();
 
   return (
     name.endsWith('.jpg') ||
@@ -68,15 +78,16 @@ const isImageAttachment = (att: HomeworkAttachment): boolean => {
     name.endsWith('.bmp') ||
     type.includes('image') ||
     url.startsWith('data:image/') ||
+    url.startsWith('blob:') ||
     url.match(/\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i) !== null
   );
 };
 
 // Attachment type meta (Icon, Badge, Color)
 const getAttachmentMeta = (att: HomeworkAttachment) => {
-  const name = (att.name || '').toLowerCase();
-  const type = (att.type || '').toLowerCase();
-  const url = (att.url || '').toLowerCase();
+  const name = (att.name || att.file_name || '').toLowerCase();
+  const type = (att.type || att.file_type || '').toLowerCase();
+  const url = (att.url || att.file_url || '').toLowerCase();
 
   if (isImageAttachment(att)) {
     return {
@@ -168,9 +179,8 @@ const openPreview = (att: HomeworkAttachment) => {
     previewImage.value = att;
     zoomLevel.value = 1;
     rotation.value = 0;
-  } else if (att.url) {
-    // Open documents or links in a new tab for instant view
-    window.open(att.url, '_blank', 'noopener,noreferrer');
+  } else if (att.url || att.file_url) {
+    window.open(att.url || att.file_url, '_blank', 'noopener,noreferrer');
   }
 };
 
@@ -218,9 +228,11 @@ onUnmounted(() => {
 
 // Download helper preserving the original file name
 const downloadFile = (att: HomeworkAttachment) => {
+  const url = att.url || att.file_url || '';
+  if (!url) return;
   const link = document.createElement('a');
-  link.href = att.url;
-  link.download = att.name || 'ملزمة-الواجب';
+  link.href = url;
+  link.download = att.name || att.file_name || 'ملزمة-الواجب';
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
   document.body.appendChild(link);
@@ -235,7 +247,7 @@ const downloadFile = (att: HomeworkAttachment) => {
     :title="homework ? `تفاصيل الواجب: ${homework.title}` : 'تفاصيل الواجب المدرسي'"
     :subtitle="homework ? `المادة: ${homework.subject_name} • المعلم: ${homework.teacher_name}` : ''"
     :icon="BookOpen"
-    max-width="max-w-[540px]"
+    max-width="max-w-[560px]"
     @close="close"
   >
     <!-- Loading State -->
@@ -245,7 +257,7 @@ const downloadFile = (att: HomeworkAttachment) => {
     </div>
 
     <!-- Content State -->
-    <div v-else-if="homework" class="space-y-5">
+    <div v-else-if="homework" class="space-y-5" dir="rtl">
       <!-- 1. Subject & Status Header Card -->
       <div class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.08] bg-purple-500/[0.03] dark:bg-white/[0.02] space-y-3 shadow-xs">
         <div class="flex items-start justify-between gap-3">
@@ -257,8 +269,9 @@ const downloadFile = (att: HomeworkAttachment) => {
               <h4 class="font-black text-sm text-bx-title font-display">
                 {{ homework.subject_name }}
               </h4>
-              <p class="text-xs text-bx-muted font-medium mt-0.5">
-                المعلم المسؤول: {{ homework.teacher_name }}
+              <p class="text-xs text-bx-muted font-medium mt-0.5 flex items-center gap-1">
+                <UserCheck class="w-3.5 h-3.5 text-bx-primary" />
+                <span>المعلم المسؤول: {{ homework.teacher_name }}</span>
               </p>
             </div>
           </div>
@@ -277,7 +290,7 @@ const downloadFile = (att: HomeworkAttachment) => {
         </div>
 
         <!-- Class / Section Details if available -->
-        <div v-if="'section_name' in homework" class="flex items-center gap-2 pt-2 border-t border-[#B4AED8]/40 dark:border-white/[0.06]">
+        <div v-if="'section_name' in homework || 'class_name' in homework" class="flex items-center gap-2 pt-2 border-t border-[#B4AED8]/40 dark:border-white/[0.06]">
           <span class="text-[11px] font-bold text-bx-muted flex items-center gap-1">
             <School class="w-3.5 h-3.5 text-bx-primary" />
             <span>الصف والشعبة:</span>
@@ -341,7 +354,7 @@ const downloadFile = (att: HomeworkAttachment) => {
           </span>
         </div>
 
-        <div v-if="attachmentsList.length === 0" class="py-4 text-center text-xs text-bx-muted border border-dashed border-[#B4AED8]/60 dark:border-white/10 rounded-xl">
+        <div v-if="attachmentsList.length === 0" class="py-6 text-center text-xs text-bx-muted border border-dashed border-[#B4AED8]/60 dark:border-white/10 rounded-2xl">
           لا توجد ملازم أو ملفات مرفقة بهذا الواجب
         </div>
 
@@ -349,76 +362,78 @@ const downloadFile = (att: HomeworkAttachment) => {
           <div
             v-for="(att, idx) in attachmentsList"
             :key="idx"
-            class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-2xl border border-[#B4AED8]/60 dark:border-white/[0.08] hover:border-bx-primary bg-purple-500/[0.02] hover:bg-purple-500/[0.05] transition-all group shadow-2xs gap-3"
+            class="flex items-center justify-between p-3 rounded-2xl border border-[#B4AED8]/70 dark:border-white/[0.1] bg-[var(--bx-surface-solid)] shadow-xs hover:shadow-md hover:border-bx-primary/60 transition-all group gap-3"
           >
             <!-- File Info & Expressive Type Icon / Thumbnail -->
             <div
-              class="flex items-center gap-3 overflow-hidden cursor-pointer"
+              class="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer"
               @click="openPreview(att)"
               :title="isImageAttachment(att) ? 'انقر لمعاينة الصورة' : 'معاينة المرفق'"
             >
-              <!-- Image Thumbnail or Type Icon -->
+              <!-- Large Distinct Thumbnail / Icon (48x48) -->
               <div
-                v-if="isImageAttachment(att) && att.url"
-                class="w-11 h-11 rounded-xl overflow-hidden border border-purple-500/30 bg-purple-500/10 shrink-0 relative group-hover:scale-105 transition-transform flex items-center justify-center shadow-2xs"
+                v-if="isImageAttachment(att) && (att.url || att.file_url)"
+                class="w-12 h-12 rounded-xl overflow-hidden border-2 border-purple-500/30 shrink-0 relative group/thumb shadow-xs"
               >
                 <img
-                  :src="att.url"
-                  :alt="att.name"
-                  class="w-full h-full object-cover"
+                  :src="att.url || att.file_url"
+                  :alt="att.name || att.file_name"
+                  class="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform"
                   @error="(e: any) => { e.target.style.display = 'none'; }"
                 />
-                <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-white transition-opacity backdrop-blur-[1px]">
                   <Eye class="w-4 h-4" />
                 </div>
               </div>
 
               <div
                 v-else
-                class="w-11 h-11 rounded-xl flex items-center justify-center font-bold border shrink-0 transition-transform group-hover:scale-105 shadow-2xs"
+                class="w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 shadow-xs"
                 :class="getAttachmentMeta(att).colorClass"
               >
-                <component :is="getAttachmentMeta(att).icon" class="w-5 h-5" />
+                <component :is="getAttachmentMeta(att).icon" class="w-6 h-6 stroke-[1.8]" />
               </div>
 
-              <div class="truncate">
-                <span class="text-xs font-black text-bx-title group-hover:text-bx-primary transition-colors block truncate">
-                  {{ att.name }}
-                </span>
-                <div class="flex items-center gap-2 mt-0.5 text-[10px] text-bx-muted">
+              <!-- File Meta Details -->
+              <div class="min-w-0 flex-1 space-y-1">
+                <div class="text-xs font-black text-bx-title truncate block leading-snug" :title="att.name || att.file_name">
+                  {{ att.name || att.file_name }}
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
                   <span
-                    class="px-2 py-0.2 rounded-md border font-semibold"
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-2xs"
                     :class="getAttachmentMeta(att).tagColor"
                   >
                     {{ getAttachmentMeta(att).label }}
                   </span>
-                  <span v-if="att.size" class="font-mono font-bold">{{ att.size }}</span>
+                  <span class="text-[11px] text-bx-muted font-mono">
+                    {{ formatFileSize(att.size || att.file_size) }}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <!-- Action Buttons: Preview & Download -->
-            <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
-              <!-- Preview Button (For Images, PDFs, Links) -->
+            <!-- Action Buttons: Preview & Download (Circle Action Buttons) -->
+            <div class="flex items-center gap-2 shrink-0">
+              <!-- Preview Button -->
               <button
                 type="button"
                 @click="openPreview(att)"
-                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-bx-primary border border-purple-500/20 text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                :title="isImageAttachment(att) ? 'معاينة الصورة بدقة عالية' : 'معاينة / فتح في نافذة جديدة'"
+                class="w-9 h-9 rounded-full border border-purple-500/20 bg-purple-500/5 hover:bg-bx-primary text-bx-primary hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                :title="isImageAttachment(att) ? 'معاينة الصورة' : 'فتح المرفق'"
               >
-                <Eye class="w-3.5 h-3.5" />
-                <span>معاينة</span>
+                <Eye class="w-4 h-4" />
               </button>
 
-              <!-- Download Button (Preserves Original Name) -->
+              <!-- Download Button -->
               <button
+                v-if="!isImageAttachment(att) || (att.url || att.file_url)"
                 type="button"
                 @click="downloadFile(att)"
-                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-bx-primary/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-bx-primary/20 text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                :title="`تنزيل باسم: ${att.name}`"
+                class="w-9 h-9 rounded-full border border-bx-primary/20 bg-bx-primary/5 hover:bg-bx-primary text-bx-primary hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                :title="`تحميل ملف: ${att.name || att.file_name}`"
               >
-                <Download class="w-3.5 h-3.5" />
-                <span>تحميل</span>
+                <Download class="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -436,7 +451,7 @@ const downloadFile = (att: HomeworkAttachment) => {
 
     <!-- Drawer Footer -->
     <template #footer>
-      <div class="flex items-center justify-between w-full">
+      <div class="flex items-center justify-between w-full" dir="rtl">
         <button
           type="button"
           @click="close"
@@ -486,10 +501,10 @@ const downloadFile = (att: HomeworkAttachment) => {
               </div>
               <div class="truncate">
                 <h4 class="font-bold text-sm text-white truncate">
-                  {{ previewImage.name }}
+                  {{ previewImage.name || previewImage.file_name }}
                 </h4>
                 <p class="text-[11px] text-slate-400">
-                  معاينة الصورة • {{ previewImage.size || 'حجم أصلي' }}
+                  معاينة الصورة • {{ previewImage.size || previewImage.file_size || 'حجم أصلي' }}
                 </p>
               </div>
             </div>
@@ -552,14 +567,14 @@ const downloadFile = (att: HomeworkAttachment) => {
             </div>
           </div>
 
-            <!-- Image Canvas Zone -->
+          <!-- Image Canvas Zone -->
           <div
             class="flex-1 overflow-auto p-4 flex items-center justify-center min-h-[350px] max-h-[calc(90vh-120px)] bg-black/50 relative select-none"
             @dblclick="resetZoom"
           >
             <img
-              :src="previewImage.url"
-              :alt="previewImage.name"
+              :src="previewImage.url || previewImage.file_url"
+              :alt="previewImage.name || previewImage.file_name"
               class="max-w-full max-h-full object-contain rounded-xl transition-transform duration-200 shadow-2xl cursor-zoom-in"
               :style="{
                 transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,

@@ -333,52 +333,55 @@ onUnmounted(() => {
             <div
               v-for="(att, idx) in attachmentsList"
               :key="idx"
-              class="flex items-center justify-between p-3 rounded-xl border border-[#B4AED8]/60 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] group hover:border-bx-primary/50 transition-all"
+              class="flex items-center justify-between p-3 rounded-2xl border border-[#B4AED8]/70 dark:border-white/[0.1] bg-[var(--bx-surface-solid)] shadow-xs hover:shadow-md hover:border-bx-primary/60 transition-all group gap-3"
             >
-              <div class="flex items-center gap-3 min-w-0 flex-1">
-                <!-- Thumbnail / Icon -->
+              <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                <!-- Large Distinct Thumbnail / Icon (48x48) -->
                 <div
                   v-if="isImageAttachment(att)"
-                  class="w-10 h-10 rounded-lg overflow-hidden border border-purple-500/20 shrink-0 cursor-pointer relative group/thumb"
+                  class="w-12 h-12 rounded-xl overflow-hidden border-2 border-purple-500/30 shrink-0 cursor-pointer relative group/thumb shadow-xs"
                   @click="openImageModal(att)"
+                  title="انقر للمعاينة والتكبير"
                 >
-                  <img :src="att.file_url || att.url" :alt="att.file_name || att.name" class="w-full h-full object-cover" />
-                  <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-white transition-opacity">
+                  <img :src="att.file_url || att.url" :alt="att.file_name || att.name" class="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform" />
+                  <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-white transition-opacity backdrop-blur-[1px]">
                     <Eye class="w-4 h-4" />
                   </div>
                 </div>
                 <div
                   v-else
-                  class="w-10 h-10 rounded-lg border flex items-center justify-center shrink-0"
+                  class="w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 shadow-xs"
                   :class="getAttachmentMeta(att).colorClass"
                 >
-                  <component :is="getAttachmentMeta(att).icon" class="w-5 h-5" />
+                  <component :is="getAttachmentMeta(att).icon" class="w-6 h-6 stroke-[1.8]" />
                 </div>
 
-                <!-- Info -->
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-bx-title truncate block">{{ att.file_name || att.name }}</span>
+                <!-- File Meta Details -->
+                <div class="min-w-0 flex-1 space-y-1">
+                  <div class="text-xs font-black text-bx-title truncate block leading-snug" :title="att.file_name || att.name">
+                    {{ att.file_name || att.name }}
+                  </div>
+                  <div class="flex items-center gap-2 flex-wrap">
                     <span
-                      class="px-1.5 py-0.2 rounded text-[9px] font-bold border shrink-0"
+                      class="px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-2xs"
                       :class="getAttachmentMeta(att).tagColor"
                     >
                       {{ getAttachmentMeta(att).label }}
                     </span>
-                  </div>
-                  <div class="text-[10px] text-bx-muted font-mono mt-0.5">
-                    {{ formatFileSize(att.file_size || att.size) }}
+                    <span class="text-[11px] text-bx-muted font-mono">
+                      {{ formatFileSize(att.file_size || att.size) }}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <!-- Actions: Preview / Download / Open -->
-              <div class="flex items-center gap-1.5 shrink-0">
+              <!-- Actions: Preview / Download -->
+              <div class="flex items-center gap-2 shrink-0">
                 <button
                   v-if="isImageAttachment(att)"
                   type="button"
                   @click="openImageModal(att)"
-                  class="p-2 rounded-lg text-bx-primary hover:bg-purple-500/10 transition-colors cursor-pointer"
+                  class="w-9 h-9 rounded-full border border-purple-500/25 bg-purple-500/5 hover:bg-bx-primary text-bx-primary hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
                   title="تكبير الصورة"
                 >
                   <Eye class="w-4 h-4" />
@@ -388,7 +391,7 @@ onUnmounted(() => {
                   target="_blank"
                   rel="noopener noreferrer"
                   :download="att.file_name || att.name"
-                  class="p-2 rounded-lg text-bx-primary hover:bg-purple-500/10 transition-colors cursor-pointer"
+                  class="w-9 h-9 rounded-full border border-[#B4AED8]/60 dark:border-white/10 hover:border-bx-primary hover:bg-bx-primary text-bx-muted hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
                   title="فتح أو تحميل المرفق"
                 >
                   <Download class="w-4 h-4" />

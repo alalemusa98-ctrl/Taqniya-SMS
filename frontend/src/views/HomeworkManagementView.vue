@@ -1029,6 +1029,7 @@ onMounted(() => {
         :item-to-edit="itemToEdit"
         :academic-year-id="selectedYearId"
         :academic-term-id="selectedTermId"
+        :teachers="allTeachers"
         :available-teaching-assignments="availableTeachingAssignments"
         :is-submitting="isSubmitting"
         @submit="handleFormSubmit"
