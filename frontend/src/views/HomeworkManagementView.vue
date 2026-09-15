@@ -13,8 +13,11 @@ import {
   Trash2,
   Loader2,
   TrendingUp,
-  Layers,
-  GraduationCap,
+  User,
+  Eye,
+  Edit2,
+  Paperclip,
+  FileText,
 } from 'lucide-vue-next';
 import {
   homeworkApi,
@@ -31,7 +34,6 @@ import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
-import HomeworkCard from '../components/homework/HomeworkCard.vue';
 import HomeworkDetailDrawer from '../components/homework/HomeworkDetailDrawer.vue';
 import HomeworkDrawerForm from '../components/homework/HomeworkDrawerForm.vue';
 
@@ -220,6 +222,84 @@ const totalExpiredCount = computed(() => {
 });
 
 const totalClassesCount = computed(() => classesData.value.length);
+
+export interface EnrichedHomeworkRow {
+  id: number;
+  indexNumber: number;
+  class_id: number;
+  class_name: string;
+  class_section_id: number;
+  section_name: string;
+  subject_name: string;
+  teacher_name: string;
+  title: string;
+  attachments_count: number;
+  assigned_date: string;
+  due_date: string;
+  status: 'active' | 'expired';
+  deadlineInfo: { label: string; isUrgent: boolean; isExpired: boolean } | null;
+  raw: HomeworkItem;
+}
+
+// Flat list for Datatable presentation
+const allHomeworkRows = computed<EnrichedHomeworkRow[]>(() => {
+  const list: EnrichedHomeworkRow[] = [];
+  let idx = (paginationMeta.value.current_page - 1) * paginationMeta.value.per_page + 1;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  classesData.value.forEach((cls) => {
+    cls.sections?.forEach((sec) => {
+      sec.assignments?.forEach((hw) => {
+        let deadlineInfo: { label: string; isUrgent: boolean; isExpired: boolean } | null = null;
+        if (hw.due_date) {
+          const due = new Date(hw.due_date);
+          due.setHours(0, 0, 0, 0);
+          const diffTime = due.getTime() - today.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays < 0) {
+            const days = Math.abs(diffDays);
+            const dayText = days === 1 ? 'يوم واحد' : days === 2 ? 'يومين' : `${days} أيام`;
+            deadlineInfo = { label: `منتهي (منذ ${dayText})`, isUrgent: false, isExpired: true };
+          } else if (diffDays === 0) {
+            deadlineInfo = { label: 'مستحق اليوم!', isUrgent: true, isExpired: false };
+          } else if (diffDays === 1) {
+            deadlineInfo = { label: 'مستحق غداً', isUrgent: true, isExpired: false };
+          } else if (diffDays === 2) {
+            deadlineInfo = { label: 'متبقي يومان', isUrgent: false, isExpired: false };
+          } else {
+            deadlineInfo = { label: `متبقي ${diffDays} أيام`, isUrgent: false, isExpired: false };
+          }
+        }
+        if (hw.status === 'expired' && (!deadlineInfo || !deadlineInfo.isExpired)) {
+          deadlineInfo = { label: 'منتهي الصلاحية', isUrgent: false, isExpired: true };
+        }
+
+        list.push({
+          id: hw.id,
+          indexNumber: idx++,
+          class_id: cls.class_id,
+          class_name: cls.class_name,
+          class_section_id: sec.class_section_id,
+          section_name: sec.section_name,
+          subject_name: hw.subject_name,
+          teacher_name: hw.teacher_name,
+          title: hw.title,
+          attachments_count: hw.attachments_count,
+          assigned_date: hw.assigned_date,
+          due_date: hw.due_date,
+          status: hw.status,
+          deadlineInfo,
+          raw: hw,
+        });
+      });
+    });
+  });
+
+  return list;
+});
 
 // Fetch Initial Data
 const loadInitialData = async () => {
@@ -721,73 +801,187 @@ onMounted(() => {
           </button>
         </div>
 
-        <!-- 6. Hierarchical Classes & Sections Cards Grid -->
-        <div v-else class="space-y-6">
-          <div
-            v-for="cls in classesData"
-            :key="cls.class_id"
-            class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs"
-          >
-            <!-- Class Header Bar -->
-            <div class="bg-purple-500/[0.04] dark:bg-white/[0.03] py-3.5 px-5 border-b border-[#B4AED8]/60 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/30 dark:border-purple-400/40 flex items-center justify-center text-bx-primary dark:text-purple-300 shrink-0">
-                  <GraduationCap class="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 class="font-black text-sm text-bx-title font-display block leading-tight">{{ cls.class_name }}</h3>
-                  <div class="flex items-center gap-2 mt-0.5">
-                    <span class="text-[10px] font-semibold text-bx-muted px-2 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
-                      {{ cls.sections?.length || 0 }} شُعب دراسية
+        <!-- 6. Unified Datatable Content: Enclosed in a Bordered Card -->
+        <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-start border-collapse text-xs">
+              <!-- Table Header with Distinct Background and Crisp Dividers -->
+              <thead>
+                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
+                  <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
+                  
+                  <!-- 1. Subject & Teacher combined -->
+                  <th class="py-3 px-4 font-bold text-start min-w-[190px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>المادة والمعلم</span>
+                    </div>
+                  </th>
+
+                  <!-- 2. Homework Title -->
+                  <th class="py-3 px-4 font-bold text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <FileText class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>عنوان الواجب</span>
+                    </div>
+                  </th>
+
+                  <!-- 3. Class & Section -->
+                  <th class="py-3 px-4 font-bold text-start min-w-[150px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <School class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>الصف والشعبة</span>
+                    </div>
+                  </th>
+
+                  <!-- 4. Dates & Deadline -->
+                  <th class="py-3 px-4 font-bold text-start min-w-[160px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center gap-1.5">
+                      <Clock class="w-3.5 h-3.5 text-rose-500" />
+                      <span>تاريخ النشر والاستحقاق</span>
+                    </div>
+                  </th>
+
+                  <!-- 5. Attachments -->
+                  <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
+                      <span>المرفقات</span>
+                    </div>
+                  </th>
+
+                  <!-- 6. Status -->
+                  <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">الحالة</th>
+                  
+                  <!-- 7. Actions -->
+                  <th class="py-3 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
+                </tr>
+              </thead>
+
+              <!-- Table Body with Crisp Dividers -->
+              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
+                <tr
+                  v-for="(row, idx) in allHomeworkRows"
+                  :key="row.id"
+                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
+                >
+                  <!-- Sequence Counter # -->
+                  <td class="py-3.5 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
+                    {{ (paginationMeta.current_page - 1) * paginationMeta.per_page + idx + 1 }}
+                  </td>
+
+                  <!-- 1. Subject & Teacher (Combined) -->
+                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="space-y-1">
+                      <div>
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
+                          {{ row.subject_name }}
+                        </span>
+                      </div>
+                      <div class="text-xs text-bx-title font-medium">
+                        {{ row.teacher_name }}
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- 2. Homework Title -->
+                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span
+                      class="font-black text-xs sm:text-sm text-bx-title block leading-snug group-hover:text-bx-primary transition-colors cursor-pointer"
+                      @click="handleOpenView(row.raw)"
+                    >
+                      {{ row.title }}
                     </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+                  </td>
 
-            <!-- Sections Container Inside Class -->
-            <div class="p-4 space-y-5">
-              <div
-                v-for="sec in cls.sections"
-                :key="sec.class_section_id"
-                class="space-y-3"
-              >
-                <!-- Section Ribbon -->
-                <div class="flex items-center justify-between px-1">
-                  <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
-                    <Layers class="w-4 h-4 text-bx-primary" />
-                    <span>{{ sec.section_name }}</span>
-                  </div>
-                  <span class="text-[11px] font-mono font-bold text-bx-muted">
-                    {{ sec.assignments?.length || 0 }} واجبات مسجلة
-                  </span>
-                </div>
+                  <!-- 3. Class & Section -->
+                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="font-bold text-xs text-bx-title">
+                      <span>{{ row.class_name }}</span>
+                      <span class="text-bx-muted mx-1">•</span>
+                      <span class="text-bx-primary">{{ row.section_name }}</span>
+                    </div>
+                  </td>
 
-                <!-- Homework Cards Grid -->
-                <div
-                  v-if="sec.assignments && sec.assignments.length > 0"
-                  class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5"
-                >
-                  <HomeworkCard
-                    v-for="hw in sec.assignments"
-                    :key="hw.id"
-                    :homework="hw"
-                    :can-manage="canManage"
-                    @view="handleOpenView"
-                    @edit="handleOpenEdit"
-                    @delete="handleOpenDelete"
-                  />
-                </div>
+                  <!-- 4. Dates -->
+                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <div class="space-y-1 text-[11px]">
+                      <div class="text-bx-muted font-mono">
+                        نشر: {{ row.assigned_date.slice(0, 10) }}
+                      </div>
+                      <div class="font-mono font-medium text-bx-title">
+                        استحقاق: {{ row.due_date.slice(0, 10) }}
+                      </div>
+                    </div>
+                  </td>
 
-                <!-- Empty Section State -->
-                <div
-                  v-else
-                  class="py-6 text-center text-xs text-bx-muted border border-dashed border-[#B4AED8]/60 dark:border-white/10 rounded-xl"
-                >
-                  لا توجد واجبات منزلية مسجلة لهذه الشعبة حالياً
-                </div>
-              </div>
-            </div>
+                  <!-- 5. Attachments Count Badge -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span
+                      v-if="row.attachments_count > 0"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
+                    >
+                      <Paperclip class="w-3.5 h-3.5" />
+                      <span>{{ row.attachments_count }} مرفقات</span>
+                    </span>
+                    <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
+                  </td>
+
+                  <!-- 6. Status Badge (Displays dynamic remaining days or expired notice) -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                    <span
+                      class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
+                      :class="
+                        row.status === 'expired' || row.deadlineInfo?.isExpired
+                          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                          : row.deadlineInfo?.isUrgent
+                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
+                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      "
+                    >
+                      {{ row.deadlineInfo?.label || (row.status === 'active' ? 'ساري للتسليم' : 'منتهي الصلاحية') }}
+                    </span>
+                  </td>
+
+                  <!-- 7. Action Buttons Toolbar -->
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap last:border-e-0">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <!-- View Button -->
+                      <button
+                        type="button"
+                        @click="handleOpenView(row.raw)"
+                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                        title="معاينة التفاصيل والمرفقات"
+                      >
+                        <Eye class="w-3.5 h-3.5" />
+                      </button>
+
+                      <!-- Edit Button (Teachers / Admins) -->
+                      <button
+                        v-if="canManage"
+                        type="button"
+                        @click="handleOpenEdit(row.raw)"
+                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                        title="تعديل بيانات الواجب"
+                      >
+                        <Edit2 class="w-3.5 h-3.5" />
+                      </button>
+
+                      <!-- Delete Button (Teachers / Admins) -->
+                      <button
+                        v-if="canManage"
+                        type="button"
+                        @click="handleOpenDelete(row.raw)"
+                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                        title="حذف الواجب المدرسي"
+                      >
+                        <Trash2 class="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
