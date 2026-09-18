@@ -132,7 +132,7 @@
             "description": "تغيير كلمة المرور الخاصة بالمستخدم المسجل حالياً، مع التحقق الإجباري من كلمة المرور السابقة وتطابق التأكيد.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"current_password\": \"SecretPassword@123\",\n  \"new_password\": \"SecretPassword@123\",\n  \"new_password_confirmation\": \"NewSecretPassword@2026\"\n}",
+              "raw": "{\n  \"current_password\": \"SecretPassword@123\",\n  \"new_password\": \"NewSecretPassword@2026\",\n  \"new_password_confirmation\": \"NewSecretPassword@2026\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
