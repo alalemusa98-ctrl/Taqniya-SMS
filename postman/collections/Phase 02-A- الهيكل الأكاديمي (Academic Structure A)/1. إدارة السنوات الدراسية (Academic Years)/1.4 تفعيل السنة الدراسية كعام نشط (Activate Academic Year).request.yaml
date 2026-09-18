@@ -1,0 +1,26 @@
+$kind: http-request
+name: 1.4 تفعيل السنة الدراسية كعام نشط (Activate Academic Year)
+description: |-
+  تحويل العام المستهدف إلى العام الدراسي النشط الحصري بالمنظومة (is_active = 1) وإلغاء تفعيل العام السابق ذرياً.
+url: "{{baseUrl}}/academic/years/{{yearId}}/activate"
+method: POST
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم تفعيل السنة الدراسية كعام نشط بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Activated year response verifies is_active = 1", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data.is_active).to.eql(1);
+      });
+    language: text/javascript
+order: 4000

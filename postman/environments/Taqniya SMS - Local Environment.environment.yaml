@@ -24,3 +24,9 @@ values:
     value: '1'
   - key: targetAuditLogId
     value: '1'
+  - key: yearId
+    value: '1'
+  - key: termId
+    value: '1'
+  - key: stageId
+    value: '1'

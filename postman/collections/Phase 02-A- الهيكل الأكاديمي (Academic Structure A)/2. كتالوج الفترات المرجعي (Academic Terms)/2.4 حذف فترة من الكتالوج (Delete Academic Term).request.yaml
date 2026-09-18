@@ -1,0 +1,25 @@
+$kind: http-request
+name: 2.4 حذف فترة من الكتالوج (Delete Academic Term)
+description: |-
+  حذف فترة مرجعية غير مستخدمة من الكتالوج بالمعرف `{{termId}}`.
+url: "{{baseUrl}}/academic/terms/{{termId}}"
+method: DELETE
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم حذف الفترة من الكتالوج بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Delete academic term returns success true", function () {
+          pm.expect(jsonData.success).to.eql(true);
+      });
+    language: text/javascript
+order: 4000

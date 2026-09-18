@@ -1,0 +1,45 @@
+$kind: http-request
+name: 3.1 عرض وبحث قائمة المراحل التعليمية (List Academic Stages)
+description: |-
+  استرجاع المراحل التعليمية مرتبة تصاعدياً بحسب أولوية العرض order_index ASC مع دعم الفرز والبحث والترقيم.
+url: "{{baseUrl}}/academic/stages?search=&sort_by=order_index&sort_order=asc&page=1&per_page=15"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث النصي باسم المرحلة (مثال الابتدائية)
+  - key: sort_by
+    value: order_index
+    description: "حقل الفرز: id, name, order_index"
+  - key: sort_order
+    value: asc
+    description: "اتجاه الفرز: asc أو desc"
+  - key: page
+    value: "1"
+    description: رقم الصفحة
+  - key: per_page
+    value: "15"
+    description: عدد السجلات في الصفحة
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - نجاح جلب قائمة المراحل التعليمية", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response has valid academic stages schema", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data).to.be.an('array');
+          pm.expect(jsonData.meta).to.be.an('object');
+          pm.expect(jsonData.meta.total).to.be.a('number');
+      });
+    language: text/javascript
+order: 1000

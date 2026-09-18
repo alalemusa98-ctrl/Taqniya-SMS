@@ -1,0 +1,16 @@
+$kind: collection
+name: "Phase 02-A: الهيكل الأكاديمي (Academic Structure A)"
+description: |-
+  توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 02-A (13 مساراً) وفق العقد المعماري الرسمي `MD/phases/phase_02_academic_structure_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).
+
+  المجموعات المشمولة:
+  0. المصادقة وإعداد الجلسة (auth)
+  1. إدارة السنوات الدراسية (academic_years)
+  2. كتالوج الفترات المرجعي (academic_terms)
+  3. إدارة المراحل التعليمية (academic_stages)
+auth:
+  - id: 8fda2b0c-440d-4f2d-be8f-ce7e1be3275c
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{authToken}}"

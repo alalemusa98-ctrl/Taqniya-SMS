@@ -1,0 +1,42 @@
+$kind: http-request
+name: 2.2 إضافة فترة لكتالوج الفترات العام (Create Academic Term)
+description: |-
+  إضافة فترة معيارية جديدة للكتالوج المرجعي العام وتخزين المعرف `termId`.
+url: "{{baseUrl}}/academic/terms"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "الفصل الصيفي الإثرائي",
+      "term_number": 9
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201 - تمت إضافة الفترة للكتالوج العام بنجاح", function () {
+          pm.response.to.have.status(201);
+      });
+
+      if (pm.response.code === 201) {
+          var jsonData = pm.response.json();
+          pm.test("Created term contains valid ID and attributes", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+              pm.expect(jsonData.data.term_number).to.eql(9);
+          });
+
+          if (jsonData.data && jsonData.data.id) {
+              pm.environment.set("termId", String(jsonData.data.id));
+              console.log("✅ تم حفظ termId بنجاح:", jsonData.data.id);
+          }
+      }
+    language: text/javascript
+order: 2000

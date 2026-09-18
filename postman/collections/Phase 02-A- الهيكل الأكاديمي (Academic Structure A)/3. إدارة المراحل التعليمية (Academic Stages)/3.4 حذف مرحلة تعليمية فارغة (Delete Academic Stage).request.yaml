@@ -1,0 +1,25 @@
+$kind: http-request
+name: 3.4 حذف مرحلة تعليمية فارغة (Delete Academic Stage)
+description: |-
+  حذف مرحلة تعليمية فارغة غير مرتبطة بصفوف دراسية بالمعرف `{{stageId}}`.
+url: "{{baseUrl}}/academic/stages/{{stageId}}"
+method: DELETE
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم حذف المرحلة التعليمية بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Delete academic stage returns success true", function () {
+          pm.expect(jsonData.success).to.eql(true);
+      });
+    language: text/javascript
+order: 4000

@@ -1,0 +1,25 @@
+$kind: http-request
+name: 1.5 حذف سنة دراسية (Delete Academic Year)
+description: |-
+  تنفيذ الحذف لسنة دراسية غير مستخدمة بالمعرف `{{yearId}}`.
+url: "{{baseUrl}}/academic/years/{{yearId}}"
+method: DELETE
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم حذف السنة الدراسية بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Delete academic year returns success true", function () {
+          pm.expect(jsonData.success).to.eql(true);
+      });
+    language: text/javascript
+order: 5000

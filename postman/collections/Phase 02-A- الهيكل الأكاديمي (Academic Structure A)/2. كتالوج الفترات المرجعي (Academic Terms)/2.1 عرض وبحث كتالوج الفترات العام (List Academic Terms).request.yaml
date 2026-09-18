@@ -1,0 +1,45 @@
+$kind: http-request
+name: 2.1 عرض وبحث كتالوج الفترات العام (List Academic Terms)
+description: |-
+  استرجاع كتالوج الفترات المعيارية العامة بالدولة مرتبة تصاعدياً بـ term_number ASC مع دعم البحث والترقيم والفرز.
+url: "{{baseUrl}}/academic/terms?search=&sort_by=term_number&sort_order=asc&page=1&per_page=15"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث النصي باسم الفترة (مثال الأول)
+  - key: sort_by
+    value: term_number
+    description: "حقل الفرز: id, name, term_number"
+  - key: sort_order
+    value: asc
+    description: "اتجاه الفرز: asc أو desc"
+  - key: page
+    value: "1"
+    description: رقم الصفحة
+  - key: per_page
+    value: "15"
+    description: عدد السجلات في الصفحة
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - نجاح جلب كتالوج الفترات", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response has valid academic terms schema", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data).to.be.an('array');
+          pm.expect(jsonData.meta).to.be.an('object');
+          pm.expect(jsonData.meta.total).to.be.a('number');
+      });
+    language: text/javascript
+order: 1000

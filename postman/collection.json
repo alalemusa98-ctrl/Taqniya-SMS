@@ -1,64 +1,16 @@
 {
   "info": {
-    "name": "Phase 01: الهوية والمصادقة والتدقيق (Authentication, Identity & Audit)",
-    "description": "توثيق شامل ومكتمل لجميع مسارات المرحلة الأولى (10 مسارات) وفق العقد المعماري الرسمي `MD/phases/phase_01_auth_identity/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n1. المصادقة وإدارة الجلسات (auth)\n2. إدارة حسابات المستخدمين (users)\n3. سجلات التدقيق الأمني والحركات (audit_logs)",
+    "name": "Phase 02-A: الهيكل الأكاديمي (Academic Structure A)",
+    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 02-A (13 مساراً) وفق العقد المعماري الرسمي `MD/phases/phase_02_academic_structure_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (auth)\n1. إدارة السنوات الدراسية (academic_years)\n2. كتالوج الفترات المرجعي (academic_terms)\n3. إدارة المراحل التعليمية (academic_stages)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "1. المصادقة وإدارة الجلسات (Authentication & Sessions)",
-      "description": "مسارات تسجيل الدخول، استرجاع الملف الشخصي، تسجيل الخروج، وتغيير كلمة المرور.",
+      "name": "0. المصادقة وإعداد الجلسة (Authentication & Setup)",
+      "description": "تسجيل دخول مدير النظام للحصول على توكن الصلاحية وتخزينه تلقائياً في authToken لتشغيل الاختبارات.",
       "item": [
         {
-          "name": "استرجاع بيانات الملف الشخصي والجلسة النشطة (Get Profile / Me)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/auth/me",
-            "description": "استرجاع بيانات الحساب وصلاحيات المستخدم الحالي بناءً على التوكن الممرر في ترويسة الطلب."
-          }
-        },
-        {
-          "name": "تسجيل الخروج وإبطال التوكن (Logout)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/auth/logout",
-            "description": "إبطال جلسة العمل الحالية وحذف التوكن المستخدم من جدول التوكنات بقاعدة البيانات."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "if (pm.response.code === 200) {",
-                  "    pm.environment.set(\"authToken\", \"\");",
-                  "    console.log(\"✅ تم تفريغ authToken من متغيرات البيئة بعد تسجيل الخروج بنجاح.\");",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "تسجيل الدخول الموحد بالرمز المؤسسي (Login)",
+          "name": "تسجيل الدخول كمدير النظام (Login as Admin)",
           "request": {
             "method": "POST",
             "header": [
@@ -74,10 +26,10 @@
               }
             ],
             "url": "{{baseUrl}}/auth/login",
-            "description": "تسجيل الدخول الموحد لكافة مستخدمي المنظومة (مدير، معلم، طالب، ولي أمر) بالرمز المؤسسي وكلمة المرور.\n\n* ملاحظة: يخضع لحماية التخمين Rate Limiter بحد أقصى 5 طلبات في الدقيقة.",
+            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع المسارات التالية.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_code\": \"ADM-1001\",\n  \"password\": \"SecretPassword@123\"\n}",
+              "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -91,93 +43,35 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
+                  "pm.test(\"Status code is 200 - تم تسجيل الدخول بنجاح\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "if (pm.response.code === 200) {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Login successful and token returned\", function () {",
+                  "    pm.test(\"Login response contains valid bearer token\", function () {",
                   "        pm.expect(jsonData.success).to.eql(true);",
                   "        pm.expect(jsonData.data.token).to.be.a('string');",
                   "    });",
                   "    ",
                   "    if (jsonData.data && jsonData.data.token) {",
                   "        pm.environment.set(\"authToken\", jsonData.data.token);",
-                  "        console.log(\"✅ تم حفظ authToken تلقائياً في متغيرات البيئة.\");",
+                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 02-A.\");",
                   "    }",
                   "}"
                 ]
               }
             }
           ]
-        },
-        {
-          "name": "تغيير كلمة المرور الذاتي للمستخدم (Change Password)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/auth/change-password",
-            "description": "تغيير كلمة المرور الخاصة بالمستخدم المسجل حالياً، مع التحقق الإجباري من كلمة المرور السابقة وتطابق التأكيد.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"current_password\": \"SecretPassword@123\",\n  \"new_password\": \"NewSecretPassword@2026\",\n  \"new_password_confirmation\": \"NewSecretPassword@2026\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
         }
       ]
     },
     {
-      "name": "2. إدارة حسابات المستخدمين (Users Management - Admin Only)",
-      "description": "مسارات إدارة ومراقبة حسابات المستخدمين بالكامل (خاص بمدير النظام Admin حصراً).",
+      "name": "1. إدارة السنوات الدراسية (Academic Years)",
+      "description": "مسارات إدارة السنوات الدراسية (استعراض، إنشاء، تعديل، تفعيل ذري، وحذف).",
       "item": [
         {
-          "name": "إعادة تعيين كلمة المرور إدارياً (Admin Reset Password)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/users/{{targetUserId}}/reset-password",
-            "description": "إعادة تعيين كلمة المرور لمستخدم بواسطة الإدارة. يقوم النظام تلقائياً بإلغاء كافة الجلسات السابقة للمستخدم لإجباره على الدخول بالكلمة الجديدة وتوثيق العملية في سجل التدقيق.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"new_password\": \"TempPass#2026!\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "استعراض وتصفية شجرة حسابات المستخدمين (List Users Tree)",
+          "name": "1.1 استعراض وبحث قائمة السنوات الدراسية (List Academic Years)",
           "request": {
             "method": "GET",
             "header": [
@@ -187,12 +81,109 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/users?role_type=teacher&is_active=1&page=1&per_page=15&sort_by=created_at&sort_order=desc",
-            "description": "استعراض قائمة حسابات المستخدمين في شجرة هرمية مع إحصائيات الأدوار والترقيم والفرز."
-          }
+            "url": "{{baseUrl}}/academic/years?search=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15",
+            "description": "استرجاع قائمة كافة السنوات الدراسية المسجلة بالمنظومة مع دعم البحث النصي والفلترة والتنقل والفرز.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - نجاح جلب قائمة السنوات الدراسية\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response has valid academic years schema\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    pm.expect(jsonData.meta).to.be.an('object');",
+                  "    pm.expect(jsonData.meta.current_page).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "تفعيل أو إيقاف حساب المستخدم (Update User Status)",
+          "name": "1.2 إضافة سنة دراسية جديدة (Create Academic Year)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/years",
+            "description": "إنشاء سجل سنة دراسية جديدة في المنظومة مع تخزين المعرف `yearId` تلقائياً.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"2029/2030\",\n  \"start_date\": \"2029-09-01\",\n  \"end_date\": \"2030-06-30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 - تم إنشاء السنة الدراسية بنجاح\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Created year response contains valid data and ID\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.name).to.eql(\"2029/2030\");",
+                  "    });",
+                  "",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.environment.set(\"yearId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ yearId بنجاح:\", jsonData.data.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 تعديل بيانات سنة دراسية (Update Academic Year)",
           "request": {
             "method": "PUT",
             "header": [
@@ -207,23 +198,52 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/users/{{targetUserId}}/status",
-            "description": "تعديل حالة الحساب إلى مفعل (1) أو معطل (0). عند التعطيل يتم إبطال وشطب كافة جلسات وتوكنات المستخدم فورياً وتوثيق سبب الإجراء في سجل التدقيق.",
+            "url": "{{baseUrl}}/academic/years/{{yearId}}",
+            "description": "تحديث بيانات سنة دراسية قائمة بالمعرف `{{yearId}}`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"is_active\": 1,\n  \"reason\": \"تعليق مؤقت للحساب لمراجعة الصلاحيات الإدارية\"\n}",
+              "raw": "{\n  \"name\": \"2029/2030 (معدلة)\",\n  \"start_date\": \"2029-09-01\",\n  \"end_date\": \"2030-06-30\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم تحديث السنة الدراسية بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Updated year response has correct updated data\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.name).to.eql(\"2029/2030 (معدلة)\");",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "عرض تفاصيل حساب مستخدم محدد (Get User By ID)",
+          "name": "1.4 تفعيل السنة الدراسية كعام نشط (Activate Academic Year)",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
                 "key": "Accept",
@@ -231,18 +251,90 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/users/{{targetUserId}}",
-            "description": "استرجاع بيانات تفصيلية لحساب محدد بالمعرف الرقمي (ID)."
-          }
+            "url": "{{baseUrl}}/academic/years/{{yearId}}/activate",
+            "description": "تحويل العام المستهدف إلى العام الدراسي النشط الحصري بالمنظومة (is_active = 1) وإلغاء تفعيل العام السابق ذرياً.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم تفعيل السنة الدراسية كعام نشط بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Activated year response verifies is_active = 1\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.is_active).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.5 حذف سنة دراسية (Delete Academic Year)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/years/{{yearId}}",
+            "description": "تنفيذ الحذف لسنة دراسية غير مستخدمة بالمعرف `{{yearId}}`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم حذف السنة الدراسية بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Delete academic year returns success true\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "3. سجلات التدقيق الأمني (Audit Logs - Admin Only)",
-      "description": "مسارات استعراض وتتبع العمليات الحساسة ومقارنة التغييرات (خاص بمدير النظام Admin حصراً).",
+      "name": "2. كتالوج الفترات المرجعي (Academic Terms)",
+      "description": "مسارات إدارة كتالوج الفترات والفصول الدراسية المعيارية (استعراض، إضافة، تعديل، وحذف).",
       "item": [
         {
-          "name": "استعراض وتصفية سجلات التدقيق (List Audit Logs)",
+          "name": "2.1 عرض وبحث كتالوج الفترات العام (List Academic Terms)",
           "request": {
             "method": "GET",
             "header": [
@@ -252,12 +344,216 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/audit-logs?page=1&per_page=15&date_from=2026-01-01&date_to=2026-12-31&sort_by=created_at&sort_order=desc",
-            "description": "استرجاع قائمة سجلات التدقيق الأمني مع دعم التصفية المتقدمة حسب التاريخ، نوع الإجراء، الكيان المتأثر، والمستخدم المنفذ."
-          }
+            "url": "{{baseUrl}}/academic/terms?search=&sort_by=term_number&sort_order=asc&page=1&per_page=15",
+            "description": "استرجاع كتالوج الفترات المعيارية العامة بالدولة مرتبة تصاعدياً بـ term_number ASC مع دعم البحث والترقيم والفرز.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - نجاح جلب كتالوج الفترات\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response has valid academic terms schema\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    pm.expect(jsonData.meta).to.be.an('object');",
+                  "    pm.expect(jsonData.meta.total).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "عرض تفاصيل حركة تدقيق ومقارنة الفروقات (Get Audit Log By ID)",
+          "name": "2.2 إضافة فترة لكتالوج الفترات العام (Create Academic Term)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/terms",
+            "description": "إضافة فترة معيارية جديدة للكتالوج المرجعي العام وتخزين المعرف `termId`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"الفصل الصيفي الإثرائي\",\n  \"term_number\": 9\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 - تمت إضافة الفترة للكتالوج العام بنجاح\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Created term contains valid ID and attributes\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.term_number).to.eql(9);",
+                  "    });",
+                  "",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.environment.set(\"termId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ termId بنجاح:\", jsonData.data.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 تعديل مسمى أو ترتيب فترة بالكتالوج (Update Academic Term)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/terms/{{termId}}",
+            "description": "تحديث بيانات فترة مرجعية قائمة بالكتالوج بالمعرف `{{termId}}`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"الفصل الصيفي المكثف (معدل)\",\n  \"term_number\": 9\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم تحديث الفترة بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Updated term has modified name\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.name).to.eql(\"الفصل الصيفي المكثف (معدل)\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.4 حذف فترة من الكتالوج (Delete Academic Term)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/terms/{{termId}}",
+            "description": "حذف فترة مرجعية غير مستخدمة من الكتالوج بالمعرف `{{termId}}`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم حذف الفترة من الكتالوج بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Delete academic term returns success true\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. إدارة المراحل التعليمية (Academic Stages)",
+      "description": "مسارات إدارة المراحل التعليمية (استعراض، إضافة، تعديل، وحذف المراحل).",
+      "item": [
+        {
+          "name": "3.1 عرض وبحث قائمة المراحل التعليمية (List Academic Stages)",
           "request": {
             "method": "GET",
             "header": [
@@ -267,9 +563,207 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/audit-logs/{{targetAuditLogId}}",
-            "description": "استرجاع تفاصيل سجل تدقيق محدد متضمناً القيم السابقة (old_values) والقيم الجديدة (new_values) وعنوان الـ IP وبيانات العميل."
-          }
+            "url": "{{baseUrl}}/academic/stages?search=&sort_by=order_index&sort_order=asc&page=1&per_page=15",
+            "description": "استرجاع المراحل التعليمية مرتبة تصاعدياً بحسب أولوية العرض order_index ASC مع دعم الفرز والبحث والترقيم.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - نجاح جلب قائمة المراحل التعليمية\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response has valid academic stages schema\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    pm.expect(jsonData.meta).to.be.an('object');",
+                  "    pm.expect(jsonData.meta.total).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 إضافة مرحلة تعليمية جديدة (Create Academic Stage)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/stages",
+            "description": "تعريف مرحلة تعليمية جديدة وضبط ترتيبها بالهيكل الأكاديمي وتخزين المعرف `stageId`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"مرحلة رياض الأطفال والتأسيس\",\n  \"order_index\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 - تم إنشاء المرحلة التعليمية بنجاح\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Created stage contains valid ID and properties\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.order_index).to.eql(0);",
+                  "    });",
+                  "",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.environment.set(\"stageId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ stageId بنجاح:\", jsonData.data.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.3 تعديل بيانات مرحلة تعليمية (Update Academic Stage)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/stages/{{stageId}}",
+            "description": "تحديث مسمى المرحلة التعليمية أو ترتيبها الأكاديمي بالمعرف `{{stageId}}`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"مرحلة رياض الأطفال والتأسيس (معدلة)\",\n  \"order_index\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم تحديث المرحلة التعليمية بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Updated stage has modified name\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.name).to.eql(\"مرحلة رياض الأطفال والتأسيس (معدلة)\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.4 حذف مرحلة تعليمية فارغة (Delete Academic Stage)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/stages/{{stageId}}",
+            "description": "حذف مرحلة تعليمية فارغة غير مرتبطة بصفوف دراسية بالمعرف `{{stageId}}`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم حذف المرحلة التعليمية بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Delete academic stage returns success true\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

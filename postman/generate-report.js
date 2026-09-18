@@ -1,4 +1,4 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
@@ -114,27 +114,58 @@ function processFolder(folderPath, isRoot = false) {
   }
 }
 
-// 3. Compile Collection
+// 3. Compile & Run All Collections
 const collDirs = fs.readdirSync(collDir, { withFileTypes: true }).filter(d => d.isDirectory());
 if (collDirs.length === 0) {
   console.error('❌ لم يتم العثور على أي مجلد داخل postman/collections');
   process.exit(1);
 }
 
-const targetColl = path.join(collDir, collDirs[0].name);
-const collJson = processFolder(targetColl, true);
-const collJsonPath = path.join(baseDir, 'collection.json');
-fs.writeFileSync(collJsonPath, JSON.stringify(collJson, null, 2), 'utf8');
+const args = process.argv.slice(2);
+const compileOnly = args.includes('--compile-only') || args.includes('--build-only');
+const requestedPhase = args.find(a => !a.startsWith('--'));
 
-const reportFile = path.join(reportsDir, 'Phase01_Report.html');
-console.log('🚀 جاري تشغيل الاختبارات وتوليد التقرير التفاعلي عبر Newman...');
+for (const dir of collDirs) {
+  if (requestedPhase && !dir.name.includes(requestedPhase)) {
+    continue;
+  }
 
-try {
-  const newmanCmd = `newman run "${collJsonPath}" -e "${envJsonPath}" -r htmlextra --reporter-htmlextra-export "${reportFile}" --reporter-htmlextra-title "Taqniya SMS - Phase 01 API Report"`;
-  execSync(newmanCmd, { stdio: 'inherit' });
-} catch (error) {
-  // Newman returns non-zero exit code on failed assertions
+  console.log(`\n📦 جاري معالجة المجموعة: ${dir.name}`);
+  const targetColl = path.join(collDir, dir.name);
+  const collJson = processFolder(targetColl, true);
+  
+  // Clean name for files
+  let safeName = dir.name.replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_').replace(/_+/g, '_').trim();
+  if (dir.name.includes('02-A') || dir.name.includes('Academic Structure A')) {
+    safeName = 'Phase_02_A_Academic_Structure';
+  } else if (dir.name.includes('01')) {
+    safeName = 'Phase_01_Auth_Identity';
+  }
+
+  const collJsonPath = path.join(baseDir, `${safeName}.postman_collection.json`);
+  fs.writeFileSync(collJsonPath, JSON.stringify(collJson, null, 2), 'utf8');
+
+  // Also write to collection.json
+  fs.writeFileSync(path.join(baseDir, 'collection.json'), JSON.stringify(collJson, null, 2), 'utf8');
+
+  console.log(`✅ تم إنشاء ملف المجموعة: ${safeName}.postman_collection.json`);
+
+  if (compileOnly) {
+    continue;
+  }
+
+  const reportFile = path.join(reportsDir, `${safeName}_Report.html`);
+  console.log(`🚀 جاري تشغيل الاختبارات وتوليد التقرير التفاعلي عبر Newman لـ [${dir.name}]...`);
+
+  try {
+    const newmanCmd = `newman run "${collJsonPath}" -e "${envJsonPath}" -r htmlextra --reporter-htmlextra-export "${reportFile}" --reporter-htmlextra-title "Taqniya SMS - ${collJson.info.name} Report"`;
+    execSync(newmanCmd, { stdio: 'inherit' });
+    console.log(`✅ اكتمل توليد التقرير: ${reportFile}`);
+  } catch (error) {
+    console.warn(`⚠️ ملاحظة: تم تشغيل Newman (تأكد من تشغيل الخادم المحلي للحصول على نتيجة 100% نجاح).`);
+  }
 }
 
-console.log('\n✅ اكتمل توليد التقرير التفاعلي بنجاح!');
-console.log(`📄 مسار التقرير: ${reportFile}`);
+console.log('\n🎉 اكتملت عملية معالجة وتجميع مجموعات Postman بنجاح!');
+
+

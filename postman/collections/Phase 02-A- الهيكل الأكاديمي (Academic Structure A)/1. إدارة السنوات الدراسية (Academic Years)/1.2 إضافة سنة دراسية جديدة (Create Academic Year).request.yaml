@@ -1,0 +1,43 @@
+$kind: http-request
+name: 1.2 إضافة سنة دراسية جديدة (Create Academic Year)
+description: |-
+  إنشاء سجل سنة دراسية جديدة في المنظومة مع تخزين المعرف `yearId` تلقائياً.
+url: "{{baseUrl}}/academic/years"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "2029/2030",
+      "start_date": "2029-09-01",
+      "end_date": "2030-06-30"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201 - تم إنشاء السنة الدراسية بنجاح", function () {
+          pm.response.to.have.status(201);
+      });
+
+      if (pm.response.code === 201) {
+          var jsonData = pm.response.json();
+          pm.test("Created year response contains valid data and ID", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+              pm.expect(jsonData.data.name).to.eql("2029/2030");
+          });
+
+          if (jsonData.data && jsonData.data.id) {
+              pm.environment.set("yearId", String(jsonData.data.id));
+              console.log("✅ تم حفظ yearId بنجاح:", jsonData.data.id);
+          }
+      }
+    language: text/javascript
+order: 2000

@@ -1,0 +1,34 @@
+$kind: http-request
+name: 3.3 تعديل بيانات مرحلة تعليمية (Update Academic Stage)
+description: |-
+  تحديث مسمى المرحلة التعليمية أو ترتيبها الأكاديمي بالمعرف `{{stageId}}`.
+url: "{{baseUrl}}/academic/stages/{{stageId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "مرحلة رياض الأطفال والتأسيس (معدلة)",
+      "order_index": 0
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم تحديث المرحلة التعليمية بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Updated stage has modified name", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data.name).to.eql("مرحلة رياض الأطفال والتأسيس (معدلة)");
+      });
+    language: text/javascript
+order: 3000

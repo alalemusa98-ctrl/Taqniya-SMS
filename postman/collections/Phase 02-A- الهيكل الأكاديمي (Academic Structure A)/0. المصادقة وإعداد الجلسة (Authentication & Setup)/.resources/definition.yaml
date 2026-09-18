@@ -1,0 +1,4 @@
+$kind: collection
+name: 0. المصادقة وإعداد الجلسة (Authentication & Setup)
+description: تسجيل دخول مدير النظام للحصول على توكن الصلاحية وتخزينه تلقائياً في authToken لتشغيل الاختبارات.
+order: 500

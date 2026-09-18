@@ -1,0 +1,42 @@
+$kind: http-request
+name: 3.2 إضافة مرحلة تعليمية جديدة (Create Academic Stage)
+description: |-
+  تعريف مرحلة تعليمية جديدة وضبط ترتيبها بالهيكل الأكاديمي وتخزين المعرف `stageId`.
+url: "{{baseUrl}}/academic/stages"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "مرحلة رياض الأطفال والتأسيس",
+      "order_index": 0
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201 - تم إنشاء المرحلة التعليمية بنجاح", function () {
+          pm.response.to.have.status(201);
+      });
+
+      if (pm.response.code === 201) {
+          var jsonData = pm.response.json();
+          pm.test("Created stage contains valid ID and properties", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+              pm.expect(jsonData.data.order_index).to.eql(0);
+          });
+
+          if (jsonData.data && jsonData.data.id) {
+              pm.environment.set("stageId", String(jsonData.data.id));
+              console.log("✅ تم حفظ stageId بنجاح:", jsonData.data.id);
+          }
+      }
+    language: text/javascript
+order: 2000

@@ -13,8 +13,8 @@ body:
   type: text
   content: |-
     {
-      "user_code": "ADM-1001",
-      "password": "SecretPassword@123"
+      "user_code": "{{adminUserCode}}",
+      "password": "{{adminPassword}}"
     }
 auth:
   type: noauth

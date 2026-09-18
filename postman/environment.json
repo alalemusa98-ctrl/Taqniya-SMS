@@ -64,12 +64,30 @@
     },
     {
       "key": "targetUserId",
-      "value": "2",
+      "value": "1",
       "type": "default",
       "enabled": true
     },
     {
       "key": "targetAuditLogId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "yearId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "termId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "stageId",
       "value": "1",
       "type": "default",
       "enabled": true

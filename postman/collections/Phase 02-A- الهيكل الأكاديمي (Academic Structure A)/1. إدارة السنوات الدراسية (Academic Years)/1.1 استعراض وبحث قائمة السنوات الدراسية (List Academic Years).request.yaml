@@ -1,0 +1,49 @@
+$kind: http-request
+name: 1.1 استعراض وبحث قائمة السنوات الدراسية (List Academic Years)
+description: |-
+  استرجاع قائمة كافة السنوات الدراسية المسجلة بالمنظومة مع دعم البحث النصي والفلترة والتنقل والفرز.
+url: "{{baseUrl}}/academic/years?search=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث النصي باسم السنة الدراسية (مثال 2026)
+  - key: is_active
+    value: ""
+    disabled: true
+    description: "فلترة حسب حالة التفعيل: 1 للنشط، 0 لغير النشط"
+  - key: sort_by
+    value: id
+    description: "حقل الفرز: id, name, start_date, end_date"
+  - key: sort_order
+    value: desc
+    description: "اتجاه الفرز: asc أو desc"
+  - key: page
+    value: "1"
+    description: رقم الصفحة
+  - key: per_page
+    value: "15"
+    description: عدد السجلات في الصفحة
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - نجاح جلب قائمة السنوات الدراسية", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response has valid academic years schema", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data).to.be.an('array');
+          pm.expect(jsonData.meta).to.be.an('object');
+          pm.expect(jsonData.meta.current_page).to.be.a('number');
+      });
+    language: text/javascript
+order: 1000
