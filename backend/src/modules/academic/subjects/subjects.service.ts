@@ -47,23 +47,27 @@ export class SubjectsService {
       where.code = query.code;
     }
 
+    const orderByField = query.sort_by === 'id' ? 'id' : query.sort_by === 'code' ? 'code' : 'name';
+    const orderByDirection = query.sort_order === 'desc' ? 'desc' : 'asc';
+
     const [total, subjects] = await Promise.all([
       this.prisma.subject.count({ where }),
       this.prisma.subject.findMany({
         where,
         skip,
         take: perPage,
-        orderBy: { name: 'asc' },
+        orderBy: { [orderByField]: orderByDirection },
       }),
     ]);
 
     return {
       success: true,
+      message: total > 0 ? 'تم جلب بنك المواد العامة بنجاح.' : 'لا توجد مواد مسجلة ببنك المواد.',
       data: subjects.map((s) => this.serializeSubject(s)),
       meta: {
-        total,
-        page,
+        current_page: page,
         per_page: perPage,
+        total,
         last_page: Math.ceil(total / perPage) || 1,
       },
     };
@@ -77,7 +81,7 @@ export class SubjectsService {
     if (!subject || subject.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'المادة التعليمية غير موجودة.',
+        message: 'المادة غير موجودة.',
       });
     }
 
@@ -144,7 +148,7 @@ export class SubjectsService {
 
     return {
       success: true,
-      message: 'تم إضافة المادة التعليمية إلى بنك المواد بنجاح.',
+      message: 'تمت إضافة المادة لبنك المواد بنجاح.',
       data: this.serializeSubject(created),
     };
   }
@@ -226,7 +230,7 @@ export class SubjectsService {
 
     return {
       success: true,
-      message: 'تم تحديث بيانات المادة التعليمية بنجاح.',
+      message: 'تم تحديث المادة بنجاح.',
       data: this.serializeSubject(updated),
     };
   }
@@ -244,7 +248,7 @@ export class SubjectsService {
     if (!subject || subject.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'المادة التعليمية غير موجودة.',
+        message: 'المادة المراد حذفها غير موجودة بالبنك.',
       });
     }
 
@@ -280,7 +284,7 @@ export class SubjectsService {
 
     return {
       success: true,
-      message: 'تم حذف المادة التعليمية من بنك المواد بنجاح.',
+      message: 'تم حذف المادة من البنك بنجاح.',
     };
   }
 }

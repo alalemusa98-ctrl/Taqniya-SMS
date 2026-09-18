@@ -11,6 +11,14 @@ export class QuerySubjectsDto {
   code?: string;
 
   @IsOptional()
+  @IsString()
+  sort_by?: string = 'name';
+
+  @IsOptional()
+  @IsString()
+  sort_order?: 'asc' | 'desc' = 'asc';
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

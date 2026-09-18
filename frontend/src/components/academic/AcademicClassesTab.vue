@@ -6,6 +6,9 @@ import {
   type AcademicStageItem,
 } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
+import TaqniyaTable, { type TableColumn } from '../ui/TaqniyaTable.vue';
+import TaqniyaModal from '../ui/TaqniyaModal.vue';
+import TaqniyaPagination from '../ui/TaqniyaPagination.vue';
 import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
 
 // Component Lazy Loading (component_lazy_loading)
@@ -17,7 +20,6 @@ import {
   Search,
   Trash2,
   Edit2,
-  Loader2,
   AlertCircle,
   GraduationCap,
   Hash,
@@ -31,8 +33,22 @@ const stages = ref<AcademicStageItem[]>([]);
 const search = ref('');
 const selectedStageFilter = ref<string | number>('all');
 
+// Pagination State
+const currentPage = ref(1);
+const totalPages = ref(1);
+const totalRecords = ref(0);
+const perPage = ref(15);
+
 // Request Cancellation Controller (request_cancellation)
 let activeAbortController: AbortController | null = null;
+
+const columns: TableColumn[] = [
+  { key: 'index', label: '#', align: 'start', width: '60px' },
+  { key: 'name', label: 'اسم الصف الدراسي', align: 'start' },
+  { key: 'stage_name', label: 'المرحلة التعليمية', align: 'start' },
+  { key: 'grade_level', label: 'المستوى الأكاديمي', align: 'center' },
+  { key: 'actions', label: 'الإجراءات', align: 'center', width: '120px' },
+];
 
 // Drawer state for Create / Edit
 const showDrawer = ref(false);
@@ -68,16 +84,21 @@ const fetchStages = async () => {
   }
 };
 
-const fetchClasses = async () => {
+const fetchClasses = async (page = 1) => {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
   loading.value = true;
+  currentPage.value = page;
+
   try {
     const params: any = {
-      per_page: 100, // Non-paginated complete view of classes
+      page: currentPage.value,
+      per_page: perPage.value,
+      sort_by: 'grade_level',
+      sort_order: 'asc',
     };
     if (search.value.trim()) params.search = search.value.trim();
     if (selectedStageFilter.value !== 'all') {
@@ -87,6 +108,11 @@ const fetchClasses = async () => {
     const res = await academicApi.getClasses(params, activeAbortController.signal);
     if (res.data.success) {
       classes.value = res.data.data;
+      if (res.data.meta) {
+        currentPage.value = res.data.meta.current_page || page;
+        totalPages.value = res.data.meta.last_page || 1;
+        totalRecords.value = res.data.meta.total || 0;
+      }
     }
   } catch (err: any) {
     if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
@@ -96,6 +122,15 @@ const fetchClasses = async () => {
       loading.value = false;
     }
   }
+};
+
+const handlePageChange = (newPage: number) => {
+  fetchClasses(newPage);
+};
+
+const handlePerPageChange = (newPerPage: number) => {
+  perPage.value = newPerPage;
+  fetchClasses(1);
 };
 
 const openCreateDrawer = () => {
@@ -133,14 +168,14 @@ const handleSubmit = async () => {
       if (res.data.success) {
         toast.success('تمت الإضافة بنجاح', `تم إنشاء الصف الدراسي (${form.value.name})`);
         showDrawer.value = false;
-        fetchClasses();
+        fetchClasses(currentPage.value);
       }
     } else if (activeClassToEdit.value) {
       const res = await academicApi.updateClass(activeClassToEdit.value.id, form.value);
       if (res.data.success) {
         toast.success('تم التحديث بنجاح', `تم تحديث بيانات الصف الدراسي بنجاح`);
         showDrawer.value = false;
-        fetchClasses();
+        fetchClasses(currentPage.value);
       }
     }
   } catch (err: any) {
@@ -163,7 +198,7 @@ const handleDelete = async () => {
     if (res.data.success) {
       toast.success('تم الحذف بنجاح', `تم حذف الصف الدراسي (${classToDelete.value.name})`);
       showDeleteModal.value = false;
-      fetchClasses();
+      fetchClasses(currentPage.value);
     }
   } catch (err: any) {
     toast.error('تعذر الحذف', err.response?.data?.message || 'لا يمكن حذف الصف لارتباطه ببيانات دراسية نشطة.');
@@ -174,7 +209,7 @@ const handleDelete = async () => {
 
 onMounted(async () => {
   await fetchStages();
-  fetchClasses();
+  fetchClasses(1);
 });
 </script>
 
@@ -189,14 +224,14 @@ onMounted(async () => {
             <Search class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-bx-muted pointer-events-none" />
             <input
               v-model="search"
-              @keyup.enter="fetchClasses"
+              @keyup.enter="fetchClasses(1)"
               type="text"
               placeholder="بحث باسم الصف الدراسي..."
               class="w-full pr-10 pl-4 h-[42px] bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold text-start"
             />
           </div>
           <button
-            @click="fetchClasses"
+            @click="fetchClasses(1)"
             :disabled="loading"
             class="h-[42px] px-3.5 rounded-2xl bg-bx-primary/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-bx-primary/20 text-xs font-bold transition-all cursor-pointer flex items-center justify-center shrink-0"
             title="بحث فوري (أو اضغط Enter)"
@@ -210,7 +245,7 @@ onMounted(async () => {
           v-model="selectedStageFilter"
           :options="stageFilterOptions"
           :icon="GraduationCap"
-          @update:model-value="fetchClasses"
+          @update:model-value="fetchClasses(1)"
         />
       </div>
 
@@ -224,286 +259,193 @@ onMounted(async () => {
       </button>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="flex flex-col items-center justify-center py-16 text-bx-muted space-y-3">
-      <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
-      <span class="text-xs font-bold">جاري تحميل الصفوف الدراسية...</span>
-    </div>
-
-    <!-- Empty State -->
-    <div
-      v-else-if="classes.length === 0"
-      class="flex flex-col items-center justify-center py-16 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] border-dashed rounded-2xl text-center p-6 space-y-4"
+    <!-- Standardized Taqniya Table Component -->
+    <TaqniyaTable
+      :columns="columns"
+      :items="classes"
+      :is-loading="loading"
+      empty-title="لا توجد صفوف دراسية مسجلة حالياً"
+      empty-subtitle="قم بإضافة الصفوف وتسكينها في المراحل المناسبة (مثال: الصف الأول، الصف الخامس)."
     >
-      <div class="w-14 h-14 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center shadow-xs">
-        <Layers class="w-7 h-7" />
-      </div>
-      <div>
-        <h3 class="text-base font-bold text-bx-title">لا توجد صفوف دراسية مسجلة</h3>
-        <p class="text-xs text-bx-muted mt-1">قم بإضافة الصفوف وتسكينها في المراحل المناسبة (مثال: الصف الأول، الصف الخامس).</p>
-      </div>
-      <button
-        @click="openCreateDrawer"
-        class="bx-btn bx-btn-primary h-[40px] px-5 text-xs font-bold rounded-xl cursor-pointer"
-      >
-        <Plus class="w-4 h-4" />
-        <span>إضافة صف جديد</span>
-      </button>
-    </div>
+      <template #cell-index="{ index }">
+        <span class="w-7 h-7 rounded-xl bg-purple-500/10 border border-[#B4AED8]/60 dark:border-white/10 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted">
+          {{ (currentPage - 1) * perPage + index + 1 }}
+        </span>
+      </template>
 
-    <!-- Classes Table Card (Taqniya Unified Bordered Card with Sticky Header) -->
-    <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
-      <div class="overflow-x-auto">
-        <table class="w-full text-start border-collapse text-xs">
-          <thead>
-            <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/[0.12] text-bx-muted">
-              <th class="py-3.5 px-5 font-bold text-start w-16">#</th>
-              <th class="py-3.5 px-5 font-bold text-start">
-                <div class="flex items-center gap-2">
-                  <Layers class="w-3.5 h-3.5 text-bx-primary" />
-                  <span>اسم الصف الدراسي</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-5 font-bold text-start">
-                <div class="flex items-center gap-2">
-                  <GraduationCap class="w-3.5 h-3.5 text-purple-600" />
-                  <span>المرحلة التعليمية</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-5 font-bold text-center">
-                <div class="inline-flex items-center justify-center gap-1.5">
-                  <Hash class="w-3.5 h-3.5 text-emerald-600" />
-                  <span>المستوى الأكاديمي</span>
-                </div>
-              </th>
-              <th class="py-3.5 px-5 font-bold text-center w-28">
-                الإجراءات
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#B4AED8] dark:divide-white/[0.12] font-medium text-bx-text">
-            <tr
-              v-for="(cls, idx) in classes"
-              :key="cls.id"
-              class="hover:bg-purple-500/[0.05] dark:hover:bg-white/[0.03] transition-colors duration-150 group"
-            >
-              <td class="py-3.5 px-5">
-                <span class="w-7 h-7 rounded-xl bg-purple-500/10 border border-[#B4AED8]/60 dark:border-white/10 flex items-center justify-center font-mono font-black text-[11px] text-bx-muted group-hover:text-bx-primary group-hover:border-bx-primary/30 transition-colors">
-                  {{ idx + 1 }}
-                </span>
-              </td>
-              <td class="py-3.5 px-5">
-                <div>
-                  <span class="font-black text-bx-title text-sm block leading-tight">{{ cls.name }}</span>
-                  <span class="text-[10px] text-bx-muted font-mono">CLS-{{ String(cls.id).padStart(3, '0') }}#</span>
-                </div>
-              </td>
-              <td class="py-3.5 px-5">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10 shadow-xs">
-                  <GraduationCap class="w-3.5 h-3.5 shrink-0" />
-                  <span>{{ cls.stage_name || 'غير محدد' }}</span>
-                </span>
-              </td>
-              <td class="py-3.5 px-5 text-center">
-                <span class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-mono font-black border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 shadow-xs">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                  <span>المستوى {{ cls.grade_level }}</span>
-                </span>
-              </td>
-              <td class="py-3.5 px-5">
-                <div class="flex items-center justify-center gap-2">
-                  <button
-                    @click="openEditDrawer(cls)"
-                    title="تعديل الصف في القائمة الجانبية (Drawer)"
-                    class="w-8 h-8 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                  >
-                    <Edit2 class="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    @click="confirmDelete(cls)"
-                    title="حذف الصف"
-                    class="w-8 h-8 rounded-full border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                  >
-                    <Trash2 class="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <template #cell-name="{ item }">
+        <div>
+          <span class="font-black text-bx-title text-sm block leading-tight">{{ item.name }}</span>
+          <span class="text-[10px] text-bx-muted font-mono">CLS-{{ String(item.id).padStart(3, '0') }}#</span>
+        </div>
+      </template>
 
-      <!-- Table Bottom Stats Bar (Non-paginated full catalogue) -->
-      <div class="px-5 py-3.5 border-t border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] flex items-center justify-between text-xs text-bx-muted font-bold">
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
-          <span>إجمالي الصفوف الدراسية: <strong class="text-bx-title font-black">{{ classes.length }}</strong></span>
+      <template #cell-stage_name="{ item }">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10 shadow-xs">
+          <GraduationCap class="w-3.5 h-3.5 shrink-0" />
+          <span>{{ item.stage_name || 'غير محدد' }}</span>
+        </span>
+      </template>
+
+      <template #cell-grade_level="{ item }">
+        <span class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-mono font-black border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 shadow-xs">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+          <span>المستوى {{ item.grade_level }}</span>
+        </span>
+      </template>
+
+      <template #cell-actions="{ item }">
+        <div class="flex items-center justify-center gap-2">
+          <button
+            @click="openEditDrawer(item)"
+            title="تعديل بيانات الصف"
+            class="w-8 h-8 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] text-bx-muted hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+          >
+            <Edit2 class="w-3.5 h-3.5" />
+          </button>
+          <button
+            @click="confirmDelete(item)"
+            title="حذف الصف"
+            class="w-8 h-8 rounded-full border border-red-300 dark:border-red-500/40 bg-red-100/70 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+          >
+            <Trash2 class="w-3.5 h-3.5" />
+          </button>
         </div>
-        <div class="text-[11px] text-bx-muted">
-          الصفوف الدراسية المعتمدة (عرض كامل بدون تجزئة صفحات)
-        </div>
-      </div>
-    </div>
+      </template>
+    </TaqniyaTable>
+
+    <!-- Standardized Taqniya Pagination Component -->
+    <TaqniyaPagination
+      v-if="totalRecords > 0"
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      :total-items="totalRecords"
+      :per-page="perPage"
+      @update:page="handlePageChange"
+      @update:per-page="handlePerPageChange"
+    />
 
     <!-- Create/Edit Side Drawer (Taqniya Spatial Drawer) -->
     <TaqniyaDrawer
       :is-open="showDrawer"
       :title="drawerMode === 'create' ? 'إضافة صف دراسي جديد' : 'تعديل بيانات الصف الدراسي'"
-      :subtitle="drawerMode === 'create' ? 'تسكين الصف في المرحلة التعليمية وضبط المستوى الرقمي' : `تحديث بيانات (${activeClassToEdit?.name})`"
-      :icon="Layers"
+      :description="drawerMode === 'create' ? 'تسكين صف دراسي جديد وتحديد مرحلته التعليمية ومستواه الأكاديمي' : 'تحديث مسمى الصف أو مرحلته التعليمية أو مستواه'"
       @close="showDrawer = false"
     >
-      <form id="classDrawerForm" @submit.prevent="handleSubmit" class="space-y-5">
-        <!-- Stage Selection Matrix (Taqniya Selection Matrix - Section 4) -->
-        <div class="space-y-2.5">
-          <div class="flex items-center justify-between text-bx-title">
-            <div class="flex items-center gap-2">
-              <GraduationCap class="w-4 h-4 text-bx-primary shrink-0" />
-              <label class="text-xs font-bold">
-                المرحلة التعليمية التابع لها <span class="text-rose-500">*</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Interactive Selection Cards -->
-          <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
-            <div
-              v-for="stg in stages"
-              :key="stg.id"
-              @click="form.stage_id = stg.id"
-              class="p-3.5 rounded-2xl border transition-all flex items-center justify-between select-none cursor-pointer"
-              :class="[
-                form.stage_id === stg.id
-                  ? 'border-bx-primary bg-purple-500/[0.06] dark:bg-purple-500/10 shadow-xs'
-                  : 'border-[#B4AED8]/60 dark:border-white/10 hover:border-bx-primary/50 bg-[var(--bx-surface-solid)]'
-              ]"
-            >
-              <div class="flex items-center gap-3">
-                <input
-                  type="radio"
-                  name="classStageRadio"
-                  :checked="form.stage_id === stg.id"
-                  @click.stop="form.stage_id = stg.id"
-                  class="bx-custom-radio shrink-0 !m-0 cursor-pointer"
-                />
-                <div>
-                  <span class="text-xs font-bold text-bx-title block leading-tight">{{ stg.name }}</span>
-                  <span class="text-[10px] font-mono text-bx-muted">المرحلة رقم #{{ stg.id }} &bull; الترتيب: {{ stg.order_index }}</span>
-                </div>
-              </div>
-
-              <!-- Status Badge -->
-              <div>
-                <span
-                  v-if="form.stage_id === stg.id"
-                  class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-purple-500/30 text-bx-primary bg-purple-500/10"
-                >
-                  المرحلة المحددة
-                </span>
-                <span
-                  v-else
-                  class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#B4AED8]/40 dark:border-white/10 text-bx-muted bg-transparent"
-                >
-                  اختيار
-                </span>
-              </div>
-            </div>
-          </div>
-          <p class="text-[11px] text-bx-muted">المرحلة الأم الحاضنة للصف (الروضة، الابتدائي، الإعدادي، الثانوي).</p>
+      <form @submit.prevent="handleSubmit" class="space-y-4">
+        <!-- Stage Selection -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-bx-title flex items-center gap-1.5">
+            <GraduationCap class="w-3.5 h-3.5 text-bx-primary" />
+            <span>المرحلة التعليمية التابع لها <span class="text-red-500">*</span></span>
+          </label>
+          <select
+            v-model="form.stage_id"
+            required
+            class="w-full px-3.5 h-[42px] bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary font-bold"
+          >
+            <option :value="0" disabled>-- اختر المرحلة التعليمية --</option>
+            <option v-for="s in stages" :key="s.id" :value="s.id">
+              {{ s.name }} (الترتيب: {{ s.order_index }})
+            </option>
+          </select>
         </div>
 
         <!-- Class Name -->
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold text-bx-title">
-            اسم الصف الدراسي <span class="text-rose-500">*</span>
+          <label class="text-xs font-bold text-bx-title flex items-center gap-1.5">
+            <Layers class="w-3.5 h-3.5 text-bx-primary" />
+            <span>اسم الصف الدراسي <span class="text-red-500">*</span></span>
           </label>
           <input
             v-model="form.name"
             type="text"
             required
             placeholder="مثال: الصف الخامس الابتدائي"
-            class="w-full h-[42px] px-4 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text placeholder:text-bx-muted focus:outline-hidden focus:border-bx-primary transition-all font-bold"
+            class="w-full px-3.5 h-[42px] bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary font-bold"
           />
         </div>
 
-        <!-- Grade Level -->
+        <!-- Grade Level (Academic Progression Level) -->
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold text-bx-title">
-            المستوى الرقمي الأكاديمي (Grade Level) <span class="text-rose-500">*</span>
+          <label class="text-xs font-bold text-bx-title flex items-center gap-1.5">
+            <Hash class="w-3.5 h-3.5 text-emerald-600" />
+            <span>المستوى الأكاديمي الرقمي (1 إلى 12) <span class="text-red-500">*</span></span>
           </label>
-          <div class="relative">
-            <Hash class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-bx-muted pointer-events-none" />
-            <input
-              v-model.number="form.grade_level"
-              type="number"
-              min="1"
-              max="12"
-              required
-              placeholder="1 - 12"
-              class="w-full h-[42px] pr-10 pl-4 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary transition-all font-mono font-bold"
-            />
-          </div>
-        </div>
-      </form>
-
-      <template #footer>
-        <button
-          type="button"
-          @click="showDrawer = false"
-          class="bx-btn bx-btn-outline h-[42px] px-6 text-xs font-bold rounded-2xl cursor-pointer"
-        >
-          إلغاء
-        </button>
-        <button
-          type="submit"
-          form="classDrawerForm"
-          :disabled="isSubmitting"
-          class="bx-btn bx-btn-primary h-[42px] px-6 text-xs font-bold rounded-2xl cursor-pointer disabled:opacity-50"
-        >
-          <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
-          <span>{{ drawerMode === 'create' ? 'حفظ الصف الدراسي' : 'تحديث البيانات' }}</span>
-        </button>
-      </template>
-    </TaqniyaDrawer>
-
-    <!-- Delete Confirmation Modal (Taqniya Dialog) -->
-    <div
-      v-if="showDeleteModal && classToDelete"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
-    >
-      <div class="bg-[var(--bx-surface-solid)] w-full max-w-md rounded-3xl border border-[#B4AED8] dark:border-white/[0.12] shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-        <div class="flex items-center gap-3 text-rose-500">
-          <div class="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center">
-            <AlertCircle class="w-5 h-5" />
-          </div>
-          <div>
-            <h3 class="text-sm font-black text-bx-title">تأكيد حذف الصف الدراسي</h3>
-            <p class="text-[11px] text-bx-muted">حماية العلاقات الصفية (RESTRICT)</p>
-          </div>
+          <input
+            v-model.number="form.grade_level"
+            type="number"
+            min="1"
+            max="12"
+            required
+            placeholder="مثال: 5"
+            class="w-full px-3.5 h-[42px] bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary font-bold font-mono"
+          />
+          <p class="text-[11px] text-bx-muted leading-relaxed">
+            * المستوى الرقمي يحدد الترتيب التصاعدي للصفوف وترحيل الطلاب بنهاية العام.
+          </p>
         </div>
 
-        <p class="text-xs text-bx-text leading-relaxed">
-          هل تريد حذف الصف الدراسي <strong class="text-bx-title font-black">{{ classToDelete.name }}</strong>؟
-          سيتم رفض العملية فوراً في حال وجود فصول تقويم أو شُعب أو مقررات مسندة لهذا الصف.
-        </p>
-
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#B4AED8] dark:border-white/[0.12]">
+        <!-- Drawer Submit Buttons -->
+        <div class="pt-4 flex items-center justify-end gap-3 border-t border-[#B4AED8]/40 dark:border-white/10">
           <button
-            @click="showDeleteModal = false"
-            class="bx-btn bx-btn-outline h-[38px] px-5 text-xs font-bold rounded-xl cursor-pointer"
+            type="button"
+            @click="showDrawer = false"
+            class="bx-btn h-[40px] px-4 text-xs font-bold rounded-xl border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-text"
           >
             إلغاء
           </button>
           <button
-            @click="handleDelete"
-            :disabled="isDeleting"
-            class="bx-btn bx-btn-danger h-[38px] px-5 text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
+            type="submit"
+            :disabled="isSubmitting"
+            class="bx-btn bx-btn-primary h-[40px] px-6 text-xs font-bold rounded-xl"
           >
-            <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
-            <span>حذف نهائي</span>
+            <span v-if="isSubmitting">جاري الحفظ...</span>
+            <span v-else>{{ drawerMode === 'create' ? 'إنشاء الصف' : 'حفظ التعديلات' }}</span>
           </button>
         </div>
+      </form>
+    </TaqniyaDrawer>
+
+    <!-- Delete Confirmation Modal (Taqniya Standard Modal) -->
+    <TaqniyaModal
+      :is-open="showDeleteModal"
+      title="تأكيد حذف الصف الدراسي"
+      max-width="md"
+      @close="showDeleteModal = false"
+    >
+      <div class="space-y-4 text-start">
+        <div class="flex items-start gap-3 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400">
+          <AlertCircle class="w-5 h-5 shrink-0 mt-0.5" />
+          <div class="text-xs space-y-1">
+            <span class="font-bold block">تحذير حوكمي بشأن الحذف:</span>
+            <span class="leading-relaxed block text-bx-muted">
+              هل أنت متأكد من حذف الصف الدراسي (<strong>{{ classToDelete?.name }}</strong>)؟ سيتم تنفيذ الحذف المنطقي بشرط عدم ارتباطه بشُعب أو فترات أو مقررات مسندة.
+            </span>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <template #footer>
+        <div class="flex items-center justify-end gap-3 w-full">
+          <button
+            type="button"
+            @click="showDeleteModal = false"
+            class="bx-btn h-[38px] px-4 text-xs font-bold rounded-xl border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted hover:text-bx-text"
+          >
+            إلغاء
+          </button>
+          <button
+            type="button"
+            @click="handleDelete"
+            :disabled="isDeleting"
+            class="bx-btn bg-red-600 hover:bg-red-700 text-white h-[38px] px-5 text-xs font-bold rounded-xl shadow-xs"
+          >
+            <span v-if="isDeleting">جاري الحذف...</span>
+            <span v-else>تأكيد الحذف</span>
+          </button>
+        </div>
+      </template>
+    </TaqniyaModal>
   </div>
 </template>

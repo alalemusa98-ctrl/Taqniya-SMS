@@ -41,23 +41,27 @@ export class SectionsService {
       };
     }
 
+    const orderByField = query.sort_by === 'id' ? 'id' : 'name';
+    const orderByDirection = query.sort_order === 'desc' ? 'desc' : 'asc';
+
     const [total, sections] = await Promise.all([
       this.prisma.section.count({ where }),
       this.prisma.section.findMany({
         where,
         skip,
         take: perPage,
-        orderBy: { name: 'asc' },
+        orderBy: { [orderByField]: orderByDirection },
       }),
     ]);
 
     return {
       success: true,
+      message: total > 0 ? 'تم جلب بنك الشعب العامة بنجاح.' : 'لا توجد شعب عامة مسجلة.',
       data: sections.map((s) => this.serializeSection(s)),
       meta: {
-        total,
-        page,
+        current_page: page,
         per_page: perPage,
+        total,
         last_page: Math.ceil(total / perPage) || 1,
       },
     };
@@ -71,7 +75,7 @@ export class SectionsService {
     if (!section || section.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'الشعبة الدراسية غير موجودة.',
+        message: 'الشعبة العامة غير موجودة.',
       });
     }
 
@@ -196,7 +200,7 @@ export class SectionsService {
     if (!section || section.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'الشعبة الدراسية غير موجودة.',
+        message: 'الشعبة العامة غير موجودة.',
       });
     }
 

@@ -25,7 +25,7 @@ Your responsibility is:
 Target folder:
 
 ```text
-[phase_02_academic_structure_a]
+[phase_02_academic_structure_b]
 ```
 
 

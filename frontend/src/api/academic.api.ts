@@ -88,6 +88,8 @@ export interface QueryClassesParams {
 
 export interface QuerySectionsParams {
   search?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
   page?: number;
   per_page?: number;
 }
@@ -95,6 +97,8 @@ export interface QuerySectionsParams {
 export interface QuerySubjectsParams {
   search?: string;
   code?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
   page?: number;
   per_page?: number;
 }

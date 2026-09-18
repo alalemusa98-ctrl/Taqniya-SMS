@@ -73,11 +73,12 @@ export class ClassesService {
 
     return {
       success: true,
+      message: total > 0 ? 'تم جلب قائمة الصفوف الدراسية بنجاح.' : 'لا توجد صفوف دراسية مسجلة.',
       data: classes.map((c) => this.serializeClass(c)),
       meta: {
-        total,
-        page,
+        current_page: page,
         per_page: perPage,
+        total,
         last_page: Math.ceil(total / perPage) || 1,
       },
     };
@@ -171,7 +172,7 @@ export class ClassesService {
 
     return {
       success: true,
-      message: 'تم إنشاء الصف الدراسي بنجاح.',
+      message: 'تم إنشاء الصف الدراسي وتسكينه بالمرحلة بنجاح.',
       data: this.serializeClass(created),
     };
   }
@@ -268,7 +269,7 @@ export class ClassesService {
 
     return {
       success: true,
-      message: 'تم تحديث بيانات الصف الدراسي بنجاح.',
+      message: 'تم تحديث الصف الدراسي بنجاح.',
       data: this.serializeClass(updated),
     };
   }
