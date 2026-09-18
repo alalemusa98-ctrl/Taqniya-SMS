@@ -112,6 +112,9 @@ const academicGroup: NavDropdownItem[] = [
     description: 'إدارة وتوزيع الحصص المدرسية، مصفوفة الشعب، وتدقيق الشواغر',
     icon: Calendar,
   },
+];
+
+const assessmentsGroup: NavDropdownItem[] = [
   {
     label: 'الواجبات المدرسية',
     to: '/homework',
@@ -237,7 +240,18 @@ onUnmounted(() => {
               @close="closeAllDropdowns"
             />
 
-            <!-- 3. System & Governance -->
+            <!-- 3. Homework & Assessments / Exams -->
+            <HeaderNavDropdown
+              id="assessments"
+              title="الواجبات والامتحانات"
+              :icon="CalendarCheck"
+              :items="assessmentsGroup"
+              :is-open="activeDropdown === 'assessments'"
+              @toggle="handleToggleDropdown('assessments')"
+              @close="closeAllDropdowns"
+            />
+
+            <!-- 4. System & Governance -->
             <HeaderNavDropdown
               id="system"
               title="إدارة النظام والأمان"
@@ -330,7 +344,36 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Group 3 -->
+        <!-- Group 3: Homework & Assessments / Exams -->
+        <div class="pt-2 border-t border-[#B4AED8]/40 dark:border-white/10">
+          <div class="text-[11px] font-black text-bx-primary flex items-center gap-1.5 mb-2 px-2">
+            <CalendarCheck class="w-3.5 h-3.5" />
+            <span>الواجبات والامتحانات</span>
+          </div>
+          <div class="grid grid-cols-1 gap-1.5">
+            <RouterLink
+              v-for="item in assessmentsGroup"
+              :key="item.to"
+              :to="item.to"
+              @click="isMobileMenuOpen = false"
+              active-class="!bg-bx-primary !text-white font-black shadow-sm"
+              class="flex items-center gap-3 p-2.5 rounded-2xl text-xs font-bold text-bx-title hover:bg-[var(--bx-pill)] transition-all"
+            >
+              <div
+                class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border border-purple-500/20 bg-purple-500/10 text-bx-primary dark:border-white/10 dark:text-purple-300"
+                style="border-radius: 50% !important;"
+              >
+                <component :is="item.icon" class="w-4 h-4 stroke-[2.2]" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-bold leading-tight">{{ item.label }}</div>
+                <div class="text-[10px] text-bx-muted font-normal mt-0.5 truncate">{{ item.description }}</div>
+              </div>
+            </RouterLink>
+          </div>
+        </div>
+
+        <!-- Group 4 -->
         <div class="pt-2 border-t border-[#B4AED8]/40 dark:border-white/10">
           <div class="text-[11px] font-black text-bx-primary flex items-center gap-1.5 mb-2 px-2">
             <ShieldCheck class="w-3.5 h-3.5" />
