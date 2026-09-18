@@ -1,0 +1,26 @@
+$kind: http-request
+name: 1.5 إغلاق أو فتح درجات الفترة للصف (Toggle Close Class Academic Term)
+description: |-
+  تبديل حالة إغلاق درجات الفترة للصف (is_closed: 1 / 0) للأرشفة ومنع التعديل على درجات المواد.
+url: "{{baseUrl}}/academic/class-academic-terms/{{testClassTermId}}/close"
+method: POST
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 OK - تم تغيير حالة إغلاق الفترة بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response contains updated is_closed state", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data.is_closed).to.be.oneOf([0, 1]);
+      });
+    language: text/javascript
+order: 5000

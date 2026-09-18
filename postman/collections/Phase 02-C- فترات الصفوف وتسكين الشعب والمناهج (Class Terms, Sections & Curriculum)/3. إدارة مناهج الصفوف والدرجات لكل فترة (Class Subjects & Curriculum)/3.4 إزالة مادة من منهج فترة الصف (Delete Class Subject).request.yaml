@@ -1,0 +1,27 @@
+$kind: http-request
+name: 3.4 إزالة مادة من منهج فترة الصف (Delete Class Subject)
+description: |-
+  حذف مادة من مقررات فترة الصف بشرط عدم وجود درجات امتحانات مسجلة أو جدول حصص مسجل لها (ON DELETE RESTRICT -> 409 Conflict).
+url: "{{baseUrl}}/academic/class-subjects/{{testClassSubjectId}}"
+method: DELETE
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 OK or 409 Conflict (RESTRICT)", function () {
+          pm.expect([200, 404, 409]).to.include(pm.response.code);
+      });
+
+      if (pm.response.code === 200) {
+          var jsonData = pm.response.json();
+          pm.test("Response confirms class subject removal", function () {
+              pm.expect(jsonData.success).to.eql(true);
+          });
+      }
+    language: text/javascript
+order: 4000

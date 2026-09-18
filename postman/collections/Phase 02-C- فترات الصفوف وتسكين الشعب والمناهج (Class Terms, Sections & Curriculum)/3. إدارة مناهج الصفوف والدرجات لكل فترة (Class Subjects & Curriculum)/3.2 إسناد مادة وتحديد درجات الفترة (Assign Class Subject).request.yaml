@@ -1,0 +1,41 @@
+$kind: http-request
+name: 3.2 إسناد مادة وتحديد درجات الفترة (Assign Class Subject)
+description: |-
+  إضافة مادة لمنهج فترة محددة بالصف وتعيين درجة النجاح والدرجة العظمى مع التحقق من قيد النزاهة (passing_score <= max_score) وتفرد المادة بالفترة (uq_class_term_subject).
+url: "{{baseUrl}}/academic/class-subjects"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "class_academic_term_id": {{testClassTermId}},
+      "subject_id": 1,
+      "passing_score": 50.00,
+      "max_score": 100.00
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201 Created or 409 Conflict", function () {
+          pm.expect([201, 409]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 201) {
+          pm.test("Response contains assigned subject details with scores", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+              pm.expect(jsonData.data.passing_score).to.eql("50.00");
+              pm.expect(jsonData.data.max_score).to.eql("100.00");
+          });
+          pm.environment.set("testClassSubjectId", jsonData.data.id);
+      }
+    language: text/javascript
+order: 2000

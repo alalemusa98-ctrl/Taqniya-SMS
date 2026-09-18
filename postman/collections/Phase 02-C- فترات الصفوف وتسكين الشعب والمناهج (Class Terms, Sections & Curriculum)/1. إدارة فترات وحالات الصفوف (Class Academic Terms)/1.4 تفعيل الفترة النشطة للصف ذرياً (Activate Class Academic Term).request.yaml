@@ -1,0 +1,26 @@
+$kind: http-request
+name: 1.4 تفعيل الفترة النشطة للصف ذرياً (Activate Class Academic Term)
+description: |-
+  تحويل الفترة المستهدفة إلى الفترة النشطة الحصرية للصف (is_active = 1) وإلغاء تفعيل بقية فترات نفس الصف ذرياً داخل Atomic Transaction.
+url: "{{baseUrl}}/academic/class-academic-terms/{{testClassTermId}}/activate"
+method: POST
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 OK - تم تفعيل الفترة النشطة بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response indicates is_active is 1", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data.is_active).to.eql(1);
+      });
+    language: text/javascript
+order: 4000

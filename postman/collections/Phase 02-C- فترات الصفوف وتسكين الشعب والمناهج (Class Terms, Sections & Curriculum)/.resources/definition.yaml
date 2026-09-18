@@ -1,0 +1,16 @@
+$kind: collection
+name: "Phase 02-C: فترات الصفوف وتسكين الشعب والمناهج (Class Terms, Sections & Curriculum)"
+description: |-
+  توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 02-C (13 مساراً) وفق العقد المعماري الرسمي `MD/phases/phase_02_academic_structure_c/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).
+
+  المجموعات المشمولة:
+  0. المصادقة وإعداد الجلسة (Authentication & Setup)
+  1. إدارة فترات وحالات الصفوف (Class Academic Terms)
+  2. إدارة ربط وتسكين الشعب بالصفوف (Class Sections)
+  3. إدارة مناهج الصفوف والدرجات لكل فترة (Class Subjects & Curriculum)
+auth:
+  - id: 7c89ef12-321a-4d45-987b-fc12e4567890
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{authToken}}"

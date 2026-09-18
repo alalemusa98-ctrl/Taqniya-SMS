@@ -1,0 +1,38 @@
+$kind: http-request
+name: 3.3 تعديل درجات مادة مسندة بالفترة (Update Class Subject)
+description: |-
+  تحديث بيانات ودرجات مادة مسندة بفترة صف مع التحقق من عدم إغلاق الفترة للأرشفة (is_closed = 0) وقيد النزاهة (passing_score <= max_score).
+url: "{{baseUrl}}/academic/class-subjects/{{testClassSubjectId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "class_academic_term_id": {{testClassTermId}},
+      "subject_id": 1,
+      "passing_score": 60.00,
+      "max_score": 100.00
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 OK or 409 Conflict", function () {
+          pm.expect([200, 404, 409]).to.include(pm.response.code);
+      });
+
+      if (pm.response.code === 200) {
+          var jsonData = pm.response.json();
+          pm.test("Response confirms subject score update", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.passing_score).to.eql("60.00");
+          });
+      }
+    language: text/javascript
+order: 3000

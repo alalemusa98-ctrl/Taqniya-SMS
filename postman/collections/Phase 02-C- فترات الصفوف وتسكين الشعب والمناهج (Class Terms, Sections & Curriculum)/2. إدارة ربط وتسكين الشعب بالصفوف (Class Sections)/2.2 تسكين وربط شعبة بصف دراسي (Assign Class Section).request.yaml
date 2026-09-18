@@ -1,0 +1,38 @@
+$kind: http-request
+name: 2.2 تسكين وربط شعبة بصف دراسي (Assign Class Section)
+description: |-
+  فتح وتسكين شعبة عامة لصف دراسي محدد مع التحقق من عدم التكرار (uq_class_sections).
+url: "{{baseUrl}}/academic/class-sections"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "class_id": {{testClassId}},
+      "section_id": 1
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201 Created or 409 Conflict", function () {
+          pm.expect([201, 409]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 201) {
+          pm.test("Response contains assigned class section details", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+              pm.expect(jsonData.data.class_id).to.eql(Number(pm.environment.get("testClassId")));
+          });
+          pm.environment.set("testClassSectionId", jsonData.data.id);
+      }
+    language: text/javascript
+order: 2000

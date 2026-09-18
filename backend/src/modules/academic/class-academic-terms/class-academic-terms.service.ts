@@ -495,7 +495,7 @@ export class ClassAcademicTermsService {
 
     return {
       success: true,
-      message: 'تم فك ارتباط الفترة بالصف الدراسي بنجاح.',
+      message: 'تم فك ربط الفترة من الصف بنجاح.',
     };
   }
 }

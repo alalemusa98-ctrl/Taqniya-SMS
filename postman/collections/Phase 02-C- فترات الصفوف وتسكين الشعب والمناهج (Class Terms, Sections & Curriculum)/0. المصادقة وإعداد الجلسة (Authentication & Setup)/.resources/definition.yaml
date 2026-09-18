@@ -1,0 +1,4 @@
+$kind: collection
+name: 0. المصادقة وإعداد الجلسة (Authentication & Setup)
+description: تهيئة الجلسة وتسجيل دخول مدير النظام لاستخراج التوكن وحفظه في متغير البيئة `authToken`.
+order: 1000

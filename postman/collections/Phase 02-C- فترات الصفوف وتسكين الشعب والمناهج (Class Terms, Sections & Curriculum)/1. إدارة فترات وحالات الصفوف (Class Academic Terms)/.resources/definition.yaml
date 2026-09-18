@@ -1,0 +1,4 @@
+$kind: collection
+name: 1. إدارة فترات وحالات الصفوف (Class Academic Terms)
+description: مسارات إدارة وتخصيص الفترات الدراسية للصفوف، تفعيل الفترة النشطة ذرياً (Atomic Activation)، وإغلاق/فتح درجات الفترات للأرشفة وفك الربط.
+order: 2000

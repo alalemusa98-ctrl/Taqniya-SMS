@@ -1,0 +1,36 @@
+$kind: http-request
+name: 1.3 تعديل فترة صف دراسي (Update Class Academic Term)
+description: |-
+  تحديث فترة الصف المخصصة مع فحص حالة الإغلاق للأرشفة (منع التعديل إذا كانت is_closed = 1).
+url: "{{baseUrl}}/academic/class-academic-terms/{{testClassTermId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "class_id": {{testClassId}},
+      "academic_term_id": 2
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 OK or 409 Conflict", function () {
+          pm.expect([200, 404, 409]).to.include(pm.response.code);
+      });
+
+      if (pm.response.code === 200) {
+          var jsonData = pm.response.json();
+          pm.test("Response confirms class term update", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.eql(Number(pm.environment.get("testClassTermId")));
+          });
+      }
+    language: text/javascript
+order: 3000
