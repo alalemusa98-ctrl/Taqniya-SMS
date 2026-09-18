@@ -352,6 +352,42 @@ const flatExamRows = computed<EnrichedOfficialExamRow[]>(() => {
   return rows;
 });
 
+// Printable Classes Boards dynamically derived from filtered hierarchicalClasses
+const printableBoards = computed(() => {
+  if (isStudentOrParent.value && classBoardData.value) {
+    return [classBoardData.value];
+  }
+
+  return hierarchicalClasses.value.map((cls) => {
+    const classTermsList = Array.isArray(allClassAcademicTerms.value)
+      ? allClassAcademicTerms.value
+      : (allClassAcademicTerms.value as any)?.classes || [];
+    const classGroup = classTermsList.find((g: any) => Number(g.class_id) === cls.class_id);
+    let termName = '';
+    if (appliedTermFilter.value !== 'all') {
+      const selectedTerm = academicTerms.value.find((t) => Number(t.id) === Number(appliedTermFilter.value));
+      if (selectedTerm) termName = selectedTerm.name;
+    } else if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
+      const activeT = classGroup.terms.find((t: any) => Number(t.is_active) === 1 || t.is_active === true) || classGroup.terms[0];
+      if (activeT) termName = activeT.term_name || `الفصل الدراسي ${activeT.academic_term_id}`;
+    }
+
+    return {
+      class_id: cls.class_id,
+      class_name: cls.class_name,
+      grade_level: cls.grade_level,
+      academic_year_name: activeAcademicYear.value?.name || '2025/2026',
+      academic_term_name: termName || (academicTerms.value[0]?.name ?? 'الفصل الدراسي الأول'),
+      exam_types: cls.exam_types,
+    };
+  });
+});
+
+const printDateFormatted = computed(() => {
+  const d = new Date();
+  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+});
+
 async function loadInitialContext() {
   try {
     const [yearsRes, termsRes, classesRes, subjectsRes, classSubjectsRes, classTermsRes] = await Promise.all([
@@ -1103,84 +1139,149 @@ onMounted(async () => {
 
         <!-- View 2: Student / Parent & Printable Timetable Board -->
         <div v-else-if="isStudentOrParent || activeViewTab === 'class_board'" class="space-y-6">
-          <div v-if="!classBoardData && !loading" class="text-center py-12 bg-purple-500/[0.02] rounded-3xl border border-[#B4AED8] dark:border-white/10">
-            <School class="w-10 h-10 mx-auto text-bx-primary/40 mb-2" />
-            <p class="text-xs font-bold text-bx-title">يرجى اختيار صف دراسي لعرض الروزنامة المعتمدة</p>
+          <div v-if="printableBoards.length === 0 && !loading" class="text-center py-16 bg-purple-500/[0.02] rounded-3xl border border-dashed border-[#B4AED8] dark:border-white/10">
+            <School class="w-12 h-12 mx-auto text-bx-primary/40 mb-3" />
+            <h3 class="text-base font-bold text-bx-title">لا توجد روزنامة امتحانات مطابقة للفلاتر الحالية</h3>
+            <p class="text-xs text-bx-muted mt-1 max-w-sm mx-auto">
+              يرجى اختيار صف دراسي أو ضبط محددات البحث لعرض جدول الامتحانات المعتمد.
+            </p>
           </div>
 
           <div
-            v-else-if="classBoardData"
-            class="p-6 rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] shadow-sm space-y-6 print:border-none print:shadow-none print:p-0"
+            v-for="board in printableBoards"
+            :key="board.class_id"
+            class="p-6 sm:p-8 rounded-3xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] shadow-sm space-y-6 print:border-none print:shadow-none print:p-0 print:m-0 print:bg-transparent page-break-after"
           >
-            <!-- Printable Board Header -->
-            <div class="text-center space-y-1 pb-4 border-b border-[#B4AED8]/60 dark:border-white/10">
-              <div class="flex items-center justify-center gap-2 text-bx-primary font-bold text-lg font-display">
-                <School class="w-6 h-6" />
-                <span>نظام إدارة المدارس الذكي — جدول الامتحانات الرسمية المعتمد</span>
+            <!-- 1. Official Printable Document Header -->
+            <div class="space-y-3 pb-5 border-b-2 border-[#B4AED8]/70 dark:border-white/15">
+              <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-start">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-2xl bg-purple-500/10 dark:bg-white/[0.05] border border-purple-500/20 flex items-center justify-center shrink-0">
+                    <School class="w-6 h-6 text-bx-primary" />
+                  </div>
+                  <div>
+                    <h3 class="text-base sm:text-lg font-black font-display text-bx-title">
+                      نظام إدارة المدارس الذكي — Taqniya-SMS
+                    </h3>
+                    <p class="text-[11px] font-bold text-bx-muted">
+                      إدارة الامتحانات والتقويم التربوي المعتمد
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Document Stamp Meta Badge -->
+                <div class="text-center sm:text-end space-y-0.5">
+                  <span class="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
+                    وثيقة رسمية معتمدة
+                  </span>
+                  <p class="text-[10px] text-bx-muted font-mono font-medium">
+                    تاريخ الإصدار: {{ printDateFormatted }}
+                  </p>
+                </div>
               </div>
-              <p class="text-xs font-bold text-bx-title">
-                {{ classBoardData.class_name }} — {{ classBoardData.academic_term_name || 'الفصل الدراسي الأول' }} ({{ classBoardData.academic_year_name || '2025/2026' }})
-              </p>
+
+              <!-- Document Title & Academic Info Strip -->
+              <div class="p-3.5 rounded-2xl bg-purple-500/[0.04] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/10 flex flex-wrap items-center justify-around gap-2 text-xs font-bold text-bx-title">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-bx-muted">الصف الدراسي:</span>
+                  <span class="text-bx-primary font-black">{{ board.class_name }}</span>
+                </div>
+                <div class="text-bx-muted hidden sm:inline">•</div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-bx-muted">الفصل الدراسي:</span>
+                  <span>{{ board.academic_term_name }}</span>
+                </div>
+                <div class="text-bx-muted hidden sm:inline">•</div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-bx-muted">العام الدراسي:</span>
+                  <span class="font-mono">{{ board.academic_year_name }}</span>
+                </div>
+              </div>
             </div>
 
-            <!-- Groups by Exam Type -->
+            <!-- 2. Exam Groups by Type (Midterm, Final, Second Round) -->
             <div
-              v-for="group in classBoardData.exam_types"
+              v-for="group in board.exam_types"
               :key="group.exam_type"
-              class="space-y-4"
+              class="space-y-3"
             >
-              <div class="flex items-center gap-2">
+              <div class="flex items-center justify-between gap-2">
                 <span
-                  class="text-xs px-3.5 py-1 rounded-full border font-bold shadow-2xs"
+                  class="text-xs px-3.5 py-1 rounded-full border font-bold shadow-2xs inline-flex items-center gap-1.5"
                   :class="getExamTypeBadge(group.exam_type).class"
                 >
-                  {{ group.exam_type_ar }}
+                  <Layers class="w-3.5 h-3.5" />
+                  <span>{{ group.exam_type_ar }}</span>
+                </span>
+                <span class="text-[11px] font-bold text-bx-muted">
+                  إجمالي المواد: {{ group.exams?.length || group.subjects?.length || 0 }} مادة
                 </span>
               </div>
 
-              <!-- Printable Table -->
-              <div class="overflow-x-auto rounded-2xl border border-[#B4AED8]/60 dark:border-white/10">
-                <table class="w-full text-right text-xs font-sans">
-                  <thead class="bg-purple-500/5 dark:bg-white/[0.03] text-bx-title font-bold border-b border-[#B4AED8]/60 dark:border-white/10">
+              <!-- Official Clean Table (No Attachments Column, Exam Date before Day, Clean Subject) -->
+              <div class="overflow-x-auto rounded-2xl border border-[#B4AED8] dark:border-white/15 bg-[var(--bx-surface-solid)]">
+                <table class="w-full text-start border-collapse text-xs font-sans">
+                  <thead class="bg-[var(--bx-table-header)] text-bx-title font-bold border-b border-[#B4AED8]/70 dark:border-white/15">
                     <tr>
-                      <th class="p-3.5 w-12 text-center">#</th>
-                      <th class="p-3.5">اليوم والتاريخ</th>
-                      <th class="p-3.5">المادة الدراسية</th>
-                      <th class="p-3.5">القاعة والتعليمات الإرشادية</th>
-                      <th class="p-3.5 w-32 text-center print:hidden">المرفقات</th>
+                      <th class="py-3 px-3.5 w-12 text-center border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
+                      <th class="py-3 px-4 text-center w-36 border-e border-[#B4AED8]/50 dark:border-white/10">تاريخ الامتحان</th>
+                      <th class="py-3 px-4 text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">اليوم</th>
+                      <th class="py-3 px-4 text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">المادة الدراسية</th>
+                      <th class="py-3 px-4 text-start min-w-[220px] last:border-e-0">القاعة والتعليمات الإرشادية</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-[#B4AED8]/40 dark:divide-white/[0.06] text-bx-title">
+                  <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10 text-bx-title">
                     <tr
-                      v-for="(exam, idx) in group.exams"
+                      v-for="(exam, idx) in (group.exams || group.subjects || [])"
                       :key="exam.id"
-                      class="hover:bg-purple-500/[0.02]"
+                      class="hover:bg-purple-500/[0.02] transition-colors"
                     >
-                      <td class="p-3.5 text-center font-bold text-bx-muted">{{ idx + 1 }}</td>
-                      <td class="p-3.5 font-bold text-bx-primary whitespace-nowrap">
-                        {{ exam.exam_day_name }} — {{ exam.exam_date }}
+                      <td class="py-3.5 px-3.5 text-center font-bold text-bx-muted font-mono border-e border-[#B4AED8]/50 dark:border-white/10">
+                        {{ idx + 1 }}
                       </td>
-                      <td class="p-3.5 font-black text-bx-title">
+                      <td class="py-3.5 px-4 text-center font-bold text-bx-primary font-mono whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                        <div class="flex items-center justify-center gap-1.5">
+                          <Calendar class="w-3.5 h-3.5 shrink-0 text-bx-primary/70" />
+                          <span>{{ exam.exam_date }}</span>
+                        </div>
+                      </td>
+                      <td class="py-3.5 px-4 text-center font-bold text-bx-title whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                        {{ exam.exam_day_name || '—' }}
+                      </td>
+                      <td class="py-3.5 px-4 font-black text-bx-title text-sm border-e border-[#B4AED8]/50 dark:border-white/10">
                         {{ exam.subject_name }}
                       </td>
-                      <td class="p-3.5 text-bx-muted font-medium">
-                        {{ exam.notes || '—' }}
-                      </td>
-                      <td class="p-3.5 text-center print:hidden">
-                        <button
-                          v-if="exam.attachments && exam.attachments.length > 0"
-                          type="button"
-                          @click="openDetailsDrawer(exam)"
-                          class="px-3 py-1 rounded-full bg-purple-500/10 text-bx-primary border border-purple-500/20 text-xs font-bold hover:underline inline-flex items-center gap-1 shadow-2xs"
-                        >
-                          <Paperclip class="w-3.5 h-3.5" />
-                          <span>{{ exam.attachments.length }} مرفق</span>
-                        </button>
-                        <span v-else class="text-bx-muted text-xs">—</span>
+                      <td class="py-3.5 px-4 text-bx-muted font-medium last:border-e-0">
+                        {{ exam.notes || 'الالتزام بالحضور بالزي المدرسي مصطحباً الأدوات المقررة' }}
                       </td>
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            <!-- 3. Official Document Footer (Signatures & Guidelines) -->
+            <div class="pt-5 border-t border-[#B4AED8]/60 dark:border-white/10 space-y-4">
+              <div class="p-3 rounded-xl bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20 text-[11px] font-medium leading-relaxed">
+                <strong>تعليمات هامة للطلاب:</strong> يرجى التواجد في القاعة الامتحانية قبل بدء الاختبار بـ 15 دقيقة، ويُمنع منعاً باتاً إدخال أجهزة الهواتف الذكية أو المذكرات داخل لجان الامتحانات.
+              </div>
+
+              <!-- Signatures Row -->
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center pt-2 text-xs font-bold text-bx-title">
+                <div>
+                  <p class="text-bx-muted text-[11px] mb-6">رئيس لجنة الامتحانات</p>
+                  <p class="border-t border-dashed border-[#B4AED8] dark:border-white/20 pt-1">التوقيع: ....................</p>
+                </div>
+                <div>
+                  <p class="text-bx-muted text-[11px] mb-6">يعتمد: مدير المدرسة</p>
+                  <p class="border-t border-dashed border-[#B4AED8] dark:border-white/20 pt-1">الاسم والتوقيع: ....................</p>
+                </div>
+                <div class="col-span-2 sm:col-span-1">
+                  <p class="text-bx-muted text-[11px] mb-6">الختم الرسمي للمدرسة</p>
+                  <div class="w-16 h-16 mx-auto rounded-full border-2 border-dashed border-[#B4AED8] dark:border-white/20 flex items-center justify-center text-[10px] text-bx-muted/60">
+                    مكان الختم
+                  </div>
+                </div>
               </div>
             </div>
           </div>
