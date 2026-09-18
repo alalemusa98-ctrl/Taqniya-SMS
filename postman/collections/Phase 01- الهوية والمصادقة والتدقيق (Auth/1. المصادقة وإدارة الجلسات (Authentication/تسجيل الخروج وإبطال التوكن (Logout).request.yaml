@@ -1,0 +1,19 @@
+$kind: http-request
+description: إبطال جلسة العمل الحالية وحذف التوكن المستخدم من جدول التوكنات بقاعدة البيانات.
+url: "{{baseUrl}}/auth/logout"
+method: POST
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      if (pm.response.code === 200) {
+          pm.environment.set("authToken", "");
+          console.log("✅ تم تفريغ authToken من متغيرات البيئة بعد تسجيل الخروج بنجاح.");
+      }
+    language: text/javascript
+order: 3000

@@ -1,0 +1,15 @@
+$kind: http-request
+name: إعادة تعيين كلمة المرور إدارياً (Admin Reset Password)
+description: إعادة تعيين كلمة المرور لمستخدم بواسطة الإدارة. يقوم النظام تلقائياً بإلغاء كافة الجلسات السابقة للمستخدم لإجباره على الدخول بالكلمة الجديدة وتوثيق العملية في سجل التدقيق.
+url: "{{baseUrl}}/users/{{targetUserId}}/reset-password"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "new_password": "TempPass#2026!"
+    }
+order: 4000

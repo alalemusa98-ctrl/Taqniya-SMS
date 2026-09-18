@@ -1,0 +1,4 @@
+$kind: collection
+name: 2. إدارة حسابات المستخدمين (Users Management - Admin Only)
+description: مسارات إدارة ومراقبة حسابات المستخدمين بالكامل (خاص بمدير النظام Admin حصراً).
+order: 2000

@@ -1,0 +1,8 @@
+$kind: http-request
+name: استرجاع بيانات الملف الشخصي والجلسة النشطة (Get Profile / Me)
+description: استرجاع بيانات الحساب وصلاحيات المستخدم الحالي بناءً على التوكن الممرر في ترويسة الطلب.
+url: "{{baseUrl}}/auth/me"
+method: GET
+headers:
+  Accept: application/json
+order: 2000

@@ -1,0 +1,8 @@
+$kind: http-request
+name: عرض تفاصيل حساب مستخدم محدد (Get User By ID)
+description: استرجاع بيانات تفصيلية لحساب محدد بالمعرف الرقمي (ID).
+url: "{{baseUrl}}/users/{{targetUserId}}"
+method: GET
+headers:
+  Accept: application/json
+order: 2000

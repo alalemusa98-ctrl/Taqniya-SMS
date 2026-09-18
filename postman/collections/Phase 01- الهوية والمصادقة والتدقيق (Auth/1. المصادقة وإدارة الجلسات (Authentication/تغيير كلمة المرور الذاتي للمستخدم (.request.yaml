@@ -1,0 +1,17 @@
+$kind: http-request
+name: تغيير كلمة المرور الذاتي للمستخدم (Change Password)
+description: تغيير كلمة المرور الخاصة بالمستخدم المسجل حالياً، مع التحقق الإجباري من كلمة المرور السابقة وتطابق التأكيد.
+url: "{{baseUrl}}/auth/change-password"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "current_password": "SecretPassword@123",
+      "new_password": "NewSecretPassword@2026",
+      "new_password_confirmation": "NewSecretPassword@2026"
+    }
+order: 4000

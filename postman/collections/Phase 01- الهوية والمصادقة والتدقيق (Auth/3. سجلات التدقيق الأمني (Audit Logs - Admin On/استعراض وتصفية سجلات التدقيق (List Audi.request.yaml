@@ -1,0 +1,36 @@
+$kind: http-request
+name: استعراض وتصفية سجلات التدقيق (List Audit Logs)
+description: استرجاع قائمة سجلات التدقيق الأمني مع دعم التصفية المتقدمة حسب التاريخ، نوع الإجراء، الكيان المتأثر، والمستخدم المنفذ.
+url: "{{baseUrl}}/audit-logs?page=1&per_page=15&date_from=2026-01-01&date_to=2026-12-31&sort_by=created_at&sort_order=desc"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: page
+    value: "1"
+  - key: per_page
+    value: "15"
+  - key: action
+    value: login
+    disabled: true
+    description: "نوع الحركة: login, logout, password_change, user_activated, user_deactivated, admin_reset_password"
+  - key: entity_type
+    value: User
+    disabled: true
+    description: "الكيان المتأثر: User, AcademicYear, Grade, ClassSection, Homework, Attendance, Exam"
+  - key: user_id
+    value: "1"
+    disabled: true
+    description: معرف المستخدم المنفذ
+  - key: date_from
+    value: 2026-01-01
+    description: بداية النطاق الزمني (YYYY-MM-DD)
+  - key: date_to
+    value: 2026-12-31
+    description: نهاية النطاق الزمني (YYYY-MM-DD)
+  - key: sort_by
+    value: created_at
+    description: "الحقول المتاحة: id, created_at, action"
+  - key: sort_order
+    value: desc
+order: 1000

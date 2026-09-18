@@ -2,6 +2,12 @@
 workspace:
   id: 97077541-a9ee-4b5d-8a39-c416417da7bc
 
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/Phase 01- الهوية والمصادقة والتدقيق (Auth: a1b2c3d4-e5f6-47a8-b9c0-112233445566
+
 # All resources in the `postman/` folder are automatically registered in Local View.
 # Point to additional files outside the `postman/` folder to register them individually. Example:
 #localResources:

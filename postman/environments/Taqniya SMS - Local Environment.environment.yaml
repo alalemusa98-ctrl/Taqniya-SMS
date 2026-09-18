@@ -1,0 +1,26 @@
+name: Taqniya SMS - Local Environment
+values:
+  - key: baseUrl
+    value: 'http://localhost:3000/api/v1'
+  - key: authToken
+    value: ''
+  - key: adminUserCode
+    value: ADM-1001
+  - key: adminPassword
+    value: SecretPassword@123
+  - key: teacherUserCode
+    value: TCH-2001
+  - key: teacherPassword
+    value: SecretPassword@123
+  - key: studentUserCode
+    value: STU-3001
+  - key: studentPassword
+    value: SecretPassword@123
+  - key: parentUserCode
+    value: PAR-4001
+  - key: parentPassword
+    value: SecretPassword@123
+  - key: targetUserId
+    value: '1'
+  - key: targetAuditLogId
+    value: '1'

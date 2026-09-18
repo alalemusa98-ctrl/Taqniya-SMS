@@ -1,0 +1,8 @@
+$kind: http-request
+name: عرض تفاصيل حركة تدقيق ومقارنة الفروقات (Get Audit Log By ID)
+description: استرجاع تفاصيل سجل تدقيق محدد متضمناً القيم السابقة (old_values) والقيم الجديدة (new_values) وعنوان الـ IP وبيانات العميل.
+url: "{{baseUrl}}/audit-logs/{{targetAuditLogId}}"
+method: GET
+headers:
+  Accept: application/json
+order: 2000

@@ -1,0 +1,15 @@
+$kind: collection
+name: "Phase 01: الهوية والمصادقة والتدقيق (Authentication, Identity & Audit)"
+description: |-
+  توثيق شامل ومكتمل لجميع مسارات المرحلة الأولى (10 مسارات) وفق العقد المعماري الرسمي `MD/phases/phase_01_auth_identity/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).
+
+  المجموعات المشمولة:
+  1. المصادقة وإدارة الجلسات (auth)
+  2. إدارة حسابات المستخدمين (users)
+  3. سجلات التدقيق الأمني والحركات (audit_logs)
+auth:
+  - id: 7fda1b0c-330d-4f2d-be8f-ce7e1be3274b
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{authToken}}"

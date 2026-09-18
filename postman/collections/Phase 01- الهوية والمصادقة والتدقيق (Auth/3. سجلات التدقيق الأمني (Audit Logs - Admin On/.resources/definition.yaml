@@ -1,0 +1,4 @@
+$kind: collection
+name: 3. سجلات التدقيق الأمني (Audit Logs - Admin Only)
+description: مسارات استعراض وتتبع العمليات الحساسة ومقارنة التغييرات (خاص بمدير النظام Admin حصراً).
+order: 3000

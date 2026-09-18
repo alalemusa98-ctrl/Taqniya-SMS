@@ -1,0 +1,4 @@
+$kind: collection
+name: 1. المصادقة وإدارة الجلسات (Authentication & Sessions)
+description: مسارات تسجيل الدخول، استرجاع الملف الشخصي، تسجيل الخروج، وتغيير كلمة المرور.
+order: 1000
