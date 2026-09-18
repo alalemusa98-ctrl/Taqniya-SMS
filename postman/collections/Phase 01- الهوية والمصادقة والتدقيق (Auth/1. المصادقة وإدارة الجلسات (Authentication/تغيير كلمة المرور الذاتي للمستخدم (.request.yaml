@@ -11,7 +11,7 @@ body:
   content: |-
     {
       "current_password": "SecretPassword@123",
-      "new_password": "NewSecretPassword@2026",
+      "new_password": "SecretPassword@123",
       "new_password_confirmation": "NewSecretPassword@2026"
     }
 order: 4000

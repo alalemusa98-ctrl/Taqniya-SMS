@@ -11,6 +11,7 @@ async function main() {
   // ===========================================================================
   const defaultPassword = 'SecretPassword@123';
   const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+  const userRequestedPassword = await bcrypt.hash('11223344', 10);
 
   const seedUsers = [
     {
@@ -32,12 +33,25 @@ async function main() {
       is_active: 1,
     },
     {
+      user_code: 'STU-3002',
+      password: userRequestedPassword,
+      role_type: RoleType.student,
+      is_active: 1,
+    },
+    {
       user_code: 'PAR-4001',
       password: hashedPassword,
       role_type: RoleType.parent,
       is_active: 0,
     },
+    {
+      user_code: 'PAR-4002',
+      password: userRequestedPassword,
+      role_type: RoleType.parent,
+      is_active: 0,
+    },
   ];
+
 
   for (const user of seedUsers) {
     await prisma.user.upsert({
