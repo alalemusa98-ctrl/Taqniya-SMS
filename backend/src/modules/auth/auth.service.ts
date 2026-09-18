@@ -79,6 +79,7 @@ export class AuthService {
       sub: user.id.toString(),
       user_code: user.user_code,
       role_type: user.role_type,
+      jti: crypto.randomUUID(),
     };
 
     const token = this.jwtService.sign(payload);
@@ -146,6 +147,7 @@ export class AuthService {
 
     return {
       success: true,
+      message: 'تم استرجاع بيانات الملف الشخصي بنجاح.',
       data: {
         id: Number(user.id),
         user_code: user.user_code,
@@ -173,7 +175,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'تم تسجيل الخروج بنجاح وإلغاء الجلسة.',
+      message: 'تم تسجيل الخروج بنجاح وإبطال جلسة العمل.',
     };
   }
 

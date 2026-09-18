@@ -25,16 +25,24 @@ export class AuditController {
     @Query('per_page') perPage?: number,
     @Query('action') action?: string,
     @Query('entity_type') entityType?: string,
+    @Query('user_id') userId?: number,
+    @Query('date_from') dateFrom?: string,
+    @Query('date_to') dateTo?: string,
     @Query('from_date') fromDate?: string,
     @Query('to_date') toDate?: string,
+    @Query('sort_by') sortBy?: string,
+    @Query('sort_order') sortOrder?: 'asc' | 'desc',
   ) {
     return this.auditService.findAll({
       page,
       per_page: perPage,
       action,
       entity_type: entityType,
-      from_date: fromDate,
-      to_date: toDate,
+      user_id: userId,
+      date_from: dateFrom || fromDate,
+      date_to: dateTo || toDate,
+      sort_by: sortBy,
+      sort_order: sortOrder,
     });
   }
 
@@ -44,12 +52,13 @@ export class AuditController {
     if (!log) {
       throw new NotFoundException({
         success: false,
-        message: 'سجل التدقيق المطلوب غير موجود.',
+        message: 'سجل حركة التدقيق غير موجود.',
       });
     }
 
     return {
       success: true,
+      message: 'تم جلب تفاصيل حركة التدقيق بنجاح.',
       data: log,
     };
   }

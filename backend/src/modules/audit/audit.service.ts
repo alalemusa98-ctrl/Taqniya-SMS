@@ -36,13 +36,37 @@ export class AuditService {
     }
   }
 
+  private getActionArabic(action: string): string {
+    const map: Record<string, string> = {
+      login: 'تسجيل دخول',
+      logout: 'تسجيل خروج',
+      login_failed: 'محاولة دخول فاشلة',
+      login_blocked: 'محاولة دخول محظورة',
+      create: 'إنشاء سجل',
+      update: 'تعديل بيانات',
+      delete: 'حذف سجل',
+      user_activated: 'تفعيل حساب',
+      user_deactivated: 'تعطيل حساب',
+      password_change: 'تغيير كلمة المرور',
+      admin_reset_password: 'إعادة تعيين كلمة المرور',
+      promote: 'ترحيل أكاديمي',
+      export: 'تصدير بيانات',
+    };
+    return map[action] || action;
+  }
+
   async findAll(query: {
     page?: number;
     per_page?: number;
     action?: string;
     entity_type?: string;
+    user_id?: number | bigint;
+    date_from?: string;
+    date_to?: string;
     from_date?: string;
     to_date?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
   }) {
     const page = Number(query.page) || 1;
     const perPage = Number(query.per_page) || 15;
@@ -51,11 +75,20 @@ export class AuditService {
     const where: any = {};
     if (query.action) where.action = query.action;
     if (query.entity_type) where.entity_type = query.entity_type;
-    if (query.from_date || query.to_date) {
+    if (query.user_id) where.user_id = BigInt(query.user_id);
+
+    const fromDate = query.date_from || query.from_date;
+    const toDate = query.date_to || query.to_date;
+
+    if (fromDate || toDate) {
       where.created_at = {};
-      if (query.from_date) where.created_at.gte = new Date(query.from_date);
-      if (query.to_date) where.created_at.lte = new Date(query.to_date);
+      if (fromDate) where.created_at.gte = new Date(fromDate);
+      if (toDate) where.created_at.lte = new Date(toDate);
     }
+
+    const validSortFields = ['id', 'created_at'];
+    const sortBy = validSortFields.includes(query.sort_by || '') ? query.sort_by! : 'created_at';
+    const sortOrder = query.sort_order === 'asc' ? 'asc' : 'desc';
 
     const [total, logs] = await Promise.all([
       this.prisma.auditLog.count({ where }),
@@ -63,7 +96,7 @@ export class AuditService {
         where,
         skip,
         take: perPage,
-        orderBy: { created_at: 'desc' },
+        orderBy: { [sortBy]: sortOrder },
         include: {
           user: {
             select: {
@@ -81,6 +114,7 @@ export class AuditService {
       user_id: log.user_id ? Number(log.user_id) : null,
       user_code: log.user?.user_code || null,
       action: log.action,
+      action_ar: this.getActionArabic(log.action),
       entity_type: log.entity_type,
       entity_id: log.entity_id ? Number(log.entity_id) : null,
       old_values: log.old_values,
@@ -90,14 +124,18 @@ export class AuditService {
       created_at: log.created_at.toISOString(),
     }));
 
+    const lastPage = Math.ceil(total / perPage) || 1;
+
     return {
       success: true,
+      message: total > 0 ? 'تم جلب سجلات التدقيق بنجاح.' : 'لا توجد سجلات تدقيق تطابق محددات البحث.',
       data: serializedLogs,
       meta: {
         current_page: page,
         per_page: perPage,
         total,
-        total_pages: Math.ceil(total / perPage),
+        last_page: lastPage,
+        total_pages: lastPage,
       },
     };
   }
@@ -125,6 +163,7 @@ export class AuditService {
       user_id: log.user_id ? Number(log.user_id) : null,
       user_code: log.user?.user_code || null,
       action: log.action,
+      action_ar: this.getActionArabic(log.action),
       entity_type: log.entity_type,
       entity_id: log.entity_id ? Number(log.entity_id) : null,
       old_values: log.old_values,

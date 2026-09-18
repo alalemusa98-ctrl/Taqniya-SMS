@@ -21,6 +21,8 @@ export class UsersService {
     role_type?: RoleType;
     is_active?: number;
     search?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
     page?: number;
     per_page?: number;
   }) {
@@ -49,13 +51,18 @@ export class UsersService {
       ];
     }
 
+    // Dynamic sorting
+    const validSortFields = ['id', 'user_code', 'last_login_at', 'created_at'];
+    const sortBy = validSortFields.includes(query.sort_by || '') ? query.sort_by! : 'id';
+    const sortOrder = query.sort_order === 'desc' ? 'desc' : 'asc';
+
     const [total, users, countsByRole] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
         where,
         skip,
         take: perPage,
-        orderBy: { id: 'asc' },
+        orderBy: { [sortBy]: sortOrder },
         select: {
           id: true,
           user_code: true,
@@ -88,11 +95,11 @@ export class UsersService {
     }
 
     // Grouping into Role-Tree Matrix
-    const roleMap: Record<string, { role_type: string; role_title_ar: string; users_count: number; users: any[] }> = {
-      admin: { role_type: 'admin', role_title_ar: 'مديرو النظام', users_count: 0, users: [] },
-      teacher: { role_type: 'teacher', role_title_ar: 'المعلمون', users_count: 0, users: [] },
-      student: { role_type: 'student', role_title_ar: 'الطلاب', users_count: 0, users: [] },
-      parent: { role_type: 'parent', role_title_ar: 'أولياء الأمور', users_count: 0, users: [] },
+    const roleMap: Record<string, { role_type: string; role_type_ar: string; role_title_ar: string; users_count: number; users: any[] }> = {
+      admin: { role_type: 'admin', role_type_ar: 'مديرو النظام', role_title_ar: 'مديرو النظام', users_count: 0, users: [] },
+      teacher: { role_type: 'teacher', role_type_ar: 'المعلمون', role_title_ar: 'المعلمون', users_count: 0, users: [] },
+      student: { role_type: 'student', role_type_ar: 'الطلاب', role_title_ar: 'الطلاب', users_count: 0, users: [] },
+      parent: { role_type: 'parent', role_type_ar: 'أولياء الأمور', role_title_ar: 'أولياء الأمور', users_count: 0, users: [] },
     };
 
     for (const u of users) {
@@ -122,9 +129,13 @@ export class UsersService {
       (group) => !query.role_type || group.role_type === query.role_type,
     );
 
+    const lastPage = Math.ceil(total / perPage) || 1;
+
     return {
       success: true,
+      message: total > 0 ? 'تم جلب قائمة حسابات المستخدمين بنجاح.' : 'لا يوجد مستخدمون يطابقون محددات البحث.',
       data: {
+        total_users: total,
         role_types,
         summary_counts: summaryCounts,
       },
@@ -132,7 +143,8 @@ export class UsersService {
         current_page: page,
         per_page: perPage,
         total,
-        total_pages: Math.ceil(total / perPage),
+        last_page: lastPage,
+        total_pages: lastPage,
       },
     };
   }
@@ -174,14 +186,23 @@ export class UsersService {
       user.guardian_profile?.phone ||
       null;
 
+    const roleArMap: Record<string, string> = {
+      admin: 'مدير نظام',
+      teacher: 'معلم',
+      student: 'طالب',
+      parent: 'ولي أمر',
+    };
+
     return {
       success: true,
+      message: 'تم جلب تفاصيل حساب المستخدم بنجاح.',
       data: {
         id: Number(user.id),
         user_code: user.user_code,
         full_name: fullName,
         phone,
         role_type: user.role_type,
+        role_type_ar: roleArMap[user.role_type] || user.role_type,
         is_active: user.is_active,
         last_login_at: user.last_login_at ? user.last_login_at.toISOString() : null,
         created_at: user.created_at.toISOString(),
@@ -254,6 +275,7 @@ export class UsersService {
         id: Number(user.id),
         user_code: user.user_code,
         is_active: dto.is_active,
+        updated_at: new Date().toISOString(),
       },
     };
   }

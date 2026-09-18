@@ -15,22 +15,32 @@ import {
   Clock,
   TrendingUp,
   LayoutGrid,
-  ChevronRight,
-  ChevronLeft,
   Calendar,
   Phone,
   User as UserIcon,
-  Hash,
-  Zap,
 } from 'lucide-vue-next';
 import TaqniyaErrorBoundary from '../ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../ui/TaqniyaKpiCard.vue';
 import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
+import TaqniyaTable, { type TableColumn } from '../ui/TaqniyaTable.vue';
+import TaqniyaPagination from '../ui/TaqniyaPagination.vue';
 import UserStatusModal from './UserStatusModal.vue';
 import ResetPasswordModal from '../modals/ResetPasswordModal.vue';
-import { formatDate, formatDateTime } from '../../utils/formatters';
+import { formatDateTime } from '../../utils/formatters';
+
 
 type TabKey = 'all' | 'admin' | 'teacher' | 'student' | 'parent';
+
+const userTableColumns: TableColumn[] = [
+  { key: 'id', label: '# الرقم', width: '70px' },
+  { key: 'user_code', label: 'الرمز المؤسسي' },
+  { key: 'full_name', label: 'الاسم المرتبط' },
+  { key: 'role_type', label: 'نوع الحساب / الدور' },
+  { key: 'is_active', label: 'حالة الحساب' },
+  { key: 'last_login_at', label: 'آخر تسجيل دخول' },
+  { key: 'actions', label: 'الإجراءات', align: 'center', width: '130px' },
+];
+
 
 const activeTab = ref<TabKey>('all');
 const roleGroups = ref<any[]>([]);
@@ -366,194 +376,115 @@ const flattenedUsers = computed(() => {
           </button>
         </div>
 
-        <!-- 4. Table Card with Full Design Token Styling -->
-        <div class="overflow-hidden rounded-2xl border border-bx-border bg-bx-surface shadow-xs">
-          <div class="overflow-x-auto">
-            <table class="w-full text-start border-collapse">
-              <thead>
-                <tr class="bg-bx-table-header border-b border-bx-border text-bx-muted text-xs">
-                  <th class="py-3 px-4 font-bold text-start w-16 font-['Alexandria',sans-serif] border-e border-bx-divider"># الرقم</th>
-                  <th class="py-3 px-4 font-bold text-start border-e border-bx-divider">
-                    <div class="flex items-center gap-1.5">
-                      <Hash class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>الرمز المؤسسي</span>
-                    </div>
-                  </th>
-                  <th class="py-3 px-4 font-bold text-start border-e border-bx-divider">
-                    <div class="flex items-center gap-1.5">
-                      <UserIcon class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>الاسم المرتبط</span>
-                    </div>
-                  </th>
-                  <th class="py-3 px-4 font-bold text-start border-e border-bx-divider">
-                    <div class="flex items-center gap-1.5">
-                      <Shield class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>نوع الحساب / الدور</span>
-                    </div>
-                  </th>
-                  <th class="py-3 px-4 font-bold text-start border-e border-bx-divider">
-                    <div class="flex items-center gap-1.5">
-                      <Zap class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>حالة الحساب</span>
-                    </div>
-                  </th>
-                  <th class="py-3 px-4 font-bold text-start border-e border-bx-divider">
-                    <div class="flex items-center gap-1.5">
-                      <Clock class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>آخر تسجيل دخول</span>
-                    </div>
-                  </th>
-                  <th class="py-3 px-4 font-bold text-center w-32 last:border-e-0">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-bx-divider text-xs font-medium text-bx-title">
-                <!-- Loading State -->
-                <tr v-if="isLoading">
-                  <td colspan="7" class="py-14 text-center text-bx-muted">
-                    <div class="w-7 h-7 border-2 border-bx-primary border-t-transparent rounded-full animate-spin mx-auto mb-2.5"></div>
-                    <span class="font-bold">جاري استدعاء حسابات المستخدمين...</span>
-                  </td>
-                </tr>
+        <!-- 4. Taqniya Shared Table & Pagination -->
+        <div class="space-y-0">
+          <TaqniyaTable
+            :columns="userTableColumns"
+            :items="flattenedUsers"
+            :is-loading="isLoading"
+            empty-title="لا توجد حسابات مستخدمين تطابق محددات البحث"
+            empty-subtitle="جرب تغيير التبويب المختار أو مسح حقل البحث."
+            :empty-icon="UsersIcon"
+            loading-text="جاري استدعاء حسابات المستخدمين..."
+          >
+            <template #cell-id="{ item }">
+              <span class="font-mono font-bold text-bx-muted">{{ item.id }}</span>
+            </template>
 
-                <!-- Empty State -->
-                <tr v-else-if="flattenedUsers.length === 0">
-                  <td colspan="7" class="py-14 text-center space-y-3 p-8">
-                    <div class="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-950/40 text-bx-primary flex items-center justify-center mx-auto">
-                      <UsersIcon class="w-6 h-6" />
-                    </div>
-                    <h3 class="text-sm font-bold text-bx-title">لا توجد حسابات مستخدمين تطابق محددات البحث</h3>
-                    <p class="text-xs text-bx-muted max-w-sm mx-auto">جرب تغيير التبويب المختار أو مسح حقل البحث.</p>
-                  </td>
-                </tr>
+            <template #cell-user_code="{ item }">
+              <span class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-bx-border text-bx-title/90">
+                {{ item.user_code }}
+              </span>
+            </template>
 
-                <!-- User Rows -->
-                <tr
-                  v-else
-                  v-for="user in flattenedUsers"
-                  :key="user.id"
-                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
+            <template #cell-full_name="{ item }">
+              <span v-if="item.full_name" class="font-black text-xs sm:text-sm text-bx-title block leading-tight">
+                {{ item.full_name }}
+              </span>
+              <span v-else class="text-bx-muted italic text-[11px]">
+                غير معين (حساب نظام)
+              </span>
+            </template>
+
+            <template #cell-role_type="{ item }">
+              <span
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border"
+                :class="getRoleTheme(item.role_type)"
+              >
+                <component :is="getRoleIcon(item.role_type)" class="w-3.5 h-3.5" />
+                <span>{{ item.role_type_ar || getRoleTitle(item.role_type) }}</span>
+              </span>
+            </template>
+
+            <template #cell-is_active="{ item }">
+              <span
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border"
+                :class="item.is_active === 1
+                  ? 'bg-emerald-500/10 text-bx-success border-emerald-500/20'
+                  : 'bg-rose-500/10 text-bx-danger border-rose-500/20'"
+              >
+                <span class="w-1.5 h-1.5 rounded-full" :class="item.is_active === 1 ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+                <span>{{ item.is_active === 1 ? 'نشط ومفعل' : 'معطل وموقوف' }}</span>
+              </span>
+            </template>
+
+            <template #cell-last_login_at="{ item }">
+              <span v-if="item.last_login_at" class="font-mono text-bx-muted text-xs font-bold">
+                {{ formatDateTime(item.last_login_at) }}
+              </span>
+              <span v-else class="text-bx-muted italic text-xs font-normal">
+                لم يسجل دخول بعد
+              </span>
+            </template>
+
+            <template #cell-actions="{ item }">
+              <div class="flex items-center justify-center gap-1.5">
+                <!-- View Details Button -->
+                <button
+                  type="button"
+                  @click="openDetails(item)"
+                  class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                  title="معاينة تفاصيل الحساب"
                 >
-                  <!-- ID -->
-                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-bx-divider">
-                    {{ user.id }}
-                  </td>
+                  <Eye class="w-3.5 h-3.5" />
+                </button>
 
-                  <!-- User Code -->
-                  <td class="py-3 px-4 font-mono font-black text-bx-primary text-xs whitespace-nowrap border-e border-bx-divider">
-                    <span class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-bx-border text-bx-title/90">
-                      {{ user.user_code }}
-                    </span>
-                  </td>
+                <!-- Toggle Status Button -->
+                <button
+                  type="button"
+                  @click="openStatusToggle(item)"
+                  class="w-7 h-7 rounded-full border flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                  :class="item.is_active === 1
+                    ? 'border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white'
+                    : 'border-emerald-300 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white dark:border-emerald-400 dark:bg-emerald-950/80 dark:text-emerald-300 dark:hover:bg-emerald-600 dark:hover:text-white'"
+                  :title="item.is_active === 1 ? 'إيقاف الحساب' : 'تفعيل الحساب'"
+                >
+                  <UserX v-if="item.is_active === 1" class="w-3.5 h-3.5" />
+                  <UserCheck v-else class="w-3.5 h-3.5" />
+                </button>
 
-                  <!-- Associated Full Name -->
-                  <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
-                    <span v-if="user.full_name" class="font-black text-xs sm:text-sm text-bx-title block leading-tight group-hover:text-bx-primary transition-colors">
-                      {{ user.full_name }}
-                    </span>
-                    <span v-else class="text-slate-400 dark:text-slate-500 font-bold text-xs">
-                      {{ user.role_type === 'admin' ? 'حساب إداري عام' : '— غير مرتبط بملف —' }}
-                    </span>
-                  </td>
+                <!-- Reset Password Button -->
+                <button
+                  type="button"
+                  @click="openResetPassword(item)"
+                  class="w-7 h-7 rounded-full border border-amber-300 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white dark:border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:hover:bg-amber-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                  title="إعادة تعيين كلمة المرور إدارياً"
+                >
+                  <KeyRound class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </template>
+          </TaqniyaTable>
 
-                  <!-- Role Badge -->
-                  <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
-                    <span
-                      class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border"
-                      :class="getRoleTheme(user.role_type)"
-                    >
-                      <component :is="getRoleIcon(user.role_type)" class="w-3.5 h-3.5" />
-                      <span>{{ getRoleTitle(user.role_type) }}</span>
-                    </span>
-                  </td>
-
-                  <!-- Status -->
-                  <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
-                    <span
-                      class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border"
-                      :class="user.is_active === 1
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'"
-                    >
-                      <span class="w-1.5 h-1.5 rounded-full" :class="user.is_active === 1 ? 'bg-emerald-500' : 'bg-rose-500'"></span>
-                      <span>{{ user.is_active === 1 ? 'نشط' : 'معطل' }}</span>
-                    </span>
-                  </td>
-
-                  <!-- Last Login -->
-                  <td class="py-3 px-4 text-bx-muted text-[11px] font-bold font-mono whitespace-nowrap border-e border-bx-divider text-start">
-                    <span v-if="user.last_login_at" class="flex items-center gap-1.5">
-                      <Clock class="w-3.5 h-3.5 text-bx-muted shrink-0" />
-                      <span>{{ formatDate(user.last_login_at) }}</span>
-                    </span>
-                    <span v-else class="text-bx-muted/50">—</span>
-                  </td>
-
-                  <!-- Actions: Uniform Circular Icon Buttons Matching Taqniya Standard -->
-                  <td class="py-3 px-4 text-center whitespace-nowrap last:border-e-0">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <!-- View Details Button -->
-                      <button
-                        @click="openDetails(user)"
-                        class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                        title="معاينة تفاصيل الحساب"
-                      >
-                        <Eye class="w-3.5 h-3.5" />
-                      </button>
-
-                      <!-- Toggle Status Button -->
-                      <button
-                        @click="openStatusToggle(user)"
-                        class="w-7 h-7 rounded-full border flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                        :class="user.is_active === 1
-                          ? 'border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white'
-                          : 'border-emerald-300 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white dark:border-emerald-400 dark:bg-emerald-950/80 dark:text-emerald-300 dark:hover:bg-emerald-600 dark:hover:text-white'"
-                        :title="user.is_active === 1 ? 'إيقاف الحساب' : 'تفعيل الحساب'"
-                      >
-                        <UserX v-if="user.is_active === 1" class="w-3.5 h-3.5" />
-                        <UserCheck v-else class="w-3.5 h-3.5" />
-                      </button>
-
-                      <!-- Reset Password Button -->
-                      <button
-                        @click="openResetPassword(user)"
-                        class="w-7 h-7 rounded-full border border-amber-300 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white dark:border-amber-400 dark:bg-amber-950/80 dark:text-amber-300 dark:hover:bg-amber-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                        title="إعادة تعيين كلمة المرور إدارياً"
-                      >
-                        <KeyRound class="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Pagination Ribbon -->
-          <div v-if="meta.total_pages > 1" class="px-5 py-3 border-t border-bx-divider flex items-center justify-between text-xs font-medium text-bx-muted bg-bx-table-header">
-            <div>
-              <span>عرض الصفحة {{ meta.current_page }} من {{ meta.total_pages }} (إجمالي {{ meta.total }} حساب)</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <button
-                :disabled="meta.current_page <= 1 || isLoading"
-                @click="loadUsers(meta.current_page - 1)"
-                class="px-3 py-1 rounded-full border border-bx-border bg-bx-surface text-bx-title hover:border-bx-primary disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer flex items-center gap-1 text-xs"
-              >
-                <ChevronRight class="w-3.5 h-3.5" />
-                <span>السابق</span>
-              </button>
-              <button
-                :disabled="meta.current_page >= meta.total_pages || isLoading"
-                @click="loadUsers(meta.current_page + 1)"
-                class="px-3 py-1 rounded-full border border-bx-border bg-bx-surface text-bx-title hover:border-bx-primary disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer flex items-center gap-1 text-xs"
-              >
-                <span>التالي</span>
-                <ChevronLeft class="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
+          <TaqniyaPagination
+            :current-page="meta.current_page"
+            :total-pages="meta.total_pages"
+            :total="meta.total"
+            :is-loading="isLoading"
+            item-name="حساب"
+            @page-change="loadUsers"
+          />
         </div>
-
       </div>
 
       <!-- Standard Drawer for User Details (TaqniyaDrawer) -->

@@ -31,6 +31,8 @@ export class UsersController {
     @Query('role_type') roleType?: RoleType,
     @Query('is_active') isActive?: number,
     @Query('search') search?: string,
+    @Query('sort_by') sortBy?: string,
+    @Query('sort_order') sortOrder?: 'asc' | 'desc',
     @Query('page') page?: number,
     @Query('per_page') perPage?: number,
   ) {
@@ -38,6 +40,8 @@ export class UsersController {
       role_type: roleType,
       is_active: isActive,
       search,
+      sort_by: sortBy,
+      sort_order: sortOrder,
       page,
       per_page: perPage,
     });

@@ -75,3 +75,77 @@ export async function deduplicatedGet<T = any>(
   return promise;
 }
 
+/**
+ * SWR (Stale-While-Revalidate) Cache Store
+ * Satisfies frontend_capabilities.yaml: client_caching_swr: required
+ */
+interface SwrCacheEntry<T = any> {
+  data: AxiosResponse<T>;
+  timestamp: number;
+}
+
+const swrCache = new Map<string, SwrCacheEntry>();
+const DEFAULT_SWR_TTL = 30_000; // 30 seconds
+
+/**
+ * SWR GET Helper
+ * Returns stale cached data immediately if available, while fetching fresh data in the background.
+ */
+export async function swrGet<T = any>(
+  url: string,
+  config?: AxiosRequestConfig,
+  options?: {
+    ttl?: number;
+    onRevalidate?: (freshData: AxiosResponse<T>) => void;
+  },
+): Promise<AxiosResponse<T>> {
+  const reqConfig: AxiosRequestConfig = { ...config, method: 'GET', url };
+  const key = getRequestKey(reqConfig);
+  const ttl = options?.ttl ?? DEFAULT_SWR_TTL;
+  const cached = swrCache.get(key);
+  const now = Date.now();
+
+  // If we have a fresh cache entry, return it immediately
+  if (cached && now - cached.timestamp < ttl) {
+    return cached.data;
+  }
+
+  // If we have stale cache, trigger background revalidation and return stale
+  if (cached) {
+    deduplicatedGet<T>(url, config)
+      .then((fresh: AxiosResponse<T>) => {
+        swrCache.set(key, { data: fresh, timestamp: Date.now() });
+        if (options?.onRevalidate) {
+          options.onRevalidate(fresh);
+        }
+      })
+      .catch((err: unknown) => {
+        console.warn('SWR revalidation failed:', err);
+      });
+
+    return cached.data;
+  }
+
+  // No cache at all: perform network request, cache result, and return
+  const response = await deduplicatedGet<T>(url, config);
+  swrCache.set(key, { data: response, timestamp: Date.now() });
+  return response;
+}
+
+/**
+ * Invalidate SWR cache entries (e.g. on mutation)
+ */
+export function invalidateSwrCache(urlPattern?: string): void {
+  if (!urlPattern) {
+    swrCache.clear();
+    return;
+  }
+  for (const key of swrCache.keys()) {
+    if (key.includes(urlPattern)) {
+      swrCache.delete(key);
+    }
+  }
+}
+
+
+

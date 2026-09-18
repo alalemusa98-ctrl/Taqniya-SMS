@@ -132,6 +132,55 @@ describe('Phase 01: Authentication, Identity & Audit (TDD Verification)', () => 
       );
     });
 
+    it('TC-AUTH-04: Reject login attempt with invalid user_code pattern or empty password', async () => {
+      const { validate } = await import('class-validator');
+      const { LoginDto } = await import('./modules/auth/dto/login.dto.js');
+
+      const invalidDto = new LoginDto();
+      invalidDto.user_code = 'invalid_code_format';
+      invalidDto.password = '';
+
+      const errors = await validate(invalidDto);
+      expect(errors.length).toBeGreaterThanOrEqual(2);
+      expect(errors.some((e) => e.property === 'user_code')).toBe(true);
+      expect(errors.some((e) => e.property === 'password')).toBe(true);
+    });
+
+    it('TC-AUTH-07: Reject profile request with non-existent or deleted user ID (401)', async () => {
+      await expect(authService.getMe(99999999)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('TC-AUTH-08 & 09: Logout successfully, purge session from database, and prevent reuse', async () => {
+      // First login to create session
+      const loginRes = await authService.login(
+        { user_code: 'ADM-1001', password: 'SecretPassword@123', device_name: 'Logout Test' },
+        '127.0.0.1',
+      );
+      expect(loginRes.success).toBe(true);
+
+      const sessionsBefore = await prisma.personalAccessToken.findMany({
+        where: { user_id: BigInt(loginRes.data.user.id) },
+      });
+      expect(sessionsBefore.length).toBeGreaterThan(0);
+
+      const latestSession = sessionsBefore[sessionsBefore.length - 1];
+
+      // Perform logout
+      const logoutRes = await authService.logout(
+        loginRes.data.user.id,
+        Number(latestSession.id),
+        '127.0.0.1',
+      );
+      expect(logoutRes.success).toBe(true);
+      expect(logoutRes.message).toBe('تم تسجيل الخروج بنجاح وإبطال جلسة العمل.');
+
+      // TC-AUTH-09: Verify token session has been completely removed
+      const sessionAfter = await prisma.personalAccessToken.findUnique({
+        where: { id: latestSession.id },
+      });
+      expect(sessionAfter).toBeNull();
+    });
+
     it('TC-AUTH-11: Reject change password if confirmation does not match', async () => {
       const studentUser = await prisma.user.findUnique({ where: { user_code: 'STU-3001' } });
 
@@ -154,22 +203,51 @@ describe('Phase 01: Authentication, Identity & Audit (TDD Verification)', () => 
       const result = await usersService.findAllTree({});
 
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم جلب قائمة حسابات المستخدمين بنجاح.');
       expect(result.data.role_types).toBeDefined();
       expect(result.data.role_types.length).toBe(4);
+      expect(result.meta.last_page).toBeDefined();
 
       const adminGroup = result.data.role_types.find((g) => g.role_type === 'admin');
       expect(adminGroup).toBeDefined();
+      expect(adminGroup!.role_type_ar).toBe('مديرو النظام');
       expect(adminGroup!.users_count).toBeGreaterThanOrEqual(1);
     });
 
-    it('TC-USR-03: Get single user details by ID', async () => {
+    it('TC-USR-02: Enforce RBAC by denying access to non-admin roles', async () => {
+      const { RolesGuard } = await import('./common/guards/roles.guard.js');
+      const { Reflector } = await import('@nestjs/core');
+
+      const reflector = new Reflector();
+      const rolesGuard = new RolesGuard(reflector);
+
+      // Simulate execution context with teacher role attempting to access admin route
+      const mockContextTeacher: any = {
+        getHandler: () => {},
+        getClass: () => {},
+        switchToHttp: () => ({
+          getRequest: () => ({
+            user: { id: 2, user_code: 'TCH-2001', role_type: RoleType.teacher },
+          }),
+        }),
+      };
+
+      // Mock reflector returning [RoleType.admin] for the route
+      reflector.getAllAndOverride = () => [RoleType.admin];
+
+      expect(() => rolesGuard.canActivate(mockContextTeacher)).toThrow(ForbiddenException);
+    });
+
+    it('TC-USR-03: Get single user details by ID with Arabic role translation', async () => {
       const teacherUser = await prisma.user.findUnique({ where: { user_code: 'TCH-2001' } });
       expect(teacherUser).toBeDefined();
 
       const details = await usersService.findOne(Number(teacherUser!.id));
       expect(details.success).toBe(true);
+      expect(details.message).toBe('تم جلب تفاصيل حساب المستخدم بنجاح.');
       expect(details.data.user_code).toBe('TCH-2001');
       expect(details.data.role_type).toBe('teacher');
+      expect(details.data.role_type_ar).toBe('معلم');
     });
 
     it('TC-USR-04: Deactivate and reactivate user with atomic session invalidation', async () => {
@@ -186,6 +264,7 @@ describe('Phase 01: Authentication, Identity & Audit (TDD Verification)', () => 
 
       expect(deactivateResult.success).toBe(true);
       expect(deactivateResult.data.is_active).toBe(0);
+      expect(deactivateResult.data.updated_at).toBeDefined();
 
       // Verify sessions were wiped
       const activeTokens = await prisma.personalAccessToken.findMany({
@@ -221,13 +300,16 @@ describe('Phase 01: Authentication, Identity & Audit (TDD Verification)', () => 
   });
 
   describe('Group 3: Audit Logs (audit_logs)', () => {
-    it('TC-AUD-01: List audit logs with pagination', async () => {
+    it('TC-AUD-01: List audit logs with pagination and Arabic action translation', async () => {
       const result = await auditService.findAll({ page: 1, per_page: 10 });
 
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم جلب سجلات التدقيق بنجاح.');
       expect(Array.isArray(result.data)).toBe(true);
       expect(result.data.length).toBeGreaterThan(0);
+      expect(result.data[0].action_ar).toBeDefined();
       expect(result.meta.total).toBeGreaterThan(0);
+      expect(result.meta.last_page).toBeDefined();
     });
 
     it('TC-AUD-02: Get audit log details by ID with diff values', async () => {
@@ -238,6 +320,28 @@ describe('Phase 01: Authentication, Identity & Audit (TDD Verification)', () => 
       expect(log).not.toBeNull();
       expect(log!.id).toBe(Number(logs[0].id));
       expect(log!.action).toBeDefined();
+      expect(log!.action_ar).toBeDefined();
+    });
+
+    it('TC-AUD-03: Deny non-admin roles from accessing audit logs', async () => {
+      const { RolesGuard } = await import('./common/guards/roles.guard.js');
+      const { Reflector } = await import('@nestjs/core');
+
+      const reflector = new Reflector();
+      const rolesGuard = new RolesGuard(reflector);
+
+      const mockContextStudent: any = {
+        getHandler: () => {},
+        getClass: () => {},
+        switchToHttp: () => ({
+          getRequest: () => ({
+            user: { id: 3, user_code: 'STU-3001', role_type: RoleType.student },
+          }),
+        }),
+      };
+
+      reflector.getAllAndOverride = () => [RoleType.admin];
+      expect(() => rolesGuard.canActivate(mockContextStudent)).toThrow(ForbiddenException);
     });
   });
 });
