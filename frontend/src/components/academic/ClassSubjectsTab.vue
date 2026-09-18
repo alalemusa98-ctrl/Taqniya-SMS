@@ -12,6 +12,7 @@ import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
 
 // Component Lazy Loading (component_lazy_loading)
 const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
+const TaqniyaModal = defineAsyncComponent(() => import('../ui/TaqniyaModal.vue'));
 import {
   BookOpenCheck,
   Plus,
@@ -1000,32 +1001,31 @@ onMounted(async () => {
       </form>
     </TaqniyaDrawer>
 
-    <!-- Delete Confirmation Modal -->
-    <div
-      v-if="showDeleteModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in"
+    <!-- Delete Confirmation Modal using Shared TaqniyaModal -->
+    <TaqniyaModal
+      :is-open="showDeleteModal"
+      title="تأكيد إزالة المادة من منهج الصف"
+      subtitle="فك إسناد المادة عن الصف الدراسي بكافة فصوله"
+      max-width="md"
+      @close="showDeleteModal = false"
     >
-      <div class="w-full max-w-md bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-6 space-y-4 shadow-xl">
-        <div class="flex items-center gap-3 text-rose-500">
-          <div class="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center">
-            <Trash2 class="w-5 h-5" />
-          </div>
-          <div>
-            <h3 class="font-bold text-sm text-bx-title">تأكيد إزالة المادة من منهج الصف</h3>
-            <p class="text-xs text-bx-muted">فك إسناد المادة عن الصف الدراسي بكافة فصوله</p>
-          </div>
+      <template #icon>
+        <div class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+          <Trash2 class="w-5 h-5" />
         </div>
+      </template>
 
-        <div class="p-3.5 rounded-2xl bg-rose-500/5 border border-rose-500/15 text-xs text-bx-muted">
-          <p class="font-semibold text-rose-600 dark:text-rose-400 mb-1">
-            المادة المستهدفة: {{ itemToDelete?.name }} ({{ itemToDelete?.class_name }})
-          </p>
-          <p class="text-[11px] leading-relaxed">
-            سيتم حذف ارتباط المادة بمنهج هذا الصف لكافة الفصول الدراسية المسندة. يُشترط عدم وجود درجات رصد أو جداول حصص معتمدة مرتبطة بها.
-          </p>
-        </div>
+      <div class="p-3.5 rounded-2xl bg-rose-500/5 border border-rose-500/15 text-xs text-bx-muted">
+        <p class="font-semibold text-rose-600 dark:text-rose-400 mb-1">
+          المادة المستهدفة: {{ itemToDelete?.name }} ({{ itemToDelete?.class_name }})
+        </p>
+        <p class="text-[11px] leading-relaxed">
+          سيتم حذف ارتباط المادة بمنهج هذا الصف لكافة الفصول الدراسية المسندة. يُشترط عدم وجود درجات رصد أو جداول حصص معتمدة مرتبطة بها.
+        </p>
+      </div>
 
-        <div class="flex items-center justify-end gap-2.5 pt-2">
+      <template #footer>
+        <div class="flex items-center justify-end gap-2.5">
           <button
             type="button"
             @click="showDeleteModal = false"
@@ -1044,7 +1044,7 @@ onMounted(async () => {
             <span>تأكيد فك الارتباط</span>
           </button>
         </div>
-      </div>
-    </div>
+      </template>
+    </TaqniyaModal>
   </div>
 </template>

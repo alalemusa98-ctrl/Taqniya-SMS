@@ -11,12 +11,13 @@
 ## 1. نطاق المرحلة والحدود المعمارية (Scope & Boundaries)
 
 ### 🟢 ما تشمله المرحلة (In-Scope):
-- **فترات وحالات الصفوف (`class_academic_terms`) — [5 مسارات]:**
+- **فترات وحالات الصفوف (`class_academic_terms`) — [6 مسارات]:**
   - استعراض وبحث فترات وحالات الصفوف (`GET /api/v1/academic/class-academic-terms`).
   - تخصيص وربط فترة بصف دراسي (`POST /api/v1/academic/class-academic-terms`).
   - تعديل فترة صف دراسي (`PUT /api/v1/academic/class-academic-terms/:id`).
   - تفعيل الفترة النشطة للصف ذرياً (`POST /api/v1/academic/class-academic-terms/:id/activate`).
   - إغلاق/فتح درجات الفترة للصف للأرشفة (`POST /api/v1/academic/class-academic-terms/:id/close`).
+  - فك ربط فترة غير نشطة من صف دراسي (`DELETE /api/v1/academic/class-academic-terms/:id`).
 - **ربط وتسكين الشُعب بالصفوف (`class_sections`) — [3 مسارات]:**
   - استعراض الشعب المفتوحة لصف دراسي (`GET /api/v1/academic/class-sections`).
   - تسكين وفتح شعبة لصف مع فحص تفرد الربط (`POST /api/v1/academic/class-sections`).
@@ -43,7 +44,7 @@
 
 ### 👥 مصفوفة الفاعلين والصلاحيات:
 - **مدير النظام (Admin - `role_type = 'admin'`):**
-  - يمتلك الصلاحية الكاملة على كافة العمليات الـ 12 (قراءة، تخصيص، تسكين، تفعيل، إغلاق، تعديل، فك ربط).
+  - يمتلك الصلاحية الكاملة على كافة العمليات الـ 13 (قراءة، تخصيص، تسكين، تفعيل، إغلاق، تعديل، فك ربط).
 - **المعلم (Teacher)، الطالب (Student)، ولي الأمر (Parent):**
   - **يُحظر عليهم تماماً** إجراء أي تعديل أو تخصيص لفترات أو شُعب أو مناهج ودرجات.
   - أي محاولة وصول غير مصرح بها تُرفض فوراً برمز المنع الصريح `403 Forbidden`.
@@ -82,9 +83,9 @@ stateDiagram-v2
 
 ---
 
-### 🗓️ الخطوة 1: إدارة فترات وحالات الصفوف (`class_academic_terms`) — [5 مسارات]
+### 🗓️ الخطوة 1: إدارة فترات وحالات الصفوف (`class_academic_terms`) — [6 مسارات]
 
-> **الوصف:** تخصيص وتعديل الفترات المعتمدة لكل صف دراسي والتحكم في الفترة النشطة والمغلقة للصف.
+> **الوصف:** تخصيص وتعديل الفترات المعتمدة لكل صف دراسي والتحكم في الفترة النشطة والمغلقة للصف وفك ربط الفترات غير النشطة.
 
 #### 📋 جدول مسارات الخطوة 1:
 | # | العملية المنطقية (Operation) | HTTP Method & Endpoint | الصلاحية | رمز النجاح | مرجع العقد في `routes.md` |
@@ -94,6 +95,7 @@ stateDiagram-v2
 | **1.3** | تعديل فترة صف دراسي | `PUT /api/v1/academic/class-academic-terms/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 | **1.4** | تفعيل الفترة النشطة للصف (ذري) | `POST /api/v1/academic/class-academic-terms/:id/activate` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 | **1.5** | إغلاق/فتح درجات الفترة للصف | `POST /api/v1/academic/class-academic-terms/:id/close` | `admin` | `200 OK` | [في routes.md](./routes.md) |
+| **1.6** | فك ربط فترة غير نشطة من صف دراسي | `DELETE /api/v1/academic/class-academic-terms/:id` | `admin` | `200 OK` | [في routes.md](./routes.md) |
 
 ---
 
@@ -142,6 +144,15 @@ stateDiagram-v2
 - **التنفيذ:** تعديل الحقل وتوثيق الحركة في `audit_logs`.
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - استجابات الإغلاق (`200 OK`, `404 Not Found`) مسجلة في [`routes.md`](./routes.md).
+
+#### 🔹 [Operation 1.6] `DELETE /api/v1/academic/class-academic-terms/:id` — فك ربط فترة غير نشطة من صف
+- **الغرض والوظيفة:** إلغاء تخصيص فترة لصف دراسي بشرط ألا تكون نشطة وألا تحتوي على مواد دراسية.
+- **قواعد الحماية المرجعية:**
+  - فحص حالة الفترة: إذا كانت الفترة هي النشطة حالياً للصف (`is_active = 1`)، يُمنع الحذف ويُرجع رمز `409 Conflict`.
+  - فحص المواد المسندة: إذا كانت الفترة تحتوي على مواد دراسية مسندة (`class_subjects`)، يُمنع الحذف ويُرجع رمز `409 Conflict` (حماية RESTRICT).
+  - في حال استيفاء الشروط: تنفيذ الحذف المنطقي (`deleted_at = NOW()`) وتوثيق الحركة في `audit_logs`.
+- **عقد الاستجابات والمدخلات (Network SSoT):**
+  - استجابات الحذف (`200 OK`, `404 Not Found`, `409 Conflict`) مسجلة في [`routes.md`](./routes.md).
 
 ---
 

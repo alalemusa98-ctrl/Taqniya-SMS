@@ -22,7 +22,7 @@
   Accept-Language: ar
   ```
 
-### 📋 مصفوفة المسارات الـ 12 الموحدة (Master Route Matrix):
+### 📋 مصفوفة المسارات الموحدة (Master Route Matrix):
 
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
@@ -31,13 +31,14 @@
 | **3** | `class_academic_terms` | `PUT` | `/api/v1/academic/class-academic-terms/:id` | `admin` | تعديل فترة صف دراسي |
 | **4** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/activate` | `admin` | تفعيل الفترة النشطة للصف (Atomic) |
 | **5** | `class_academic_terms` | `POST` | `/api/v1/academic/class-academic-terms/:id/close` | `admin` | إغلاق/فتح درجات الفترة للصف للأرشفة |
-| **6** | `class_sections` | `GET` | `/api/v1/academic/class-sections` | `admin` | عرض وبحث شعب الصفوف المفتوحة |
-| **7** | `class_sections` | `POST` | `/api/v1/academic/class-sections` | `admin` | تسكين وربط شعبة بصف دراسي |
-| **8** | `class_sections` | `DELETE` | `/api/v1/academic/class-sections/:id` | `admin` | فك ربط شعبة من صف |
-| **9** | `class_subjects` | `GET` | `/api/v1/academic/class-subjects` | `admin` | استعراض مناهج ومقررات الصفوف بالفصول |
-| **10** | `class_subjects` | `POST` | `/api/v1/academic/class-subjects` | `admin` | إسناد مادة وتحديد درجات الفترة |
-| **11** | `class_subjects` | `PUT` | `/api/v1/academic/class-subjects/:id` | `admin` | تعديل درجات مادة مسندة بالفترة |
-| **12** | `class_subjects` | `DELETE` | `/api/v1/academic/class-subjects/:id` | `admin` | إزالة مادة من منهج فترة الصف |
+| **6** | `class_academic_terms` | `DELETE` | `/api/v1/academic/class-academic-terms/:id` | `admin` | فك ربط فترة غير نشطة من صف دراسي |
+| **7** | `class_sections` | `GET` | `/api/v1/academic/class-sections` | `admin` | عرض وبحث شعب الصفوف المفتوحة |
+| **8** | `class_sections` | `POST` | `/api/v1/academic/class-sections` | `admin` | تسكين وربط شعبة بصف دراسي |
+| **9** | `class_sections` | `DELETE` | `/api/v1/academic/class-sections/:id` | `admin` | فك ربط شعبة من صف |
+| **10** | `class_subjects` | `GET` | `/api/v1/academic/class-subjects` | `admin` | استعراض مناهج ومقررات الصفوف بالفصول |
+| **11** | `class_subjects` | `POST` | `/api/v1/academic/class-subjects` | `admin` | إسناد مادة وتحديد درجات الفترة |
+| **12** | `class_subjects` | `PUT` | `/api/v1/academic/class-subjects/:id` | `admin` | تعديل درجات مادة مسندة بالفترة |
+| **13** | `class_subjects` | `DELETE` | `/api/v1/academic/class-subjects/:id` | `admin` | إزالة مادة من منهج فترة الصف |
 
 ### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
 
@@ -342,6 +343,40 @@
 {
   "success": false,
   "message": "تخصيص فترة الصف غير موجود."
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
+
+---
+
+### 1.6 `DELETE /api/v1/academic/class-academic-terms/:id` — فك ربط فترة من صف دراسي
+
+> **الوصف الوظيفي:** إلغاء تخصيص فترة لصف دراسي بشرط ألا تكون الفترة النشطة حالياً للصف وألا تحتوي على مواد دراسية مسندة (`ON DELETE RESTRICT`).
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "message": "تم فك ربط الفترة من الصف بنجاح."
+}
+```
+
+##### 🔍 `404 Not Found`:
+```json
+{
+  "success": false,
+  "message": "تخصيص فترة الصف غير موجود."
+}
+```
+
+##### ⚡ `409 Conflict` (الفترة نشطة أو تحتوي على مواد مسندة):
+```json
+{
+  "success": false,
+  "message": "لا يمكن حذف أو فك ربط الفترة النشطة حالياً للصف أو المحتوية على مواد مسندة (RESTRICT)."
 }
 ```
 

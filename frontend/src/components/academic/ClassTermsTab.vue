@@ -12,6 +12,7 @@ import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
 
 // Component Lazy Loading (component_lazy_loading)
 const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
+const TaqniyaModal = defineAsyncComponent(() => import('../ui/TaqniyaModal.vue'));
 import {
   Plus,
   Zap,
@@ -1010,38 +1011,37 @@ onMounted(async () => {
       </form>
     </TaqniyaDrawer>
 
-    <!-- Delete Confirmation Modal (فك الارتباط) -->
-    <div
-      v-if="showDeleteModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in"
+    <!-- Delete Confirmation Modal (فك الارتباط) using Shared TaqniyaModal -->
+    <TaqniyaModal
+      :is-open="showDeleteModal"
+      title="تأكيد فك ارتباط الفترة"
+      subtitle="سيتم إزالة ربط هذه الفترة بالصف الدراسي المختار"
+      max-width="md"
+      @close="showDeleteModal = false"
     >
-      <div class="w-full max-w-md bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-6 space-y-4 shadow-xl">
-        <div class="flex items-center gap-3 text-rose-500">
-          <div class="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center">
-            <Trash2 class="w-5 h-5" />
-          </div>
-          <div>
-            <h3 class="font-bold text-sm text-bx-title">تأكيد فك ارتباط الفترة</h3>
-            <p class="text-xs text-bx-muted">سيتم إزالة ربط هذه الفترة بالصف الدراسي المختار</p>
-          </div>
+      <template #icon>
+        <div class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+          <Trash2 class="w-5 h-5" />
         </div>
+      </template>
 
-        <div class="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 text-xs text-bx-muted leading-relaxed space-y-1">
-          <p>
-            أنت على وشك فك ارتباط:
-            <strong class="text-bx-title font-black">{{ itemToDelete?.name }}</strong>.
-          </p>
-          <p class="text-[11px] text-rose-600 dark:text-rose-400 font-bold">
-            * يشترط النظام ألا تكون الفترة نشطة حالياً وألا تحتوي على مواد مسندة بها.
-          </p>
-        </div>
+      <div class="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 text-xs text-bx-muted leading-relaxed space-y-1">
+        <p>
+          أنت على وشك فك ارتباط:
+          <strong class="text-bx-title font-black">{{ itemToDelete?.name }}</strong>.
+        </p>
+        <p class="text-[11px] text-rose-600 dark:text-rose-400 font-bold">
+          * يشترط النظام ألا تكون الفترة نشطة حالياً وألا تحتوي على مواد مسندة بها.
+        </p>
+      </div>
 
-        <div class="flex items-center justify-end gap-2.5 pt-2">
+      <template #footer>
+        <div class="flex items-center justify-end gap-2.5">
           <button
             type="button"
             @click="showDeleteModal = false"
             :disabled="isDeleting"
-            class="px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all"
+            class="px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
           >
             إلغاء التراجع
           </button>
@@ -1049,13 +1049,13 @@ onMounted(async () => {
             type="button"
             @click="handleDelete"
             :disabled="isDeleting"
-            class="px-6 py-2.5 rounded-full bg-rose-600 text-white text-xs font-bold shadow-md shadow-rose-600/20 hover:bg-rose-700 flex items-center gap-2 cursor-pointer transition-all"
+            class="px-6 py-2.5 rounded-full bg-rose-600 text-white text-xs font-bold shadow-md shadow-rose-600/20 hover:bg-rose-700 flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50"
           >
             <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
             <span>تأكيد فك الارتباط</span>
           </button>
         </div>
-      </div>
-    </div>
+      </template>
+    </TaqniyaModal>
   </div>
 </template>
