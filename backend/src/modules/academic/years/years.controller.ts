@@ -58,8 +58,16 @@ export class YearsController {
     return this.yearsService.update(id, dto, adminId, ipAddress, userAgent);
   }
 
-  @Patch(':id/activate')
+  @Post(':id/activate')
   async activate(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    const adminId = (req as any).user?.id ? Number((req as any).user.id) : undefined;
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.yearsService.activate(id, adminId, ipAddress, userAgent);
+  }
+
+  @Patch(':id/activate')
+  async activatePatch(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
     const adminId = (req as any).user?.id ? Number((req as any).user.id) : undefined;
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];

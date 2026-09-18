@@ -56,6 +56,24 @@ export interface QueryYearsParams {
   per_page?: number;
   search?: string;
   is_active?: number;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+}
+
+export interface QueryTermsParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+}
+
+export interface QueryStagesParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface QueryClassesParams {
@@ -231,12 +249,12 @@ export const academicApi = {
     deduplicatedGet<any>(`/academic/years/${id}`, { signal }),
   createYear: (payload: CreateYearPayload) => apiClient.post('/academic/years', payload),
   updateYear: (id: number, payload: UpdateYearPayload) => apiClient.put(`/academic/years/${id}`, payload),
-  activateYear: (id: number) => apiClient.patch(`/academic/years/${id}/activate`),
+  activateYear: (id: number) => apiClient.post(`/academic/years/${id}/activate`),
   deleteYear: (id: number) => apiClient.delete(`/academic/years/${id}`),
 
   // Terms (02-A)
-  getTerms: (signal?: AbortSignal) =>
-    deduplicatedGet<any>('/academic/terms', { signal }),
+  getTerms: (params?: QueryTermsParams, signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/terms', { params, signal }),
   getTermById: (id: number, signal?: AbortSignal) =>
     deduplicatedGet<any>(`/academic/terms/${id}`, { signal }),
   createTerm: (payload: CreateTermPayload) => apiClient.post('/academic/terms', payload),
@@ -244,8 +262,8 @@ export const academicApi = {
   deleteTerm: (id: number) => apiClient.delete(`/academic/terms/${id}`),
 
   // Stages (02-A)
-  getStages: (signal?: AbortSignal) =>
-    deduplicatedGet<any>('/academic/stages', { signal }),
+  getStages: (params?: QueryStagesParams, signal?: AbortSignal) =>
+    deduplicatedGet<any>('/academic/stages', { params, signal }),
   getStageById: (id: number, signal?: AbortSignal) =>
     deduplicatedGet<any>(`/academic/stages/${id}`, { signal }),
   createStage: (payload: CreateStagePayload) => apiClient.post('/academic/stages', payload),

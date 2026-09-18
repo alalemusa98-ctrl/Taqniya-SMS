@@ -49,23 +49,27 @@ export class YearsService {
       where.is_active = Number(query.is_active);
     }
 
+    const sortBy = query.sort_by || 'id';
+    const sortOrder = query.sort_order === 'asc' ? 'asc' : 'desc';
+
     const [total, years] = await Promise.all([
       this.prisma.academicYear.count({ where }),
       this.prisma.academicYear.findMany({
         where,
         skip,
         take: perPage,
-        orderBy: { start_date: 'desc' },
+        orderBy: { [sortBy]: sortOrder },
       }),
     ]);
 
     return {
       success: true,
+      message: total > 0 ? 'تم جلب قائمة السنوات الدراسية بنجاح.' : 'لا توجد سنوات دراسية مسجلة.',
       data: years.map((y) => this.serializeYear(y)),
       meta: {
-        total,
-        page,
+        current_page: page,
         per_page: perPage,
+        total,
         last_page: Math.ceil(total / perPage) || 1,
       },
     };
@@ -96,7 +100,10 @@ export class YearsService {
     if (endDate <= startDate) {
       throw new UnprocessableEntityException({
         success: false,
-        message: 'تاريخ نهاية السنة الدراسية يجب أن يكون بعد تاريخ البداية.',
+        message: 'بيانات الإدخال غير صالحة.',
+        errors: {
+          end_date: ['تاريخ النهاية يجب أن يكون بعد تاريخ البداية.'],
+        },
       });
     }
 
@@ -110,7 +117,7 @@ export class YearsService {
     if (existing) {
       throw new ConflictException({
         success: false,
-        message: 'اسم السنة الدراسية موجود مسبقاً.',
+        message: 'اسم السنة الدراسية موجود مسبقاً (uq_academic_years_name).',
       });
     }
 
@@ -143,7 +150,13 @@ export class YearsService {
     return {
       success: true,
       message: 'تم إنشاء السنة الدراسية بنجاح.',
-      data: this.serializeYear(created),
+      data: {
+        id: Number(created.id),
+        name: created.name,
+        start_date: dto.start_date,
+        end_date: dto.end_date,
+        is_active: 0,
+      },
     };
   }
 
@@ -165,7 +178,10 @@ export class YearsService {
     if (endDate <= startDate) {
       throw new UnprocessableEntityException({
         success: false,
-        message: 'تاريخ نهاية السنة الدراسية يجب أن يكون بعد تاريخ البداية.',
+        message: 'بيانات التحديث غير صالحة.',
+        errors: {
+          end_date: ['تاريخ النهاية يجب أن يكون بعد تاريخ البداية.'],
+        },
       });
     }
 
@@ -181,7 +197,7 @@ export class YearsService {
       if (duplicate) {
         throw new ConflictException({
           success: false,
-          message: 'اسم السنة الدراسية موجود مسبقاً.',
+          message: 'اسم السنة الدراسية مستخدم مسبقاً لسنة أخرى.',
         });
       }
     }
@@ -220,8 +236,14 @@ export class YearsService {
 
     return {
       success: true,
-      message: 'تم تحديث بيانات السنة الدراسية بنجاح.',
-      data: this.serializeYear(updated),
+      message: 'تم تحديث السنة الدراسية بنجاح.',
+      data: {
+        id: Number(updated.id),
+        name: updated.name,
+        start_date: dto.start_date || oldValues.start_date,
+        end_date: dto.end_date || oldValues.end_date,
+        is_active: Number(updated.is_active),
+      },
     };
   }
 
@@ -233,7 +255,7 @@ export class YearsService {
     if (!year || year.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'السنة الدراسية غير موجودة.',
+        message: 'السنة الدراسية المراد تفعيلها غير موجودة.',
       });
     }
 
@@ -265,8 +287,12 @@ export class YearsService {
 
     return {
       success: true,
-      message: 'تم تفعيل السنة الدراسية بنجاح واعتمادها كسنة حالية.',
-      data: this.serializeYear(updated),
+      message: 'تم تفعيل السنة الدراسية كعام نشط للمنظومة بنجاح.',
+      data: {
+        id: Number(updated.id),
+        name: updated.name,
+        is_active: 1,
+      },
     };
   }
 
@@ -282,7 +308,7 @@ export class YearsService {
     if (!year || year.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'السنة الدراسية غير موجودة.',
+        message: 'السنة الدراسية المراد حذفها غير موجودة.',
       });
     }
 
@@ -290,7 +316,7 @@ export class YearsService {
     if (year.student_enrollments.length > 0 || year.teaching_assignments.length > 0) {
       throw new ConflictException({
         success: false,
-        message: 'لا يمكن حذف السنة الدراسية لوجود تسجيلات طلاب أو جداول تدريس مرتبطة بها.',
+        message: 'لا يمكن حذف السنة الدراسية لارتباطها بفترات صفوف أو طلاب (RESTRICT).',
       });
     }
 

@@ -7,6 +7,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service.js';
 import { AuditService } from '../../audit/audit.service.js';
 import { CreateAcademicTermDto } from './dto/create-term.dto.js';
 import { UpdateAcademicTermDto } from './dto/update-term.dto.js';
+import { QueryAcademicTermsDto } from './dto/query-terms.dto.js';
 
 @Injectable()
 export class TermsService {
@@ -26,15 +27,44 @@ export class TermsService {
     };
   }
 
-  async findAll() {
-    const terms = await this.prisma.academicTerm.findMany({
-      where: { deleted_at: null },
-      orderBy: { term_number: 'asc' },
-    });
+  async findAll(query: QueryAcademicTermsDto = {}) {
+    const page = Number(query.page) || 1;
+    const perPage = Number(query.per_page) || 15;
+    const skip = (page - 1) * perPage;
+
+    const where: any = {
+      deleted_at: null,
+    };
+
+    if (query.search) {
+      where.name = {
+        contains: query.search,
+      };
+    }
+
+    const sortBy = query.sort_by || 'term_number';
+    const sortOrder = query.sort_order === 'desc' ? 'desc' : 'asc';
+
+    const [total, terms] = await Promise.all([
+      this.prisma.academicTerm.count({ where }),
+      this.prisma.academicTerm.findMany({
+        where,
+        skip,
+        take: perPage,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+    ]);
 
     return {
       success: true,
+      message: total > 0 ? 'تم جلب كتالوج الفترات المعيارية بنجاح.' : 'لا توجد فترات مسجلة بالكتالوج.',
       data: terms.map((t) => this.serializeTerm(t)),
+      meta: {
+        current_page: page,
+        per_page: perPage,
+        total,
+        last_page: Math.ceil(total / perPage) || 1,
+      },
     };
   }
 
@@ -46,7 +76,7 @@ export class TermsService {
     if (!term || term.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'الفصل الدراسي غير موجود.',
+        message: 'الفترة غير موجودة بالكتالوج.',
       });
     }
 
@@ -60,26 +90,28 @@ export class TermsService {
     const existingName = await this.prisma.academicTerm.findFirst({
       where: {
         name: dto.name,
+        deleted_at: null,
       },
     });
 
     if (existingName) {
       throw new ConflictException({
         success: false,
-        message: 'اسم الفصل الدراسي موجود مسبقاً في الكتالوج.',
+        message: 'اسم الفترة أو رقم الترتيب موجود مسبقاً بالكتالوج (uq_terms_name, uq_terms_number).',
       });
     }
 
     const existingNumber = await this.prisma.academicTerm.findFirst({
       where: {
         term_number: dto.term_number,
+        deleted_at: null,
       },
     });
 
     if (existingNumber) {
       throw new ConflictException({
         success: false,
-        message: 'رقم الفصل الدراسي الترتيبي موجود مسبقاً.',
+        message: 'اسم الفترة أو رقم الترتيب موجود مسبقاً بالكتالوج (uq_terms_name, uq_terms_number).',
       });
     }
 
@@ -95,7 +127,7 @@ export class TermsService {
       if (err.code === 'P2002') {
         throw new ConflictException({
           success: false,
-          message: 'اسم الفصل أو رقم الترتيب موجود مسبقاً.',
+          message: 'اسم الفترة أو رقم الترتيب موجود مسبقاً بالكتالوج (uq_terms_name, uq_terms_number).',
         });
       }
       throw err;
@@ -118,8 +150,12 @@ export class TermsService {
 
     return {
       success: true,
-      message: 'تم إنشاء الفصل الدراسي في الكتالوج بنجاح.',
-      data: this.serializeTerm(created),
+      message: 'تمت إضافة الفترة للكتالوج العام بنجاح.',
+      data: {
+        id: Number(created.id),
+        name: created.name,
+        term_number: Number(created.term_number),
+      },
     };
   }
 
@@ -131,7 +167,7 @@ export class TermsService {
     if (!term || term.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'الفصل الدراسي غير موجود.',
+        message: 'الفترة غير موجودة بالكتالوج.',
       });
     }
 
@@ -147,7 +183,7 @@ export class TermsService {
       if (duplicateName) {
         throw new ConflictException({
           success: false,
-          message: 'اسم الفصل الدراسي موجود مسبقاً.',
+          message: 'اسم الفترة أو رقم الترتيب مستخدم مسبقاً لفترة أخرى.',
         });
       }
     }
@@ -164,7 +200,7 @@ export class TermsService {
       if (duplicateNumber) {
         throw new ConflictException({
           success: false,
-          message: 'رقم الفصل الدراسي موجود مسبقاً.',
+          message: 'اسم الفترة أو رقم الترتيب مستخدم مسبقاً لفترة أخرى.',
         });
       }
     }
@@ -200,8 +236,12 @@ export class TermsService {
 
     return {
       success: true,
-      message: 'تم تحديث بيانات الفصل الدراسي بنجاح.',
-      data: this.serializeTerm(updated),
+      message: 'تم تحديث الفترة بنجاح.',
+      data: {
+        id: Number(updated.id),
+        name: updated.name,
+        term_number: Number(updated.term_number),
+      },
     };
   }
 
@@ -219,7 +259,7 @@ export class TermsService {
     if (!term || term.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'الفصل الدراسي غير موجود.',
+        message: 'الفترة المراد حذفها غير موجودة بالكتالوج.',
       });
     }
 
@@ -232,7 +272,7 @@ export class TermsService {
     ) {
       throw new ConflictException({
         success: false,
-        message: 'لا يمكن حذف الفصل الدراسي لوجود فصول صفية أو واجبات أو امتحانات مرتبطة به.',
+        message: 'لا يمكن حذف الفترة المرجعية لارتباطها بتخصيصات صفوف (RESTRICT).',
       });
     }
 
@@ -256,7 +296,7 @@ export class TermsService {
 
     return {
       success: true,
-      message: 'تم حذف الفصل الدراسي من الكتالوج بنجاح.',
+      message: 'تم حذف الفترة من الكتالوج بنجاح.',
     };
   }
 }

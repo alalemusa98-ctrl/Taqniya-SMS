@@ -25,7 +25,7 @@ Your responsibility is:
 Target folder:
 
 ```text
-[phase_01_auth_identity]
+[phase_02_academic_structure_a]
 ```
 
 

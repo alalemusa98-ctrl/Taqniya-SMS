@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   Req,
   ParseIntPipe,
@@ -13,6 +14,7 @@ import {
 import { StagesService } from './stages.service.js';
 import { CreateAcademicStageDto } from './dto/create-stage.dto.js';
 import { UpdateAcademicStageDto } from './dto/update-stage.dto.js';
+import { QueryAcademicStagesDto } from './dto/query-stages.dto.js';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../common/guards/roles.guard.js';
 import { Roles } from '../../../common/decorators/roles.decorator.js';
@@ -26,8 +28,8 @@ export class StagesController {
   constructor(private readonly stagesService: StagesService) {}
 
   @Get()
-  async findAll() {
-    return this.stagesService.findAll();
+  async findAll(@Query() query: QueryAcademicStagesDto) {
+    return this.stagesService.findAll(query);
   }
 
   @Get(':id')

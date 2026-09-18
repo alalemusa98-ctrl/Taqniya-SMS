@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class QueryAcademicYearsDto {
@@ -22,4 +22,14 @@ export class QueryAcademicYearsDto {
   @Type(() => Number)
   @IsInt()
   is_active?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['id', 'name', 'start_date', 'end_date'])
+  sort_by?: string = 'id';
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['asc', 'desc'])
+  sort_order?: 'asc' | 'desc' = 'desc';
 }

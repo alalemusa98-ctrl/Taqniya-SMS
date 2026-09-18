@@ -50,6 +50,7 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
       );
 
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم إنشاء السنة الدراسية بنجاح.');
       expect(result.data.name).toBe(uniqueName);
       expect(result.data.is_active).toBe(0);
       createdYearId = result.data.id;
@@ -86,16 +87,20 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
       ).rejects.toThrow(ConflictException);
     });
 
-    it('TC-AY-04: Retrieve years list with pagination and search', async () => {
+    it('TC-AY-04: Retrieve years list with pagination, sorting, and search', async () => {
       const result = await yearsService.findAll({
         page: 1,
         per_page: 10,
+        sort_by: 'start_date',
+        sort_order: 'desc',
       });
 
       expect(result.success).toBe(true);
+      expect(result.message).toBeDefined();
       expect(Array.isArray(result.data)).toBe(true);
       expect(result.meta).toBeDefined();
       expect(result.meta.total).toBeGreaterThanOrEqual(1);
+      expect(result.meta.current_page).toBe(1);
     });
 
     it('TC-AY-05: Update academic year details', async () => {
@@ -109,6 +114,7 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
       );
 
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم تحديث السنة الدراسية بنجاح.');
       expect(result.data.name).toBe(updatedName);
     });
 
@@ -126,6 +132,7 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
       // Activate first year
       const act1 = await yearsService.activate(createdYearId, testAdminId);
       expect(act1.success).toBe(true);
+      expect(act1.message).toBe('تم تفعيل السنة الدراسية كعام نشط للمنظومة بنجاح.');
       expect(act1.data.is_active).toBe(1);
 
       // Check in DB
@@ -158,6 +165,7 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
 
       const result = await yearsService.remove(toDelete.data.id, testAdminId);
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم حذف السنة الدراسية بنجاح.');
 
       const deleted = await prisma.academicYear.findUnique({ where: { id: BigInt(toDelete.data.id) } });
       expect(deleted!.deleted_at).not.toBeNull();
@@ -184,6 +192,7 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
       );
 
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تمت إضافة الفترة للكتالوج العام بنجاح.');
       expect(result.data.name).toBe(termName);
       expect(result.data.term_number).toBe(termNumber);
       createdTermId = result.data.id;
@@ -201,10 +210,18 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
       ).rejects.toThrow(ConflictException);
     });
 
-    it('TC-AT-03: Retrieve terms catalog sorted by term_number', async () => {
-      const result = await termsService.findAll();
+    it('TC-AT-03: Retrieve terms catalog sorted by term_number with pagination', async () => {
+      const result = await termsService.findAll({
+        page: 1,
+        per_page: 10,
+        sort_by: 'term_number',
+        sort_order: 'asc',
+      });
       expect(result.success).toBe(true);
+      expect(result.message).toBeDefined();
       expect(Array.isArray(result.data)).toBe(true);
+      expect(result.meta).toBeDefined();
+      expect(result.meta.current_page).toBe(1);
     });
 
     it('TC-AT-04: Update term details in catalog', async () => {
@@ -218,6 +235,7 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
       );
 
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم تحديث الفترة بنجاح.');
       expect(result.data.name).toBe(updatedName);
     });
 
@@ -232,6 +250,7 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
 
       const result = await termsService.remove(termToDel.data.id, testAdminId);
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم حذف الفترة من الكتالوج بنجاح.');
 
       const deleted = await prisma.academicTerm.findUnique({ where: { id: BigInt(termToDel.data.id) } });
       expect(deleted!.deleted_at).not.toBeNull();
@@ -255,6 +274,7 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
       );
 
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم إنشاء المرحلة التعليمية بنجاح.');
       expect(result.data.name).toBe(stageName);
       expect(result.data.order_index).toBe(5);
       createdStageId = result.data.id;
@@ -273,10 +293,18 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
       ).rejects.toThrow(ConflictException);
     });
 
-    it('TC-AS-03: Retrieve stages list ordered by order_index', async () => {
-      const result = await stagesService.findAll();
+    it('TC-AS-03: Retrieve stages list ordered by order_index with pagination', async () => {
+      const result = await stagesService.findAll({
+        page: 1,
+        per_page: 10,
+        sort_by: 'order_index',
+        sort_order: 'asc',
+      });
       expect(result.success).toBe(true);
+      expect(result.message).toBeDefined();
       expect(Array.isArray(result.data)).toBe(true);
+      expect(result.meta).toBeDefined();
+      expect(result.meta.current_page).toBe(1);
     });
 
     it('TC-AS-04: Update academic stage', async () => {
@@ -291,6 +319,7 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
       );
 
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم تحديث المرحلة التعليمية بنجاح.');
       expect(result.data.name).toBe(updatedName);
       expect(result.data.order_index).toBe(10);
     });
@@ -306,6 +335,7 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
 
       const result = await stagesService.remove(stageToDel.data.id, testAdminId);
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم حذف المرحلة التعليمية بنجاح.');
 
       const deleted = await prisma.academicStage.findUnique({ where: { id: BigInt(stageToDel.data.id) } });
       expect(deleted!.deleted_at).not.toBeNull();

@@ -7,6 +7,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service.js';
 import { AuditService } from '../../audit/audit.service.js';
 import { CreateAcademicStageDto } from './dto/create-stage.dto.js';
 import { UpdateAcademicStageDto } from './dto/update-stage.dto.js';
+import { QueryAcademicStagesDto } from './dto/query-stages.dto.js';
 
 @Injectable()
 export class StagesService {
@@ -26,15 +27,44 @@ export class StagesService {
     };
   }
 
-  async findAll() {
-    const stages = await this.prisma.academicStage.findMany({
-      where: { deleted_at: null },
-      orderBy: { order_index: 'asc' },
-    });
+  async findAll(query: QueryAcademicStagesDto = {}) {
+    const page = Number(query.page) || 1;
+    const perPage = Number(query.per_page) || 15;
+    const skip = (page - 1) * perPage;
+
+    const where: any = {
+      deleted_at: null,
+    };
+
+    if (query.search) {
+      where.name = {
+        contains: query.search,
+      };
+    }
+
+    const sortBy = query.sort_by || 'order_index';
+    const sortOrder = query.sort_order === 'desc' ? 'desc' : 'asc';
+
+    const [total, stages] = await Promise.all([
+      this.prisma.academicStage.count({ where }),
+      this.prisma.academicStage.findMany({
+        where,
+        skip,
+        take: perPage,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+    ]);
 
     return {
       success: true,
+      message: total > 0 ? 'تم جلب قائمة المراحل التعليمية بنجاح.' : 'لا توجد مراحل تعليمية مسجلة.',
       data: stages.map((s) => this.serializeStage(s)),
+      meta: {
+        current_page: page,
+        per_page: perPage,
+        total,
+        last_page: Math.ceil(total / perPage) || 1,
+      },
     };
   }
 
@@ -46,7 +76,7 @@ export class StagesService {
     if (!stage || stage.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'المرحلة الدراسية غير موجودة.',
+        message: 'المرحلة التعليمية غير موجودة.',
       });
     }
 
@@ -67,14 +97,14 @@ export class StagesService {
     if (existingName) {
       throw new ConflictException({
         success: false,
-        message: 'اسم المرحلة الدراسية موجود مسبقاً.',
+        message: 'اسم المرحلة التعليمية موجود مسبقاً (uq_stages_name).',
       });
     }
 
     const created = await this.prisma.academicStage.create({
       data: {
         name: dto.name,
-        order_index: dto.order_index,
+        order_index: dto.order_index ?? 1,
       },
     });
 
@@ -95,8 +125,12 @@ export class StagesService {
 
     return {
       success: true,
-      message: 'تم إنشاء المرحلة الدراسية بنجاح.',
-      data: this.serializeStage(created),
+      message: 'تم إنشاء المرحلة التعليمية بنجاح.',
+      data: {
+        id: Number(created.id),
+        name: created.name,
+        order_index: Number(created.order_index),
+      },
     };
   }
 
@@ -108,7 +142,7 @@ export class StagesService {
     if (!stage || stage.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'المرحلة الدراسية غير موجودة.',
+        message: 'المرحلة التعليمية غير موجودة.',
       });
     }
 
@@ -124,7 +158,7 @@ export class StagesService {
       if (duplicateName) {
         throw new ConflictException({
           success: false,
-          message: 'اسم المرحلة الدراسية موجود مسبقاً.',
+          message: 'اسم المرحلة التعليمية مستخدم مسبقاً لمرحلة أخرى.',
         });
       }
     }
@@ -160,8 +194,12 @@ export class StagesService {
 
     return {
       success: true,
-      message: 'تم تحديث بيانات المرحلة الدراسية بنجاح.',
-      data: this.serializeStage(updated),
+      message: 'تم تحديث المرحلة التعليمية بنجاح.',
+      data: {
+        id: Number(updated.id),
+        name: updated.name,
+        order_index: Number(updated.order_index),
+      },
     };
   }
 
@@ -176,7 +214,7 @@ export class StagesService {
     if (!stage || stage.deleted_at !== null) {
       throw new NotFoundException({
         success: false,
-        message: 'المرحلة الدراسية غير موجودة.',
+        message: 'المرحلة التعليمية المراد حذفها غير موجودة.',
       });
     }
 
@@ -184,7 +222,7 @@ export class StagesService {
     if (stage.classes.length > 0) {
       throw new ConflictException({
         success: false,
-        message: 'لا يمكن حذف المرحلة الدراسية لوجود صفوف دراسية مرتبطة بها.',
+        message: 'لا يمكن حذف المرحلة التعليمية لارتباطها بصفوف دراسية (RESTRICT).',
       });
     }
 
@@ -208,7 +246,7 @@ export class StagesService {
 
     return {
       success: true,
-      message: 'تم حذف المرحلة الدراسية بنجاح.',
+      message: 'تم حذف المرحلة التعليمية بنجاح.',
     };
   }
 }

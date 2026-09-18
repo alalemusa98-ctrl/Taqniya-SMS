@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   Req,
   ParseIntPipe,
@@ -13,6 +14,7 @@ import {
 import { TermsService } from './terms.service.js';
 import { CreateAcademicTermDto } from './dto/create-term.dto.js';
 import { UpdateAcademicTermDto } from './dto/update-term.dto.js';
+import { QueryAcademicTermsDto } from './dto/query-terms.dto.js';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../common/guards/roles.guard.js';
 import { Roles } from '../../../common/decorators/roles.decorator.js';
@@ -26,8 +28,8 @@ export class TermsController {
   constructor(private readonly termsService: TermsService) {}
 
   @Get()
-  async findAll() {
-    return this.termsService.findAll();
+  async findAll(@Query() query: QueryAcademicTermsDto) {
+    return this.termsService.findAll(query);
   }
 
   @Get(':id')
