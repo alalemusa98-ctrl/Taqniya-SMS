@@ -112,6 +112,12 @@ export class QuizzesService {
     const where: any = {
       academic_year_id: year.id,
       deleted_at: null,
+      class_section: {
+        deleted_at: null,
+      },
+      teaching_assignment: {
+        deleted_at: null,
+      },
     };
 
     if (query.academic_term_id) {
@@ -327,6 +333,9 @@ export class QuizzesService {
     const classMap = new Map<number, any>();
 
     for (const q of quizzes) {
+      if (!q.class_section || !q.class_section.class || !q.class_section.section) {
+        continue;
+      }
       const classId = Number(q.class_section.class.id);
       const className = q.class_section.class.name;
       const gradeLevel = q.class_section.class.grade_level;
@@ -362,8 +371,8 @@ export class QuizzesService {
 
       sectionObj.quizzes.push({
         id: Number(q.id),
-        subject_name: q.teaching_assignment.subject.name,
-        teacher_name: q.teaching_assignment.teacher.full_name,
+        subject_name: q.teaching_assignment?.subject?.name || '',
+        teacher_name: q.teaching_assignment?.teacher?.full_name || '',
         title: q.title,
         attachments_count: attachmentsCount,
         quiz_date: this.formatDateOnly(q.quiz_date),
@@ -408,6 +417,8 @@ export class QuizzesService {
       where: {
         id: BigInt(id),
         deleted_at: null,
+        class_section: { deleted_at: null },
+        teaching_assignment: { deleted_at: null },
       },
       include: {
         academic_term: true,
@@ -444,15 +455,15 @@ export class QuizzesService {
         academic_year_id: Number(quiz.academic_year_id),
         academic_term_id: Number(quiz.academic_term_id),
         term_name: quiz.academic_term?.name || '',
-        class_id: Number(quiz.class_section.class.id),
-        class_name: quiz.class_section.class.name,
-        class_section_id: Number(quiz.class_section.id),
-        section_name: quiz.class_section.section.name,
-        teaching_assignment_id: Number(quiz.teaching_assignment.id),
-        subject_id: Number(quiz.teaching_assignment.subject.id),
-        subject_name: quiz.teaching_assignment.subject.name,
-        teacher_id: Number(quiz.teaching_assignment.teacher.id),
-        teacher_name: quiz.teaching_assignment.teacher.full_name,
+        class_id: quiz.class_section?.class ? Number(quiz.class_section.class.id) : 0,
+        class_name: quiz.class_section?.class?.name || '',
+        class_section_id: quiz.class_section ? Number(quiz.class_section.id) : 0,
+        section_name: quiz.class_section?.section?.name || '',
+        teaching_assignment_id: quiz.teaching_assignment ? Number(quiz.teaching_assignment.id) : 0,
+        subject_id: quiz.teaching_assignment?.subject ? Number(quiz.teaching_assignment.subject.id) : 0,
+        subject_name: quiz.teaching_assignment?.subject?.name || '',
+        teacher_id: quiz.teaching_assignment?.teacher ? Number(quiz.teaching_assignment.teacher.id) : 0,
+        teacher_name: quiz.teaching_assignment?.teacher?.full_name || '',
         created_by_user_id: Number(quiz.created_by_user_id),
         created_by_name: quiz.creator?.user_code || '',
         title: quiz.title,

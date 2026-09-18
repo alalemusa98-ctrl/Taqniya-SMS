@@ -94,6 +94,12 @@ export class AssignmentsService {
     const where: any = {
       academic_year_id: year.id,
       deleted_at: null,
+      class_section: {
+        deleted_at: null,
+      },
+      teaching_assignment: {
+        deleted_at: null,
+      },
     };
 
     if (query.academic_term_id) {
@@ -337,7 +343,12 @@ export class AssignmentsService {
    */
   async findById(id: number, currentUser?: any) {
     const assignment = await this.prisma.assignment.findFirst({
-      where: { id: BigInt(id), deleted_at: null },
+      where: {
+        id: BigInt(id),
+        deleted_at: null,
+        class_section: { deleted_at: null },
+        teaching_assignment: { deleted_at: null },
+      },
       include: {
         academic_year: true,
         academic_term: true,

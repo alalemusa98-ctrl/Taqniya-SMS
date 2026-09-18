@@ -493,10 +493,10 @@ model TimetableSlot {
   deleted_at             DateTime? @db.Timestamp(0)
 
   // Relations
-  academic_year       AcademicYear       @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_year_id")
-  class_section       ClassSection       @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_class_section_id")
-  period_slot         PeriodSlot         @relation(fields: [period_slot_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_period_slot_id")
-  teaching_assignment TeachingAssignment @relation(fields: [teaching_assignment_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_teaching_assignment_id")
+  academic_year       AcademicYear?       @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_year_id")
+  class_section       ClassSection?       @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_class_section_id")
+  period_slot         PeriodSlot?         @relation(fields: [period_slot_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_period_slot_id")
+  teaching_assignment TeachingAssignment? @relation(fields: [teaching_assignment_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_timetable_teaching_assignment_id")
 
   @@unique([academic_year_id, class_section_id, day_of_week, period_slot_id], map: "uq_timetable_section_slot")
   @@index([academic_year_id, day_of_week, period_slot_id, teaching_assignment_id], map: "idx_timetable_teacher_conflict")
@@ -525,11 +525,11 @@ model Assignment {
   deleted_at             DateTime? @db.Timestamp(0)
 
   // Relations
-  academic_year       AcademicYear       @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_year_id")
-  academic_term       AcademicTerm       @relation(fields: [academic_term_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_term_id")
-  class_section       ClassSection       @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_class_section_id")
-  teaching_assignment TeachingAssignment @relation(fields: [teaching_assignment_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_teaching_assignment_id")
-  creator             User               @relation(fields: [created_by_user_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_created_by_user_id")
+  academic_year       AcademicYear?       @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_year_id")
+  academic_term       AcademicTerm?       @relation(fields: [academic_term_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_term_id")
+  class_section       ClassSection?       @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_class_section_id")
+  teaching_assignment TeachingAssignment? @relation(fields: [teaching_assignment_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_teaching_assignment_id")
+  creator             User?               @relation(fields: [created_by_user_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_assignments_created_by_user_id")
 
   @@index([class_section_id, academic_term_id], map: "idx_assignments_section_term")
   @@index([teaching_assignment_id], map: "idx_assignments_teaching")
@@ -558,11 +558,11 @@ model Quiz {
   deleted_at             DateTime? @db.Timestamp(0)
 
   // Relations
-  academic_year       AcademicYear       @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_year_id")
-  academic_term       AcademicTerm       @relation(fields: [academic_term_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_term_id")
-  class_section       ClassSection       @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_class_section_id")
-  teaching_assignment TeachingAssignment @relation(fields: [teaching_assignment_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_teaching_assignment_id")
-  creator             User               @relation(fields: [created_by_user_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_created_by_user_id")
+  academic_year       AcademicYear?       @relation(fields: [academic_year_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_year_id")
+  academic_term       AcademicTerm?       @relation(fields: [academic_term_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_term_id")
+  class_section       ClassSection?       @relation(fields: [class_section_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_class_section_id")
+  teaching_assignment TeachingAssignment? @relation(fields: [teaching_assignment_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_teaching_assignment_id")
+  creator             User?               @relation(fields: [created_by_user_id], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_quizzes_created_by_user_id")
 
   @@index([class_section_id, academic_term_id], map: "idx_quizzes_section_term")
   @@index([teaching_assignment_id], map: "idx_quizzes_teaching")
