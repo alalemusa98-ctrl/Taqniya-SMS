@@ -1,0 +1,41 @@
+$kind: http-request
+name: 2.2 إنشاء شعبة عامة جديدة (Create Section)
+description: |-
+  إضافة مسمى شعبة عامة جديدة للكتالوج المرجعي العام بالمدرسة مع حفظ المعرف `sectionId`.
+url: "{{baseUrl}}/academic/sections"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "شعبة هـ النموذجية"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201 - تم إنشاء الشعبة العامة بنجاح", function () {
+          pm.response.to.have.status(201);
+      });
+
+      if (pm.response.code === 201) {
+          var jsonData = pm.response.json();
+          pm.test("Created section response contains valid data and ID", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+              pm.expect(jsonData.data.name).to.eql("شعبة هـ النموذجية");
+          });
+
+          if (jsonData.data && jsonData.data.id) {
+              pm.environment.set("sectionId", String(jsonData.data.id));
+              console.log("✅ تم حفظ sectionId بنجاح:", jsonData.data.id);
+          }
+      }
+    language: text/javascript
+order: 2000

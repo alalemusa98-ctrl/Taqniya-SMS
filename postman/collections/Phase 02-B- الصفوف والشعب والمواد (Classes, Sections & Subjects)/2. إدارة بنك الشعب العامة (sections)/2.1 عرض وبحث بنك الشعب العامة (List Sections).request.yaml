@@ -1,0 +1,45 @@
+$kind: http-request
+name: 2.1 عرض وبحث بنك الشعب العامة (List Sections)
+description: |-
+  استرجاع كتالوج الشعب العامة المعتمدة بالمدرسة لمرة واحدة مع دعم البحث والفرز والترقيم.
+url: "{{baseUrl}}/academic/sections?search=&sort_by=name&sort_order=asc&page=1&per_page=15"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث النصي باسم الشعبة (مثال شعبة أ)
+  - key: sort_by
+    value: name
+    description: "حقل الفرز: id, name"
+  - key: sort_order
+    value: asc
+    description: "اتجاه الفرز: asc أو desc"
+  - key: page
+    value: "1"
+    description: رقم الصفحة
+  - key: per_page
+    value: "15"
+    description: عدد السجلات في الصفحة
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - نجاح جلب بنك الشعب العامة", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response has valid academic sections schema", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data).to.be.an('array');
+          pm.expect(jsonData.meta).to.be.an('object');
+          pm.expect(jsonData.meta.current_page).to.be.a('number');
+      });
+    language: text/javascript
+order: 1000

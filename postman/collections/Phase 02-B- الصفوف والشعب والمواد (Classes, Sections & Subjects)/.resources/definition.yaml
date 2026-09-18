@@ -1,0 +1,16 @@
+$kind: collection
+name: "Phase 02-B: الصفوف والشعب والمواد (Classes, Sections & Subjects)"
+description: |-
+  توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 02-B (12 مساراً) وفق العقد المعماري الرسمي `MD/phases/phase_02_academic_structure_b/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).
+
+  المجموعات المشمولة:
+  0. المصادقة وإعداد الجلسة (auth)
+  1. إدارة الصفوف وتحديد تبعيتها للمراحل (classes)
+  2. إدارة بنك الشعب العامة (sections)
+  3. إدارة بنك المواد الدراسية العامة (subjects)
+auth:
+  - id: 9fda2b0c-550d-4f2d-be8f-ce7e1be3276d
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{authToken}}"

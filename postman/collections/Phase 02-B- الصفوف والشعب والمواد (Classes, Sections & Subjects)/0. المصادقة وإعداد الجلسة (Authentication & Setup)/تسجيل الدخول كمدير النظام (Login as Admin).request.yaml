@@ -1,0 +1,39 @@
+$kind: http-request
+name: تسجيل الدخول كمدير النظام (Login as Admin)
+description: |-
+  تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 02-B.
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "user_code": "{{adminUserCode}}",
+      "password": "{{adminPassword}}"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم تسجيل الدخول بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      if (pm.response.code === 200) {
+          var jsonData = pm.response.json();
+          pm.test("Login response contains valid bearer token", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.token).to.be.a('string');
+          });
+          
+          if (jsonData.data && jsonData.data.token) {
+              pm.environment.set("authToken", jsonData.data.token);
+              console.log("✅ تم حفظ authToken بنجاح لاختبارات المرحلة 02-B.");
+          }
+      }
+    language: text/javascript
+order: 1000

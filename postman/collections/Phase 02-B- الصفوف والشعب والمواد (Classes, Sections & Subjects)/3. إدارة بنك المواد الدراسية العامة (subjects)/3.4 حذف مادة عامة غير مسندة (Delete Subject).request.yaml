@@ -1,0 +1,25 @@
+$kind: http-request
+name: 3.4 حذف مادة عامة غير مسندة (Delete Subject)
+description: |-
+  حذف مادة عامة غير مسندة في مقررات صفوف دراسية بالمعرف `{{subjectId}}`.
+url: "{{baseUrl}}/academic/subjects/{{subjectId}}"
+method: DELETE
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم حذف المادة من البنك بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Delete subject returns success true", function () {
+          pm.expect(jsonData.success).to.eql(true);
+      });
+    language: text/javascript
+order: 4000

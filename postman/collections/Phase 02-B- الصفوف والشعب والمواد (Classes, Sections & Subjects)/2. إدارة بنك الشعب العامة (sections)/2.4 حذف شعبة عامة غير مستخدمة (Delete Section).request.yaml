@@ -1,0 +1,25 @@
+$kind: http-request
+name: 2.4 حذف شعبة عامة غير مستخدمة (Delete Section)
+description: |-
+  حذف شعبة عامة غير مسندة لصفوف دراسية بالمعرف `{{sectionId}}`.
+url: "{{baseUrl}}/academic/sections/{{sectionId}}"
+method: DELETE
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم حذف الشعبة العامة بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Delete section returns success true", function () {
+          pm.expect(jsonData.success).to.eql(true);
+      });
+    language: text/javascript
+order: 4000

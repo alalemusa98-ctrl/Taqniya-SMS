@@ -1,0 +1,33 @@
+$kind: http-request
+name: 2.3 تعديل مسمى شعبة عامة (Update Section)
+description: |-
+  تحديث مسمى شعبة عامة قائمة بالكتالوج بالمعرف `{{sectionId}}`.
+url: "{{baseUrl}}/academic/sections/{{sectionId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "شعبة هـ النموذجية (معدلة)"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم تحديث مسمى الشعبة بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Updated section has modified name", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data.name).to.eql("شعبة هـ النموذجية (معدلة)");
+      });
+    language: text/javascript
+order: 3000

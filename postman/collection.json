@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Phase 02-A: الهيكل الأكاديمي (Academic Structure A)",
-    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 02-A (13 مساراً) وفق العقد المعماري الرسمي `MD/phases/phase_02_academic_structure_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (auth)\n1. إدارة السنوات الدراسية (academic_years)\n2. كتالوج الفترات المرجعي (academic_terms)\n3. إدارة المراحل التعليمية (academic_stages)",
+    "name": "Phase 02-B: الصفوف والشعب والمواد (Classes, Sections & Subjects)",
+    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 02-B (12 مساراً) وفق العقد المعماري الرسمي `MD/phases/phase_02_academic_structure_b/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (auth)\n1. إدارة الصفوف وتحديد تبعيتها للمراحل (classes)\n2. إدارة بنك الشعب العامة (sections)\n3. إدارة بنك المواد الدراسية العامة (subjects)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -26,7 +26,7 @@
               }
             ],
             "url": "{{baseUrl}}/auth/login",
-            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع المسارات التالية.",
+            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 02-B.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
@@ -56,7 +56,7 @@
                   "    ",
                   "    if (jsonData.data && jsonData.data.token) {",
                   "        pm.environment.set(\"authToken\", jsonData.data.token);",
-                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 02-A.\");",
+                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 02-B.\");",
                   "    }",
                   "}"
                 ]
@@ -67,11 +67,11 @@
       ]
     },
     {
-      "name": "1. إدارة السنوات الدراسية (Academic Years)",
-      "description": "مسارات إدارة السنوات الدراسية (استعراض، إنشاء، تعديل، تفعيل ذري، وحذف).",
+      "name": "1. إدارة الصفوف وتحديد تبعيتها للمراحل (Classes)",
+      "description": "مسارات إدارة الصفوف الدراسية وتسكينها بالمراحل التعليمية وضبط المستوى الأكاديمي الرقمي (استعراض، إنشاء، تعديل، وحذف).",
       "item": [
         {
-          "name": "1.1 استعراض وبحث قائمة السنوات الدراسية (List Academic Years)",
+          "name": "1.1 عرض وبحث قائمة الصفوف الدراسية (List Classes)",
           "request": {
             "method": "GET",
             "header": [
@@ -81,8 +81,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/years?search=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15",
-            "description": "استرجاع قائمة كافة السنوات الدراسية المسجلة بالمنظومة مع دعم البحث النصي والفلترة والتنقل والفرز.",
+            "url": "{{baseUrl}}/academic/classes?search=&stage_id=&grade_level=&sort_by=grade_level&sort_order=asc&page=1&per_page=15",
+            "description": "استرجاع قائمة الصفوف الدراسية المضافة بالمنظومة مع دعم البحث النصي والتصفية بالمرحلة التعليمية والمستوى الرقمي والترتيب والترقيم.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -100,12 +100,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - نجاح جلب قائمة السنوات الدراسية\", function () {",
+                  "pm.test(\"Status code is 200 - نجاح جلب قائمة الصفوف الدراسية\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
-                  "pm.test(\"Response has valid academic years schema\", function () {",
+                  "pm.test(\"Response has valid academic classes schema\", function () {",
                   "    pm.expect(jsonData.success).to.eql(true);",
                   "    pm.expect(jsonData.data).to.be.an('array');",
                   "    pm.expect(jsonData.meta).to.be.an('object');",
@@ -117,7 +117,7 @@
           ]
         },
         {
-          "name": "1.2 إضافة سنة دراسية جديدة (Create Academic Year)",
+          "name": "1.2 إنشاء صف دراسي وتسكينه بمرحلة (Create Class)",
           "request": {
             "method": "POST",
             "header": [
@@ -132,8 +132,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/years",
-            "description": "إنشاء سجل سنة دراسية جديدة في المنظومة مع تخزين المعرف `yearId` تلقائياً.",
+            "url": "{{baseUrl}}/academic/classes",
+            "description": "إضافة صف دراسي جديد وتحديد تبعيته للمرحلة التعليمية والترتيب الرقمي للترحيل (grade_level) مع حفظ المعرف `classId`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -146,7 +146,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"2029/2030\",\n  \"start_date\": \"2029-09-01\",\n  \"end_date\": \"2030-06-30\"\n}",
+              "raw": "{\n  \"stage_id\": {{stageId}},\n  \"name\": \"الصف العاشر التأسيسي\",\n  \"grade_level\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -160,21 +160,21 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 201 - تم إنشاء السنة الدراسية بنجاح\", function () {",
+                  "pm.test(\"Status code is 201 - تم إنشاء الصف وتسكينه بالمرحلة بنجاح\", function () {",
                   "    pm.response.to.have.status(201);",
                   "});",
                   "",
                   "if (pm.response.code === 201) {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Created year response contains valid data and ID\", function () {",
+                  "    pm.test(\"Created class response contains valid data and ID\", function () {",
                   "        pm.expect(jsonData.success).to.eql(true);",
                   "        pm.expect(jsonData.data.id).to.be.a('number');",
-                  "        pm.expect(jsonData.data.name).to.eql(\"2029/2030\");",
+                  "        pm.expect(jsonData.data.grade_level).to.eql(10);",
                   "    });",
                   "",
                   "    if (jsonData.data && jsonData.data.id) {",
-                  "        pm.environment.set(\"yearId\", String(jsonData.data.id));",
-                  "        console.log(\"✅ تم حفظ yearId بنجاح:\", jsonData.data.id);",
+                  "        pm.environment.set(\"classId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ classId بنجاح:\", jsonData.data.id);",
                   "    }",
                   "}"
                 ]
@@ -183,7 +183,7 @@
           ]
         },
         {
-          "name": "1.3 تعديل بيانات سنة دراسية (Update Academic Year)",
+          "name": "1.3 تعديل بيانات صف دراسي (Update Class)",
           "request": {
             "method": "PUT",
             "header": [
@@ -198,8 +198,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/years/{{yearId}}",
-            "description": "تحديث بيانات سنة دراسية قائمة بالمعرف `{{yearId}}`.",
+            "url": "{{baseUrl}}/academic/classes/{{classId}}",
+            "description": "تحديث مسمى الصف أو مرحلته أو مستواه الرقمي بالمعرف `{{classId}}`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -212,7 +212,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"2029/2030 (معدلة)\",\n  \"start_date\": \"2029-09-01\",\n  \"end_date\": \"2030-06-30\"\n}",
+              "raw": "{\n  \"stage_id\": {{stageId}},\n  \"name\": \"الصف العاشر التأسيسي العام (معدل)\",\n  \"grade_level\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -226,14 +226,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - تم تحديث السنة الدراسية بنجاح\", function () {",
+                  "pm.test(\"Status code is 200 - تم تحديث الصف الدراسي بنجاح\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
-                  "pm.test(\"Updated year response has correct updated data\", function () {",
+                  "pm.test(\"Updated class response has modified name\", function () {",
                   "    pm.expect(jsonData.success).to.eql(true);",
-                  "    pm.expect(jsonData.data.name).to.eql(\"2029/2030 (معدلة)\");",
+                  "    pm.expect(jsonData.data.name).to.eql(\"الصف العاشر التأسيسي العام (معدل)\");",
                   "});"
                 ]
               }
@@ -241,51 +241,7 @@
           ]
         },
         {
-          "name": "1.4 تفعيل السنة الدراسية كعام نشط (Activate Academic Year)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/academic/years/{{yearId}}/activate",
-            "description": "تحويل العام المستهدف إلى العام الدراسي النشط الحصري بالمنظومة (is_active = 1) وإلغاء تفعيل العام السابق ذرياً.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{authToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 200 - تم تفعيل السنة الدراسية كعام نشط بنجاح\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "var jsonData = pm.response.json();",
-                  "pm.test(\"Activated year response verifies is_active = 1\", function () {",
-                  "    pm.expect(jsonData.success).to.eql(true);",
-                  "    pm.expect(jsonData.data.is_active).to.eql(1);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "1.5 حذف سنة دراسية (Delete Academic Year)",
+          "name": "1.4 حذف صف دراسي غير مرتبط (Delete Class)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -295,8 +251,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/years/{{yearId}}",
-            "description": "تنفيذ الحذف لسنة دراسية غير مستخدمة بالمعرف `{{yearId}}`.",
+            "url": "{{baseUrl}}/academic/classes/{{classId}}",
+            "description": "تنفيذ الحذف المنطقي لصف دراسي غير مرتبط بالمعرف `{{classId}}`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -314,12 +270,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - تم حذف السنة الدراسية بنجاح\", function () {",
+                  "pm.test(\"Status code is 200 - تم حذف الصف الدراسي بنجاح\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
-                  "pm.test(\"Delete academic year returns success true\", function () {",
+                  "pm.test(\"Delete class returns success true\", function () {",
                   "    pm.expect(jsonData.success).to.eql(true);",
                   "});"
                 ]
@@ -330,11 +286,11 @@
       ]
     },
     {
-      "name": "2. كتالوج الفترات المرجعي (Academic Terms)",
-      "description": "مسارات إدارة كتالوج الفترات والفصول الدراسية المعيارية (استعراض، إضافة، تعديل، وحذف).",
+      "name": "2. إدارة بنك الشعب العامة (sections)",
+      "description": "مسارات إدارة بنك الشعب العامة المعتمدة بالمدرسة (استعراض، إنشاء، تعديل، وحذف).",
       "item": [
         {
-          "name": "2.1 عرض وبحث كتالوج الفترات العام (List Academic Terms)",
+          "name": "2.1 عرض وبحث بنك الشعب العامة (List Sections)",
           "request": {
             "method": "GET",
             "header": [
@@ -344,8 +300,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/terms?search=&sort_by=term_number&sort_order=asc&page=1&per_page=15",
-            "description": "استرجاع كتالوج الفترات المعيارية العامة بالدولة مرتبة تصاعدياً بـ term_number ASC مع دعم البحث والترقيم والفرز.",
+            "url": "{{baseUrl}}/academic/sections?search=&sort_by=name&sort_order=asc&page=1&per_page=15",
+            "description": "استرجاع كتالوج الشعب العامة المعتمدة بالمدرسة لمرة واحدة مع دعم البحث والفرز والترقيم.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -363,16 +319,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - نجاح جلب كتالوج الفترات\", function () {",
+                  "pm.test(\"Status code is 200 - نجاح جلب بنك الشعب العامة\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
-                  "pm.test(\"Response has valid academic terms schema\", function () {",
+                  "pm.test(\"Response has valid academic sections schema\", function () {",
                   "    pm.expect(jsonData.success).to.eql(true);",
                   "    pm.expect(jsonData.data).to.be.an('array');",
                   "    pm.expect(jsonData.meta).to.be.an('object');",
-                  "    pm.expect(jsonData.meta.total).to.be.a('number');",
+                  "    pm.expect(jsonData.meta.current_page).to.be.a('number');",
                   "});"
                 ]
               }
@@ -380,7 +336,7 @@
           ]
         },
         {
-          "name": "2.2 إضافة فترة لكتالوج الفترات العام (Create Academic Term)",
+          "name": "2.2 إنشاء شعبة عامة جديدة (Create Section)",
           "request": {
             "method": "POST",
             "header": [
@@ -395,8 +351,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/terms",
-            "description": "إضافة فترة معيارية جديدة للكتالوج المرجعي العام وتخزين المعرف `termId`.",
+            "url": "{{baseUrl}}/academic/sections",
+            "description": "إضافة مسمى شعبة عامة جديدة للكتالوج المرجعي العام بالمدرسة مع حفظ المعرف `sectionId`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -409,7 +365,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"الفصل الصيفي الإثرائي\",\n  \"term_number\": 9\n}",
+              "raw": "{\n  \"name\": \"شعبة هـ النموذجية\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -423,21 +379,21 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 201 - تمت إضافة الفترة للكتالوج العام بنجاح\", function () {",
+                  "pm.test(\"Status code is 201 - تم إنشاء الشعبة العامة بنجاح\", function () {",
                   "    pm.response.to.have.status(201);",
                   "});",
                   "",
                   "if (pm.response.code === 201) {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Created term contains valid ID and attributes\", function () {",
+                  "    pm.test(\"Created section response contains valid data and ID\", function () {",
                   "        pm.expect(jsonData.success).to.eql(true);",
                   "        pm.expect(jsonData.data.id).to.be.a('number');",
-                  "        pm.expect(jsonData.data.term_number).to.eql(9);",
+                  "        pm.expect(jsonData.data.name).to.eql(\"شعبة هـ النموذجية\");",
                   "    });",
                   "",
                   "    if (jsonData.data && jsonData.data.id) {",
-                  "        pm.environment.set(\"termId\", String(jsonData.data.id));",
-                  "        console.log(\"✅ تم حفظ termId بنجاح:\", jsonData.data.id);",
+                  "        pm.environment.set(\"sectionId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ sectionId بنجاح:\", jsonData.data.id);",
                   "    }",
                   "}"
                 ]
@@ -446,7 +402,7 @@
           ]
         },
         {
-          "name": "2.3 تعديل مسمى أو ترتيب فترة بالكتالوج (Update Academic Term)",
+          "name": "2.3 تعديل مسمى شعبة عامة (Update Section)",
           "request": {
             "method": "PUT",
             "header": [
@@ -461,8 +417,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/terms/{{termId}}",
-            "description": "تحديث بيانات فترة مرجعية قائمة بالكتالوج بالمعرف `{{termId}}`.",
+            "url": "{{baseUrl}}/academic/sections/{{sectionId}}",
+            "description": "تحديث مسمى شعبة عامة قائمة بالكتالوج بالمعرف `{{sectionId}}`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -475,7 +431,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"الفصل الصيفي المكثف (معدل)\",\n  \"term_number\": 9\n}",
+              "raw": "{\n  \"name\": \"شعبة هـ النموذجية (معدلة)\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -489,14 +445,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - تم تحديث الفترة بنجاح\", function () {",
+                  "pm.test(\"Status code is 200 - تم تحديث مسمى الشعبة بنجاح\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
-                  "pm.test(\"Updated term has modified name\", function () {",
+                  "pm.test(\"Updated section has modified name\", function () {",
                   "    pm.expect(jsonData.success).to.eql(true);",
-                  "    pm.expect(jsonData.data.name).to.eql(\"الفصل الصيفي المكثف (معدل)\");",
+                  "    pm.expect(jsonData.data.name).to.eql(\"شعبة هـ النموذجية (معدلة)\");",
                   "});"
                 ]
               }
@@ -504,7 +460,7 @@
           ]
         },
         {
-          "name": "2.4 حذف فترة من الكتالوج (Delete Academic Term)",
+          "name": "2.4 حذف شعبة عامة غير مستخدمة (Delete Section)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -514,8 +470,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/terms/{{termId}}",
-            "description": "حذف فترة مرجعية غير مستخدمة من الكتالوج بالمعرف `{{termId}}`.",
+            "url": "{{baseUrl}}/academic/sections/{{sectionId}}",
+            "description": "حذف شعبة عامة غير مسندة لصفوف دراسية بالمعرف `{{sectionId}}`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -533,12 +489,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - تم حذف الفترة من الكتالوج بنجاح\", function () {",
+                  "pm.test(\"Status code is 200 - تم حذف الشعبة العامة بنجاح\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
-                  "pm.test(\"Delete academic term returns success true\", function () {",
+                  "pm.test(\"Delete section returns success true\", function () {",
                   "    pm.expect(jsonData.success).to.eql(true);",
                   "});"
                 ]
@@ -549,11 +505,11 @@
       ]
     },
     {
-      "name": "3. إدارة المراحل التعليمية (Academic Stages)",
-      "description": "مسارات إدارة المراحل التعليمية (استعراض، إضافة، تعديل، وحذف المراحل).",
+      "name": "3. إدارة بنك المواد الدراسية العامة (subjects)",
+      "description": "مسارات إدارة بنك المواد العامة والمناهج المرجعية بالمدرسة (استعراض، إضافة، تعديل، وحذف).",
       "item": [
         {
-          "name": "3.1 عرض وبحث قائمة المراحل التعليمية (List Academic Stages)",
+          "name": "3.1 عرض وبحث بنك المواد العامة (List Subjects)",
           "request": {
             "method": "GET",
             "header": [
@@ -563,8 +519,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/stages?search=&sort_by=order_index&sort_order=asc&page=1&per_page=15",
-            "description": "استرجاع المراحل التعليمية مرتبة تصاعدياً بحسب أولوية العرض order_index ASC مع دعم الفرز والبحث والترقيم.",
+            "url": "{{baseUrl}}/academic/subjects?search=&code=&sort_by=name&sort_order=asc&page=1&per_page=15",
+            "description": "استرجاع الكتالوج العام لكافة المواد والمناهج المعتمدة في بنك مواد المدرسة مع دعم البحث والفلترة والفرز والترقيم.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -582,16 +538,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - نجاح جلب قائمة المراحل التعليمية\", function () {",
+                  "pm.test(\"Status code is 200 - نجاح جلب بنك المواد العامة\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
-                  "pm.test(\"Response has valid academic stages schema\", function () {",
+                  "pm.test(\"Response has valid academic subjects schema\", function () {",
                   "    pm.expect(jsonData.success).to.eql(true);",
                   "    pm.expect(jsonData.data).to.be.an('array');",
                   "    pm.expect(jsonData.meta).to.be.an('object');",
-                  "    pm.expect(jsonData.meta.total).to.be.a('number');",
+                  "    pm.expect(jsonData.meta.current_page).to.be.a('number');",
                   "});"
                 ]
               }
@@ -599,7 +555,7 @@
           ]
         },
         {
-          "name": "3.2 إضافة مرحلة تعليمية جديدة (Create Academic Stage)",
+          "name": "3.2 إضافة مادة جديدة لبنك المواد (Create Subject)",
           "request": {
             "method": "POST",
             "header": [
@@ -614,8 +570,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/stages",
-            "description": "تعريف مرحلة تعليمية جديدة وضبط ترتيبها بالهيكل الأكاديمي وتخزين المعرف `stageId`.",
+            "url": "{{baseUrl}}/academic/subjects",
+            "description": "إضافة مادة جديدة وكودها الرمزي لكتالوج المواد العام بالمدرسة مع حفظ المعرف `subjectId`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -628,7 +584,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"مرحلة رياض الأطفال والتأسيس\",\n  \"order_index\": 0\n}",
+              "raw": "{\n  \"name\": \"تقنية المعلومات والذكاء الاصطناعي\",\n  \"code\": \"IT-AI-10\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -642,21 +598,21 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 201 - تم إنشاء المرحلة التعليمية بنجاح\", function () {",
+                  "pm.test(\"Status code is 201 - تمت إضافة المادة لبنك المواد بنجاح\", function () {",
                   "    pm.response.to.have.status(201);",
                   "});",
                   "",
                   "if (pm.response.code === 201) {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Created stage contains valid ID and properties\", function () {",
+                  "    pm.test(\"Created subject response contains valid data and ID\", function () {",
                   "        pm.expect(jsonData.success).to.eql(true);",
                   "        pm.expect(jsonData.data.id).to.be.a('number');",
-                  "        pm.expect(jsonData.data.order_index).to.eql(0);",
+                  "        pm.expect(jsonData.data.code).to.eql(\"IT-AI-10\");",
                   "    });",
                   "",
                   "    if (jsonData.data && jsonData.data.id) {",
-                  "        pm.environment.set(\"stageId\", String(jsonData.data.id));",
-                  "        console.log(\"✅ تم حفظ stageId بنجاح:\", jsonData.data.id);",
+                  "        pm.environment.set(\"subjectId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ subjectId بنجاح:\", jsonData.data.id);",
                   "    }",
                   "}"
                 ]
@@ -665,7 +621,7 @@
           ]
         },
         {
-          "name": "3.3 تعديل بيانات مرحلة تعليمية (Update Academic Stage)",
+          "name": "3.3 تعديل مادة ببنك المواد (Update Subject)",
           "request": {
             "method": "PUT",
             "header": [
@@ -680,8 +636,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/stages/{{stageId}}",
-            "description": "تحديث مسمى المرحلة التعليمية أو ترتيبها الأكاديمي بالمعرف `{{stageId}}`.",
+            "url": "{{baseUrl}}/academic/subjects/{{subjectId}}",
+            "description": "تحديث بيانات مادة قائمة في بنك المواد بالمعرف `{{subjectId}}`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -694,7 +650,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"مرحلة رياض الأطفال والتأسيس (معدلة)\",\n  \"order_index\": 0\n}",
+              "raw": "{\n  \"name\": \"تقنية المعلومات والذكاء الاصطناعي (محدثة)\",\n  \"code\": \"IT-AI-ADV\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -708,14 +664,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - تم تحديث المرحلة التعليمية بنجاح\", function () {",
+                  "pm.test(\"Status code is 200 - تم تحديث المادة بنجاح\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
-                  "pm.test(\"Updated stage has modified name\", function () {",
+                  "pm.test(\"Updated subject response has modified name and code\", function () {",
                   "    pm.expect(jsonData.success).to.eql(true);",
-                  "    pm.expect(jsonData.data.name).to.eql(\"مرحلة رياض الأطفال والتأسيس (معدلة)\");",
+                  "    pm.expect(jsonData.data.name).to.eql(\"تقنية المعلومات والذكاء الاصطناعي (محدثة)\");",
+                  "    pm.expect(jsonData.data.code).to.eql(\"IT-AI-ADV\");",
                   "});"
                 ]
               }
@@ -723,7 +680,7 @@
           ]
         },
         {
-          "name": "3.4 حذف مرحلة تعليمية فارغة (Delete Academic Stage)",
+          "name": "3.4 حذف مادة عامة غير مسندة (Delete Subject)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -733,8 +690,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/academic/stages/{{stageId}}",
-            "description": "حذف مرحلة تعليمية فارغة غير مرتبطة بصفوف دراسية بالمعرف `{{stageId}}`.",
+            "url": "{{baseUrl}}/academic/subjects/{{subjectId}}",
+            "description": "حذف مادة عامة غير مسندة في مقررات صفوف دراسية بالمعرف `{{subjectId}}`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -752,12 +709,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - تم حذف المرحلة التعليمية بنجاح\", function () {",
+                  "pm.test(\"Status code is 200 - تم حذف المادة من البنك بنجاح\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
-                  "pm.test(\"Delete academic stage returns success true\", function () {",
+                  "pm.test(\"Delete subject returns success true\", function () {",
                   "    pm.expect(jsonData.success).to.eql(true);",
                   "});"
                 ]

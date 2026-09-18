@@ -1,0 +1,35 @@
+$kind: http-request
+name: 3.3 تعديل مادة ببنك المواد (Update Subject)
+description: |-
+  تحديث بيانات مادة قائمة في بنك المواد بالمعرف `{{subjectId}}`.
+url: "{{baseUrl}}/academic/subjects/{{subjectId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "تقنية المعلومات والذكاء الاصطناعي (محدثة)",
+      "code": "IT-AI-ADV"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم تحديث المادة بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Updated subject response has modified name and code", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data.name).to.eql("تقنية المعلومات والذكاء الاصطناعي (محدثة)");
+          pm.expect(jsonData.data.code).to.eql("IT-AI-ADV");
+      });
+    language: text/javascript
+order: 3000

@@ -1,0 +1,35 @@
+$kind: http-request
+name: 1.3 تعديل بيانات صف دراسي (Update Class)
+description: |-
+  تحديث مسمى الصف أو مرحلته أو مستواه الرقمي بالمعرف `{{classId}}`.
+url: "{{baseUrl}}/academic/classes/{{classId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stage_id": {{stageId}},
+      "name": "الصف العاشر التأسيسي العام (معدل)",
+      "grade_level": 10
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم تحديث الصف الدراسي بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Updated class response has modified name", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data.name).to.eql("الصف العاشر التأسيسي العام (معدل)");
+      });
+    language: text/javascript
+order: 3000

@@ -1,0 +1,25 @@
+$kind: http-request
+name: 1.4 حذف صف دراسي غير مرتبط (Delete Class)
+description: |-
+  تنفيذ الحذف المنطقي لصف دراسي غير مرتبط بالمعرف `{{classId}}`.
+url: "{{baseUrl}}/academic/classes/{{classId}}"
+method: DELETE
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم حذف الصف الدراسي بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Delete class returns success true", function () {
+          pm.expect(jsonData.success).to.eql(true);
+      });
+    language: text/javascript
+order: 4000

@@ -91,6 +91,24 @@
       "value": "1",
       "type": "default",
       "enabled": true
+    },
+    {
+      "key": "classId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "sectionId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "subjectId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
     }
   ]
 }

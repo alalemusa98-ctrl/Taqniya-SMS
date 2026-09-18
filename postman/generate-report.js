@@ -138,6 +138,8 @@ for (const dir of collDirs) {
   let safeName = dir.name.replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_').replace(/_+/g, '_').trim();
   if (dir.name.includes('02-A') || dir.name.includes('Academic Structure A')) {
     safeName = 'Phase_02_A_Academic_Structure';
+  } else if (dir.name.includes('02-B') || dir.name.includes('Classes, Sections & Subjects') || dir.name.includes('الصفوف والشعب')) {
+    safeName = 'Phase_02_B_Classes_Sections_Subjects';
   } else if (dir.name.includes('01')) {
     safeName = 'Phase_01_Auth_Identity';
   }

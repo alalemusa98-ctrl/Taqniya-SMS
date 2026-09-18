@@ -30,3 +30,9 @@ values:
     value: '1'
   - key: stageId
     value: '1'
+  - key: classId
+    value: ''
+  - key: sectionId
+    value: ''
+  - key: subjectId
+    value: ''

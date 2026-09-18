@@ -1,0 +1,43 @@
+$kind: http-request
+name: 1.2 إنشاء صف دراسي وتسكينه بمرحلة (Create Class)
+description: |-
+  إضافة صف دراسي جديد وتحديد تبعيته للمرحلة التعليمية والترتيب الرقمي للترحيل (grade_level) مع حفظ المعرف `classId`.
+url: "{{baseUrl}}/academic/classes"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "stage_id": {{stageId}},
+      "name": "الصف العاشر التأسيسي",
+      "grade_level": 10
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201 - تم إنشاء الصف وتسكينه بالمرحلة بنجاح", function () {
+          pm.response.to.have.status(201);
+      });
+
+      if (pm.response.code === 201) {
+          var jsonData = pm.response.json();
+          pm.test("Created class response contains valid data and ID", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+              pm.expect(jsonData.data.grade_level).to.eql(10);
+          });
+
+          if (jsonData.data && jsonData.data.id) {
+              pm.environment.set("classId", String(jsonData.data.id));
+              console.log("✅ تم حفظ classId بنجاح:", jsonData.data.id);
+          }
+      }
+    language: text/javascript
+order: 2000

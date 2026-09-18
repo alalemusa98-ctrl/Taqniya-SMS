@@ -1,0 +1,42 @@
+$kind: http-request
+name: 3.2 إضافة مادة جديدة لبنك المواد (Create Subject)
+description: |-
+  إضافة مادة جديدة وكودها الرمزي لكتالوج المواد العام بالمدرسة مع حفظ المعرف `subjectId`.
+url: "{{baseUrl}}/academic/subjects"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "تقنية المعلومات والذكاء الاصطناعي",
+      "code": "IT-AI-10"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201 - تمت إضافة المادة لبنك المواد بنجاح", function () {
+          pm.response.to.have.status(201);
+      });
+
+      if (pm.response.code === 201) {
+          var jsonData = pm.response.json();
+          pm.test("Created subject response contains valid data and ID", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+              pm.expect(jsonData.data.code).to.eql("IT-AI-10");
+          });
+
+          if (jsonData.data && jsonData.data.id) {
+              pm.environment.set("subjectId", String(jsonData.data.id));
+              console.log("✅ تم حفظ subjectId بنجاح:", jsonData.data.id);
+          }
+      }
+    language: text/javascript
+order: 2000

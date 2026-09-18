@@ -1,0 +1,53 @@
+$kind: http-request
+name: 1.1 عرض وبحث قائمة الصفوف الدراسية (List Classes)
+description: |-
+  استرجاع قائمة الصفوف الدراسية المضافة بالمنظومة مع دعم البحث النصي والتصفية بالمرحلة التعليمية والمستوى الرقمي والترتيب والترقيم.
+url: "{{baseUrl}}/academic/classes?search=&stage_id=&grade_level=&sort_by=grade_level&sort_order=asc&page=1&per_page=15"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث النصي باسم الصف (مثال الخامس)
+  - key: stage_id
+    value: ""
+    disabled: true
+    description: تصفية الصفوف التابعة لمرحلة تعليمية معينة
+  - key: grade_level
+    value: ""
+    disabled: true
+    description: تصفية بحسب الترتيب الأكاديمي الرقمي (1 إلى 12)
+  - key: sort_by
+    value: grade_level
+    description: "حقل الفرز: id, name, grade_level, stage_id"
+  - key: sort_order
+    value: asc
+    description: "اتجاه الفرز: asc أو desc"
+  - key: page
+    value: "1"
+    description: رقم الصفحة
+  - key: per_page
+    value: "15"
+    description: عدد السجلات في الصفحة
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - نجاح جلب قائمة الصفوف الدراسية", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response has valid academic classes schema", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data).to.be.an('array');
+          pm.expect(jsonData.meta).to.be.an('object');
+          pm.expect(jsonData.meta.current_page).to.be.a('number');
+      });
+    language: text/javascript
+order: 1000

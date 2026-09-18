@@ -1,0 +1,49 @@
+$kind: http-request
+name: 3.1 عرض وبحث بنك المواد العامة (List Subjects)
+description: |-
+  استرجاع الكتالوج العام لكافة المواد والمناهج المعتمدة في بنك مواد المدرسة مع دعم البحث والفلترة والفرز والترقيم.
+url: "{{baseUrl}}/academic/subjects?search=&code=&sort_by=name&sort_order=asc&page=1&per_page=15"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث النصي باسم المادة أو الكود الرمزي
+  - key: code
+    value: ""
+    disabled: true
+    description: فلترة مباشرة بحسب الكود الرمزي
+  - key: sort_by
+    value: name
+    description: "حقل الفرز: id, name, code"
+  - key: sort_order
+    value: asc
+    description: "اتجاه الفرز: asc أو desc"
+  - key: page
+    value: "1"
+    description: رقم الصفحة
+  - key: per_page
+    value: "15"
+    description: عدد السجلات في الصفحة
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - نجاح جلب بنك المواد العامة", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response has valid academic subjects schema", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data).to.be.an('array');
+          pm.expect(jsonData.meta).to.be.an('object');
+          pm.expect(jsonData.meta.current_page).to.be.a('number');
+      });
+    language: text/javascript
+order: 1000
