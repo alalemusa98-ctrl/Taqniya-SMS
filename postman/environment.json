@@ -1,0 +1,78 @@
+{
+  "id": "taqniya-sms-local-env",
+  "name": "Taqniya SMS - Local Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "adminUserCode",
+      "value": "ADM-1001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "adminPassword",
+      "value": "SecretPassword@123",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "teacherUserCode",
+      "value": "TCH-2001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "teacherPassword",
+      "value": "SecretPassword@123",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "studentUserCode",
+      "value": "STU-3001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "studentPassword",
+      "value": "SecretPassword@123",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "parentUserCode",
+      "value": "PAR-4001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "parentPassword",
+      "value": "SecretPassword@123",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "targetUserId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "targetAuditLogId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
+    }
+  ]
+}
