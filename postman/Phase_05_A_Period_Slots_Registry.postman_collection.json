@@ -1,0 +1,1230 @@
+{
+  "info": {
+    "name": "Phase 05-A: فترات وتوقيتات الحصص والفسح اليومية (Daily Period Slots Registry)",
+    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 05-A (4 مسارات معتمدة) لإدارة فترات وتوقيتات الحصص والفسح اليومية باليوم المدرسي، وفق العقد المعماري والشبكي الرسمي `MD/phases/phase_05_timetables_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (Authentication & Setup)\n1. إدارة فترات وتوقيتات الحصص والفسح اليومية (Daily Period Slots Registry)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. المصادقة وإعداد الجلسة (Authentication & Setup)",
+      "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة authToken لاختبارات المرحلة 05-A.",
+      "item": [
+        {
+          "name": "تسجيل الدخول كمدير النظام (Login as Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 05-A.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم تسجيل الدخول بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Login response contains valid bearer token\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.token).to.be.a('string');",
+                  "    });",
+                  "    ",
+                  "    if (jsonData.data && jsonData.data.token) {",
+                  "        pm.environment.set(\"authToken\", jsonData.data.token);",
+                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 05-A.\");",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم تسجيل الدخول بنجاح",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/auth/login",
+                "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 05-A.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تسجيل الدخول بنجاح.\",\n  \"data\": {\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"id\": 1,\n      \"user_code\": \"ADM-1001\",\n      \"role\": \"admin\",\n      \"full_name\": \"مدير النظام العام\"\n    }\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. إدارة فترات وتوقيتات الحصص اليومية (Daily Period Slots Registry)",
+      "description": "مسارات استعراض وبحث فترات وتوقيتات الحصص والفسح اليومية، وإضافة فترة جديدة، وتعديل بياناتها وتوقيتاتها، وحذفها مع فحص الحماية المرجعية (RESTRICT) وفق routes.md.",
+      "item": [
+        {
+          "name": "1.1 استعراض وبحث فترات وتوقيتات الحصص والفسح اليومية (List Period Slots)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/period-slots?search=&is_break=&sort_by=slot_number&sort_order=asc&page=1&per_page=15",
+            "description": "استرجاع قائمة الفترات الزمنية للحصص والفسح باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفلترة بحالة الاستراحة والبحث والترقيم الصفحي وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم جلب فترات الحصص بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response contains period slots data array and meta pagination\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data).to.be.an('array');",
+                  "        pm.expect(jsonData.meta).to.be.an('object');",
+                  "    });",
+                  "",
+                  "    // Save first periodSlot ID if available for subsequent tests",
+                  "    if (jsonData.data && jsonData.data.length > 0) {",
+                  "        var firstSlot = jsonData.data[0];",
+                  "        pm.environment.set(\"periodSlotId\", String(firstSlot.id));",
+                  "        console.log(\"✅ تم حفظ periodSlotId:\", firstSlot.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم جلب فترات الحصص اليومية بنجاح",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots?search=&is_break=&sort_by=slot_number&sort_order=asc&page=1&per_page=15",
+                "description": "استرجاع قائمة الفترات الزمنية للحصص والفسح باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفلترة بحالة الاستراحة والبحث والترقيم الصفحي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب فترات الحصص اليومية بنجاح.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"name\": \"الحصة الأولى\",\n      \"slot_number\": 1,\n      \"start_time\": \"08:00:00\",\n      \"end_time\": \"08:45:00\",\n      \"is_break\": 0,\n      \"created_at\": \"2026-08-29T08:00:00Z\"\n    },\n    {\n      \"id\": 2,\n      \"name\": \"الحصة الثانية\",\n      \"slot_number\": 2,\n      \"start_time\": \"08:45:00\",\n      \"end_time\": \"09:30:00\",\n      \"is_break\": 0,\n      \"created_at\": \"2026-08-29T08:00:00Z\"\n    },\n    {\n      \"id\": 3,\n      \"name\": \"الفسحة / الاستراحة\",\n      \"slot_number\": 3,\n      \"start_time\": \"09:30:00\",\n      \"end_time\": \"10:00:00\",\n      \"is_break\": 1,\n      \"created_at\": \"2026-08-29T08:00:00Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 3,\n    \"last_page\": 1\n  }\n}"
+            },
+            {
+              "name": "200 OK - القائمة فارغة",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots?search=&is_break=&sort_by=slot_number&sort_order=asc&page=1&per_page=15",
+                "description": "استرجاع قائمة الفترات الزمنية للحصص والفسح باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفلترة بحالة الاستراحة والبحث والترقيم الصفحي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"لا توجد فترات حصص تطابق محددات البحث.\",\n  \"data\": [],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 0,\n    \"last_page\": 1\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots?search=&is_break=&sort_by=slot_number&sort_order=asc&page=1&per_page=15",
+                "description": "استرجاع قائمة الفترات الزمنية للحصص والفسح باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفلترة بحالة الاستراحة والبحث والترقيم الصفحي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots?search=&is_break=&sort_by=slot_number&sort_order=asc&page=1&per_page=15",
+                "description": "استرجاع قائمة الفترات الزمنية للحصص والفسح باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفلترة بحالة الاستراحة والبحث والترقيم الصفحي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "1.2 إضافة فترة حصة أو استراحة جديدة (Create Period Slot)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/period-slots",
+            "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 - تم إنشاء فترة الحصة بنجاح\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response contains newly created slot data with ID\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data).to.be.an('object');",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "    });",
+                  "",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.environment.set(\"createdPeriodSlotId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ createdPeriodSlotId بنجاح للاختبارات التالية:\", jsonData.data.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Created - تم إنشاء فترة الحصة اليومية بنجاح",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots",
+                "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم إنشاء فترة الحصة اليومية بنجاح.\",\n  \"data\": {\n    \"id\": 99,\n    \"name\": \"الحصة السادسة التجريبية\",\n    \"slot_number\": 99,\n    \"start_time\": \"13:00:00\",\n    \"end_time\": \"13:45:00\",\n    \"is_break\": 0,\n    \"created_at\": \"2026-08-29T13:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots",
+                "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots",
+                "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            },
+            {
+              "name": "409 Conflict - الرقم التسلسلي مسجل مسبقاً",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots",
+                "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"الرقم التسلسلي للحصة مسجل مسبقاً (uq_period_slots_number).\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity - بيانات غير صالحة",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots",
+                "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات فترة الحصة غير صالحة.\",\n  \"errors\": {\n    \"end_time\": [\n      \"وقت النهاية يجب أن يكون لاحقاً لوقت البداية.\"\n    ],\n    \"slot_number\": [\n      \"الرقم التسلسلي للحصة مطلوب ويجب أن يكون رقماً صحيحاً موجباً.\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "1.3 تعديل مسمى وتوقيتات فترة الحصة أو الاستراحة (Update Period Slot)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+            "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم تحديث فترة الحصة بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response indicates update success and contains updated attributes\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.name).to.eql(\"الحصة السادسة المعدلة\");",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم تحديث فترة الحصة اليومية بنجاح",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تحديث فترة الحصة اليومية بنجاح.\",\n  \"data\": {\n    \"id\": 99,\n    \"name\": \"الحصة السادسة المعدلة\",\n    \"slot_number\": 99,\n    \"start_time\": \"13:00:00\",\n    \"end_time\": \"13:50:00\",\n    \"is_break\": 0\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            },
+            {
+              "name": "404 Not Found - فترة الحصة غير موجودة",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"فترة الحصة غير موجودة.\"\n}"
+            },
+            {
+              "name": "409 Conflict - تعارض في الرقم التسلسلي",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"الرقم التسلسلي للحصة مسجل مسبقاً (uq_period_slots_number).\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity - بيانات غير صالحة",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات فترة الحصة غير صالحة.\",\n  \"errors\": {\n    \"end_time\": [\n      \"وقت النهاية يجب أن يكون لاحقاً لوقت البداية.\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "1.4 حذف فترة الحصة مع فحص الحماية المرجعية (Delete Period Slot)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+            "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم حذف فترة الحصة بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response confirms slot deletion\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.message).to.eql(\"تم حذف فترة الحصة بنجاح.\");",
+                  "    });",
+                  "",
+                  "    // Reset temporary slot variable",
+                  "    pm.environment.set(\"createdPeriodSlotId\", \"\");",
+                  "    console.log(\"✅ تم تفريغ createdPeriodSlotId بنجاح بعد اكتمال دورة الاختبار الحيوية.\");",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم حذف فترة الحصة بنجاح",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم حذف فترة الحصة بنجاح.\"\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            },
+            {
+              "name": "404 Not Found - فترة الحصة غير موجودة",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"فترة الحصة غير موجودة.\"\n}"
+            },
+            {
+              "name": "409 Conflict - حماية النزاهة المرجعية",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
+                "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"لا يمكن حذف فترة الحصة لارتباطها بحصص مجدولة في الجداول الأسبوعية (Foreign Key Restrict).\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

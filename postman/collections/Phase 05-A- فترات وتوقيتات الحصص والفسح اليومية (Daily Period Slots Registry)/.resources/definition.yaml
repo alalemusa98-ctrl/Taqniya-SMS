@@ -1,0 +1,14 @@
+$kind: collection
+name: "Phase 05-A: فترات وتوقيتات الحصص والفسح اليومية (Daily Period Slots Registry)"
+description: |-
+  توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 05-A (4 مسارات معتمدة) لإدارة فترات وتوقيتات الحصص والفسح اليومية باليوم المدرسي، وفق العقد المعماري والشبكي الرسمي `MD/phases/phase_05_timetables_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).
+
+  المجموعات المشمولة:
+  0. المصادقة وإعداد الجلسة (Authentication & Setup)
+  1. إدارة فترات وتوقيتات الحصص والفسح اليومية (Daily Period Slots Registry)
+auth:
+  - id: 5a8e7f91-1234-4a5b-9c7d-8e9f0a1b2c3d
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{authToken}}"

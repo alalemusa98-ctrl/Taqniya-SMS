@@ -195,20 +195,14 @@
       "enabled": true
     },
     {
-      "key": "enrollmentId",
+      "key": "periodSlotId",
       "value": "1",
       "type": "default",
       "enabled": true
     },
     {
-      "key": "createdEnrollmentId",
+      "key": "createdPeriodSlotId",
       "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "classSectionId",
-      "value": "5",
       "type": "default",
       "enabled": true
     }

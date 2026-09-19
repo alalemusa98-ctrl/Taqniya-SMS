@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Phase 04-B: تسكين وتسجيل الطلاب بالفصول والشعب (Student Enrollments Registry)",
-    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 04-B (7 مسارات معتمدة) وفق العقد المعماري الرسمي `MD/phases/phase_04_students_guardians_b/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (Authentication & Setup)\n1. إدارة سجل تسكين الطلاب الأكاديمي (Student Enrollments Registry)",
+    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 04-B (7 مسارات معتمدة) لإدارة تسكين وتسجيل الطلاب وتوزيعهم بالفصول والشعب وتوليد أرقام الجلوس وحالات التسكين الأكاديمية وحساب الإحصائيات، وفق العقد المعماري الرسمي `MD/phases/phase_04_students_guardians_b/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (Authentication & Setup)\n1. إدارة سجل تسكين الطلاب الأكاديمي (Student Enrollments Registry)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -25,11 +25,7 @@
                 "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
-            },
+            "url": "{{baseUrl}}/auth/login",
             "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 04-B.",
             "body": {
               "mode": "raw",
@@ -66,6 +62,48 @@
                 ]
               }
             }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم تسجيل الدخول بنجاح",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/auth/login",
+                "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 04-B.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تسجيل الدخول بنجاح.\",\n  \"data\": {\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"id\": 1,\n      \"user_code\": \"ADM-1001\",\n      \"role\": \"admin\",\n      \"full_name\": \"مدير النظام العام\"\n    }\n  }\n}"
+            }
           ]
         }
       ]
@@ -85,44 +123,18 @@
                 "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/student-enrollments?search=&academic_year_id=&class_id=&class_section_id=&status=",
-              "host": ["{{baseUrl}}"],
-              "path": ["student-enrollments"],
-              "query": [
+            "url": "{{baseUrl}}/student-enrollments?search=&academic_year_id=&class_id=&class_section_id=&status=",
+            "description": "استرجاع مصفوفة تسكين الطلاب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (classes -> sections -> students) مع دعم التصفية والبحث النصي وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
                 {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true,
-                  "description": "البحث النصي باسم الطالب أو الكود الموحد STU-XXXX أو رقم الجلوس"
-                },
-                {
-                  "key": "academic_year_id",
-                  "value": "",
-                  "disabled": true,
-                  "description": "تصفية بحسب العام الدراسي (افتراضياً العام الدراسي النشط)"
-                },
-                {
-                  "key": "class_id",
-                  "value": "",
-                  "disabled": true,
-                  "description": "تصفية لجلب شعب وطلاب صف دراسي محدد (مثال 5)"
-                },
-                {
-                  "key": "class_section_id",
-                  "value": "",
-                  "disabled": true,
-                  "description": "تصفية لجلب طلاب شعبة دراسية محددة فقط"
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "disabled": true,
-                  "description": "تصفية بحسب الحالة الأكاديمية: enrolled, passed, second_round, failed, graduated"
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
                 }
               ]
-            },
-            "description": "استرجاع مصفوفة تسكين الطلاب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (classes -> sections -> students) مع دعم التصفية والبحث النصي وفق routes.md."
+            }
           },
           "event": [
             {
@@ -142,6 +154,7 @@
                   "        pm.expect(jsonData.data.classes).to.be.an('array');",
                   "    });",
                   "",
+                  "    // Save first enrollment ID if available for subsequent tests",
                   "    if (jsonData.data.classes.length > 0) {",
                   "        var firstClass = jsonData.data.classes[0];",
                   "        if (firstClass.sections && firstClass.sections.length > 0) {",
@@ -158,6 +171,116 @@
                 ]
               }
             }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم جلب مصفوفة تسكين الطلاب بنجاح",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments?search=&academic_year_id=&class_id=&class_section_id=&status=",
+                "description": "استرجاع مصفوفة تسكين الطلاب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (classes -> sections -> students) مع دعم التصفية والبحث النصي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب مصفوفة تسكين الطلاب بالصفوف والشعب بنجاح.\",\n  \"data\": {\n    \"academic_year_id\": 1,\n    \"academic_year_name\": \"2025/2026\",\n    \"classes\": [\n      {\n        \"class_id\": 5,\n        \"class_name\": \"الصف الخامس\",\n        \"grade_level\": 5,\n        \"sections\": [\n          {\n            \"class_section_id\": 5,\n            \"section_name\": \"شعبة أ\",\n            \"enrolled_count\": 2,\n            \"students\": [\n              {\n                \"enrollment_id\": 1,\n                \"student_id\": 1,\n                \"student_code\": \"STU-3001\",\n                \"student_name\": \"محمد علي الفيتوري\",\n                \"seating_number\": \"SEAT-5001\",\n                \"status\": \"enrolled\",\n                \"created_at\": \"2026-08-29T10:00:00Z\"\n              },\n              {\n                \"enrollment_id\": 2,\n                \"student_id\": 2,\n                \"student_code\": \"STU-3002\",\n                \"student_name\": \"فاطمة أحمد سالم\",\n                \"seating_number\": \"SEAT-5002\",\n                \"status\": \"enrolled\",\n                \"created_at\": \"2026-08-29T10:05:00Z\"\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments?search=&academic_year_id=&class_id=&class_section_id=&status=",
+                "description": "استرجاع مصفوفة تسكين الطلاب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (classes -> sections -> students) مع دعم التصفية والبحث النصي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments?search=&academic_year_id=&class_id=&class_section_id=&status=",
+                "description": "استرجاع مصفوفة تسكين الطلاب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (classes -> sections -> students) مع دعم التصفية والبحث النصي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            }
           ]
         },
         {
@@ -171,20 +294,18 @@
                 "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/student-enrollments/class-counts?academic_year_id=",
-              "host": ["{{baseUrl}}"],
-              "path": ["student-enrollments", "class-counts"],
-              "query": [
+            "url": "{{baseUrl}}/student-enrollments/class-counts?academic_year_id=",
+            "description": "استرجاع إحصائيات خفيفة وسريعة لأعداد الطلاب المسكنين مجمعة حسب الصف الدراسي لدعم شارات العدادات بالواجهة وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
                 {
-                  "key": "academic_year_id",
-                  "value": "",
-                  "disabled": true,
-                  "description": "تحديد العام الدراسي المطلوب (افتراضياً العام الدراسي النشط)"
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
                 }
               ]
-            },
-            "description": "استرجاع إحصائيات خفيفة وسريعة لأعداد الطلاب المسكنين مجمعة حسب الصف الدراسي لدعم شارات العدادات بالواجهة وفق routes.md."
+            }
           },
           "event": [
             {
@@ -206,6 +327,116 @@
                 ]
               }
             }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم جلب إحصائيات الصفوف بنجاح",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/class-counts?academic_year_id=",
+                "description": "استرجاع إحصائيات خفيفة وسريعة لأعداد الطلاب المسكنين مجمعة حسب الصف الدراسي لدعم شارات العدادات بالواجهة وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"class_id\": 5,\n      \"count\": 42\n    },\n    {\n      \"class_id\": 6,\n      \"count\": 38\n    }\n  ],\n  \"enrolled_student_ids\": [\n    101,\n    102,\n    103,\n    104\n  ]\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/class-counts?academic_year_id=",
+                "description": "استرجاع إحصائيات خفيفة وسريعة لأعداد الطلاب المسكنين مجمعة حسب الصف الدراسي لدعم شارات العدادات بالواجهة وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/class-counts?academic_year_id=",
+                "description": "استرجاع إحصائيات خفيفة وسريعة لأعداد الطلاب المسكنين مجمعة حسب الصف الدراسي لدعم شارات العدادات بالواجهة وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            }
           ]
         },
         {
@@ -219,12 +450,18 @@
                 "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/students/{{studentId}}/enrollments",
-              "host": ["{{baseUrl}}"],
-              "path": ["students", "{{studentId}}", "enrollments"]
-            },
-            "description": "استرجاع السجل التاريخي لتسكين طالب محدد عبر كافة الأعوام وتتبع تدرجه الأكاديمي وحالات النجاح والرسوب استناداً إلى الصحائف المؤرشفة والتسكين الجاري وفق routes.md."
+            "url": "{{baseUrl}}/students/{{studentId}}/enrollments",
+            "description": "استرجاع السجل التاريخي لتسكين طالب محدد عبر كافة الأعوام وتتبع تدرجه الأكاديمي وحالات النجاح والرسوب استناداً إلى الصحائف المؤرشفة والتسكين الجاري وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "event": [
             {
@@ -246,6 +483,152 @@
                 ]
               }
             }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم جلب السجل التسكيني للطالب بنجاح",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/students/{{studentId}}/enrollments",
+                "description": "استرجاع السجل التاريخي لتسكين طالب محدد عبر كافة الأعوام وتتبع تدرجه الأكاديمي وحالات النجاح والرسوب استناداً إلى الصحائف المؤرشفة والتسكين الجاري وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب السجل التسكيني للطالب بنجاح.\",\n  \"data\": [\n    {\n      \"id\": 25,\n      \"academic_year_id\": 2,\n      \"academic_year_name\": \"2025/2026\",\n      \"class_name\": \"الصف الخامس\",\n      \"grade_level\": 5,\n      \"section_name\": \"شعبة أ\",\n      \"seating_number\": \"SEAT-5001\",\n      \"status\": \"enrolled\",\n      \"created_at\": \"2025-09-01T08:00:00Z\"\n    },\n    {\n      \"id\": 1,\n      \"academic_year_id\": 1,\n      \"academic_year_name\": \"2024/2025\",\n      \"class_name\": \"الصف الرابع\",\n      \"grade_level\": 4,\n      \"section_name\": \"شعبة ب\",\n      \"seating_number\": \"SEAT-4015\",\n      \"status\": \"passed\",\n      \"created_at\": \"2024-09-01T08:00:00Z\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "404 Not Found - سجل الطالب غير موجود",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/students/{{studentId}}/enrollments",
+                "description": "استرجاع السجل التاريخي لتسكين طالب محدد عبر كافة الأعوام وتتبع تدرجه الأكاديمي وحالات النجاح والرسوب استناداً إلى الصحائف المؤرشفة والتسكين الجاري وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"سجل الطالب أو التسكين غير موجود.\"\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/students/{{studentId}}/enrollments",
+                "description": "استرجاع السجل التاريخي لتسكين طالب محدد عبر كافة الأعوام وتتبع تدرجه الأكاديمي وحالات النجاح والرسوب استناداً إلى الصحائف المؤرشفة والتسكين الجاري وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/students/{{studentId}}/enrollments",
+                "description": "استرجاع السجل التاريخي لتسكين طالب محدد عبر كافة الأعوام وتتبع تدرجه الأكاديمي وحالات النجاح والرسوب استناداً إلى الصحائف المؤرشفة والتسكين الجاري وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            }
           ]
         },
         {
@@ -264,12 +647,18 @@
                 "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/student-enrollments",
-              "host": ["{{baseUrl}}"],
-              "path": ["student-enrollments"]
-            },
+            "url": "{{baseUrl}}/student-enrollments",
             "description": "تسكين طالب في صف وشعبة بالعام الدراسي النشط وتوليد رقم الجلوس مع التحقق الذري من قيد منع تكرار التسكين السنوي (uq_student_year_enrollment) وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"student_id\": {{studentId}},\n  \"class_section_id\": 5,\n  \"seating_number\": \"SEAT-5003\",\n  \"status\": \"enrolled\"\n}",
@@ -305,6 +694,258 @@
                 ]
               }
             }
+          ],
+          "response": [
+            {
+              "name": "201 Created - تم تسكين الطالب بنجاح",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments",
+                "description": "تسكين طالب في صف وشعبة بالعام الدراسي النشط وتوليد رقم الجلوس مع التحقق الذري من قيد منع تكرار التسكين السنوي (uq_student_year_enrollment) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"student_id\": {{studentId}},\n  \"class_section_id\": 5,\n  \"seating_number\": \"SEAT-5003\",\n  \"status\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تسكين وتنسيق الطالب بالفصل والشعبة بنجاح.\",\n  \"data\": {\n    \"id\": 1,\n    \"academic_year_id\": 1,\n    \"student_id\": 3,\n    \"student_code\": \"STU-3003\",\n    \"student_name\": \"أنس خالد السويح\",\n    \"class_id\": 5,\n    \"class_name\": \"الصف الخامس\",\n    \"grade_level\": 5,\n    \"class_section_id\": 5,\n    \"section_name\": \"شعبة أ\",\n    \"seating_number\": \"SEAT-5003\",\n    \"status\": \"enrolled\",\n    \"created_at\": \"2026-08-29T10:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Conflict - تعارض التسكين السنوي مسبقاً",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments",
+                "description": "تسكين طالب في صف وشعبة بالعام الدراسي النشط وتوليد رقم الجلوس مع التحقق الذري من قيد منع تكرار التسكين السنوي (uq_student_year_enrollment) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"student_id\": {{studentId}},\n  \"class_section_id\": 5,\n  \"seating_number\": \"SEAT-5003\",\n  \"status\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"تعارض في التسكين: الطالب مسكن مسبقاً في هذا العام الدراسي في فصل أو شعبة أخرى (uq_student_year_enrollment).\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity - مدخلات غير صالحة",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments",
+                "description": "تسكين طالب في صف وشعبة بالعام الدراسي النشط وتوليد رقم الجلوس مع التحقق الذري من قيد منع تكرار التسكين السنوي (uq_student_year_enrollment) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"student_id\": {{studentId}},\n  \"class_section_id\": 5,\n  \"seating_number\": \"SEAT-5003\",\n  \"status\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات التسكين غير صالحة.\",\n  \"errors\": {\n    \"student_id\": [\n      \"يجب تحديد طالب صالح.\"\n    ],\n    \"class_section_id\": [\n      \"يجب تحديد شعبة دراسية صالحة.\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments",
+                "description": "تسكين طالب في صف وشعبة بالعام الدراسي النشط وتوليد رقم الجلوس مع التحقق الذري من قيد منع تكرار التسكين السنوي (uq_student_year_enrollment) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"student_id\": {{studentId}},\n  \"class_section_id\": 5,\n  \"seating_number\": \"SEAT-5003\",\n  \"status\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments",
+                "description": "تسكين طالب في صف وشعبة بالعام الدراسي النشط وتوليد رقم الجلوس مع التحقق الذري من قيد منع تكرار التسكين السنوي (uq_student_year_enrollment) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"student_id\": {{studentId}},\n  \"class_section_id\": 5,\n  \"seating_number\": \"SEAT-5003\",\n  \"status\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            }
           ]
         },
         {
@@ -323,12 +964,18 @@
                 "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["student-enrollments", "{{enrollmentId}}"]
-            },
+            "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
             "description": "تعديل بيانات تسجيل الطالب ونقله لشعبة أخرى بنفس الصف، أو تحديث رقم الجلوس أو تعديل الحالة الأكاديمية وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"class_section_id\": 6,\n  \"seating_number\": \"SEAT-5003-B\",\n  \"status\": \"enrolled\"\n}",
@@ -359,6 +1006,258 @@
                 ]
               }
             }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم تحديث بيانات التسكين بنجاح",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+                "description": "تعديل بيانات تسجيل الطالب ونقله لشعبة أخرى بنفس الصف، أو تحديث رقم الجلوس أو تعديل الحالة الأكاديمية وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"class_section_id\": 6,\n  \"seating_number\": \"SEAT-5003-B\",\n  \"status\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تحديث بيانات التسكين ورقم الجلوس بنجاح.\",\n  \"data\": {\n    \"id\": 1,\n    \"class_section_id\": 6,\n    \"section_name\": \"شعبة ب\",\n    \"seating_number\": \"SEAT-5003-B\",\n    \"status\": \"enrolled\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found - سجل التسكين غير موجود",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+                "description": "تعديل بيانات تسجيل الطالب ونقله لشعبة أخرى بنفس الصف، أو تحديث رقم الجلوس أو تعديل الحالة الأكاديمية وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"class_section_id\": 6,\n  \"seating_number\": \"SEAT-5003-B\",\n  \"status\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"سجل التسكين غير موجود.\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity - شعبة غير صالحة",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+                "description": "تعديل بيانات تسجيل الطالب ونقله لشعبة أخرى بنفس الصف، أو تحديث رقم الجلوس أو تعديل الحالة الأكاديمية وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"class_section_id\": 6,\n  \"seating_number\": \"SEAT-5003-B\",\n  \"status\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات التسكين غير صالحة.\",\n  \"errors\": {\n    \"class_section_id\": [\n      \"الشعبة الدراسية المحددة غير صالحة أو غير تابعة لنفس الصف الدراسي.\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+                "description": "تعديل بيانات تسجيل الطالب ونقله لشعبة أخرى بنفس الصف، أو تحديث رقم الجلوس أو تعديل الحالة الأكاديمية وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"class_section_id\": 6,\n  \"seating_number\": \"SEAT-5003-B\",\n  \"status\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+                "description": "تعديل بيانات تسجيل الطالب ونقله لشعبة أخرى بنفس الصف، أو تحديث رقم الجلوس أو تعديل الحالة الأكاديمية وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"class_section_id\": 6,\n  \"seating_number\": \"SEAT-5003-B\",\n  \"status\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            }
           ]
         },
         {
@@ -377,12 +1276,18 @@
                 "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/student-enrollments/bulk-enroll",
-              "host": ["{{baseUrl}}"],
-              "path": ["student-enrollments", "bulk-enroll"]
-            },
+            "url": "{{baseUrl}}/student-enrollments/bulk-enroll",
             "description": "تسكين وتوزيع دفعة من الطلاب دفعة واحدة في شعبة دراسية مخصصة بالحدث الذري (Database Transaction) وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"class_section_id\": 5,\n  \"student_ids\": [101, 102, 103, 104, 105]\n}",
@@ -413,6 +1318,258 @@
                 ]
               }
             }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم التسكين الجماعي بنجاح",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/bulk-enroll",
+                "description": "تسكين وتوزيع دفعة من الطلاب دفعة واحدة في شعبة دراسية مخصصة بالحدث الذري (Database Transaction) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"class_section_id\": 5,\n  \"student_ids\": [101, 102, 103, 104, 105]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم التسكين الجماعي لـ 5 طلاب بنجاح بالحدث الذري.\",\n  \"data\": {\n    \"enrolled_count\": 5,\n    \"class_id\": 5,\n    \"class_name\": \"الصف الخامس\",\n    \"class_section_id\": 5,\n    \"academic_year_id\": 1\n  }\n}"
+            },
+            {
+              "name": "409 Conflict - تعارض في التسكين الجماعي لطالب مسكن مسبقاً",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/bulk-enroll",
+                "description": "تسكين وتوزيع دفعة من الطلاب دفعة واحدة في شعبة دراسية مخصصة بالحدث الذري (Database Transaction) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"class_section_id\": 5,\n  \"student_ids\": [101, 102, 103, 104, 105]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"تعارض في التسكين الجماعي: أحد الطلاب المحددين مسكن مسبقاً بالعام الدراسي الحالي.\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity - قائمة غير صالحة",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/bulk-enroll",
+                "description": "تسكين وتوزيع دفعة من الطلاب دفعة واحدة في شعبة دراسية مخصصة بالحدث الذري (Database Transaction) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"class_section_id\": 5,\n  \"student_ids\": [101, 102, 103, 104, 105]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"قائمة الطلاب غير صالحة أو فارغة.\"\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/bulk-enroll",
+                "description": "تسكين وتوزيع دفعة من الطلاب دفعة واحدة في شعبة دراسية مخصصة بالحدث الذري (Database Transaction) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"class_section_id\": 5,\n  \"student_ids\": [101, 102, 103, 104, 105]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/bulk-enroll",
+                "description": "تسكين وتوزيع دفعة من الطلاب دفعة واحدة في شعبة دراسية مخصصة بالحدث الذري (Database Transaction) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"class_section_id\": 5,\n  \"student_ids\": [101, 102, 103, 104, 105]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            }
           ]
         },
         {
@@ -426,12 +1583,18 @@
                 "type": "text"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["student-enrollments", "{{enrollmentId}}"]
-            },
-            "description": "إلغاء سجل تسكين الطالب وتجريده من الشعبة مع فحص الحماية المرجعية الصارمة (RESTRICT) لحظر الحذف في حال وجود درجات أو امتحانات مرصودة بالسجل الأكاديمي وفق routes.md."
+            "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+            "description": "إلغاء سجل تسكين الطالب وتجريده من الشعبة مع فحص الحماية المرجعية الصارمة (RESTRICT) لحظر الحذف في حال وجود درجات أو امتحانات مرصودة بالسجل الأكاديمي وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "event": [
             {
@@ -458,19 +1621,191 @@
                 ]
               }
             }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم إلغاء سجل التسكين بنجاح",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+                "description": "إلغاء سجل تسكين الطالب وتجريده من الشعبة مع فحص الحماية المرجعية الصارمة (RESTRICT) لحظر الحذف في حال وجود درجات أو امتحانات مرصودة بالسجل الأكاديمي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم إلغاء سجل التسكين وتجريد الطالب بنجاح.\"\n}"
+            },
+            {
+              "name": "409 Conflict - حظر الحماية المرجعية لوجود درجات مرصودة",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+                "description": "إلغاء سجل تسكين الطالب وتجريده من الشعبة مع فحص الحماية المرجعية الصارمة (RESTRICT) لحظر الحذف في حال وجود درجات أو امتحانات مرصودة بالسجل الأكاديمي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"لا يمكن إلغاء التسكين لارتباط الطالب بدرجات أو واجبات أو امتحانات مرصودة بالسجل الأكاديمي (Foreign Key Restrict).\"\n}"
+            },
+            {
+              "name": "404 Not Found - سجل التسكين غير موجود",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+                "description": "إلغاء سجل تسكين الطالب وتجريده من الشعبة مع فحص الحماية المرجعية الصارمة (RESTRICT) لحظر الحذف في حال وجود درجات أو امتحانات مرصودة بالسجل الأكاديمي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"سجل التسكين غير موجود.\"\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+                "description": "إلغاء سجل تسكين الطالب وتجريده من الشعبة مع فحص الحماية المرجعية الصارمة (RESTRICT) لحظر الحذف في حال وجود درجات أو امتحانات مرصودة بالسجل الأكاديمي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+                "description": "إلغاء سجل تسكين الطالب وتجريده من الشعبة مع فحص الحماية المرجعية الصارمة (RESTRICT) لحظر الحذف في حال وجود درجات أو امتحانات مرصودة بالسجل الأكاديمي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            }
           ]
         }
       ]
     }
-  ],
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{authToken}}",
-        "type": "string"
-      }
-    ]
-  }
+  ]
 }
