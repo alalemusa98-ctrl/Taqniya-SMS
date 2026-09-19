@@ -1,0 +1,87 @@
+$kind: http-request
+name: 1.2 استعراض النصاب والمواد المسندة لمعلم محدد (Get Teacher Assignments & Quota)
+description: |-
+  استرجاع قائمة كافة الصفوف والشعب والمواد المكلف بها معلم محدد بالعام الدراسي وفق المعيار الرسمي في routes.md.
+url: "{{baseUrl}}/teachers/{{teacherId}}/assignments?academic_year_id=&search=&page=1&per_page=15"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: academic_year_id
+    value: ""
+    disabled: true
+    description: تصفية حسب العام الدراسي (افتراضياً العام النشط)
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث باسم الصف أو الشعبة أو المادة
+  - key: page
+    value: "1"
+    description: رقم الصفحة
+  - key: per_page
+    value: "15"
+    description: عدد العناصر بالصفحة
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - نجاح جلب النصاب الأكاديمي للمعلم
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم جلب النصاب الأكاديمي للمعلم بنجاح."
+      data:
+        - id: 101
+          academic_year_id: 1
+          academic_year_name: "2025/2026"
+          class_id: 5
+          class_name: "الصف الخامس"
+          class_section_id: 5
+          section_name: "شعبة أ"
+          subject_id: 1
+          subject_name: "الرياضيات"
+          subject_code: "MATH"
+        - id: 105
+          academic_year_id: 1
+          academic_year_name: "2025/2026"
+          class_id: 6
+          class_name: "الصف السادس"
+          class_section_id: 8
+          section_name: "شعبة ب"
+          subject_id: 1
+          subject_name: "الرياضيات"
+          subject_code: "MATH"
+      meta:
+        current_page: 1
+        per_page: 15
+        total: 2
+        last_page: 1
+  - name: 404 Not Found - ملف المعلم غير موجود
+    status: Not Found
+    code: 404
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ملف المعلم غير موجود."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 or 404", function () {
+          pm.expect([200, 404]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 200) {
+          pm.test("Response has valid quota array matching routes.md", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data).to.be.an('array');
+              pm.expect(jsonData.meta).to.be.an('object');
+          });
+      }
+    language: text/javascript
+order: 2000

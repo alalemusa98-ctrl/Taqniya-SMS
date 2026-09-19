@@ -1,0 +1,102 @@
+$kind: http-request
+name: 1.1 استعراض وبحث وتصفية قائمة الطلاب (List Students)
+description: |-
+  استرجاع قائمة طلاب المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالنوع وحالة الحساب والترقيم القياسي وفق routes.md.
+url: "{{baseUrl}}/students?search=&gender=&sort_by=id&sort_order=desc&page=1&per_page=15"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث النصي باسم الطالب أو الرمز المؤسسي (مثال محمد أو STU-3001)
+  - key: gender
+    value: ""
+    disabled: true
+    description: تصفية بحسب الجنس (male, female)
+  - key: sort_by
+    value: id
+    description: "حقل الفرز: id, full_name, birth_date"
+  - key: sort_order
+    value: desc
+    description: "اتجاه الفرز: asc أو desc"
+  - key: page
+    value: "1"
+    description: رقم الصفحة
+  - key: per_page
+    value: "15"
+    description: عدد السجلات في الصفحة
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - نجاح جلب قائمة الطلاب
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم جلب قائمة الطلاب بنجاح."
+      data:
+        - id: 1
+          user_id: 101
+          user_code: "STU-3001"
+          full_name: "محمد علي الفيتوري"
+          phone: "0911111111"
+          birth_date: "2015-05-12"
+          gender: "male"
+          class_section: "الصف الخامس - شعبة أ"
+          created_at: "2026-08-29T10:00:00Z"
+        - id: 2
+          user_id: 102
+          user_code: "STU-3002"
+          full_name: "فاطمة أحمد سالم"
+          phone: "0922222222"
+          birth_date: "2016-03-20"
+          gender: "female"
+          class_section: "الصف الرابع - شعبة ب"
+          created_at: "2026-08-29T10:05:00Z"
+      meta:
+        current_page: 1
+        per_page: 15
+        total: 2
+        last_page: 1
+  - name: 401 Unauthorized - غير مصرح بالوصول
+    status: Unauthorized
+    code: 401
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
+  - name: 403 Forbidden - صلاحيات غير كافية
+    status: Forbidden
+    code: 403
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - نجاح جلب قائمة الطلاب", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response has valid students list schema matching routes.md", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data).to.be.an('array');
+          pm.expect(jsonData.meta).to.be.an('object');
+      });
+
+      if (jsonData.data && jsonData.data.length > 0) {
+          pm.environment.set("studentId", String(jsonData.data[0].id));
+          console.log("✅ تم استخراج studentId للاختبار:", jsonData.data[0].id);
+      }
+    language: text/javascript
+order: 1000

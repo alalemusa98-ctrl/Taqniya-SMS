@@ -1,0 +1,60 @@
+$kind: http-request
+name: 2.4 تحديث وتعديل بيانات ولي الأمر (Update Guardian)
+description: |-
+  تحديث بيانات ولي الأمر والقرابة ورقم الهاتف وفق routes.md.
+url: "{{baseUrl}}/guardians/{{guardianId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "full_name": "خالد مسعود السويح المعدل",
+      "phone": "0913333399",
+      "relationship": "father"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم تحديث ملف ولي الأمر بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم تحديث ملف ولي الأمر بنجاح."
+      data:
+        id: 2
+        user_id: 202
+        user_code: "PAR-4002"
+        full_name: "خالد مسعود السويح المعدل"
+        phone: "0913333399"
+        relationship: "father"
+  - name: 404 Not Found - ملف ولي الأمر غير موجود
+    status: Not Found
+    code: 404
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ملف ولي الأمر غير موجود."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 or 404", function () {
+          pm.expect([200, 404]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 200) {
+          pm.test("Guardian updated successfully according to routes.md", function () {
+              pm.expect(jsonData.success).to.eql(true);
+          });
+      }
+    language: text/javascript
+order: 4000

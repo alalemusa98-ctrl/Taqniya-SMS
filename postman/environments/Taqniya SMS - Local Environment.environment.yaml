@@ -50,3 +50,17 @@ values:
     value: '1'
   - key: createdTeacherId
     value: ''
+  - key: teachingAssignmentId
+    value: ''
+  - key: createdAssignmentId
+    value: ''
+  - key: studentId
+    value: '1'
+  - key: createdStudentId
+    value: ''
+  - key: guardianId
+    value: '1'
+  - key: createdGuardianId
+    value: ''
+  - key: guardianStudentLinkId
+    value: ''

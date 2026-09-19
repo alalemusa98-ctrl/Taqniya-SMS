@@ -1,0 +1,61 @@
+$kind: http-request
+name: 3.1 استعراض قائمة الأبناء المكفولين لولي أمر محدد (List Guardian Students)
+description: |-
+  استرجاع قائمة الطلاب التابعين لوصاية ولي أمر معين لتمكينه من التبديل بين سياقات أبنائه في الواجهة وفق routes.md.
+url: "{{baseUrl}}/guardians/{{guardianId}}/students"
+method: GET
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم جلب قائمة الأبناء المكفولين لولي الأمر بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم جلب قائمة الأبناء المكفولين لولي الأمر بنجاح."
+      data:
+        - student_id: 1
+          student_code: "STU-3001"
+          student_name: "محمد علي الفيتوري"
+          class_section: "الصف الخامس - شعبة أ"
+          is_primary: 1
+        - student_id: 2
+          student_code: "STU-3002"
+          student_name: "فاطمة علي الفيتوري"
+          class_section: "الصف الثالث - شعبة أ"
+          is_primary: 1
+  - name: 404 Not Found - ملف ولي الأمر غير موجود
+    status: Not Found
+    code: 404
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ملف ولي الأمر غير موجود."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 or 404", function () {
+          pm.expect([200, 404]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 200) {
+          pm.test("Guardian students list matches routes.md schema", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data).to.be.an('array');
+          });
+
+          if (jsonData.data && jsonData.data.length > 0) {
+              pm.environment.set("guardianStudentLinkId", String(jsonData.data[0].student_id));
+              console.log("✅ تم استخراج guardianStudentLinkId للاختبار:", jsonData.data[0].student_id);
+          }
+      }
+    language: text/javascript
+order: 1000

@@ -149,7 +149,11 @@ for (const dir of collDirs) {
   
   // Clean name for files
   let safeName = dir.name.replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_').replace(/_+/g, '_').trim();
-  if (dir.name.includes('03-A') || dir.name.includes('Teachers Profiles Registry') || dir.name.includes('الكادر التعليمي')) {
+  if (dir.name.includes('04-A') || dir.name.includes('Students & Guardians') || dir.name.includes('الطلاب وأولياء الأمور')) {
+    safeName = 'Phase_04_A_Students_Guardians_Registry';
+  } else if (dir.name.includes('03-B') || dir.name.includes('Teaching Assignments') || dir.name.includes('إسناد التدريس')) {
+    safeName = 'Phase_03_B_Teaching_Assignments';
+  } else if (dir.name.includes('03-A') || dir.name.includes('Teachers Profiles Registry') || dir.name.includes('الكادر التعليمي')) {
     safeName = 'Phase_03_A_Teachers_Profiles_Registry';
   } else if (dir.name.includes('02-C') || dir.name.includes('Class Terms') || dir.name.includes('فترات الصفوف')) {
     safeName = 'Phase_02_C_Class_Terms_Sections_Curriculum';

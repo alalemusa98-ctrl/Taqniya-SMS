@@ -1,0 +1,90 @@
+$kind: http-request
+name: 2.1 استعراض وبحث قائمة أولياء الأمور (List Guardians)
+description: |-
+  استرجاع قائمة أولياء الأمور مع دعم البحث بالاسم أو الهاتف أو كود PAR-XXXX والترقيم الصفحي وفق routes.md.
+url: "{{baseUrl}}/guardians?search=&page=1&per_page=15"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث النصي باسم ولي الأمر، الهاتف، أو الرمز الموحد
+  - key: page
+    value: "1"
+    description: رقم الصفحة
+  - key: per_page
+    value: "15"
+    description: عدد السجلات في الصفحة
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم جلب قائمة أولياء الأمور بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم جلب قائمة أولياء الأمور بنجاح."
+      data:
+        - id: 1
+          user_id: 201
+          user_code: "PAR-4001"
+          full_name: "علي محمد الفيتوري"
+          phone: "0912222222"
+          relationship: "father"
+          students_count: 2
+          created_at: "2026-08-29T10:00:00Z"
+        - id: 2
+          user_id: 202
+          user_code: "PAR-4002"
+          full_name: "خالد مسعود السويح"
+          phone: "0913333333"
+          relationship: "father"
+          students_count: 1
+          created_at: "2026-08-29T10:15:00Z"
+      meta:
+        current_page: 1
+        per_page: 15
+        total: 2
+        last_page: 1
+  - name: 401 Unauthorized - غير مصرح بالوصول
+    status: Unauthorized
+    code: 401
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
+  - name: 403 Forbidden - صلاحيات غير كافية
+    status: Forbidden
+    code: 403
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - نجاح جلب أولياء الأمور", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response has valid guardians list schema matching routes.md", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data).to.be.an('array');
+          pm.expect(jsonData.meta).to.be.an('object');
+      });
+
+      if (jsonData.data && jsonData.data.length > 0) {
+          pm.environment.set("guardianId", String(jsonData.data[0].id));
+          console.log("✅ تم استخراج guardianId للاختبار:", jsonData.data[0].id);
+      }
+    language: text/javascript
+order: 1000

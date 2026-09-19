@@ -151,6 +151,48 @@
       "value": "",
       "type": "default",
       "enabled": true
+    },
+    {
+      "key": "teachingAssignmentId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "createdAssignmentId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "studentId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "createdStudentId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "guardianId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "createdGuardianId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "guardianStudentLinkId",
+      "value": "",
+      "type": "default",
+      "enabled": true
     }
   ]
 }

@@ -1,0 +1,77 @@
+$kind: http-request
+name: 3.2 ربط وصاية ولي أمر بطالب وتحديد الوصي الرئيسي (Link Guardian To Student)
+description: |-
+  إنشاء رابط وصاية جديد بين ولي أمر وطالب وتحديد صفة الوصي الأساسي (is_primary) مع منع التكرار (uq_guardian_student) وفق routes.md.
+url: "{{baseUrl}}/guardian-students"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "guardian_id": 1,
+      "student_id": 2,
+      "is_primary": 1
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 201 Created - تم ربط وصاية ولي الأمر بالطالب بنجاح
+    status: Created
+    code: 201
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم ربط وصاية ولي الأمر بالطالب بنجاح."
+      data:
+        id: 15
+        guardian_id: 1
+        student_id: 2
+        is_primary: 1
+        created_at: "2026-08-29T12:00:00Z"
+  - name: 409 Conflict - تعارض في الربط
+    status: Conflict
+    code: 409
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "تعارض في الربط: يوجد رابط وصاية مسجل مسبقاً بين هذا الطالب وولي الأمر (uq_guardian_student)."
+  - name: 422 Unprocessable Entity - مدخلات غير صالحة
+    status: Unprocessable Entity
+    code: 422
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "بيانات ربط الوصاية غير صالحة."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201 or 409", function () {
+          pm.expect([201, 409]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 201) {
+          pm.test("Guardian student link created successfully matching routes.md", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+          });
+
+          if (jsonData.data && jsonData.data.id) {
+              pm.environment.set("guardianStudentLinkId", String(jsonData.data.id));
+              console.log("✅ تم حفظ guardianStudentLinkId بنجاح:", jsonData.data.id);
+          }
+      } else if (pm.response.code === 409) {
+          pm.test("Conflict on duplicate custody link caught", function () {
+              pm.expect(jsonData.success).to.eql(false);
+          });
+      }
+    language: text/javascript
+order: 2000

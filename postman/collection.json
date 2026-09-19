@@ -1,13 +1,13 @@
 {
   "info": {
-    "name": "Phase 03-A: إدارة ملفات الكادر التعليمي (Teachers Profiles Registry)",
-    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 03-A (5 مسارات) وفق العقد المعماري الرسمي `MD/phases/phase_03_teachers_assignments_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (Authentication & Setup)\n1. إدارة سجل وملفات المعلمين (Teachers Profiles Registry)",
+    "name": "Phase 04-A: سجل الطلاب وأولياء الأمور (Students & Guardians Registry)",
+    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 04-A (11 مساراً رئيسياً) وفق العقد المعماري الرسمي `MD/phases/phase_04_students_guardians_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (Authentication & Setup)\n1. إدارة سجل وملفات الطلاب (Students Registry)\n2. إدارة سجل أولياء الأمور (Guardians Registry)\n3. إدارة شبكة الوصاية والربط الأسري (Guardian Students Custody)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "0. المصادقة وإعداد الجلسة (Authentication & Setup)",
-      "description": "تسجيل دخول مدير النظام لتهيئة الجلسة واستخراج التوكن (authToken) لاستخدامه في اختبار وتوثيق مسارات ملفات الكادر التعليمي.",
+      "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة authToken لاختبارات المرحلة 04-A.",
       "item": [
         {
           "name": "تسجيل الدخول كمدير النظام (Login as Admin)",
@@ -26,7 +26,7 @@
               }
             ],
             "url": "{{baseUrl}}/auth/login",
-            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 03-A.",
+            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 04-A.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
@@ -56,7 +56,7 @@
                   "    ",
                   "    if (jsonData.data && jsonData.data.token) {",
                   "        pm.environment.set(\"authToken\", jsonData.data.token);",
-                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 03-A.\");",
+                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 04-A.\");",
                   "    }",
                   "}"
                 ]
@@ -81,7 +81,7 @@
                   }
                 ],
                 "url": "{{baseUrl}}/auth/login",
-                "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 03-A.",
+                "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 04-A.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
@@ -109,11 +109,11 @@
       ]
     },
     {
-      "name": "1. إدارة سجل وملفات المعلمين (Teachers Profiles Registry)",
-      "description": "مسارات استعراض وبحث وتفاصيل وإنشاء وتعديل وحذف ملفات المعلمين وتوليد الحسابات الموحدة.",
+      "name": "1. إدارة سجل وملفات الطلاب (Students Registry)",
+      "description": "مسارات استعراض وبحث وتفاصيل وإنشاء وتعديل وحذف ملفات الطلاب وتوليد الحسابات الموحدة STU-XXXX.",
       "item": [
         {
-          "name": "1.1 استعراض وبحث قائمة المعلمين (List Teachers)",
+          "name": "1.1 استعراض وبحث وتصفية قائمة الطلاب (List Students)",
           "request": {
             "method": "GET",
             "header": [
@@ -123,8 +123,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/teachers?search=&specialization=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15",
-            "description": "استرجاع قائمة معلمي المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالتخصص وحالة الحساب والترقيم القياسي.",
+            "url": "{{baseUrl}}/students?search=&gender=&sort_by=id&sort_order=desc&page=1&per_page=15",
+            "description": "استرجاع قائمة طلاب المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالنوع وحالة الحساب والترقيم القياسي وفق routes.md.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -142,21 +142,20 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - نجاح جلب قائمة المعلمين\", function () {",
+                  "pm.test(\"Status code is 200 - نجاح جلب قائمة الطلاب\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
-                  "pm.test(\"Response has valid teachers list schema\", function () {",
+                  "pm.test(\"Response has valid students list schema matching routes.md\", function () {",
                   "    pm.expect(jsonData.success).to.eql(true);",
                   "    pm.expect(jsonData.data).to.be.an('array');",
                   "    pm.expect(jsonData.meta).to.be.an('object');",
-                  "    pm.expect(jsonData.meta.current_page).to.be.a('number');",
                   "});",
                   "",
                   "if (jsonData.data && jsonData.data.length > 0) {",
-                  "    pm.environment.set(\"teacherId\", String(jsonData.data[0].id));",
-                  "    console.log(\"✅ تم استخراج معلم للاختبار teacherId:\", jsonData.data[0].id);",
+                  "    pm.environment.set(\"studentId\", String(jsonData.data[0].id));",
+                  "    console.log(\"✅ تم استخراج studentId للاختبار:\", jsonData.data[0].id);",
                   "}"
                 ]
               }
@@ -164,7 +163,7 @@
           ],
           "response": [
             {
-              "name": "200 OK - نجاح جلب قائمة المعلمين",
+              "name": "200 OK - نجاح جلب قائمة الطلاب",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -174,8 +173,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers?search=&specialization=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15",
-                "description": "استرجاع قائمة معلمي المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالتخصص وحالة الحساب والترقيم القياسي.",
+                "url": "{{baseUrl}}/students?search=&gender=&sort_by=id&sort_order=desc&page=1&per_page=15",
+                "description": "استرجاع قائمة طلاب المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالنوع وحالة الحساب والترقيم القياسي وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -197,7 +196,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب قائمة المعلمين بنجاح.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"user_id\": 10,\n      \"user_code\": \"TCH-2001\",\n      \"full_name\": \"أحمد محمود سالم\",\n      \"phone\": \"0912345678\",\n      \"specialization\": \"الرياضيات\",\n      \"hire_date\": \"2022-09-01\",\n      \"is_active\": 1\n    },\n    {\n      \"id\": 2,\n      \"user_id\": 11,\n      \"user_code\": \"TCH-2002\",\n      \"full_name\": \"فاطمة عمر المهدي\",\n      \"phone\": \"0923456789\",\n      \"specialization\": \"العلوم العامة\",\n      \"hire_date\": \"2023-01-15\",\n      \"is_active\": 1\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 2,\n    \"last_page\": 1\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب قائمة الطلاب بنجاح.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"user_id\": 101,\n      \"user_code\": \"STU-3001\",\n      \"full_name\": \"محمد علي الفيتوري\",\n      \"phone\": \"0911111111\",\n      \"birth_date\": \"2015-05-12\",\n      \"gender\": \"male\",\n      \"class_section\": \"الصف الخامس - شعبة أ\",\n      \"created_at\": \"2026-08-29T10:00:00Z\"\n    },\n    {\n      \"id\": 2,\n      \"user_id\": 102,\n      \"user_code\": \"STU-3002\",\n      \"full_name\": \"فاطمة أحمد سالم\",\n      \"phone\": \"0922222222\",\n      \"birth_date\": \"2016-03-20\",\n      \"gender\": \"female\",\n      \"class_section\": \"الصف الرابع - شعبة ب\",\n      \"created_at\": \"2026-08-29T10:05:00Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 2,\n    \"last_page\": 1\n  }\n}"
             },
             {
               "name": "401 Unauthorized - غير مصرح بالوصول",
@@ -210,8 +209,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers?search=&specialization=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15",
-                "description": "استرجاع قائمة معلمي المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالتخصص وحالة الحساب والترقيم القياسي.",
+                "url": "{{baseUrl}}/students?search=&gender=&sort_by=id&sort_order=desc&page=1&per_page=15",
+                "description": "استرجاع قائمة طلاب المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالنوع وحالة الحساب والترقيم القياسي وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -246,8 +245,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers?search=&specialization=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15",
-                "description": "استرجاع قائمة معلمي المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالتخصص وحالة الحساب والترقيم القياسي.",
+                "url": "{{baseUrl}}/students?search=&gender=&sort_by=id&sort_order=desc&page=1&per_page=15",
+                "description": "استرجاع قائمة طلاب المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالنوع وحالة الحساب والترقيم القياسي وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -274,7 +273,7 @@
           ]
         },
         {
-          "name": "1.2 استعراض تفاصيل ملف معلم محدد (Get Teacher By ID)",
+          "name": "1.2 استعراض تفاصيل الملف الشخصي الكامل لطالب (Get Student Profile)",
           "request": {
             "method": "GET",
             "header": [
@@ -284,8 +283,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/teachers/{{teacherId}}",
-            "description": "استرجاع الملف الشخصي الكامل لمعلم محدد متضمناً حساب دخوله الموحد وبياناته المهنية.",
+            "url": "{{baseUrl}}/students/{{studentId}}",
+            "description": "استرجاع الملف الشخصي الكامل للطالب متضمناً حساب دخوله الموحد والصف والشعبة وبيانات التواصل وفق routes.md.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -307,11 +306,10 @@
                   "    pm.expect([200, 404]).to.include(pm.response.code);",
                   "});",
                   "",
+                  "var jsonData = pm.response.json();",
                   "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Teacher profile details schema is valid\", function () {",
+                  "    pm.test(\"Student profile matches routes.md schema\", function () {",
                   "        pm.expect(jsonData.success).to.eql(true);",
-                  "        pm.expect(jsonData.data).to.be.an('object');",
                   "        pm.expect(jsonData.data.id).to.be.a('number');",
                   "        pm.expect(jsonData.data.user_code).to.be.a('string');",
                   "        pm.expect(jsonData.data.full_name).to.be.a('string');",
@@ -323,7 +321,7 @@
           ],
           "response": [
             {
-              "name": "200 OK - تم جلب تفاصيل ملف المعلم بنجاح",
+              "name": "200 OK - تم جلب تفاصيل ملف الطالب بنجاح",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -333,8 +331,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers/{{teacherId}}",
-                "description": "استرجاع الملف الشخصي الكامل لمعلم محدد متضمناً حساب دخوله الموحد وبياناته المهنية.",
+                "url": "{{baseUrl}}/students/{{studentId}}",
+                "description": "استرجاع الملف الشخصي الكامل للطالب متضمناً حساب دخوله الموحد والصف والشعبة وبيانات التواصل وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -356,10 +354,10 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب تفاصيل ملف المعلم بنجاح.\",\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 10,\n    \"user_code\": \"TCH-2001\",\n    \"full_name\": \"أحمد محمود سالم\",\n    \"phone\": \"0912345678\",\n    \"specialization\": \"الرياضيات\",\n    \"hire_date\": \"2022-09-01\",\n    \"is_active\": 1,\n    \"created_at\": \"2022-09-01T10:00:00Z\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب تفاصيل ملف الطالب بنجاح.\",\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 101,\n    \"user_code\": \"STU-3001\",\n    \"full_name\": \"محمد علي الفيتوري\",\n    \"phone\": \"0911111111\",\n    \"birth_date\": \"2015-05-12\",\n    \"gender\": \"male\",\n    \"class_section\": \"الصف الخامس - شعبة أ\",\n    \"created_at\": \"2026-08-29T10:00:00Z\"\n  }\n}"
             },
             {
-              "name": "404 Not Found - ملف المعلم غير موجود",
+              "name": "404 Not Found - ملف الطالب غير موجود",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -369,8 +367,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers/{{teacherId}}",
-                "description": "استرجاع الملف الشخصي الكامل لمعلم محدد متضمناً حساب دخوله الموحد وبياناته المهنية.",
+                "url": "{{baseUrl}}/students/{{studentId}}",
+                "description": "استرجاع الملف الشخصي الكامل للطالب متضمناً حساب دخوله الموحد والصف والشعبة وبيانات التواصل وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -392,12 +390,12 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"ملف المعلم غير موجود.\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"ملف الطالب غير موجود.\"\n}"
             }
           ]
         },
         {
-          "name": "1.3 إنشاء ملف معلم جديد وتوليد الحساب الموحد (Create Teacher)",
+          "name": "1.3 تسجيل ملف طالب جديد وتوليد الحساب الموحد (Create Student)",
           "request": {
             "method": "POST",
             "header": [
@@ -412,8 +410,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/teachers",
-            "description": "إنشاء ملف المعلم وتوليد حساب الدخول الموحد (TCH-XXXX) في جدول المستخدمين users ذرياً ضمن نفس المعاملة.",
+            "url": "{{baseUrl}}/students",
+            "description": "إنشاء ملف طالب وتوليد حساب مستخدم ذري بجدول users بالرمز الموحد STU-XXXX مع دعم التسكين الفوري الاختياري وفق routes.md.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -426,7 +424,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية\",\n  \"hire_date\": \"2026-09-01\",\n  \"password\": \"Password123!\"\n}",
+              "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"class_section_id\": 5,\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -446,18 +444,18 @@
                   "",
                   "var jsonData = pm.response.json();",
                   "if (pm.response.code === 201) {",
-                  "    pm.test(\"Teacher created with valid atomic user code TCH-XXXX\", function () {",
+                  "    pm.test(\"Student created with atomic user code STU-XXXX matching routes.md\", function () {",
                   "        pm.expect(jsonData.success).to.eql(true);",
                   "        pm.expect(jsonData.data.id).to.be.a('number');",
-                  "        pm.expect(jsonData.data.user_code).to.match(/^TCH-\\d+$/);",
+                  "        pm.expect(jsonData.data.user_code).to.match(/^STU-\\d+$/);",
                   "    });",
                   "",
                   "    if (jsonData.data && jsonData.data.id) {",
-                  "        pm.environment.set(\"createdTeacherId\", String(jsonData.data.id));",
-                  "        console.log(\"✅ تم حفظ createdTeacherId بنجاح:\", jsonData.data.id);",
+                  "        pm.environment.set(\"createdStudentId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ createdStudentId بنجاح:\", jsonData.data.id);",
                   "    }",
                   "} else if (pm.response.code === 409) {",
-                  "    pm.test(\"Conflict detected on phone number duplicate\", function () {",
+                  "    pm.test(\"Conflict on duplicate phone caught\", function () {",
                   "        pm.expect(jsonData.success).to.eql(false);",
                   "    });",
                   "}"
@@ -467,7 +465,7 @@
           ],
           "response": [
             {
-              "name": "201 Created - تم إنشاء ملف المعلم وتوليد حساب الدخول الموحد بنجاح",
+              "name": "201 Created - تم إنشاء ملف الطالب وتوليد حساب الدخول وتسكينه بالشعبة بنجاح",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -482,8 +480,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers",
-                "description": "إنشاء ملف المعلم وتوليد حساب الدخول الموحد (TCH-XXXX) في جدول المستخدمين users ذرياً ضمن نفس المعاملة.",
+                "url": "{{baseUrl}}/students",
+                "description": "إنشاء ملف طالب وتوليد حساب مستخدم ذري بجدول users بالرمز الموحد STU-XXXX مع دعم التسكين الفوري الاختياري وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -496,7 +494,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية\",\n  \"hire_date\": \"2026-09-01\",\n  \"password\": \"Password123!\"\n}",
+                  "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"class_section_id\": 5,\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -514,10 +512,10 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم إنشاء ملف المعلم وتوليد حساب الدخول الموحد بنجاح.\",\n  \"data\": {\n    \"id\": 3,\n    \"user_id\": 12,\n    \"user_code\": \"TCH-2003\",\n    \"full_name\": \"علي مصطفى الورفلي\",\n    \"phone\": \"0934567890\",\n    \"specialization\": \"اللغة العربية\",\n    \"hire_date\": \"2026-09-01\",\n    \"created_at\": \"2026-08-29T12:00:00Z\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم إنشاء ملف الطالب وتوليد حساب الدخول وتسكينه بالشعبة بنجاح.\",\n  \"data\": {\n    \"id\": 3,\n    \"user_id\": 103,\n    \"user_code\": \"STU-3003\",\n    \"full_name\": \"طارق زياد الورفلي\",\n    \"phone\": \"0933333333\",\n    \"birth_date\": \"2015-08-10\",\n    \"gender\": \"male\",\n    \"enrollment\": {\n      \"id\": 501,\n      \"academic_year_id\": 1,\n      \"academic_year_name\": \"2025/2026\",\n      \"class_id\": 5,\n      \"class_name\": \"الصف الخامس\",\n      \"class_section_id\": 5,\n      \"section_name\": \"شعبة أ\",\n      \"seating_number\": \"105\",\n      \"status\": \"enrolled\"\n    },\n    \"created_at\": \"2026-08-29T12:00:00Z\"\n  }\n}"
             },
             {
-              "name": "409 Conflict - رقم هاتف المعلم مسجل مسبقاً",
+              "name": "409 Conflict - تعارض في رقم الهاتف",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -532,8 +530,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers",
-                "description": "إنشاء ملف المعلم وتوليد حساب الدخول الموحد (TCH-XXXX) في جدول المستخدمين users ذرياً ضمن نفس المعاملة.",
+                "url": "{{baseUrl}}/students",
+                "description": "إنشاء ملف طالب وتوليد حساب مستخدم ذري بجدول users بالرمز الموحد STU-XXXX مع دعم التسكين الفوري الاختياري وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -546,7 +544,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية\",\n  \"hire_date\": \"2026-09-01\",\n  \"password\": \"Password123!\"\n}",
+                  "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"class_section_id\": 5,\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -564,7 +562,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"رقم هاتف المعلم مسجل مسبقاً.\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"تعارض: رقم الهاتف مسجل مسبقاً لمستخدم آخر بالمنظومة (uq_users_phone).\"\n}"
             },
             {
               "name": "422 Unprocessable Entity - بيانات غير صالحة",
@@ -582,8 +580,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers",
-                "description": "إنشاء ملف المعلم وتوليد حساب الدخول الموحد (TCH-XXXX) في جدول المستخدمين users ذرياً ضمن نفس المعاملة.",
+                "url": "{{baseUrl}}/students",
+                "description": "إنشاء ملف طالب وتوليد حساب مستخدم ذري بجدول users بالرمز الموحد STU-XXXX مع دعم التسكين الفوري الاختياري وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -596,7 +594,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية\",\n  \"hire_date\": \"2026-09-01\",\n  \"password\": \"Password123!\"\n}",
+                  "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"class_section_id\": 5,\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -614,12 +612,12 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات ملف المعلم غير صالحة.\",\n  \"errors\": {\n    \"full_name\": [\n      \"الاسم الرباعي واللقب للمعلم مطلوب.\"\n    ],\n    \"password\": [\n      \"كلمة المرور يجب ألا تقل عن 8 خانات وتحتوي على أرقام وحروف.\"\n    ]\n  }\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات ملف الطالب غير صالحة.\",\n  \"errors\": {\n    \"full_name\": [\n      \"الاسم الكامل للطالب مطلوب.\"\n    ],\n    \"gender\": [\n      \"يرجى تحديد جنس الطالب (ذكر / أنثى).\"\n    ]\n  }\n}"
             }
           ]
         },
         {
-          "name": "1.4 تعديل البيانات الشخصية والمهنية للمعلم (Update Teacher)",
+          "name": "1.4 تحديث وتعديل البيانات الشخصية للطالب (Update Student)",
           "request": {
             "method": "PUT",
             "header": [
@@ -634,8 +632,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
-            "description": "تحديث بيانات ملف المعلم (الاسم، الهاتف، التخصص، تاريخ التعيين، أو كلمة المرور) مع حماية البريد والهاتف ضد التكرار.",
+            "url": "{{baseUrl}}/students/{{studentId}}",
+            "description": "تحديث بيانات الطالب وتحديث كلمة المرور عند الرغبة (مع إمكانية تحديث الشعبة المسكن بها) وفق routes.md.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -648,7 +646,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي المحدث\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية والتربية الإسلامية\",\n  \"hire_date\": \"2026-09-01\"\n}",
+              "raw": "{\n  \"full_name\": \"محمد علي الفيتوري المعدل\",\n  \"phone\": \"0911111199\",\n  \"birth_date\": \"2015-05-12\",\n  \"gender\": \"male\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -662,16 +660,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200, 404 or 409\", function () {",
-                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "pm.test(\"Status code is 200 or 404\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
                   "});",
                   "",
+                  "var jsonData = pm.response.json();",
                   "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Teacher update reflects updated fields\", function () {",
+                  "    pm.test(\"Student updated successfully according to routes.md\", function () {",
                   "        pm.expect(jsonData.success).to.eql(true);",
-                  "        pm.expect(jsonData.data.full_name).to.eql(\"علي مصطفى الورفلي المحدث\");",
-                  "        pm.expect(jsonData.data.specialization).to.eql(\"اللغة العربية والتربية الإسلامية\");",
                   "    });",
                   "}"
                 ]
@@ -680,7 +676,7 @@
           ],
           "response": [
             {
-              "name": "200 OK - تم تحديث بيانات ملف المعلم بنجاح",
+              "name": "200 OK - تم تحديث بيانات ملف الطالب بنجاح",
               "originalRequest": {
                 "method": "PUT",
                 "header": [
@@ -695,8 +691,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
-                "description": "تحديث بيانات ملف المعلم (الاسم، الهاتف، التخصص، تاريخ التعيين، أو كلمة المرور) مع حماية البريد والهاتف ضد التكرار.",
+                "url": "{{baseUrl}}/students/{{studentId}}",
+                "description": "تحديث بيانات الطالب وتحديث كلمة المرور عند الرغبة (مع إمكانية تحديث الشعبة المسكن بها) وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -709,7 +705,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي المحدث\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية والتربية الإسلامية\",\n  \"hire_date\": \"2026-09-01\"\n}",
+                  "raw": "{\n  \"full_name\": \"محمد علي الفيتوري المعدل\",\n  \"phone\": \"0911111199\",\n  \"birth_date\": \"2015-05-12\",\n  \"gender\": \"male\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -727,10 +723,10 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم تحديث بيانات ملف المعلم بنجاح.\",\n  \"data\": {\n    \"id\": 3,\n    \"user_id\": 12,\n    \"user_code\": \"TCH-2003\",\n    \"full_name\": \"علي مصطفى الورفلي المحدث\",\n    \"phone\": \"0934567890\",\n    \"specialization\": \"اللغة العربية والتربية الإسلامية\",\n    \"hire_date\": \"2026-09-01\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تحديث بيانات ملف الطالب بنجاح.\",\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 101,\n    \"user_code\": \"STU-3001\",\n    \"full_name\": \"محمد علي الفيتوري المعدل\",\n    \"phone\": \"0911111199\",\n    \"birth_date\": \"2015-05-12\",\n    \"gender\": \"male\"\n  }\n}"
             },
             {
-              "name": "404 Not Found - ملف المعلم غير موجود",
+              "name": "404 Not Found - ملف الطالب غير موجود",
               "originalRequest": {
                 "method": "PUT",
                 "header": [
@@ -745,8 +741,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
-                "description": "تحديث بيانات ملف المعلم (الاسم، الهاتف، التخصص، تاريخ التعيين، أو كلمة المرور) مع حماية البريد والهاتف ضد التكرار.",
+                "url": "{{baseUrl}}/students/{{studentId}}",
+                "description": "تحديث بيانات الطالب وتحديث كلمة المرور عند الرغبة (مع إمكانية تحديث الشعبة المسكن بها) وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -759,7 +755,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي المحدث\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية والتربية الإسلامية\",\n  \"hire_date\": \"2026-09-01\"\n}",
+                  "raw": "{\n  \"full_name\": \"محمد علي الفيتوري المعدل\",\n  \"phone\": \"0911111199\",\n  \"birth_date\": \"2015-05-12\",\n  \"gender\": \"male\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -777,62 +773,12 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"ملف المعلم غير موجود.\"\n}"
-            },
-            {
-              "name": "409 Conflict - رقم هاتف المعلم مسجل مسبقاً",
-              "originalRequest": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
-                "description": "تحديث بيانات ملف المعلم (الاسم، الهاتف، التخصص، تاريخ التعيين، أو كلمة المرور) مع حماية البريد والهاتف ضد التكرار.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي المحدث\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية والتربية الإسلامية\",\n  \"hire_date\": \"2026-09-01\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Conflict",
-              "code": 409,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"رقم هاتف المعلم مسجل مسبقاً.\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"ملف الطالب غير موجود.\"\n}"
             }
           ]
         },
         {
-          "name": "1.5 حذف ملف المعلم وحسابه (Delete Teacher)",
+          "name": "1.5 حذف ملف الطالب وحسابه مع فحص الحماية (Delete Student)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -842,8 +788,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
-            "description": "تنفيذ الحذف المنطقي لملف المعلم وحسابه بشرط عدم وجود إسنادات تدريس نشطة أو سابقة مرصودة باسمه في teaching_assignments (RESTRICT).",
+            "url": "{{baseUrl}}/students/{{createdStudentId}}",
+            "description": "حذف ملف الطالب مع التحقق الإجباري الصارم من عدم وجود سجلات أكاديمية مرتبطة به (سجلات تسكين أو درجات أو واجبات) وفق routes.md.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -861,19 +807,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200, 404 or 409\", function () {",
+                  "pm.test(\"Status code is 200, 404, or 409\", function () {",
                   "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
                   "});",
                   "",
                   "var jsonData = pm.response.json();",
                   "if (pm.response.code === 200) {",
-                  "    pm.test(\"Teacher soft deletion and account cleanup succeeded\", function () {",
+                  "    pm.test(\"Student deleted successfully\", function () {",
                   "        pm.expect(jsonData.success).to.eql(true);",
-                  "        pm.expect(jsonData.message).to.be.a('string');",
-                  "    });",
-                  "} else if (pm.response.code === 409) {",
-                  "    pm.test(\"Deletion restricted due to teaching assignments\", function () {",
-                  "        pm.expect(jsonData.success).to.eql(false);",
                   "    });",
                   "}"
                 ]
@@ -882,7 +823,7 @@
           ],
           "response": [
             {
-              "name": "200 OK - تم حذف ملف المعلم وحسابه بنجاح",
+              "name": "200 OK - تم حذف ملف الطالب وحسابه بنجاح",
               "originalRequest": {
                 "method": "DELETE",
                 "header": [
@@ -892,8 +833,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
-                "description": "تنفيذ الحذف المنطقي لملف المعلم وحسابه بشرط عدم وجود إسنادات تدريس نشطة أو سابقة مرصودة باسمه في teaching_assignments (RESTRICT).",
+                "url": "{{baseUrl}}/students/{{createdStudentId}}",
+                "description": "حذف ملف الطالب مع التحقق الإجباري الصارم من عدم وجود سجلات أكاديمية مرتبطة به (سجلات تسكين أو درجات أو واجبات) وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -915,10 +856,10 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم حذف ملف المعلم وحسابه بنجاح.\"\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم حذف ملف الطالب وحسابه بنجاح.\"\n}"
             },
             {
-              "name": "404 Not Found - ملف المعلم غير موجود",
+              "name": "404 Not Found - ملف الطالب غير موجود",
               "originalRequest": {
                 "method": "DELETE",
                 "header": [
@@ -928,8 +869,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
-                "description": "تنفيذ الحذف المنطقي لملف المعلم وحسابه بشرط عدم وجود إسنادات تدريس نشطة أو سابقة مرصودة باسمه في teaching_assignments (RESTRICT).",
+                "url": "{{baseUrl}}/students/{{createdStudentId}}",
+                "description": "حذف ملف الطالب مع التحقق الإجباري الصارم من عدم وجود سجلات أكاديمية مرتبطة به (سجلات تسكين أو درجات أو واجبات) وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -951,10 +892,10 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"ملف المعلم غير موجود.\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"ملف الطالب غير موجود.\"\n}"
             },
             {
-              "name": "409 Conflict - منع الحذف لوجود إسنادات تدريس RESTRICT",
+              "name": "409 Conflict - حماية النزاهة المرجعية RESTRICT",
               "originalRequest": {
                 "method": "DELETE",
                 "header": [
@@ -964,8 +905,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
-                "description": "تنفيذ الحذف المنطقي لملف المعلم وحسابه بشرط عدم وجود إسنادات تدريس نشطة أو سابقة مرصودة باسمه في teaching_assignments (RESTRICT).",
+                "url": "{{baseUrl}}/students/{{createdStudentId}}",
+                "description": "حذف ملف الطالب مع التحقق الإجباري الصارم من عدم وجود سجلات أكاديمية مرتبطة به (سجلات تسكين أو درجات أو واجبات) وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -987,7 +928,1465 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"لا يمكن حذف ملف المعلم لوجود إسنادات تدريس أو جداول حصص مرتبطة به (RESTRICT).\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"لا يمكن حذف الطالب لوجود سجلات تسكين أكاديمي أو درجات أو واجبات مرتبطة به في المنظومة (Foreign Key Restrict).\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. إدارة سجل أولياء الأمور (Guardians Registry)",
+      "description": "مسارات استعراض وبحث وتفاصيل وإنشاء وتعديل وحذف ملفات أولياء الأمور وتوليد الحسابات الموحدة PAR-XXXX.",
+      "item": [
+        {
+          "name": "2.1 استعراض وبحث قائمة أولياء الأمور (List Guardians)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guardians?search=&page=1&per_page=15",
+            "description": "استرجاع قائمة أولياء الأمور مع دعم البحث بالاسم أو الهاتف أو كود PAR-XXXX والترقيم الصفحي وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - نجاح جلب أولياء الأمور\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response has valid guardians list schema matching routes.md\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    pm.expect(jsonData.meta).to.be.an('object');",
+                  "});",
+                  "",
+                  "if (jsonData.data && jsonData.data.length > 0) {",
+                  "    pm.environment.set(\"guardianId\", String(jsonData.data[0].id));",
+                  "    console.log(\"✅ تم استخراج guardianId للاختبار:\", jsonData.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم جلب قائمة أولياء الأمور بنجاح",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians?search=&page=1&per_page=15",
+                "description": "استرجاع قائمة أولياء الأمور مع دعم البحث بالاسم أو الهاتف أو كود PAR-XXXX والترقيم الصفحي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب قائمة أولياء الأمور بنجاح.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"user_id\": 201,\n      \"user_code\": \"PAR-4001\",\n      \"full_name\": \"علي محمد الفيتوري\",\n      \"phone\": \"0912222222\",\n      \"relationship\": \"father\",\n      \"students_count\": 2,\n      \"created_at\": \"2026-08-29T10:00:00Z\"\n    },\n    {\n      \"id\": 2,\n      \"user_id\": 202,\n      \"user_code\": \"PAR-4002\",\n      \"full_name\": \"خالد مسعود السويح\",\n      \"phone\": \"0913333333\",\n      \"relationship\": \"father\",\n      \"students_count\": 1,\n      \"created_at\": \"2026-08-29T10:15:00Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 2,\n    \"last_page\": 1\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians?search=&page=1&per_page=15",
+                "description": "استرجاع قائمة أولياء الأمور مع دعم البحث بالاسم أو الهاتف أو كود PAR-XXXX والترقيم الصفحي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians?search=&page=1&per_page=15",
+                "description": "استرجاع قائمة أولياء الأمور مع دعم البحث بالاسم أو الهاتف أو كود PAR-XXXX والترقيم الصفحي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "2.2 استعراض تفاصيل ملف ولي أمر محدد (Get Guardian Profile)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guardians/{{guardianId}}",
+            "description": "استرجاع بيانات ولي الأمر الشخصية وبيانات حسابه وأرقام الاتصال وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 or 404\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Guardian profile structure matches routes.md\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.user_code).to.be.a('string');",
+                  "        pm.expect(jsonData.data.full_name).to.be.a('string');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم جلب تفاصيل ملف ولي الأمر بنجاح",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians/{{guardianId}}",
+                "description": "استرجاع بيانات ولي الأمر الشخصية وبيانات حسابه وأرقام الاتصال وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب تفاصيل ملف ولي الأمر بنجاح.\",\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 201,\n    \"user_code\": \"PAR-4001\",\n    \"full_name\": \"علي محمد الفيتوري\",\n    \"phone\": \"0912222222\",\n    \"relationship\": \"father\",\n    \"students_count\": 2,\n    \"created_at\": \"2026-08-29T10:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found - ملف ولي الأمر غير موجود",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians/{{guardianId}}",
+                "description": "استرجاع بيانات ولي الأمر الشخصية وبيانات حسابه وأرقام الاتصال وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ملف ولي الأمر غير موجود.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "2.3 تسجيل ولي أمر جديد وتوليد الحساب الموحد (Create Guardian)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guardians",
+            "description": "إنشاء ملف ولي أمر وتوليد حساب مستخدم ذري بجدول users بكود PAR-XXXX مع التحقق من تفرد رقم الهاتف وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"خالد مسعود السويح\",\n  \"phone\": \"0913333333\",\n  \"relationship\": \"father\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 or 409\", function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "    pm.test(\"Guardian created with atomic user code PAR-XXXX matching routes.md\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.user_code).to.match(/^PAR-\\d+$/);",
+                  "    });",
+                  "",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.environment.set(\"createdGuardianId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ createdGuardianId بنجاح:\", jsonData.data.id);",
+                  "    }",
+                  "} else if (pm.response.code === 409) {",
+                  "    pm.test(\"Conflict on duplicate phone caught properly\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(false);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Created - تم إنشاء ملف ولي الأمر وتوليد حساب الدخول بنجاح",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians",
+                "description": "إنشاء ملف ولي أمر وتوليد حساب مستخدم ذري بجدول users بكود PAR-XXXX مع التحقق من تفرد رقم الهاتف وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"خالد مسعود السويح\",\n  \"phone\": \"0913333333\",\n  \"relationship\": \"father\",\n  \"password\": \"Password123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم إنشاء ملف ولي الأمر وتوليد حساب الدخول بنجاح.\",\n  \"data\": {\n    \"id\": 2,\n    \"user_id\": 202,\n    \"user_code\": \"PAR-4002\",\n    \"full_name\": \"خالد مسعود السويح\",\n    \"phone\": \"0913333333\",\n    \"relationship\": \"father\",\n    \"created_at\": \"2026-08-29T12:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Conflict - رقم الهاتف مسجل مسبقاً",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians",
+                "description": "إنشاء ملف ولي أمر وتوليد حساب مستخدم ذري بجدول users بكود PAR-XXXX مع التحقق من تفرد رقم الهاتف وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"خالد مسعود السويح\",\n  \"phone\": \"0913333333\",\n  \"relationship\": \"father\",\n  \"password\": \"Password123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"رقم هاتف ولي الأمر مسجل مسبقاً في المنظومة (uq_guardians_phone).\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity - مدخلات غير صالحة",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians",
+                "description": "إنشاء ملف ولي أمر وتوليد حساب مستخدم ذري بجدول users بكود PAR-XXXX مع التحقق من تفرد رقم الهاتف وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"خالد مسعود السويح\",\n  \"phone\": \"0913333333\",\n  \"relationship\": \"father\",\n  \"password\": \"Password123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات ولي الأمر غير صالحة.\",\n  \"errors\": {\n    \"phone\": [\n      \"رقم الهاتف مطلوب.\"\n    ],\n    \"full_name\": [\n      \"الاسم الكامل مطلوب.\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "2.4 تحديث وتعديل بيانات ولي الأمر (Update Guardian)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guardians/{{guardianId}}",
+            "description": "تحديث بيانات ولي الأمر والقرابة ورقم الهاتف وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"خالد مسعود السويح المعدل\",\n  \"phone\": \"0913333399\",\n  \"relationship\": \"father\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 or 404\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Guardian updated successfully according to routes.md\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم تحديث ملف ولي الأمر بنجاح",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians/{{guardianId}}",
+                "description": "تحديث بيانات ولي الأمر والقرابة ورقم الهاتف وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"خالد مسعود السويح المعدل\",\n  \"phone\": \"0913333399\",\n  \"relationship\": \"father\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تحديث ملف ولي الأمر بنجاح.\",\n  \"data\": {\n    \"id\": 2,\n    \"user_id\": 202,\n    \"user_code\": \"PAR-4002\",\n    \"full_name\": \"خالد مسعود السويح المعدل\",\n    \"phone\": \"0913333399\",\n    \"relationship\": \"father\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found - ملف ولي الأمر غير موجود",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians/{{guardianId}}",
+                "description": "تحديث بيانات ولي الأمر والقرابة ورقم الهاتف وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"خالد مسعود السويح المعدل\",\n  \"phone\": \"0913333399\",\n  \"relationship\": \"father\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ملف ولي الأمر غير موجود.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "2.5 حذف ملف ولي الأمر مع فحص الحماية المرجعية (Delete Guardian)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guardians/{{createdGuardianId}}",
+            "description": "حذف ملف ولي الأمر مع التحقق من عدم وجود وصاية نشطة على طلاب (RESTRICT) وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200, 404, or 409\", function () {",
+                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Guardian deleted successfully\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم حذف ملف ولي الأمر وحسابه بنجاح",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians/{{createdGuardianId}}",
+                "description": "حذف ملف ولي الأمر مع التحقق من عدم وجود وصاية نشطة على طلاب (RESTRICT) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم حذف ملف ولي الأمر وحسابه بنجاح.\"\n}"
+            },
+            {
+              "name": "404 Not Found - ملف ولي الأمر غير موجود",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians/{{createdGuardianId}}",
+                "description": "حذف ملف ولي الأمر مع التحقق من عدم وجود وصاية نشطة على طلاب (RESTRICT) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ملف ولي الأمر غير موجود.\"\n}"
+            },
+            {
+              "name": "409 Conflict - حماية النزاهة المرجعية RESTRICT",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians/{{createdGuardianId}}",
+                "description": "حذف ملف ولي الأمر مع التحقق من عدم وجود وصاية نشطة على طلاب (RESTRICT) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"لا يمكن حذف ولي الأمر لارتباطه بروابط وصاية مع طلاب في المنظومة (Foreign Key Restrict).\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. إدارة شبكة الوصاية والربط الأسري (Guardian Students Custody)",
+      "description": "مسارات استعراض قائمة الأبناء المكفولين تحت وصاية ولي أمر، وإنشاء رابط الوصاية وتعديل صفة الوصي الرئيسي وفك الارتباط.",
+      "item": [
+        {
+          "name": "3.1 استعراض قائمة الأبناء المكفولين لولي أمر محدد (List Guardian Students)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guardians/{{guardianId}}/students",
+            "description": "استرجاع قائمة الطلاب التابعين لوصاية ولي أمر معين لتمكينه من التبديل بين سياقات أبنائه في الواجهة وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 or 404\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Guardian students list matches routes.md schema\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data).to.be.an('array');",
+                  "    });",
+                  "",
+                  "    if (jsonData.data && jsonData.data.length > 0) {",
+                  "        pm.environment.set(\"guardianStudentLinkId\", String(jsonData.data[0].student_id));",
+                  "        console.log(\"✅ تم استخراج guardianStudentLinkId للاختبار:\", jsonData.data[0].student_id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم جلب قائمة الأبناء المكفولين لولي الأمر بنجاح",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians/{{guardianId}}/students",
+                "description": "استرجاع قائمة الطلاب التابعين لوصاية ولي أمر معين لتمكينه من التبديل بين سياقات أبنائه في الواجهة وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب قائمة الأبناء المكفولين لولي الأمر بنجاح.\",\n  \"data\": [\n    {\n      \"student_id\": 1,\n      \"student_code\": \"STU-3001\",\n      \"student_name\": \"محمد علي الفيتوري\",\n      \"class_section\": \"الصف الخامس - شعبة أ\",\n      \"is_primary\": 1\n    },\n    {\n      \"student_id\": 2,\n      \"student_code\": \"STU-3002\",\n      \"student_name\": \"فاطمة علي الفيتوري\",\n      \"class_section\": \"الصف الثالث - شعبة أ\",\n      \"is_primary\": 1\n    }\n  ]\n}"
+            },
+            {
+              "name": "404 Not Found - ملف ولي الأمر غير موجود",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardians/{{guardianId}}/students",
+                "description": "استرجاع قائمة الطلاب التابعين لوصاية ولي أمر معين لتمكينه من التبديل بين سياقات أبنائه في الواجهة وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ملف ولي الأمر غير موجود.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "3.2 ربط وصاية ولي أمر بطالب وتحديد الوصي الرئيسي (Link Guardian To Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guardian-students",
+            "description": "إنشاء رابط وصاية جديد بين ولي أمر وطالب وتحديد صفة الوصي الأساسي (is_primary) مع منع التكرار (uq_guardian_student) وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guardian_id\": 1,\n  \"student_id\": 2,\n  \"is_primary\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 or 409\", function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "    pm.test(\"Guardian student link created successfully matching routes.md\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "    });",
+                  "",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.environment.set(\"guardianStudentLinkId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ guardianStudentLinkId بنجاح:\", jsonData.data.id);",
+                  "    }",
+                  "} else if (pm.response.code === 409) {",
+                  "    pm.test(\"Conflict on duplicate custody link caught\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(false);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Created - تم ربط وصاية ولي الأمر بالطالب بنجاح",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardian-students",
+                "description": "إنشاء رابط وصاية جديد بين ولي أمر وطالب وتحديد صفة الوصي الأساسي (is_primary) مع منع التكرار (uq_guardian_student) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"guardian_id\": 1,\n  \"student_id\": 2,\n  \"is_primary\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم ربط وصاية ولي الأمر بالطالب بنجاح.\",\n  \"data\": {\n    \"id\": 15,\n    \"guardian_id\": 1,\n    \"student_id\": 2,\n    \"is_primary\": 1,\n    \"created_at\": \"2026-08-29T12:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Conflict - تعارض في الربط",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardian-students",
+                "description": "إنشاء رابط وصاية جديد بين ولي أمر وطالب وتحديد صفة الوصي الأساسي (is_primary) مع منع التكرار (uq_guardian_student) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"guardian_id\": 1,\n  \"student_id\": 2,\n  \"is_primary\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"تعارض في الربط: يوجد رابط وصاية مسجل مسبقاً بين هذا الطالب وولي الأمر (uq_guardian_student).\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity - مدخلات غير صالحة",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardian-students",
+                "description": "إنشاء رابط وصاية جديد بين ولي أمر وطالب وتحديد صفة الوصي الأساسي (is_primary) مع منع التكرار (uq_guardian_student) وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"guardian_id\": 1,\n  \"student_id\": 2,\n  \"is_primary\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات ربط الوصاية غير صالحة.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "3.3 تعديل رابط الوصاية وتبديل صفة الوصي الرئيسي (Update Guardian Student Link)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guardian-students/{{guardianStudentLinkId}}",
+            "description": "تعديل رابط الوصاية أو تغيير صفة الوصي الرئيسي وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guardian_id\": 1,\n  \"student_id\": 2,\n  \"is_primary\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 or 404\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Guardian custody updated successfully matching routes.md\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم تعديل رابط وصاية ولي الأمر بنجاح",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardian-students/{{guardianStudentLinkId}}",
+                "description": "تعديل رابط الوصاية أو تغيير صفة الوصي الرئيسي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"guardian_id\": 1,\n  \"student_id\": 2,\n  \"is_primary\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تعديل رابط وصاية ولي الأمر بنجاح.\",\n  \"data\": {\n    \"id\": 15,\n    \"guardian_id\": 1,\n    \"student_id\": 2,\n    \"is_primary\": 0\n  }\n}"
+            },
+            {
+              "name": "404 Not Found - رابط الوصاية غير موجود",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardian-students/{{guardianStudentLinkId}}",
+                "description": "تعديل رابط الوصاية أو تغيير صفة الوصي الرئيسي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"guardian_id\": 1,\n  \"student_id\": 2,\n  \"is_primary\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"سجل رابط الوصاية غير موجود.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "3.4 فك وإلغاء رابط الوصاية بين ولي الأمر والطالب (Delete Guardian Student Link)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/guardian-students/{{guardianStudentLinkId}}",
+            "description": "فك ارتباط الوصاية بين الطالب وولي الأمر وإلغاء صفة الوصي وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 or 404\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Custody link deleted successfully matching routes.md\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم فك وإلغاء رابط الوصاية بنجاح",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardian-students/{{guardianStudentLinkId}}",
+                "description": "فك ارتباط الوصاية بين الطالب وولي الأمر وإلغاء صفة الوصي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم فك وإلغاء رابط الوصاية بنجاح.\"\n}"
+            },
+            {
+              "name": "404 Not Found - رابط الوصاية غير موجود",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/guardian-students/{{guardianStudentLinkId}}",
+                "description": "فك ارتباط الوصاية بين الطالب وولي الأمر وإلغاء صفة الوصي وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"سجل رابط الوصاية غير موجود.\"\n}"
             }
           ]
         }

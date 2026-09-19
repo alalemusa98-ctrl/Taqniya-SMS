@@ -1,0 +1,44 @@
+$kind: http-request
+name: 3.4 فك وإلغاء رابط الوصاية بين ولي الأمر والطالب (Delete Guardian Student Link)
+description: |-
+  فك ارتباط الوصاية بين الطالب وولي الأمر وإلغاء صفة الوصي وفق routes.md.
+url: "{{baseUrl}}/guardian-students/{{guardianStudentLinkId}}"
+method: DELETE
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم فك وإلغاء رابط الوصاية بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم فك وإلغاء رابط الوصاية بنجاح."
+  - name: 404 Not Found - رابط الوصاية غير موجود
+    status: Not Found
+    code: 404
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "سجل رابط الوصاية غير موجود."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 or 404", function () {
+          pm.expect([200, 404]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 200) {
+          pm.test("Custody link deleted successfully matching routes.md", function () {
+              pm.expect(jsonData.success).to.eql(true);
+          });
+      }
+    language: text/javascript
+order: 4000

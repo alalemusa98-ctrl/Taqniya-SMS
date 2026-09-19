@@ -1,0 +1,56 @@
+$kind: http-request
+name: 2.2 استعراض تفاصيل ملف ولي أمر محدد (Get Guardian Profile)
+description: |-
+  استرجاع بيانات ولي الأمر الشخصية وبيانات حسابه وأرقام الاتصال وفق routes.md.
+url: "{{baseUrl}}/guardians/{{guardianId}}"
+method: GET
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم جلب تفاصيل ملف ولي الأمر بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم جلب تفاصيل ملف ولي الأمر بنجاح."
+      data:
+        id: 1
+        user_id: 201
+        user_code: "PAR-4001"
+        full_name: "علي محمد الفيتوري"
+        phone: "0912222222"
+        relationship: "father"
+        students_count: 2
+        created_at: "2026-08-29T10:00:00Z"
+  - name: 404 Not Found - ملف ولي الأمر غير موجود
+    status: Not Found
+    code: 404
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ملف ولي الأمر غير موجود."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 or 404", function () {
+          pm.expect([200, 404]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 200) {
+          pm.test("Guardian profile structure matches routes.md", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+              pm.expect(jsonData.data.user_code).to.be.a('string');
+              pm.expect(jsonData.data.full_name).to.be.a('string');
+          });
+      }
+    language: text/javascript
+order: 2000

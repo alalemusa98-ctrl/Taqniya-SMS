@@ -1,0 +1,62 @@
+$kind: http-request
+name: 1.4 تحديث وتعديل البيانات الشخصية للطالب (Update Student)
+description: |-
+  تحديث بيانات الطالب وتحديث كلمة المرور عند الرغبة (مع إمكانية تحديث الشعبة المسكن بها) وفق routes.md.
+url: "{{baseUrl}}/students/{{studentId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "full_name": "محمد علي الفيتوري المعدل",
+      "phone": "0911111199",
+      "birth_date": "2015-05-12",
+      "gender": "male"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم تحديث بيانات ملف الطالب بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم تحديث بيانات ملف الطالب بنجاح."
+      data:
+        id: 1
+        user_id: 101
+        user_code: "STU-3001"
+        full_name: "محمد علي الفيتوري المعدل"
+        phone: "0911111199"
+        birth_date: "2015-05-12"
+        gender: "male"
+  - name: 404 Not Found - ملف الطالب غير موجود
+    status: Not Found
+    code: 404
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ملف الطالب غير موجود."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 or 404", function () {
+          pm.expect([200, 404]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 200) {
+          pm.test("Student updated successfully according to routes.md", function () {
+              pm.expect(jsonData.success).to.eql(true);
+          });
+      }
+    language: text/javascript
+order: 4000

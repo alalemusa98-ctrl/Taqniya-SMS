@@ -1,0 +1,14 @@
+$kind: collection
+name: "Phase 03-B: إسناد التدريس والأنصبة الأكاديمية (Teaching Assignments & Academic Quota)"
+description: |-
+  توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 03-B (5 مسارات) وفق العقد المعماري الرسمي `MD/phases/phase_03_teachers_assignments_b/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).
+
+  المجموعات المشمولة:
+  0. المصادقة وإعداد الجلسة (Authentication & Setup)
+  1. إدارة كشوفات وإسناد التدريس (Teaching Assignments)
+auth:
+  - id: 9fda3c0d-550e-4f2d-be8f-ce7e1be3277e
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{authToken}}"

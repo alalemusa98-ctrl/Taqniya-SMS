@@ -1,0 +1,16 @@
+$kind: collection
+name: "Phase 04-A: سجل الطلاب وأولياء الأمور (Students & Guardians Registry)"
+description: |-
+  توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 04-A (11 مساراً رئيسياً) وفق العقد المعماري الرسمي `MD/phases/phase_04_students_guardians_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).
+
+  المجموعات المشمولة:
+  0. المصادقة وإعداد الجلسة (Authentication & Setup)
+  1. إدارة سجل وملفات الطلاب (Students Registry)
+  2. إدارة سجل أولياء الأمور (Guardians Registry)
+  3. إدارة شبكة الوصاية والربط الأسري (Guardian Students Custody)
+auth:
+  - id: 8fda3c0d-660e-4f2d-be8f-ce7e1be3278f
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{authToken}}"

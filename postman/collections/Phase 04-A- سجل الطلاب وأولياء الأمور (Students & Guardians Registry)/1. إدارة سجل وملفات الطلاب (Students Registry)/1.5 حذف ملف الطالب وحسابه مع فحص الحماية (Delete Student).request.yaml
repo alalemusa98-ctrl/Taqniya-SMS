@@ -1,0 +1,52 @@
+$kind: http-request
+name: 1.5 حذف ملف الطالب وحسابه مع فحص الحماية (Delete Student)
+description: |-
+  حذف ملف الطالب مع التحقق الإجباري الصارم من عدم وجود سجلات أكاديمية مرتبطة به (سجلات تسكين أو درجات أو واجبات) وفق routes.md.
+url: "{{baseUrl}}/students/{{createdStudentId}}"
+method: DELETE
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم حذف ملف الطالب وحسابه بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم حذف ملف الطالب وحسابه بنجاح."
+  - name: 404 Not Found - ملف الطالب غير موجود
+    status: Not Found
+    code: 404
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ملف الطالب غير موجود."
+  - name: 409 Conflict - حماية النزاهة المرجعية RESTRICT
+    status: Conflict
+    code: 409
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "لا يمكن حذف الطالب لوجود سجلات تسكين أكاديمي أو درجات أو واجبات مرتبطة به في المنظومة (Foreign Key Restrict)."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200, 404, or 409", function () {
+          pm.expect([200, 404, 409]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 200) {
+          pm.test("Student deleted successfully", function () {
+              pm.expect(jsonData.success).to.eql(true);
+          });
+      }
+    language: text/javascript
+order: 5000

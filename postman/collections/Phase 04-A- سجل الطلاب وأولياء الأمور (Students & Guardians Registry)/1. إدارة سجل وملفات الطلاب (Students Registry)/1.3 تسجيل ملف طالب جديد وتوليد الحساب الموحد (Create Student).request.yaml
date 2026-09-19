@@ -1,0 +1,98 @@
+$kind: http-request
+description: إنشاء ملف طالب وتوليد حساب مستخدم ذري بجدول users بالرمز الموحد STU-XXXX مع دعم التسكين الفوري الاختياري وفق routes.md.
+url: "{{baseUrl}}/students"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "full_name": "طارق زياد الورفلي",
+      "phone": "0933333333",
+      "birth_date": "2015-08-10",
+      "gender": "male",
+      "password": "Password123!",
+      "academic_year_id": 1,
+      "seating_number": "105"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 201 Created - تم إنشاء ملف الطالب وتوليد حساب الدخول وتسكينه بالشعبة بنجاح
+    status: Created
+    code: 201
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم إنشاء ملف الطالب وتوليد حساب الدخول وتسكينه بالشعبة بنجاح."
+      data:
+        id: 3
+        user_id: 103
+        user_code: "STU-3003"
+        full_name: "طارق زياد الورفلي"
+        phone: "0933333333"
+        birth_date: "2015-08-10"
+        gender: "male"
+        enrollment:
+          id: 501
+          academic_year_id: 1
+          academic_year_name: "2025/2026"
+          class_id: 5
+          class_name: "الصف الخامس"
+          class_section_id: 5
+          section_name: "شعبة أ"
+          seating_number: "105"
+          status: "enrolled"
+        created_at: "2026-08-29T12:00:00Z"
+  - name: 409 Conflict - تعارض في رقم الهاتف
+    status: Conflict
+    code: 409
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "تعارض: رقم الهاتف مسجل مسبقاً لمستخدم آخر بالمنظومة (uq_users_phone)."
+  - name: 422 Unprocessable Entity - بيانات غير صالحة
+    status: Unprocessable Entity
+    code: 422
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "بيانات ملف الطالب غير صالحة."
+      errors:
+        full_name:
+          - "الاسم الكامل للطالب مطلوب."
+        gender:
+          - "يرجى تحديد جنس الطالب (ذكر / أنثى)."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 201 or 409", function () {
+          pm.expect([201, 409]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 201) {
+          pm.test("Student created with atomic user code STU-XXXX matching routes.md", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.id).to.be.a('number');
+              pm.expect(jsonData.data.user_code).to.match(/^STU-\d+$/);
+          });
+
+          if (jsonData.data && jsonData.data.id) {
+              pm.environment.set("createdStudentId", String(jsonData.data.id));
+              console.log("✅ تم حفظ createdStudentId بنجاح:", jsonData.data.id);
+          }
+      } else if (pm.response.code === 409) {
+          pm.test("Conflict on duplicate phone caught", function () {
+              pm.expect(jsonData.success).to.eql(false);
+          });
+      }
+    language: text/javascript
+order: 3000
