@@ -339,7 +339,10 @@ export class AssignmentsService {
 
     return {
       success: true,
-      message: 'تم جلب مصفوفة الواجبات المدرسية بنجاح.',
+      message:
+        total === 0
+          ? 'لا توجد واجبات مدرسية تطابق محددات البحث.'
+          : 'تم جلب مصفوفة الواجبات المدرسية بنجاح.',
       data: {
         academic_year_id: Number(year.id),
         academic_year_name: year.name,
