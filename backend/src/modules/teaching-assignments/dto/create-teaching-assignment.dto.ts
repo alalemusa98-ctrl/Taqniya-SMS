@@ -1,11 +1,11 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateTeachingAssignmentDto {
-  @IsNotEmpty({ message: 'العام الدراسي مطلوب' })
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({}, { message: 'معرف العام الدراسي يجب أن يكون رقماً' })
-  academic_year_id!: number;
+  academic_year_id?: number;
 
   @IsNotEmpty({ message: 'الشعبة الدراسية مطلوبة' })
   @Type(() => Number)

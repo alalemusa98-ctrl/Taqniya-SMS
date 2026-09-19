@@ -203,6 +203,33 @@ describe('Phase 03-B: Teaching Assignments Registry (TDD Verification)', () => {
       createdAssignmentId = result.data.id;
     });
 
+    it('TC-ASN-05-AUTO: Automatically resolves active academic year if academic_year_id is omitted from payload', async () => {
+      const tempSubject = await prisma.subject.create({
+        data: {
+          name: `مادة تجريبية آلية-${Date.now()}`,
+          code: `AUT${String(Date.now()).slice(-4)}`,
+        },
+      });
+
+      const dto = {
+        class_section_id: testSectionId,
+        subject_id: Number(tempSubject.id),
+        teacher_id: testTeacherId2,
+      };
+
+      const result = await assignmentsService.create(dto, testAdminId);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result.data.academic_year_id).toBe(testYearId);
+      expect(result.data.subject_id).toBe(Number(tempSubject.id));
+      expect(result.data.teacher_id).toBe(testTeacherId2);
+
+      // Clean up temp test assignment and subject
+      await prisma.teachingAssignment.delete({ where: { id: BigInt(result.data.id) } });
+      await prisma.subject.delete({ where: { id: tempSubject.id } });
+    });
+
     it('TC-ASN-06: Invariant Check (uq_teaching_assignment) - rejects duplicate assignment with 409 Conflict', async () => {
       const dto = {
         academic_year_id: testYearId,

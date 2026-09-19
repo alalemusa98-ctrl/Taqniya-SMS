@@ -315,15 +315,29 @@ export class TeachingAssignmentsService {
    * Assign teacher to subject in section
    */
   async create(dto: CreateTeachingAssignmentDto, userId: number, ipAddress?: string, userAgent?: string) {
-    // 1. Verify existence of Academic Year, Class Section, Subject, Teacher
-    const year = await this.prisma.academicYear.findFirst({
-      where: { id: BigInt(dto.academic_year_id), deleted_at: null },
-    });
-    if (!year) {
-      throw new UnprocessableEntityException({
-        academic_year_id: ['العام الدراسي المحدد غير موجود.'],
+    // 1. Resolve and verify Academic Year (specified or default to active)
+    let year;
+    if (dto.academic_year_id) {
+      year = await this.prisma.academicYear.findFirst({
+        where: { id: BigInt(dto.academic_year_id), deleted_at: null },
       });
+      if (!year) {
+        throw new UnprocessableEntityException({
+          academic_year_id: ['العام الدراسي المحدد غير موجود.'],
+        });
+      }
+    } else {
+      year = await this.prisma.academicYear.findFirst({
+        where: { is_active: 1, deleted_at: null },
+        orderBy: { id: 'desc' },
+      });
+      if (!year) {
+        throw new UnprocessableEntityException({
+          academic_year_id: ['لا يوجد عام دراسي نشط في المنظومة.'],
+        });
+      }
     }
+    const resolvedYearId = year.id;
 
     const section = await this.prisma.classSection.findFirst({
       where: { id: BigInt(dto.class_section_id), deleted_at: null },
@@ -356,7 +370,7 @@ export class TeachingAssignmentsService {
     // 2. Check Single Teacher Invariant (uq_teaching_assignment)
     const existing = await this.prisma.teachingAssignment.findFirst({
       where: {
-        academic_year_id: BigInt(dto.academic_year_id),
+        academic_year_id: resolvedYearId,
         class_section_id: BigInt(dto.class_section_id),
         subject_id: BigInt(dto.subject_id),
       },
@@ -380,7 +394,7 @@ export class TeachingAssignmentsService {
           })
         : tx.teachingAssignment.create({
             data: {
-              academic_year_id: BigInt(dto.academic_year_id),
+              academic_year_id: resolvedYearId,
               class_section_id: BigInt(dto.class_section_id),
               subject_id: BigInt(dto.subject_id),
               teacher_id: BigInt(dto.teacher_id),
@@ -395,7 +409,7 @@ export class TeachingAssignmentsService {
       entityType: 'teaching_assignments',
       entityId: created.id,
       newValues: {
-        academic_year_id: dto.academic_year_id,
+        academic_year_id: Number(resolvedYearId),
         class_section_id: dto.class_section_id,
         subject_id: dto.subject_id,
         teacher_id: dto.teacher_id,
@@ -466,11 +480,13 @@ export class TeachingAssignmentsService {
       });
     }
 
+    const targetYearId = dto.academic_year_id ? BigInt(dto.academic_year_id) : existing.academic_year_id;
+
     // 2. Check collision with another active assignment (excluding current record)
     const collision = await this.prisma.teachingAssignment.findFirst({
       where: {
         id: { not: BigInt(id) },
-        academic_year_id: BigInt(dto.academic_year_id),
+        academic_year_id: targetYearId,
         class_section_id: BigInt(dto.class_section_id),
         subject_id: BigInt(dto.subject_id),
         deleted_at: null,
@@ -495,7 +511,7 @@ export class TeachingAssignmentsService {
       return tx.teachingAssignment.update({
         where: { id: BigInt(id) },
         data: {
-          academic_year_id: BigInt(dto.academic_year_id),
+          academic_year_id: targetYearId,
           class_section_id: BigInt(dto.class_section_id),
           subject_id: BigInt(dto.subject_id),
           teacher_id: BigInt(dto.teacher_id),
@@ -511,7 +527,7 @@ export class TeachingAssignmentsService {
       entityId: BigInt(id),
       oldValues,
       newValues: {
-        academic_year_id: dto.academic_year_id,
+        academic_year_id: Number(targetYearId),
         class_section_id: dto.class_section_id,
         subject_id: dto.subject_id,
         teacher_id: dto.teacher_id,

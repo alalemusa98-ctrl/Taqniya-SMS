@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { GraduationCap, AlertCircle, Loader2, Save } from 'lucide-vue-next';
+import { GraduationCap, AlertCircle, Loader2, Save, Calendar, CheckCircle2 } from 'lucide-vue-next';
 import { teachingAssignmentsApi } from '../../api/teaching-assignments.api';
 import type { Teacher } from '../../api/teachers.api';
 import { useToast } from '../../composables/useToast';
@@ -46,24 +46,24 @@ const isSubmitting = ref(false);
 const fieldErrors = ref<Record<string, string[]>>({});
 const formErrorMessage = ref<string | null>(null);
 
+// Automatically resolve active academic year (or fallback to latest)
+const activeAcademicYear = computed(() => {
+  return props.academicYears.find((y) => y.is_active === 1) || props.academicYears[0];
+});
+
 watch(
   () => props.isOpen,
   (open) => {
     if (open) {
       form.value = { ...props.initialData };
+      if ((!form.value.academic_year_id || form.value.academic_year_id === 0) && activeAcademicYear.value) {
+        form.value.academic_year_id = activeAcademicYear.value.id;
+      }
       fieldErrors.value = {};
       formErrorMessage.value = null;
     }
   },
   { immediate: true },
-);
-
-// Options mappings
-const yearOptions = computed<TaqniyaSelectOption[]>(() =>
-  props.academicYears.map((y) => ({
-    value: y.id,
-    label: `${y.name} ${y.is_active === 1 ? '(النشط)' : ''}`,
-  })),
 );
 
 const classOptions = computed<TaqniyaSelectOption[]>(() =>
@@ -197,18 +197,23 @@ async function handleSubmit() {
         <span>{{ formErrorMessage }}</span>
       </div>
 
-      <!-- Academic Year -->
-      <div>
-        <label class="block text-xs font-bold text-bx-title mb-1">
-          العام الدراسي <span class="text-rose-500">*</span>
-        </label>
-        <TaqniyaSelect
-          v-model="form.academic_year_id"
-          :options="yearOptions"
-          placeholder="اختر العام الدراسي..."
-          full-width
-          :disabled="mode === 'edit'"
-        />
+      <!-- Active Academic Year Context (System Resolved) -->
+      <div class="p-3 rounded-xl bg-bx-surface-2/80 border border-bx-border flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <Calendar class="w-4 h-4" />
+          </div>
+          <div>
+            <div class="text-[11px] font-bold text-bx-subtitle">العام الدراسي المستهدف</div>
+            <div class="text-xs font-black text-bx-title">
+              {{ activeAcademicYear ? activeAcademicYear.name : 'العام الأكاديمي النشط' }}
+            </div>
+          </div>
+        </div>
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+          <CheckCircle2 class="w-3.5 h-3.5" />
+          محدد تلقائياً
+        </span>
       </div>
 
       <!-- Class Selection -->
