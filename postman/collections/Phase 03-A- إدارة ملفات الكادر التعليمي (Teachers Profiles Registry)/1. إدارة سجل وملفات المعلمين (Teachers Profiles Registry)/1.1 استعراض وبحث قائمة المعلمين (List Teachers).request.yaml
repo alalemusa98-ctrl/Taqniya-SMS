@@ -1,0 +1,105 @@
+$kind: http-request
+name: 1.1 استعراض وبحث قائمة المعلمين (List Teachers)
+description: |-
+  استرجاع قائمة معلمي المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالتخصص وحالة الحساب والترقيم القياسي.
+url: "{{baseUrl}}/teachers?search=&specialization=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث النصي باسم المعلم أو الرمز المؤسسي (مثال أحمد أو TCH-2001)
+  - key: specialization
+    value: ""
+    disabled: true
+    description: تصفية المعلمين حسب التخصص العلمي (مثال الرياضيات)
+  - key: is_active
+    value: ""
+    disabled: true
+    description: تصفية بحسب حالة الحساب النشط (0 أو 1)
+  - key: sort_by
+    value: id
+    description: "حقل الفرز: id, full_name, user_code, hire_date"
+  - key: sort_order
+    value: desc
+    description: "اتجاه الفرز: asc أو desc"
+  - key: page
+    value: "1"
+    description: رقم الصفحة
+  - key: per_page
+    value: "15"
+    description: عدد السجلات في الصفحة
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - نجاح جلب قائمة المعلمين
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم جلب قائمة المعلمين بنجاح."
+      data:
+        - id: 1
+          user_id: 10
+          user_code: "TCH-2001"
+          full_name: "أحمد محمود سالم"
+          phone: "0912345678"
+          specialization: "الرياضيات"
+          hire_date: "2022-09-01"
+          is_active: 1
+        - id: 2
+          user_id: 11
+          user_code: "TCH-2002"
+          full_name: "فاطمة عمر المهدي"
+          phone: "0923456789"
+          specialization: "العلوم العامة"
+          hire_date: "2023-01-15"
+          is_active: 1
+      meta:
+        current_page: 1
+        per_page: 15
+        total: 2
+        last_page: 1
+  - name: 401 Unauthorized - غير مصرح بالوصول
+    status: Unauthorized
+    code: 401
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
+  - name: 403 Forbidden - صلاحيات غير كافية
+    status: Forbidden
+    code: 403
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - نجاح جلب قائمة المعلمين", function () {
+          pm.response.to.have.status(200);
+      });
+
+      var jsonData = pm.response.json();
+      pm.test("Response has valid teachers list schema", function () {
+          pm.expect(jsonData.success).to.eql(true);
+          pm.expect(jsonData.data).to.be.an('array');
+          pm.expect(jsonData.meta).to.be.an('object');
+          pm.expect(jsonData.meta.current_page).to.be.a('number');
+      });
+
+      if (jsonData.data && jsonData.data.length > 0) {
+          pm.environment.set("teacherId", String(jsonData.data[0].id));
+          console.log("✅ تم استخراج معلم للاختبار teacherId:", jsonData.data[0].id);
+      }
+    language: text/javascript
+order: 1000

@@ -22,7 +22,8 @@
             ],
             "url": "{{baseUrl}}/auth/me",
             "description": "استرجاع بيانات الحساب وصلاحيات المستخدم الحالي بناءً على التوكن الممرر في ترويسة الطلب."
-          }
+          },
+          "response": []
         },
         {
           "name": "تسجيل الخروج وإبطال التوكن (Logout)",
@@ -55,7 +56,8 @@
                 ]
               }
             }
-          ]
+          ],
+          "response": []
         },
         {
           "name": "تسجيل الدخول الموحد بالرمز المؤسسي (Login)",
@@ -110,7 +112,8 @@
                 ]
               }
             }
-          ]
+          ],
+          "response": []
         },
         {
           "name": "تغيير كلمة المرور الذاتي للمستخدم (Change Password)",
@@ -139,7 +142,8 @@
                 }
               }
             }
-          }
+          },
+          "response": []
         }
       ]
     },
@@ -174,7 +178,8 @@
                 }
               }
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "استعراض وتصفية شجرة حسابات المستخدمين (List Users Tree)",
@@ -189,7 +194,8 @@
             ],
             "url": "{{baseUrl}}/users?role_type=teacher&is_active=1&page=1&per_page=15&sort_by=created_at&sort_order=desc",
             "description": "استعراض قائمة حسابات المستخدمين في شجرة هرمية مع إحصائيات الأدوار والترقيم والفرز."
-          }
+          },
+          "response": []
         },
         {
           "name": "تفعيل أو إيقاف حساب المستخدم (Update User Status)",
@@ -218,7 +224,8 @@
                 }
               }
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "عرض تفاصيل حساب مستخدم محدد (Get User By ID)",
@@ -233,7 +240,8 @@
             ],
             "url": "{{baseUrl}}/users/{{targetUserId}}",
             "description": "استرجاع بيانات تفصيلية لحساب محدد بالمعرف الرقمي (ID)."
-          }
+          },
+          "response": []
         }
       ]
     },
@@ -254,7 +262,8 @@
             ],
             "url": "{{baseUrl}}/audit-logs?page=1&per_page=15&date_from=2026-01-01&date_to=2026-12-31&sort_by=created_at&sort_order=desc",
             "description": "استرجاع قائمة سجلات التدقيق الأمني مع دعم التصفية المتقدمة حسب التاريخ، نوع الإجراء، الكيان المتأثر، والمستخدم المنفذ."
-          }
+          },
+          "response": []
         },
         {
           "name": "عرض تفاصيل حركة تدقيق ومقارنة الفروقات (Get Audit Log By ID)",
@@ -269,7 +278,8 @@
             ],
             "url": "{{baseUrl}}/audit-logs/{{targetAuditLogId}}",
             "description": "استرجاع تفاصيل سجل تدقيق محدد متضمناً القيم السابقة (old_values) والقيم الجديدة (new_values) وعنوان الـ IP وبيانات العميل."
-          }
+          },
+          "response": []
         }
       ]
     }

@@ -1,0 +1,811 @@
+{
+  "info": {
+    "name": "Phase 02-C: فترات الصفوف وتسكين الشعب والمناهج (Class Terms, Sections & Curriculum)",
+    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 02-C (13 مساراً) وفق العقد المعماري الرسمي `MD/phases/phase_02_academic_structure_c/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (Authentication & Setup)\n1. إدارة فترات وحالات الصفوف (Class Academic Terms)\n2. إدارة ربط وتسكين الشعب بالصفوف (Class Sections)\n3. إدارة مناهج الصفوف والدرجات لكل فترة (Class Subjects & Curriculum)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. المصادقة وإعداد الجلسة (Authentication & Setup)",
+      "description": "تهيئة الجلسة وتسجيل دخول مدير النظام لاستخراج التوكن وحفظه في متغير البيئة `authToken`.",
+      "item": [
+        {
+          "name": "تسجيل الدخول كمدير النظام (Login as Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 02-C.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم تسجيل الدخول بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Login response contains valid bearer token\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.token).to.be.a('string');",
+                  "    });",
+                  "    ",
+                  "    if (jsonData.data && jsonData.data.token) {",
+                  "        pm.environment.set(\"authToken\", jsonData.data.token);",
+                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 02-C.\");",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. إدارة فترات وحالات الصفوف (Class Academic Terms)",
+      "description": "مسارات إدارة وتخصيص الفترات الدراسية للصفوف، تفعيل الفترة النشطة ذرياً (Atomic Activation)، وإغلاق/فتح درجات الفترات للأرشفة وفك الربط.",
+      "item": [
+        {
+          "name": "1.1 عرض وبحث فترات وحالات الصفوف (List Class Academic Terms)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-academic-terms?class_id=&academic_term_id=&is_active=&is_closed=&search=&page=1&per_page=15",
+            "description": "استرجاع فترات وحالات كافة صفوف المدرسة مجمعة هرمياً لكل صف مع دعم الفلترة لصف محدد أو فترة محددة أو البحث النصي والترقيم القياسي.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - نجاح جلب فترات وحالات صفوف المدرسة\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response contains structured classes and terms schema\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.classes).to.be.an('array');",
+                  "    pm.expect(jsonData.meta).to.be.an('object');",
+                  "    pm.expect(jsonData.meta.current_page).to.be.a('number');",
+                  "});",
+                  "",
+                  "if (jsonData.data && jsonData.data.classes.length > 0) {",
+                  "    for (var i = 0; i < jsonData.data.classes.length; i++) {",
+                  "        var c = jsonData.data.classes[i];",
+                  "        if (c.terms && c.terms.length > 0) {",
+                  "            pm.environment.set(\"testClassTermId\", c.terms[0].id);",
+                  "            pm.environment.set(\"testClassId\", c.class_id);",
+                  "            break;",
+                  "        }",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "1.2 تخصيص وربط فترة بصف دراسي (Assign Class Academic Term)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-academic-terms",
+            "description": "تخصيص وربط فترة رسمية لصف دراسي في القالب العام بحالة افتراضية (is_active = 0, is_closed = 0) مع فحص عدم التكرار (uq_class_term).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"class_id\": {{testClassId}},\n  \"academic_term_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 Created or 409 Conflict\", function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "    pm.test(\"Response contains assigned class term details\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.is_active).to.eql(0);",
+                  "        pm.expect(jsonData.data.is_closed).to.eql(0);",
+                  "    });",
+                  "    pm.environment.set(\"testClassTermId\", jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "1.3 تعديل فترة صف دراسي (Update Class Academic Term)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-academic-terms/{{testClassTermId}}",
+            "description": "تحديث فترة الصف المخصصة مع فحص حالة الإغلاق للأرشفة (منع التعديل إذا كانت is_closed = 1).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"class_id\": {{testClassId}},\n  \"academic_term_id\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK or 409 Conflict\", function () {",
+                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response confirms class term update\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.eql(Number(pm.environment.get(\"testClassTermId\")));",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "1.4 تفعيل الفترة النشطة للصف ذرياً (Activate Class Academic Term)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-academic-terms/{{testClassTermId}}/activate",
+            "description": "تحويل الفترة المستهدفة إلى الفترة النشطة الحصرية للصف (is_active = 1) وإلغاء تفعيل بقية فترات نفس الصف ذرياً داخل Atomic Transaction.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK - تم تفعيل الفترة النشطة بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response indicates is_active is 1\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.is_active).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "1.5 إغلاق أو فتح درجات الفترة للصف (Toggle Close Class Academic Term)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-academic-terms/{{testClassTermId}}/close",
+            "description": "تبديل حالة إغلاق درجات الفترة للصف (is_closed: 1 / 0) للأرشفة ومنع التعديل على درجات المواد.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK - تم تغيير حالة إغلاق الفترة بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response contains updated is_closed state\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.is_closed).to.be.oneOf([0, 1]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "1.6 فك ربط فترة غير نشطة من صف دراسي (Delete Class Academic Term)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-academic-terms/{{testClassTermId}}",
+            "description": "إلغاء تخصيص فترة لصف دراسي بشرط ألا تكون الفترة النشطة حالياً للصف وألا تحتوي على مواد دراسية مسندة (ON DELETE RESTRICT).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK or 409 Conflict (RESTRICT)\", function () {",
+                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response confirms class term removal\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. إدارة ربط وتسكين الشعب بالصفوف (Class Sections)",
+      "description": "مسارات استعراض الشعب المفتوحة للصفوف، تسكين الشعب العامة بالصفوف مع فحص التفرد، وفك الربط مع حظر الحذف عند وجود طلاب أو معلمين (ON DELETE RESTRICT).",
+      "item": [
+        {
+          "name": "2.1 عرض وبحث شعب الصفوف المفتوحة (List Class Sections)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-sections?class_id=&search=&page=1&per_page=15",
+            "description": "استرجاع قائمة الشعب المفتوحة والمسندة لكافة الصفوف الدراسية مجمعة هرمياً مع إمكانية الفلترة لصف محدد والبحث النصي والترقيم.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - نجاح جلب شعب الصفوف الدراسية\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response contains structured classes and sections schema\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.classes).to.be.an('array');",
+                  "    pm.expect(jsonData.meta).to.be.an('object');",
+                  "    pm.expect(jsonData.meta.current_page).to.be.a('number');",
+                  "});",
+                  "",
+                  "if (jsonData.data && jsonData.data.classes.length > 0) {",
+                  "    for (var i = 0; i < jsonData.data.classes.length; i++) {",
+                  "        var c = jsonData.data.classes[i];",
+                  "        if (c.sections && c.sections.length > 0) {",
+                  "            pm.environment.set(\"testClassSectionId\", c.sections[0].id);",
+                  "            break;",
+                  "        }",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "2.2 تسكين وربط شعبة بصف دراسي (Assign Class Section)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-sections",
+            "description": "فتح وتسكين شعبة عامة لصف دراسي محدد مع التحقق من عدم التكرار (uq_class_sections).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"class_id\": {{testClassId}},\n  \"section_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 Created or 409 Conflict\", function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "    pm.test(\"Response contains assigned class section details\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.class_id).to.eql(Number(pm.environment.get(\"testClassId\")));",
+                  "    });",
+                  "    pm.environment.set(\"testClassSectionId\", jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "2.3 فك ربط شعبة من صف دراسي (Delete Class Section)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-sections/{{testClassSectionId}}",
+            "description": "إلغاء تسكين شعبة من صف دراسي بشرط عدم وجود طلاب مسجلين بها في هذا العام أو معلمين مسندين (ON DELETE RESTRICT -> 409 Conflict).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK or 409 Conflict (RESTRICT)\", function () {",
+                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response confirms class section unassignment\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. إدارة مناهج الصفوف والدرجات لكل فترة (Class Subjects & Curriculum)",
+      "description": "مسارات استعراض المناهج موزعة بالفصول، إسناد المواد وتحديد درجات النجاح والعظمى (passing_score <= max_score)، تعديل درجات المواد مع حظر التعديل بالفترات المغلقة، وحذف المواد مع حظر الحذف عند وجود درجات مسجلة (RESTRICT).",
+      "item": [
+        {
+          "name": "3.1 استعراض مناهج ومقررات الصفوف بالفصول (List Class Subjects)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-subjects?class_id=&class_academic_term_id=&search=&page=1&per_page=15",
+            "description": "استرجاع الهيكل الكامل لمناهج ومقررات صفوف المدرسة موزعة بحسب الفصول الدراسية مع تفاصيل المواد ودرجات النجاح والدرجة العظمى لكل فصل والترقيم القياسي.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - نجاح جلب مناهج ومقررات الصفوف\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response contains structured classes, terms and subjects schema\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.classes).to.be.an('array');",
+                  "    pm.expect(jsonData.meta).to.be.an('object');",
+                  "    pm.expect(jsonData.meta.current_page).to.be.a('number');",
+                  "});",
+                  "",
+                  "if (jsonData.data && jsonData.data.classes.length > 0) {",
+                  "    for (var i = 0; i < jsonData.data.classes.length; i++) {",
+                  "        var c = jsonData.data.classes[i];",
+                  "        if (c.terms && c.terms.length > 0) {",
+                  "            for (var j = 0; j < c.terms.length; j++) {",
+                  "                var t = c.terms[j];",
+                  "                if (t.subjects && t.subjects.length > 0) {",
+                  "                    pm.environment.set(\"testClassSubjectId\", t.subjects[0].id);",
+                  "                    pm.environment.set(\"testSubjectId\", t.subjects[0].subject_id);",
+                  "                    break;",
+                  "                }",
+                  "            }",
+                  "        }",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "3.2 إسناد مادة وتحديد درجات الفترة (Assign Class Subject)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-subjects",
+            "description": "إضافة مادة لمنهج فترة محددة بالصف وتعيين درجة النجاح والدرجة العظمى مع التحقق من قيد النزاهة (passing_score <= max_score) وتفرد المادة بالفترة (uq_class_term_subject).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"class_academic_term_id\": {{testClassTermId}},\n  \"subject_id\": 1,\n  \"passing_score\": 50.00,\n  \"max_score\": 100.00\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 Created or 409 Conflict\", function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "    pm.test(\"Response contains assigned subject details with scores\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.passing_score).to.eql(\"50.00\");",
+                  "        pm.expect(jsonData.data.max_score).to.eql(\"100.00\");",
+                  "    });",
+                  "    pm.environment.set(\"testClassSubjectId\", jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "3.3 تعديل درجات مادة مسندة بالفترة (Update Class Subject)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-subjects/{{testClassSubjectId}}",
+            "description": "تحديث بيانات ودرجات مادة مسندة بفترة صف مع التحقق من عدم إغلاق الفترة للأرشفة (is_closed = 0) وقيد النزاهة (passing_score <= max_score).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"class_academic_term_id\": {{testClassTermId}},\n  \"subject_id\": 1,\n  \"passing_score\": 60.00,\n  \"max_score\": 100.00\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK or 409 Conflict\", function () {",
+                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response confirms subject score update\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.passing_score).to.eql(\"60.00\");",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "3.4 إزالة مادة من منهج فترة الصف (Delete Class Subject)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/academic/class-subjects/{{testClassSubjectId}}",
+            "description": "حذف مادة من مقررات فترة الصف بشرط عدم وجود درجات امتحانات مسجلة أو جدول حصص مسجل لها (ON DELETE RESTRICT -> 409 Conflict).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK or 409 Conflict (RESTRICT)\", function () {",
+                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response confirms class subject removal\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -94,19 +94,61 @@
     },
     {
       "key": "classId",
-      "value": "1",
+      "value": "",
       "type": "default",
       "enabled": true
     },
     {
       "key": "sectionId",
-      "value": "1",
+      "value": "",
       "type": "default",
       "enabled": true
     },
     {
       "key": "subjectId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testClassTermId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testClassId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testClassSectionId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testClassSubjectId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testSubjectId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "teacherId",
       "value": "1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "createdTeacherId",
+      "value": "",
       "type": "default",
       "enabled": true
     }

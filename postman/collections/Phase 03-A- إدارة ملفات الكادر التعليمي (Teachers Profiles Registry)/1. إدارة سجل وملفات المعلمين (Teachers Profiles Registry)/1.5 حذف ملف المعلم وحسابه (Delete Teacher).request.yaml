@@ -1,0 +1,57 @@
+$kind: http-request
+name: 1.5 حذف ملف المعلم وحسابه (Delete Teacher)
+description: |-
+  تنفيذ الحذف المنطقي لملف المعلم وحسابه بشرط عدم وجود إسنادات تدريس نشطة أو سابقة مرصودة باسمه في teaching_assignments (RESTRICT).
+url: "{{baseUrl}}/teachers/{{createdTeacherId}}"
+method: DELETE
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم حذف ملف المعلم وحسابه بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم حذف ملف المعلم وحسابه بنجاح."
+  - name: 404 Not Found - ملف المعلم غير موجود
+    status: Not Found
+    code: 404
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ملف المعلم غير موجود."
+  - name: 409 Conflict - منع الحذف لوجود إسنادات تدريس RESTRICT
+    status: Conflict
+    code: 409
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "لا يمكن حذف ملف المعلم لوجود إسنادات تدريس أو جداول حصص مرتبطة به (RESTRICT)."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200, 404 or 409", function () {
+          pm.expect([200, 404, 409]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 200) {
+          pm.test("Teacher soft deletion and account cleanup succeeded", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.message).to.be.a('string');
+          });
+      } else if (pm.response.code === 409) {
+          pm.test("Deletion restricted due to teaching assignments", function () {
+              pm.expect(jsonData.success).to.eql(false);
+          });
+      }
+    language: text/javascript
+order: 5000

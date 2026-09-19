@@ -1,0 +1,14 @@
+$kind: collection
+name: "Phase 03-A: إدارة ملفات الكادر التعليمي (Teachers Profiles Registry)"
+description: |-
+  توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 03-A (5 مسارات) وفق العقد المعماري الرسمي `MD/phases/phase_03_teachers_assignments_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).
+
+  المجموعات المشمولة:
+  0. المصادقة وإعداد الجلسة (Authentication & Setup)
+  1. إدارة سجل وملفات المعلمين (Teachers Profiles Registry)
+auth:
+  - id: 9fda3c0d-550e-4f2d-be8f-ce7e1be3276d
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{authToken}}"

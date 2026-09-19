@@ -1,0 +1,997 @@
+{
+  "info": {
+    "name": "Phase 03-A: إدارة ملفات الكادر التعليمي (Teachers Profiles Registry)",
+    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 03-A (5 مسارات) وفق العقد المعماري الرسمي `MD/phases/phase_03_teachers_assignments_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (Authentication & Setup)\n1. إدارة سجل وملفات المعلمين (Teachers Profiles Registry)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. المصادقة وإعداد الجلسة (Authentication & Setup)",
+      "description": "تسجيل دخول مدير النظام لتهيئة الجلسة واستخراج التوكن (authToken) لاستخدامه في اختبار وتوثيق مسارات ملفات الكادر التعليمي.",
+      "item": [
+        {
+          "name": "تسجيل الدخول كمدير النظام (Login as Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 03-A.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم تسجيل الدخول بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Login response contains valid bearer token\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.token).to.be.a('string');",
+                  "    });",
+                  "    ",
+                  "    if (jsonData.data && jsonData.data.token) {",
+                  "        pm.environment.set(\"authToken\", jsonData.data.token);",
+                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 03-A.\");",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم تسجيل الدخول بنجاح",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/auth/login",
+                "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 03-A.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تسجيل الدخول بنجاح.\",\n  \"data\": {\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"id\": 1,\n      \"user_code\": \"ADM-1001\",\n      \"role\": \"admin\",\n      \"full_name\": \"مدير النظام العام\"\n    }\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. إدارة سجل وملفات المعلمين (Teachers Profiles Registry)",
+      "description": "مسارات استعراض وبحث وتفاصيل وإنشاء وتعديل وحذف ملفات المعلمين وتوليد الحسابات الموحدة.",
+      "item": [
+        {
+          "name": "1.1 استعراض وبحث قائمة المعلمين (List Teachers)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/teachers?search=&specialization=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15",
+            "description": "استرجاع قائمة معلمي المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالتخصص وحالة الحساب والترقيم القياسي.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - نجاح جلب قائمة المعلمين\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Response has valid teachers list schema\", function () {",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    pm.expect(jsonData.meta).to.be.an('object');",
+                  "    pm.expect(jsonData.meta.current_page).to.be.a('number');",
+                  "});",
+                  "",
+                  "if (jsonData.data && jsonData.data.length > 0) {",
+                  "    pm.environment.set(\"teacherId\", String(jsonData.data[0].id));",
+                  "    console.log(\"✅ تم استخراج معلم للاختبار teacherId:\", jsonData.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - نجاح جلب قائمة المعلمين",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers?search=&specialization=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15",
+                "description": "استرجاع قائمة معلمي المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالتخصص وحالة الحساب والترقيم القياسي.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب قائمة المعلمين بنجاح.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"user_id\": 10,\n      \"user_code\": \"TCH-2001\",\n      \"full_name\": \"أحمد محمود سالم\",\n      \"phone\": \"0912345678\",\n      \"specialization\": \"الرياضيات\",\n      \"hire_date\": \"2022-09-01\",\n      \"is_active\": 1\n    },\n    {\n      \"id\": 2,\n      \"user_id\": 11,\n      \"user_code\": \"TCH-2002\",\n      \"full_name\": \"فاطمة عمر المهدي\",\n      \"phone\": \"0923456789\",\n      \"specialization\": \"العلوم العامة\",\n      \"hire_date\": \"2023-01-15\",\n      \"is_active\": 1\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 2,\n    \"last_page\": 1\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers?search=&specialization=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15",
+                "description": "استرجاع قائمة معلمي المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالتخصص وحالة الحساب والترقيم القياسي.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - صلاحيات غير كافية",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers?search=&specialization=&is_active=&sort_by=id&sort_order=desc&page=1&per_page=15",
+                "description": "استرجاع قائمة معلمي المدرسة مع دعم البحث النصي بالاسم أو الرمز الموحد user_code والتصفية بالتخصص وحالة الحساب والترقيم القياسي.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "1.2 استعراض تفاصيل ملف معلم محدد (Get Teacher By ID)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/teachers/{{teacherId}}",
+            "description": "استرجاع الملف الشخصي الكامل لمعلم محدد متضمناً حساب دخوله الموحد وبياناته المهنية.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 or 404\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Teacher profile details schema is valid\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data).to.be.an('object');",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.user_code).to.be.a('string');",
+                  "        pm.expect(jsonData.data.full_name).to.be.a('string');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم جلب تفاصيل ملف المعلم بنجاح",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers/{{teacherId}}",
+                "description": "استرجاع الملف الشخصي الكامل لمعلم محدد متضمناً حساب دخوله الموحد وبياناته المهنية.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب تفاصيل ملف المعلم بنجاح.\",\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 10,\n    \"user_code\": \"TCH-2001\",\n    \"full_name\": \"أحمد محمود سالم\",\n    \"phone\": \"0912345678\",\n    \"specialization\": \"الرياضيات\",\n    \"hire_date\": \"2022-09-01\",\n    \"is_active\": 1,\n    \"created_at\": \"2022-09-01T10:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found - ملف المعلم غير موجود",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers/{{teacherId}}",
+                "description": "استرجاع الملف الشخصي الكامل لمعلم محدد متضمناً حساب دخوله الموحد وبياناته المهنية.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ملف المعلم غير موجود.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "1.3 إنشاء ملف معلم جديد وتوليد الحساب الموحد (Create Teacher)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/teachers",
+            "description": "إنشاء ملف المعلم وتوليد حساب الدخول الموحد (TCH-XXXX) في جدول المستخدمين users ذرياً ضمن نفس المعاملة.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية\",\n  \"hire_date\": \"2026-09-01\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 or 409\", function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "    pm.test(\"Teacher created with valid atomic user code TCH-XXXX\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.user_code).to.match(/^TCH-\\d+$/);",
+                  "    });",
+                  "",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.environment.set(\"createdTeacherId\", String(jsonData.data.id));",
+                  "        console.log(\"✅ تم حفظ createdTeacherId بنجاح:\", jsonData.data.id);",
+                  "    }",
+                  "} else if (pm.response.code === 409) {",
+                  "    pm.test(\"Conflict detected on phone number duplicate\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(false);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Created - تم إنشاء ملف المعلم وتوليد حساب الدخول الموحد بنجاح",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers",
+                "description": "إنشاء ملف المعلم وتوليد حساب الدخول الموحد (TCH-XXXX) في جدول المستخدمين users ذرياً ضمن نفس المعاملة.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية\",\n  \"hire_date\": \"2026-09-01\",\n  \"password\": \"Password123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم إنشاء ملف المعلم وتوليد حساب الدخول الموحد بنجاح.\",\n  \"data\": {\n    \"id\": 3,\n    \"user_id\": 12,\n    \"user_code\": \"TCH-2003\",\n    \"full_name\": \"علي مصطفى الورفلي\",\n    \"phone\": \"0934567890\",\n    \"specialization\": \"اللغة العربية\",\n    \"hire_date\": \"2026-09-01\",\n    \"created_at\": \"2026-08-29T12:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Conflict - رقم هاتف المعلم مسجل مسبقاً",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers",
+                "description": "إنشاء ملف المعلم وتوليد حساب الدخول الموحد (TCH-XXXX) في جدول المستخدمين users ذرياً ضمن نفس المعاملة.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية\",\n  \"hire_date\": \"2026-09-01\",\n  \"password\": \"Password123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"رقم هاتف المعلم مسجل مسبقاً.\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity - بيانات غير صالحة",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers",
+                "description": "إنشاء ملف المعلم وتوليد حساب الدخول الموحد (TCH-XXXX) في جدول المستخدمين users ذرياً ضمن نفس المعاملة.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية\",\n  \"hire_date\": \"2026-09-01\",\n  \"password\": \"Password123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات ملف المعلم غير صالحة.\",\n  \"errors\": {\n    \"full_name\": [\n      \"الاسم الرباعي واللقب للمعلم مطلوب.\"\n    ],\n    \"password\": [\n      \"كلمة المرور يجب ألا تقل عن 8 خانات وتحتوي على أرقام وحروف.\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "1.4 تعديل البيانات الشخصية والمهنية للمعلم (Update Teacher)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
+            "description": "تحديث بيانات ملف المعلم (الاسم، الهاتف، التخصص، تاريخ التعيين، أو كلمة المرور) مع حماية البريد والهاتف ضد التكرار.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي المحدث\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية والتربية الإسلامية\",\n  \"hire_date\": \"2026-09-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200, 404 or 409\", function () {",
+                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Teacher update reflects updated fields\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.full_name).to.eql(\"علي مصطفى الورفلي المحدث\");",
+                  "        pm.expect(jsonData.data.specialization).to.eql(\"اللغة العربية والتربية الإسلامية\");",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم تحديث بيانات ملف المعلم بنجاح",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
+                "description": "تحديث بيانات ملف المعلم (الاسم، الهاتف، التخصص، تاريخ التعيين، أو كلمة المرور) مع حماية البريد والهاتف ضد التكرار.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي المحدث\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية والتربية الإسلامية\",\n  \"hire_date\": \"2026-09-01\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تحديث بيانات ملف المعلم بنجاح.\",\n  \"data\": {\n    \"id\": 3,\n    \"user_id\": 12,\n    \"user_code\": \"TCH-2003\",\n    \"full_name\": \"علي مصطفى الورفلي المحدث\",\n    \"phone\": \"0934567890\",\n    \"specialization\": \"اللغة العربية والتربية الإسلامية\",\n    \"hire_date\": \"2026-09-01\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found - ملف المعلم غير موجود",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
+                "description": "تحديث بيانات ملف المعلم (الاسم، الهاتف، التخصص، تاريخ التعيين، أو كلمة المرور) مع حماية البريد والهاتف ضد التكرار.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي المحدث\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية والتربية الإسلامية\",\n  \"hire_date\": \"2026-09-01\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ملف المعلم غير موجود.\"\n}"
+            },
+            {
+              "name": "409 Conflict - رقم هاتف المعلم مسجل مسبقاً",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
+                "description": "تحديث بيانات ملف المعلم (الاسم، الهاتف، التخصص، تاريخ التعيين، أو كلمة المرور) مع حماية البريد والهاتف ضد التكرار.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"علي مصطفى الورفلي المحدث\",\n  \"phone\": \"0934567890\",\n  \"specialization\": \"اللغة العربية والتربية الإسلامية\",\n  \"hire_date\": \"2026-09-01\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"رقم هاتف المعلم مسجل مسبقاً.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "1.5 حذف ملف المعلم وحسابه (Delete Teacher)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
+            "description": "تنفيذ الحذف المنطقي لملف المعلم وحسابه بشرط عدم وجود إسنادات تدريس نشطة أو سابقة مرصودة باسمه في teaching_assignments (RESTRICT).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200, 404 or 409\", function () {",
+                  "    pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Teacher soft deletion and account cleanup succeeded\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.message).to.be.a('string');",
+                  "    });",
+                  "} else if (pm.response.code === 409) {",
+                  "    pm.test(\"Deletion restricted due to teaching assignments\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(false);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم حذف ملف المعلم وحسابه بنجاح",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
+                "description": "تنفيذ الحذف المنطقي لملف المعلم وحسابه بشرط عدم وجود إسنادات تدريس نشطة أو سابقة مرصودة باسمه في teaching_assignments (RESTRICT).",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم حذف ملف المعلم وحسابه بنجاح.\"\n}"
+            },
+            {
+              "name": "404 Not Found - ملف المعلم غير موجود",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
+                "description": "تنفيذ الحذف المنطقي لملف المعلم وحسابه بشرط عدم وجود إسنادات تدريس نشطة أو سابقة مرصودة باسمه في teaching_assignments (RESTRICT).",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"ملف المعلم غير موجود.\"\n}"
+            },
+            {
+              "name": "409 Conflict - منع الحذف لوجود إسنادات تدريس RESTRICT",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/teachers/{{createdTeacherId}}",
+                "description": "تنفيذ الحذف المنطقي لملف المعلم وحسابه بشرط عدم وجود إسنادات تدريس نشطة أو سابقة مرصودة باسمه في teaching_assignments (RESTRICT).",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"لا يمكن حذف ملف المعلم لوجود إسنادات تدريس أو جداول حصص مرتبطة به (RESTRICT).\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

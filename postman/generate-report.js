@@ -92,6 +92,19 @@ function processFolder(folderPath, isRoot = false) {
           }
         }));
       }
+      if (reqYaml.responses && Array.isArray(reqYaml.responses)) {
+        item.response = reqYaml.responses.map(res => ({
+          name: res.name || `${res.code || 200} ${res.status || 'OK'}`,
+          originalRequest: item.request,
+          status: res.status || 'OK',
+          code: res.code || 200,
+          _postman_previewlanguage: 'json',
+          header: Object.entries(res.headers || { 'Content-Type': 'application/json' }).map(([k, v]) => ({ key: k, value: String(v), type: 'text' })),
+          body: typeof res.body === 'object' ? JSON.stringify(res.body, null, 2) : String(res.body || '')
+        }));
+      } else {
+        item.response = [];
+      }
       items.push(item);
     }
   }
@@ -136,7 +149,11 @@ for (const dir of collDirs) {
   
   // Clean name for files
   let safeName = dir.name.replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_').replace(/_+/g, '_').trim();
-  if (dir.name.includes('02-A') || dir.name.includes('Academic Structure A')) {
+  if (dir.name.includes('03-A') || dir.name.includes('Teachers Profiles Registry') || dir.name.includes('الكادر التعليمي')) {
+    safeName = 'Phase_03_A_Teachers_Profiles_Registry';
+  } else if (dir.name.includes('02-C') || dir.name.includes('Class Terms') || dir.name.includes('فترات الصفوف')) {
+    safeName = 'Phase_02_C_Class_Terms_Sections_Curriculum';
+  } else if (dir.name.includes('02-A') || dir.name.includes('Academic Structure A')) {
     safeName = 'Phase_02_A_Academic_Structure';
   } else if (dir.name.includes('02-B') || dir.name.includes('Classes, Sections & Subjects') || dir.name.includes('الصفوف والشعب')) {
     safeName = 'Phase_02_B_Classes_Sections_Subjects';
