@@ -42,7 +42,6 @@
 * `PRIMARY KEY (id)`
 * `UNIQUE INDEX uq_teachers_user_id (user_id)` (يضمن ارتباط الحساب الواحد بملف معلم واحد فقط 1:1).
 * `INDEX idx_teachers_full_name (full_name)` (لتسريع البحث النصي بالاسم).
-* `INDEX idx_teachers_deleted_at (deleted_at)` (لدعم استبعاد السجلات المحذوفة منطقياً).
 
 ---
 

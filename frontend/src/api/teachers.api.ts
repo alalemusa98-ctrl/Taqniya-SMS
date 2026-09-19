@@ -1,5 +1,4 @@
-import { apiClient, deduplicatedGet } from './client';
-
+import { apiClient, swrGet, invalidateSwrCache } from './client';
 
 export interface Teacher {
   id: number;
@@ -60,25 +59,40 @@ export interface TeacherDetailResponse {
 }
 
 export const teachersApi = {
-  getTeachers: (params?: GetTeachersParams, signal?: AbortSignal) =>
-    deduplicatedGet<TeachersResponse>('/teachers', { params, signal }),
+  getTeachers: (
+    params?: GetTeachersParams,
+    signal?: AbortSignal,
+    options?: { ttl?: number; onRevalidate?: (fresh: any) => void },
+  ) =>
+    swrGet<TeachersResponse>('/teachers', { params, signal }, options),
 
   getTeacherById: (id: number, signal?: AbortSignal) =>
-    deduplicatedGet<TeacherDetailResponse>(`/teachers/${id}`, { signal }),
+    swrGet<TeacherDetailResponse>(`/teachers/${id}`, { signal }),
 
+  createTeacher: async (payload: CreateTeacherPayload) => {
+    const res = await apiClient.post<TeacherDetailResponse>('/teachers', payload);
+    invalidateSwrCache('/teachers');
+    return res;
+  },
 
-  createTeacher: (payload: CreateTeacherPayload) =>
-    apiClient.post<TeacherDetailResponse>('/teachers', payload),
+  updateTeacher: async (id: number, payload: UpdateTeacherPayload) => {
+    const res = await apiClient.put<TeacherDetailResponse>(`/teachers/${id}`, payload);
+    invalidateSwrCache('/teachers');
+    return res;
+  },
 
-  updateTeacher: (id: number, payload: UpdateTeacherPayload) =>
-    apiClient.put<TeacherDetailResponse>(`/teachers/${id}`, payload),
+  deleteTeacher: async (id: number) => {
+    const res = await apiClient.delete<{ success: boolean; message: string }>(`/teachers/${id}`);
+    invalidateSwrCache('/teachers');
+    return res;
+  },
 
-  deleteTeacher: (id: number) =>
-    apiClient.delete<{ success: boolean; message: string }>(`/teachers/${id}`),
-
-  updateStatus: (userId: number, isActive: number, reason?: string) =>
-    apiClient.put<{ success: boolean; message: string }>(`/users/${userId}/status`, {
+  updateStatus: async (userId: number, isActive: number, reason?: string) => {
+    const res = await apiClient.put<{ success: boolean; message: string }>(`/users/${userId}/status`, {
       is_active: isActive,
       reason,
-    }),
+    });
+    invalidateSwrCache('/teachers');
+    return res;
+  },
 };

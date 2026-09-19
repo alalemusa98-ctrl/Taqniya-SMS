@@ -298,4 +298,97 @@ describe('Phase 03-A: Teachers Profiles Registry (TDD Verification)', () => {
       expect(actions).toContain('teacher_updated');
     });
   });
+
+  describe('Group 7: Validation DTO Verification (TC-TCH-07)', () => {
+    it('TC-TCH-07: Rejects empty full_name, weak password, and invalid hire_date (422)', async () => {
+      const { validate } = await import('class-validator');
+      const { CreateTeacherDto } = await import('./modules/teachers/dto/create-teacher.dto.js');
+
+      const invalidDto = new CreateTeacherDto();
+      invalidDto.full_name = '';
+      invalidDto.password = '123';
+      invalidDto.hire_date = 'invalid-date-format';
+
+      const errors = await validate(invalidDto);
+      expect(errors.length).toBeGreaterThanOrEqual(3);
+
+      const fullNameError = errors.find((e) => e.property === 'full_name');
+      expect(fullNameError).toBeDefined();
+      expect(fullNameError?.constraints?.isNotEmpty).toBe('الاسم الرباعي واللقب للمعلم مطلوب.');
+
+      const passwordError = errors.find((e) => e.property === 'password');
+      expect(passwordError).toBeDefined();
+      expect(passwordError?.constraints?.minLength).toBe(
+        'كلمة المرور يجب ألا تقل عن 8 خانات وتحتوي على أرقام وحروف.',
+      );
+
+      const hireDateError = errors.find((e) => e.property === 'hire_date');
+      expect(hireDateError).toBeDefined();
+      expect(hireDateError?.constraints?.isDateString).toBe(
+        'تاريخ التعيين يجب أن يكون تاريخاً صالحاً (YYYY-MM-DD).',
+      );
+    });
+
+    it('Validates correct CreateTeacherDto passes with zero errors', async () => {
+      const { validate } = await import('class-validator');
+      const { CreateTeacherDto } = await import('./modules/teachers/dto/create-teacher.dto.js');
+
+      const validDto = new CreateTeacherDto();
+      validDto.full_name = 'محمد علي حسن';
+      validDto.password = 'ValidPassword123!';
+      validDto.hire_date = '2025-09-01';
+      validDto.phone = '0912345678';
+      validDto.specialization = 'الرياضيات';
+
+      const errors = await validate(validDto);
+      expect(errors.length).toBe(0);
+    });
+  });
+
+  describe('Group 8: Controller RBAC & Security Guards Metadata Verification (TC-AUTH-01, TC-AUTH-02, TC-RBAC-01, TC-RBAC-04)', () => {
+    it('Verifies TeachersController is protected with JwtAuthGuard and RolesGuard', async () => {
+      const { TeachersController } = await import('./modules/teachers/teachers.controller.js');
+      const { JwtAuthGuard } = await import('./common/guards/jwt-auth.guard.js');
+      const { RolesGuard } = await import('./common/guards/roles.guard.js');
+
+      const guards = Reflect.getMetadata('__guards__', TeachersController);
+      expect(guards).toBeDefined();
+      expect(guards).toContain(JwtAuthGuard);
+      expect(guards).toContain(RolesGuard);
+    });
+
+    it('TC-RBAC-01 & 04: Verifies mutating endpoints strictly require admin role and exclude other roles', async () => {
+      const { TeachersController } = await import('./modules/teachers/teachers.controller.js');
+      const { ROLES_KEY } = await import('./common/decorators/roles.decorator.js');
+
+      const createRoles = Reflect.getMetadata(ROLES_KEY, TeachersController.prototype.create);
+      expect(createRoles).toEqual([RoleType.admin]);
+
+      const updateRoles = Reflect.getMetadata(ROLES_KEY, TeachersController.prototype.update);
+      expect(updateRoles).toEqual([RoleType.admin]);
+
+      const deleteRoles = Reflect.getMetadata(ROLES_KEY, TeachersController.prototype.delete);
+      expect(deleteRoles).toEqual([RoleType.admin]);
+
+      const findAllRoles = Reflect.getMetadata(ROLES_KEY, TeachersController.prototype.findAll);
+      expect(findAllRoles).toEqual([RoleType.admin]);
+
+      // Verify student and parent are NEVER allowed in any of the above
+      [createRoles, updateRoles, deleteRoles, findAllRoles].forEach((roles) => {
+        expect(roles).not.toContain(RoleType.student);
+        expect(roles).not.toContain(RoleType.parent);
+        expect(roles).not.toContain(RoleType.teacher);
+      });
+    });
+
+    it('TC-RBAC-03: Verifies findOne endpoint allows admin and teacher roles', async () => {
+      const { TeachersController } = await import('./modules/teachers/teachers.controller.js');
+      const { ROLES_KEY } = await import('./common/decorators/roles.decorator.js');
+
+      const findOneRoles = Reflect.getMetadata(ROLES_KEY, TeachersController.prototype.findOne);
+      expect(findOneRoles).toEqual([RoleType.admin, RoleType.teacher]);
+      expect(findOneRoles).not.toContain(RoleType.student);
+      expect(findOneRoles).not.toContain(RoleType.parent);
+    });
+  });
 });

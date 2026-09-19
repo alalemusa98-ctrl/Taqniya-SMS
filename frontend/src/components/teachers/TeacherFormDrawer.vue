@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { X, UserPlus, Save, AlertCircle, Lock, Phone, BookOpen, Calendar, User } from 'lucide-vue-next';
+import { UserPlus, Users, Save, AlertCircle, Lock, Phone, BookOpen, Calendar, User } from 'lucide-vue-next';
 import { teachersApi, type Teacher } from '../../api/teachers.api';
+import { useToast } from '../../composables/useToast';
+import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -13,9 +15,11 @@ const emit = defineEmits<{
   (e: 'saved'): void;
 }>();
 
+const toast = useToast();
 const isSubmitting = ref(false);
 const errorMessage = ref<string | null>(null);
 const fieldErrors = ref<Record<string, string[]>>({});
+const datePickerInput = ref<HTMLInputElement | null>(null);
 
 const form = ref({
   full_name: '',
@@ -24,6 +28,23 @@ const form = ref({
   hire_date: '',
   password: '',
 });
+
+function openNativeDatePicker() {
+  if (datePickerInput.value) {
+    try {
+      datePickerInput.value.showPicker();
+    } catch {
+      datePickerInput.value.focus();
+    }
+  }
+}
+
+function onNativeDatePicked(e: Event) {
+  const target = e.target as HTMLInputElement;
+  if (target && target.value) {
+    form.value.hire_date = target.value;
+  }
+}
 
 watch(
   () => props.teacher,
@@ -52,6 +73,16 @@ watch(
 );
 
 async function handleSubmit() {
+  if (!form.value.full_name.trim()) {
+    toast.warning('يرجى إدخال اسم المعلم الرباعي.');
+    return;
+  }
+
+  if (!props.teacher && (!form.value.password || form.value.password.length < 8)) {
+    toast.warning('كلمة المرور يجب ألا تقل عن 8 خانات.');
+    return;
+  }
+
   isSubmitting.value = true;
   errorMessage.value = null;
   fieldErrors.value = {};
@@ -69,6 +100,7 @@ async function handleSubmit() {
         payload.password = form.value.password;
       }
       await teachersApi.updateTeacher(props.teacher.id, payload);
+      toast.success('تم تحديث بيانات ملف المعلم بنجاح.');
     } else {
       // Create POST
       await teachersApi.createTeacher({
@@ -78,6 +110,7 @@ async function handleSubmit() {
         hire_date: form.value.hire_date || undefined,
         password: form.value.password,
       });
+      toast.success('تم إنشاء ملف المعلم وتوليد حساب الدخول الموحد بنجاح.');
     }
 
     emit('saved');
@@ -86,11 +119,9 @@ async function handleSubmit() {
     if (err.response?.data?.errors) {
       fieldErrors.value = err.response.data.errors;
     }
-    if (err.response?.data?.message) {
-      errorMessage.value = err.response.data.message;
-    } else {
-      errorMessage.value = 'حدث خطأ أثناء حفظ بيانات ملف المعلم.';
-    }
+    const msg = err.response?.data?.message || 'حدث خطأ أثناء حفظ بيانات ملف المعلم.';
+    errorMessage.value = msg;
+    toast.error(msg);
   } finally {
     isSubmitting.value = false;
   }
@@ -98,176 +129,174 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 overflow-hidden" dir="rtl">
-    <!-- Backdrop Blur -->
-    <div
-      class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
-      @click="emit('close')"
-    ></div>
-
-    <div class="fixed inset-y-0 left-0 pl-10 max-w-full flex">
-      <div class="w-screen max-w-md bg-[var(--bx-surface-solid)] border-r border-bx-border shadow-2xl flex flex-col">
-        <!-- Header -->
-        <div class="p-6 border-b border-bx-border flex items-center justify-between bg-[var(--bx-canvas)]">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-600/20">
-              <UserPlus class="w-5 h-5" />
-            </div>
-            <div>
-              <h3 class="text-base font-bold text-bx-title">
-                {{ teacher ? 'تعديل ملف المعلم' : 'إضافة معلم جديد' }}
-              </h3>
-              <p class="text-xs text-bx-muted">
-                {{ teacher ? 'تحديث البيانات المهنية والحساب الموحد' : 'إنشاء السجل وتوليد كود الدخول TCH-XXXX ذرياً' }}
-              </p>
-            </div>
-          </div>
-          <button
-            @click="emit('close')"
-            class="p-2 text-bx-muted hover:text-bx-title rounded-xl hover:bg-[var(--bx-pill)] transition-colors cursor-pointer"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <!-- Form Content -->
-        <form @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto p-6 space-y-4">
-          <!-- Global Error Notification -->
-          <div
-            v-if="errorMessage"
-            class="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2"
-          >
-            <AlertCircle class="w-4 h-4 shrink-0" />
-            <span>{{ errorMessage }}</span>
-          </div>
-
-          <!-- Full Name -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-bx-title flex items-center gap-1.5">
-              <User class="w-3.5 h-3.5 text-blue-500" />
-              الاسم الرباعي واللقب للمعلم <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="form.full_name"
-              type="text"
-              required
-              maxlength="150"
-              placeholder="مثال: أحمد محمود سالم الورفلي"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-bx-border bg-[var(--bx-canvas)] text-xs text-bx-title placeholder:text-bx-muted/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
-            />
-            <p v-if="fieldErrors.full_name" class="text-[11px] text-red-500 font-medium">
-              {{ fieldErrors.full_name[0] }}
-            </p>
-          </div>
-
-          <!-- Specialization -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-bx-title flex items-center gap-1.5">
-              <BookOpen class="w-3.5 h-3.5 text-indigo-500" />
-              التخصص العلمي
-            </label>
-            <input
-              v-model="form.specialization"
-              type="text"
-              maxlength="100"
-              placeholder="مثال: الرياضيات، العلوم العامة، اللغة العربية"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-bx-border bg-[var(--bx-canvas)] text-xs text-bx-title placeholder:text-bx-muted/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
-            />
-            <p v-if="fieldErrors.specialization" class="text-[11px] text-red-500 font-medium">
-              {{ fieldErrors.specialization[0] }}
-            </p>
-          </div>
-
-          <!-- Phone Number -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-bx-title flex items-center gap-1.5">
-              <Phone class="w-3.5 h-3.5 text-emerald-500" />
-              رقم الهاتف للتواصل المباشر
-            </label>
-            <input
-              v-model="form.phone"
-              type="text"
-              maxlength="20"
-              placeholder="مثال: 0912345678"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-bx-border bg-[var(--bx-canvas)] text-xs text-bx-title placeholder:text-bx-muted/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
-              dir="ltr"
-            />
-            <p v-if="fieldErrors.phone" class="text-[11px] text-red-500 font-medium">
-              {{ fieldErrors.phone[0] }}
-            </p>
-          </div>
-
-          <!-- Hire Date -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-bx-title flex items-center gap-1.5">
-              <Calendar class="w-3.5 h-3.5 text-purple-500" />
-              تاريخ التعيين والمباشرة بالمدرسة
-            </label>
-            <input
-              v-model="form.hire_date"
-              type="date"
-              dir="ltr"
-              lang="en-GB"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-bx-border bg-[var(--bx-canvas)] text-xs text-bx-title focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-['Alexandria',sans-serif] font-medium"
-            />
-            <p v-if="fieldErrors.hire_date" class="text-[11px] text-red-500 font-medium">
-              {{ fieldErrors.hire_date[0] }}
-            </p>
-          </div>
-
-          <!-- Password -->
-          <div class="space-y-1.5 pt-2 border-t border-bx-border">
-            <label class="text-xs font-bold text-bx-title flex items-center justify-between">
-              <span class="flex items-center gap-1.5">
-                <Lock class="w-3.5 h-3.5 text-amber-500" />
-                كلمة مرور الحساب الموحد
-                <span v-if="!teacher" class="text-red-500">*</span>
-              </span>
-              <span v-if="teacher" class="text-[10px] text-bx-muted font-normal">
-                (اتركها فارغة إذا كنت لا تريد التغيير)
-              </span>
-            </label>
-            <input
-              v-model="form.password"
-              type="password"
-              :required="!teacher"
-              minlength="8"
-              placeholder="••••••••"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-bx-border bg-[var(--bx-canvas)] text-xs text-bx-title placeholder:text-bx-muted/60 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
-            />
-            <p v-if="fieldErrors.password" class="text-[11px] text-red-500 font-medium">
-              {{ fieldErrors.password[0] }}
-            </p>
-          </div>
-
-          <div v-if="!teacher" class="p-3 rounded-xl bg-blue-500/5 border border-blue-500/20 text-[11px] text-blue-600 dark:text-blue-400 space-y-1">
-            <p class="font-bold">ملاحظة حوكمية حول الهوية الموحدة:</p>
-            <p class="text-blue-600/80 dark:text-blue-400/80">
-              سيقوم النظام آلياً بإنشاء حساب المستخدم بالبادئة المعيارية <span class="font-mono font-bold">TCH-XXXX</span> ومنح المعلم صلاحية تسجيل الدخول فور الحفظ.
-            </p>
-          </div>
-        </form>
-
-        <!-- Footer -->
-        <div class="p-5 border-t border-bx-border bg-[var(--bx-canvas)] flex items-center justify-end gap-3">
-          <button
-            type="button"
-            @click="emit('close')"
-            class="px-4 py-2 rounded-xl border border-bx-border hover:bg-[var(--bx-pill)] text-bx-title font-bold text-xs transition-colors cursor-pointer"
-          >
-            إلغاء
-          </button>
-          <button
-            type="button"
-            :disabled="isSubmitting"
-            @click="handleSubmit"
-            class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 flex items-center gap-1.5 disabled:opacity-50 transition-all cursor-pointer"
-          >
-            <Save class="w-4 h-4" />
-            <span>{{ isSubmitting ? 'جاري الحفظ...' : teacher ? 'تحديث البيانات' : 'حفظ وإنشاء الحساب' }}</span>
-          </button>
-        </div>
+  <TaqniyaDrawer
+    :is-open="isOpen"
+    :title="teacher ? 'تعديل بيانات ملف المعلم' : 'إضافة معلم جديد وتوليد الحساب'"
+    :subtitle="
+      teacher
+        ? 'تحديث البيانات الشخصية والمهنية للمعلم'
+        : 'تسجيل معلم جديد وتوليد حساب الدخول الموحد ذرياً'
+    "
+    :icon="teacher ? Users : UserPlus"
+    @close="emit('close')"
+  >
+    <!-- Form Body -->
+    <form @submit.prevent="handleSubmit" class="space-y-5">
+      <!-- Error Notification -->
+      <div
+        v-if="errorMessage"
+        class="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2"
+      >
+        <AlertCircle class="w-4 h-4 shrink-0" />
+        <span>{{ errorMessage }}</span>
       </div>
-    </div>
-  </div>
+
+      <!-- Full Name -->
+      <div class="space-y-1.5">
+        <div class="flex items-center gap-2 text-bx-title">
+          <User class="w-4 h-4 text-bx-primary shrink-0" />
+          <label class="text-xs font-bold">الاسم الرباعي واللقب للمعلم <span class="text-red-500">*</span></label>
+        </div>
+        <input
+          v-model="form.full_name"
+          type="text"
+          required
+          maxlength="150"
+          placeholder="مثال: أحمد محمود سالم الورفلي"
+          class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
+        />
+        <p v-if="fieldErrors.full_name" class="text-[11px] text-red-500 font-medium">
+          {{ fieldErrors.full_name[0] }}
+        </p>
+      </div>
+
+      <!-- Specialization -->
+      <div class="space-y-1.5">
+        <div class="flex items-center gap-2 text-bx-title">
+          <BookOpen class="w-4 h-4 text-purple-500 shrink-0" />
+          <label class="text-xs font-bold">التخصص العلمي</label>
+        </div>
+        <input
+          v-model="form.specialization"
+          type="text"
+          maxlength="100"
+          placeholder="مثال: الرياضيات، العلوم العامة، اللغة العربية"
+          class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
+        />
+        <p v-if="fieldErrors.specialization" class="text-[11px] text-red-500 font-medium">
+          {{ fieldErrors.specialization[0] }}
+        </p>
+      </div>
+
+      <!-- Phone Number -->
+      <div class="space-y-1.5">
+        <div class="flex items-center gap-2 text-bx-title">
+          <Phone class="w-4 h-4 text-emerald-500 shrink-0" />
+          <label class="text-xs font-bold">رقم الهاتف للتواصل المباشر</label>
+        </div>
+        <input
+          v-model="form.phone"
+          type="text"
+          maxlength="20"
+          placeholder="مثال: 0912345678"
+          class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-medium"
+          dir="ltr"
+        />
+        <p v-if="fieldErrors.phone" class="text-[11px] text-red-500 font-medium">
+          {{ fieldErrors.phone[0] }}
+        </p>
+      </div>
+
+      <!-- Hire Date -->
+      <div class="space-y-1.5">
+        <div class="flex items-center gap-2 text-bx-title">
+          <Calendar class="w-4 h-4 text-amber-500 shrink-0" />
+          <label class="text-xs font-bold">تاريخ التعيين والمباشرة بالمدرسة</label>
+        </div>
+        <div class="relative flex items-center">
+          <input
+            v-model="form.hire_date"
+            type="text"
+            placeholder="YYYY-MM-DD (مثال: 2024-09-01)"
+            dir="ltr"
+            class="w-full pl-5 pr-11 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-['Alexandria',sans-serif] font-medium"
+          />
+          <input
+            ref="datePickerInput"
+            type="date"
+            tabindex="-1"
+            aria-hidden="true"
+            :value="form.hire_date"
+            @input="onNativeDatePicked"
+            class="sr-only absolute pointer-events-none"
+          />
+          <button
+            type="button"
+            @click="openNativeDatePicker"
+            class="absolute right-2.5 p-1.5 rounded-full text-amber-500 hover:bg-amber-500/10 transition-all cursor-pointer"
+            title="اختيار التاريخ من التقويم"
+          >
+            <Calendar class="w-4 h-4" />
+          </button>
+        </div>
+        <p v-if="fieldErrors.hire_date" class="text-[11px] text-red-500 font-medium">
+          {{ fieldErrors.hire_date[0] }}
+        </p>
+      </div>
+
+      <!-- Password -->
+      <div class="space-y-1.5 pt-2 border-t border-[#B4AED8]/40 dark:border-white/[0.08]">
+        <div class="flex items-center justify-between text-bx-title">
+          <div class="flex items-center gap-2">
+            <Lock class="w-4 h-4 text-blue-500 shrink-0" />
+            <label class="text-xs font-bold">
+              كلمة مرور الحساب الموحد
+              <span v-if="!teacher" class="text-red-500">*</span>
+            </label>
+          </div>
+          <span v-if="teacher" class="text-[10px] text-bx-muted">
+            (اتركها فارغة إذا كنت لا تريد التغيير)
+          </span>
+        </div>
+        <input
+          v-model="form.password"
+          type="password"
+          :required="!teacher"
+          minlength="8"
+          placeholder="••••••••"
+          class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono"
+        />
+        <p v-if="fieldErrors.password" class="text-[11px] text-red-500 font-medium">
+          {{ fieldErrors.password[0] }}
+        </p>
+      </div>
+
+      <div v-if="!teacher" class="p-3.5 rounded-2xl bg-purple-500/[0.06] border border-purple-500/20 text-[11px] text-bx-muted leading-relaxed">
+        <p class="font-bold text-bx-title mb-0.5">💡 توليد الرمز الموحد:</p>
+        <span>سيقوم النظام آلياً بتوليد كود الدخول بصيغة <span class="font-mono font-bold text-bx-primary">TCH-XXXX</span> وتشفير كلمة المرور ذرياً داخل قاعدة البيانات.</span>
+      </div>
+    </form>
+
+    <!-- Footer Template -->
+    <template #footer>
+      <div class="flex items-center justify-end gap-3 w-full">
+        <button
+          type="button"
+          @click="emit('close')"
+          class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+        >
+          إلغاء
+        </button>
+        <button
+          type="button"
+          :disabled="isSubmitting"
+          @click="handleSubmit"
+          class="inline-flex items-center gap-1.5 px-6 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer"
+        >
+          <Save class="w-4 h-4" />
+          <span>{{ isSubmitting ? 'جاري الحفظ...' : teacher ? 'تحديث البيانات' : 'حفظ وإنشاء الحساب' }}</span>
+        </button>
+      </div>
+    </template>
+  </TaqniyaDrawer>
 </template>
