@@ -1,39 +1,34 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import {
   Plus,
   Search,
-  UserCheck,
-  Trash2,
   Loader2,
-  AlertCircle,
-  GraduationCap,
-  BookOpen,
-  Save,
-  ChevronRight,
-  ChevronLeft,
+  Calendar,
   Filter,
   RotateCcw,
-  Calendar,
-  Users,
-  School,
-  Layers,
 } from 'lucide-vue-next';
 import {
   teachingAssignmentsApi,
   type TeachingAssignmentsHierarchy,
   type AssignmentItem,
   type PaginationMeta,
-  type TeacherWorkloadItem,
 } from '../api/teaching-assignments.api';
 import { teachersApi, type Teacher } from '../api/teachers.api';
 import { academicApi } from '../api/academic.api';
 import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
+import TaqniyaPagination from '../components/ui/TaqniyaPagination.vue';
 
-// Component Lazy Loading (component_lazy_loading)
-const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
+// Feature Components
+import AssignmentDeleteModal from '../components/teaching-assignments/AssignmentDeleteModal.vue';
+import AssignmentFormDrawer from '../components/teaching-assignments/AssignmentFormDrawer.vue';
+import TeacherWorkloadDrawer from '../components/teaching-assignments/TeacherWorkloadDrawer.vue';
+import ClassAssignmentsMatrix, {
+  type ClassMatrixGroup,
+  type ClassMatrixSubjectRow,
+} from '../components/teaching-assignments/ClassAssignmentsMatrix.vue';
 
 const toast = useToast();
 
@@ -47,25 +42,27 @@ const meta = ref<PaginationMeta>({
 });
 
 const loading = ref(false);
-const isSubmitting = ref(false);
 
 // Filter Form Inputs (Draft - Non-immediate)
 const search = ref('');
 const selectedYearId = ref<number>(0);
 const selectedClassFilter = ref<number | string>('all');
+const selectedSectionFilter = ref<number | string>('all');
+const selectedSubjectFilter = ref<number | string>('all');
 const selectedTeacherFilter = ref<number | string>('all');
 
 // Applied Filter Values (Triggered explicitly by button / Enter)
 const appliedSearch = ref('');
 const appliedYearId = ref<number>(0);
 const appliedClassFilter = ref<number | string>('all');
+const appliedSectionFilter = ref<number | string>('all');
+const appliedSubjectFilter = ref<number | string>('all');
 const appliedTeacherFilter = ref<number | string>('all');
 
 // Request Cancellation Controller (request_cancellation)
 let activeAbortController: AbortController | null = null;
 
 const currentPage = ref(1);
-
 
 // Metadata for selects
 const academicYears = ref<any[]>([]);
@@ -76,67 +73,39 @@ const allTeachers = ref<Teacher[]>([]);
 const allClassSections = ref<any[]>([]);
 const rawClassSubjects = ref<any[]>([]);
 
-// Drawer State
-const showDrawer = ref(false);
-const drawerMode = ref<'create' | 'edit'>('create');
+// Drawer & Modal State
+const showFormDrawer = ref(false);
+const formDrawerMode = ref<'create' | 'edit'>('create');
 const activeAssignmentId = ref<number | null>(null);
-
-// Teacher Workload Drawer
-const showWorkloadDrawer = ref(false);
-const selectedWorkloadTeacher = ref<Teacher | null>(null);
-const teacherWorkload = ref<TeacherWorkloadItem[]>([]);
-const loadingWorkload = ref(false);
-
-// Form State
-const form = ref({
+const formInitialData = ref({
   academic_year_id: 0,
   class_id: 0,
   class_section_id: 0,
   subject_id: 0,
   teacher_id: 0,
 });
-const fieldErrors = ref<Record<string, string[]>>({});
-const formErrorMessage = ref<string | null>(null);
+
+// Teacher Workload Drawer
+const showWorkloadDrawer = ref(false);
+const selectedWorkloadTeacher = ref<Teacher | null>(null);
 
 // Delete Modal State
 const showDeleteModal = ref(false);
 const assignmentToDelete = ref<AssignmentItem | null>(null);
-const isDeleting = ref(false);
-const deleteErrorMessage = ref<string | null>(null);
-
-// Matrix Interfaces
-export interface ClassMatrixSubjectRow {
-  subject_id: number;
-  subject_name: string;
-  subject_code: string;
-  assignmentsBySection: Record<number, AssignmentItem>;
-  assignedCount: number;
-  totalSections: number;
-}
-
-export interface ClassMatrixGroup {
-  class_id: number;
-  class_name: string;
-  sections: {
-    class_section_id: number;
-    section_name: string;
-  }[];
-  subjects: ClassMatrixSubjectRow[];
-  totalAssignmentsCount: number;
-}
 
 // Fetch Initial Meta Options
 async function fetchPrerequisites() {
   try {
-    const [yearsRes, classesRes, sectionsRes, subjectsRes, teachersRes, classSectionsRes, classSubjectsRes] = await Promise.all([
-      academicApi.getYears({ per_page: 50 }),
-      academicApi.getClasses({ per_page: 100 }),
-      academicApi.getSections({ per_page: 100 }),
-      academicApi.getSubjects({ per_page: 100 }),
-      teachersApi.getTeachers({ per_page: 200, is_active: 1 }),
-      academicApi.getClassSections({ per_page: 200 }),
-      academicApi.getClassSubjects({ per_page: 100 }).catch(() => ({ data: { data: { classes: [] } } })),
-    ]);
+    const [yearsRes, classesRes, sectionsRes, subjectsRes, teachersRes, classSectionsRes, classSubjectsRes] =
+      await Promise.all([
+        academicApi.getYears({ per_page: 50 }),
+        academicApi.getClasses({ per_page: 100 }),
+        academicApi.getSections({ per_page: 100 }),
+        academicApi.getSubjects({ per_page: 100 }),
+        teachersApi.getTeachers({ per_page: 200, is_active: 1 }),
+        academicApi.getClassSections({ per_page: 200 }),
+        academicApi.getClassSubjects({ per_page: 100 }).catch(() => ({ data: { data: { classes: [] } } })),
+      ]);
 
     academicYears.value = yearsRes.data?.data || [];
     allClasses.value = classesRes.data?.data || [];
@@ -168,7 +137,6 @@ async function fetchPrerequisites() {
     if (activeY) {
       selectedYearId.value = activeY.id;
       appliedYearId.value = activeY.id;
-      form.value.academic_year_id = activeY.id;
     }
   } catch (err) {
     console.error('Failed to load prerequisites:', err);
@@ -190,6 +158,9 @@ async function fetchAssignments() {
     };
     if (appliedYearId.value) params.academic_year_id = appliedYearId.value;
     if (appliedClassFilter.value !== 'all') params.class_id = appliedClassFilter.value;
+    if (appliedSectionFilter.value !== 'all') params.class_section_id = appliedSectionFilter.value;
+    if (appliedSubjectFilter.value !== 'all') params.subject_id = appliedSubjectFilter.value;
+    if (appliedTeacherFilter.value !== 'all') params.teacher_id = appliedTeacherFilter.value;
     if (appliedSearch.value.trim()) params.search = appliedSearch.value.trim();
 
     const res = await teachingAssignmentsApi.getAll(params, activeAbortController.signal);
@@ -208,20 +179,18 @@ async function fetchAssignments() {
   }
 }
 
-// Active Academic Year (Always prioritize active year)
+// Active Academic Year
 const activeAcademicYear = computed(() => {
-  return academicYears.value.find((y) => y.is_active === 1) || academicYears.value[0];
+  return academicYears.value.find((y) => y.id === appliedYearId.value) || academicYears.value.find((y) => y.is_active === 1) || academicYears.value[0];
 });
 
-// Explicit Filter Execution (Non-immediate, triggered by filter button or Enter)
+// Explicit Filter Execution
 function applyFilters() {
   appliedSearch.value = search.value.trim();
-  const activeY = activeAcademicYear.value || academicYears.value[0];
-  if (activeY) {
-    selectedYearId.value = activeY.id;
-    appliedYearId.value = activeY.id;
-  }
+  appliedYearId.value = selectedYearId.value;
   appliedClassFilter.value = selectedClassFilter.value;
+  appliedSectionFilter.value = selectedSectionFilter.value;
+  appliedSubjectFilter.value = selectedSubjectFilter.value;
   appliedTeacherFilter.value = selectedTeacherFilter.value;
   currentPage.value = 1;
   fetchAssignments();
@@ -230,32 +199,40 @@ function applyFilters() {
 function resetFilters() {
   search.value = '';
   appliedSearch.value = '';
-  selectedClassFilter.value = 'all';
-  appliedClassFilter.value = 'all';
-  selectedTeacherFilter.value = 'all';
-  appliedTeacherFilter.value = 'all';
-  const activeY = activeAcademicYear.value || academicYears.value[0];
+  const activeY = academicYears.value.find((y) => y.is_active === 1) || academicYears.value[0];
   if (activeY) {
     selectedYearId.value = activeY.id;
     appliedYearId.value = activeY.id;
   }
+  selectedClassFilter.value = 'all';
+  appliedClassFilter.value = 'all';
+  selectedSectionFilter.value = 'all';
+  appliedSectionFilter.value = 'all';
+  selectedSubjectFilter.value = 'all';
+  appliedSubjectFilter.value = 'all';
+  selectedTeacherFilter.value = 'all';
+  appliedTeacherFilter.value = 'all';
   currentPage.value = 1;
   fetchAssignments();
 }
 
 const hasActiveFilters = computed(() => {
+  const activeY = academicYears.value.find((y) => y.is_active === 1);
+  const isYearFiltered = activeY ? appliedYearId.value !== activeY.id : false;
   return (
     appliedSearch.value.trim() !== '' ||
     appliedClassFilter.value !== 'all' ||
-    appliedTeacherFilter.value !== 'all'
+    appliedSectionFilter.value !== 'all' ||
+    appliedSubjectFilter.value !== 'all' ||
+    appliedTeacherFilter.value !== 'all' ||
+    isYearFiltered
   );
 });
 
-// Watch only pagination changes
+// Watch pagination changes
 watch(currentPage, () => {
   fetchAssignments();
 });
-
 
 // Options mappings
 const yearOptions = computed<TaqniyaSelectOption[]>(() =>
@@ -273,6 +250,31 @@ const classFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   })),
 ]);
 
+// Dynamic sections for filter based on selected class
+const sectionFilterOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (!selectedClassFilter.value || selectedClassFilter.value === 'all') {
+    return [{ value: 'all', label: 'كافة الشعب الدراسية' }];
+  }
+  const matches = allClassSections.value.filter(
+    (cs) => Number(cs.class_id) === Number(selectedClassFilter.value),
+  );
+  return [
+    { value: 'all', label: 'كافة شُعب الصف المختار' },
+    ...matches.map((cs) => ({
+      value: cs.id,
+      label: cs.name || `شعبة #${cs.id}`,
+    })),
+  ];
+});
+
+const subjectFilterOptions = computed<TaqniyaSelectOption[]>(() => [
+  { value: 'all', label: 'كافة المواد التعليمية' },
+  ...allSubjects.value.map((s) => ({
+    value: s.id,
+    label: `${s.name} (${s.code || 'كود: ' + s.id})`,
+  })),
+]);
+
 const teacherFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   { value: 'all', label: 'كافة أعضاء الكادر التعليمي' },
   ...allTeachers.value.map((t) => ({
@@ -282,80 +284,7 @@ const teacherFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   })),
 ]);
 
-// Sections available for the chosen class in form
-const availableClassSections = computed<TaqniyaSelectOption[]>(() => {
-  if (!form.value.class_id) return [];
-  const matches = allClassSections.value.filter(
-    (cs) => Number(cs.class_id) === Number(form.value.class_id),
-  );
-  return matches.map((cs) => ({
-    value: cs.id,
-    label: cs.name || `شعبة #${cs.id}`,
-  }));
-});
-
-// Watch class_id change in form: auto-select first available section or reset
-watch(
-  () => form.value.class_id,
-  (newClassId) => {
-    if (!newClassId) {
-      form.value.class_section_id = 0;
-      return;
-    }
-    const available = allClassSections.value.filter(
-      (cs) => Number(cs.class_id) === Number(newClassId),
-    );
-    if (available.length > 0) {
-      const stillValid = available.some((a) => a.id === form.value.class_section_id);
-      if (!stillValid) {
-        form.value.class_section_id = available[0].id;
-      }
-    } else {
-      form.value.class_section_id = 0;
-    }
-  },
-);
-
-const formSubjectOptions = computed<TaqniyaSelectOption[]>(() =>
-  allSubjects.value.map((s) => ({
-    value: s.id,
-    label: `${s.name} (${s.code})`,
-  })),
-);
-
-const formTeacherOptions = computed<TaqniyaSelectOption[]>(() =>
-  allTeachers.value.map((t) => ({
-    value: t.id,
-    label: `${t.full_name} (${t.user_code})`,
-    subtext: t.specialization || undefined,
-  })),
-);
-
-// Drawer Openers
-function openCreateDrawer(classId?: number, sectionId?: number, subjectId?: number) {
-  drawerMode.value = 'create';
-  activeAssignmentId.value = null;
-
-  const targetClassId = classId || allClasses.value[0]?.id || 0;
-  const availableForClass = allClassSections.value.filter(
-    (cs) => Number(cs.class_id) === Number(targetClassId),
-  );
-  const targetSectionId = sectionId || availableForClass[0]?.id || 0;
-  const targetSubjectId = subjectId || allSubjects.value[0]?.id || 0;
-
-  form.value = {
-    academic_year_id: selectedYearId.value || academicYears.value[0]?.id || 0,
-    class_id: targetClassId,
-    class_section_id: targetSectionId,
-    subject_id: targetSubjectId,
-    teacher_id: allTeachers.value[0]?.id || 0,
-  };
-  fieldErrors.value = {};
-  formErrorMessage.value = null;
-  showDrawer.value = true;
-}
-
-// Compute Class Assignment Matrix Groups (One Table per Class with Dynamic Columns for Sections)
+// Compute Class Assignment Matrix Groups
 const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
   if (!hierarchyData.value?.classes) return [];
 
@@ -366,7 +295,7 @@ const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
       section_name: s.section_name,
     }));
 
-    // 2. Gather all distinct subjects from curriculum + existing assignments
+    // 2. Gather distinct subjects
     const subjectsMap = new Map<number, { id: number; name: string; code: string }>();
 
     // From curriculum
@@ -412,43 +341,8 @@ const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
       }
     }
 
-    // Build subject rows
-    let subjectList = Array.from(subjectsMap.values());
-
-    // Filter if text search or teacher filter is active (using explicitly applied values)
-    const searchVal = appliedSearch.value.trim().toLowerCase();
-    const hasTeacherFilter = appliedTeacherFilter.value !== 'all';
-
-    if (searchVal || hasTeacherFilter) {
-      subjectList = subjectList.filter((sub) => {
-        const asgns = assignmentLookup[sub.id] || {};
-        const assignmentsList = Object.values(asgns);
-
-        // Teacher filter: Subject MUST have the selected teacher assigned in at least one section
-        if (hasTeacherFilter) {
-          const matchTeacher = assignmentsList.some(
-            (a) => Number(a.teacher_id) === Number(appliedTeacherFilter.value),
-          );
-          if (!matchTeacher) return false;
-        }
-
-        // Search filter:
-        if (searchVal) {
-          const matchSub =
-            sub.name.toLowerCase().includes(searchVal) ||
-            sub.code.toLowerCase().includes(searchVal);
-          const matchAnyTeacher = assignmentsList.some(
-            (a) =>
-              a.teacher_name.toLowerCase().includes(searchVal) ||
-              a.teacher_code.toLowerCase().includes(searchVal),
-          );
-          const matchClass = cls.class_name.toLowerCase().includes(searchVal);
-          if (!matchSub && !matchAnyTeacher && !matchClass) return false;
-        }
-
-        return true;
-      });
-    }
+    // Subject rows
+    const subjectList = Array.from(subjectsMap.values());
 
     const subjectRows: ClassMatrixSubjectRow[] = subjectList.map((sub) => {
       const sectionAssignments = assignmentLookup[sub.id] || {};
@@ -473,193 +367,54 @@ const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
   });
 });
 
-const filteredClassMatrixGroups = computed(() => {
-  const searchVal = appliedSearch.value.trim().toLowerCase();
-  const hasTeacherFilter = appliedTeacherFilter.value !== 'all';
+// Handlers for Drawer & Modal
+function handleOpenCreate(classId?: number, sectionId?: number, subjectId?: number) {
+  formDrawerMode.value = 'create';
+  activeAssignmentId.value = null;
 
-  if (searchVal || hasTeacherFilter) {
-    return (classMatrixGroups.value || []).filter((g) => (g.subjects?.length || 0) > 0);
-  }
-  return classMatrixGroups.value || [];
-});
+  const targetClassId = classId || allClasses.value[0]?.id || 0;
+  const availableForClass = allClassSections.value.filter(
+    (cs) => Number(cs.class_id) === Number(targetClassId),
+  );
+  const targetSectionId = sectionId || availableForClass[0]?.id || 0;
+  const targetSubjectId = subjectId || allSubjects.value[0]?.id || 0;
 
-function openEditDrawer(assignment: AssignmentItem, classId: number, sectionId: number) {
-  drawerMode.value = 'edit';
+  formInitialData.value = {
+    academic_year_id: selectedYearId.value || academicYears.value[0]?.id || 0,
+    class_id: targetClassId,
+    class_section_id: targetSectionId,
+    subject_id: targetSubjectId,
+    teacher_id: allTeachers.value[0]?.id || 0,
+  };
+  showFormDrawer.value = true;
+}
+
+function handleOpenEdit(assignment: AssignmentItem, classId: number, sectionId: number) {
+  formDrawerMode.value = 'edit';
   activeAssignmentId.value = assignment.id;
-  form.value = {
+  formInitialData.value = {
     academic_year_id: selectedYearId.value,
     class_id: classId,
     class_section_id: sectionId,
     subject_id: assignment.subject_id,
     teacher_id: assignment.teacher_id,
   };
-  fieldErrors.value = {};
-  formErrorMessage.value = null;
-  showDrawer.value = true;
+  showFormDrawer.value = true;
 }
 
-// Workload Drawer
-async function openWorkloadDrawer(teacherId: number) {
+function handleOpenWorkload(teacherId: number) {
   const teacher = allTeachers.value.find((t) => t.id === teacherId);
   selectedWorkloadTeacher.value = teacher || null;
   showWorkloadDrawer.value = true;
-  loadingWorkload.value = true;
-  try {
-    const res = await teachingAssignmentsApi.getTeacherAssignments(teacherId, {
-      academic_year_id: selectedYearId.value,
-    });
-    teacherWorkload.value = res.data.data;
-  } catch (err: any) {
-    toast.error('تعذر جلب النصاب التدريسي للمعلم.');
-  } finally {
-    loadingWorkload.value = false;
-  }
 }
 
-// Workload Stats Computed
-const workloadStats = computed(() => {
-  const items = teacherWorkload.value;
-  const totalAssignments = items.length;
-  const uniqueSubjects = new Set(items.map((i) => i.subject_id)).size;
-  const uniqueSections = new Set(items.map((i) => i.class_section_id)).size;
-  const uniqueClasses = new Set(items.map((i) => i.class_id)).size;
-  return {
-    totalAssignments,
-    uniqueSubjects,
-    uniqueSections,
-    uniqueClasses,
-  };
-});
-
-// Group Workload by Class (الفصل وبداخله المواد حسب الشعبة)
-interface GroupedClassWorkload {
-  class_id: number;
-  class_name: string;
-  items: TeacherWorkloadItem[];
-}
-
-const groupedTeacherWorkload = computed<GroupedClassWorkload[]>(() => {
-  const map = new Map<number, GroupedClassWorkload>();
-
-  for (const item of teacherWorkload.value) {
-    if (!map.has(item.class_id)) {
-      map.set(item.class_id, {
-        class_id: item.class_id,
-        class_name: item.class_name,
-        items: [],
-      });
-    }
-    map.get(item.class_id)!.items.push(item);
-  }
-
-  return Array.from(map.values());
-});
-
-function openAssignForTeacher(teacherId: number) {
-  showWorkloadDrawer.value = false;
-  drawerMode.value = 'create';
-  activeAssignmentId.value = null;
-
-  const targetClassId = allClasses.value[0]?.id || 0;
-  const availableForClass = allClassSections.value.filter(
-    (cs) => Number(cs.class_id) === Number(targetClassId),
-  );
-  const targetSectionId = availableForClass[0]?.id || 0;
-  const targetSubjectId = allSubjects.value[0]?.id || 0;
-
-  form.value = {
-    academic_year_id: selectedYearId.value || academicYears.value[0]?.id || 0,
-    class_id: targetClassId,
-    class_section_id: targetSectionId,
-    subject_id: targetSubjectId,
-    teacher_id: teacherId,
-  };
-  fieldErrors.value = {};
-  formErrorMessage.value = null;
-  showDrawer.value = true;
-}
-
-// Submit Form
-async function handleSubmit() {
-  fieldErrors.value = {};
-  formErrorMessage.value = null;
-
-  if (!form.value.class_section_id) {
-    toast.warning('يرجى اختيار الشعبة الدراسية.');
-    return;
-  }
-  if (!form.value.subject_id) {
-    toast.warning('يرجى اختيار المادة التعليمية.');
-    return;
-  }
-  if (!form.value.teacher_id) {
-    toast.warning('يرجى اختيار المعلم المكلف.');
-    return;
-  }
-
-  isSubmitting.value = true;
-  try {
-    const payload = {
-      academic_year_id: form.value.academic_year_id,
-      class_section_id: form.value.class_section_id,
-      subject_id: form.value.subject_id,
-      teacher_id: form.value.teacher_id,
-    };
-
-    if (drawerMode.value === 'create') {
-      const res = await teachingAssignmentsApi.create(payload);
-      toast.success(res.data.message || 'تم إسناد تدريس المادة للمعلم بنجاح.');
-    } else if (activeAssignmentId.value) {
-      const res = await teachingAssignmentsApi.update(activeAssignmentId.value, payload);
-      toast.success(res.data.message || 'تم تحديث وتعديل إسناد التدريس بنجاح.');
-    }
-
-    showDrawer.value = false;
-    await fetchAssignments();
-  } catch (err: any) {
-    const statusCode = err.response?.status;
-    const msg = err.response?.data?.message || 'حدث خطأ أثناء حفظ الإسناد.';
-
-    if (statusCode === 409) {
-      formErrorMessage.value = msg;
-      toast.error(msg);
-    } else if (statusCode === 422 && err.response?.data?.errors) {
-      fieldErrors.value = err.response.data.errors;
-      toast.error('بيانات الإسناد غير مكتملة.');
-    } else {
-      formErrorMessage.value = msg;
-      toast.error(msg);
-    }
-  } finally {
-    isSubmitting.value = false;
-  }
-}
-
-// Delete Handlers
-function confirmDelete(assignment: AssignmentItem) {
+function handleConfirmDelete(assignment: AssignmentItem) {
   assignmentToDelete.value = assignment;
-  deleteErrorMessage.value = null;
   showDeleteModal.value = true;
 }
 
-async function handleDelete() {
-  if (!assignmentToDelete.value) return;
-  isDeleting.value = true;
-  deleteErrorMessage.value = null;
-
-  try {
-    const res = await teachingAssignmentsApi.delete(assignmentToDelete.value.id);
-    toast.success(res.data.message || 'تم فك وإلغاء إسناد التدريس بنجاح.');
-    showDeleteModal.value = false;
-    assignmentToDelete.value = null;
-    await fetchAssignments();
-  } catch (err: any) {
-    const msg = err.response?.data?.message || 'تعذر فك إسناد التدريس.';
-    deleteErrorMessage.value = msg;
-    toast.error(msg);
-  } finally {
-    isDeleting.value = false;
-  }
+function onPageChange(page: number) {
+  currentPage.value = page;
 }
 
 onMounted(async () => {
@@ -671,748 +426,218 @@ onMounted(async () => {
 <template>
   <TaqniyaErrorBoundary>
     <div class="space-y-4 font-sans" dir="rtl">
-    <!-- Top Container Card -->
-    <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
-      <!-- Card Header: Title on Right, Controls & Filters on Left -->
-      <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
-        <!-- Title -->
-        <div>
-          <div class="flex items-center gap-2.5 flex-wrap">
-            <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
-              كشوفات إسناد التدريس والنصاب الأكاديمي
-            </h2>
-            <span
-              v-if="activeAcademicYear"
-              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-xs"
-            >
-              <Calendar class="w-3.5 h-3.5" />
-              <span>العام الدراسي النشط: {{ activeAcademicYear.name }}</span>
-            </span>
-          </div>
-          <p class="text-xs text-bx-muted font-medium mt-1">
-            إدارة توزيع وتكليف المعلمين بالمواد المقررة لكل شعبة، وفحص النصاب والقيود الأكاديمية
-          </p>
-        </div>
-
-        <!-- Controls: Add Button + Manual Search -->
-        <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-          <!-- Add Button -->
-          <button
-            @click="openCreateDrawer()"
-            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer"
-          >
-            <Plus class="w-3.5 h-3.5" />
-            <span>+ إسناد تدريس جديد</span>
-          </button>
-
-          <!-- Search Input with Explicit Search Trigger -->
-          <div class="relative flex-1 sm:w-72 flex items-center gap-1.5">
-            <div class="relative flex-1">
-              <Search class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-bx-muted pointer-events-none" />
-              <input
-                v-model="search"
-                @keydown.enter="applyFilters"
-                type="text"
-                placeholder="بحث باسم المعلم أو المادة أو الشعبة..."
-                class="w-full pr-10 pl-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-start"
-              />
-            </div>
-            <button
-              @click="applyFilters"
-              :disabled="loading"
-              class="h-8 px-3 rounded-full bg-purple-500/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-purple-500/30 dark:border-purple-400/30 text-xs font-bold transition-all cursor-pointer flex items-center justify-center shrink-0"
-              title="بحث فوري (أو اضغط Enter)"
-            >
-              <Search class="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Filters Bar: Class & Teacher Filters + Action Buttons -->
-      <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6 space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <!-- Top Container Card -->
+      <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
+        <!-- Card Header: Title on Right, Controls & Search on Left -->
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
+          <!-- Title -->
           <div>
-            <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب الصف الدراسي</label>
-            <TaqniyaSelect
-              v-model="selectedClassFilter"
-              :options="classFilterOptions"
-              placeholder="كافة الصفوف..."
-              full-width
-            />
-          </div>
-
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="block text-[11px] font-bold text-bx-muted">تصفية حسب المعلم</label>
-              <button
-                v-if="selectedTeacherFilter && selectedTeacherFilter !== 'all'"
-                type="button"
-                @click="openWorkloadDrawer(Number(selectedTeacherFilter))"
-                class="text-[10px] font-bold text-bx-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <h2 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+                كشوفات إسناد التدريس والنصاب الأكاديمي
+              </h2>
+              <span
+                v-if="activeAcademicYear"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-xs"
               >
-                <UserCheck class="w-3 h-3" />
-                <span>عرض النصاب التدريسي</span>
-              </button>
-            </div>
-            <TaqniyaSelect
-              v-model="selectedTeacherFilter"
-              :options="teacherFilterOptions"
-              placeholder="كافة المعلمين..."
-              full-width
-            />
-          </div>
-        </div>
-
-        <!-- Filter Action Toolbar: Apply Button, Reset Button, and Active Filter Indicator -->
-        <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <!-- Apply Filters Button -->
-            <button
-              type="button"
-              @click="applyFilters"
-              :disabled="loading"
-              class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-xs"
-            >
-              <Filter class="w-3.5 h-3.5" />
-              <span>تطبيق التصفية</span>
-            </button>
-
-            <!-- Reset Filters Button -->
-            <button
-              type="button"
-              @click="resetFilters"
-              :disabled="loading"
-              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] disabled:opacity-50 transition-all cursor-pointer"
-            >
-              <RotateCcw class="w-3.5 h-3.5" />
-              <span>إعادة تعيين الفلاتر</span>
-            </button>
-          </div>
-
-          <!-- Active Filter Indicator Badge -->
-          <div v-if="hasActiveFilters" class="flex items-center gap-2 text-[11px] text-bx-primary font-bold">
-            <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
-            <span>يتم تطبيق فلاتر مخصصة (انقر تطبيق بعد التعديل)</span>
-          </div>
-        </div>
-      </div>
-
-
-      <!-- Loading State -->
-      <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
-        <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
-        <span class="text-xs font-bold">جاري تحميل كشوفات إسناد التدريس...</span>
-      </div>
-
-      <!-- Empty State -->
-      <div
-        v-else-if="!filteredClassMatrixGroups || filteredClassMatrixGroups.length === 0"
-        class="py-14 text-center space-y-3 rounded-2xl border border-dashed border-[#B4AED8] dark:border-white/[0.12] p-8"
-      >
-        <div class="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-950/40 text-bx-primary flex items-center justify-center mx-auto">
-          <BookOpen class="w-6 h-6" />
-        </div>
-        <h3 class="text-sm font-bold text-bx-title">لا توجد إسنادات تدريس مسجلة تطابق محددات البحث</h3>
-        <p class="text-xs text-bx-muted max-w-sm mx-auto">
-          يمكنك البدء بتكليف المعلمين وتوزيع المواد على الشُعب الدراسية للعام الدراسي المعتمد.
-        </p>
-        <button
-          @click="openCreateDrawer()"
-          class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer mt-2"
-        >
-          <Plus class="w-3.5 h-3.5" />
-          <span>إسناد أول مادة الآن</span>
-        </button>
-      </div>
-
-      <!-- Hierarchical Classes Matrix List: Each Class has its own unified Table with dynamic columns for Sections -->
-      <div v-else class="space-y-6">
-        <div
-          v-for="grp in filteredClassMatrixGroups"
-          :key="grp.class_id"
-          class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs"
-        >
-          <!-- Class Header Bar -->
-          <div class="bg-purple-500/[0.04] dark:bg-white/[0.03] py-3.5 px-5 border-b border-[#B4AED8]/60 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/30 dark:border-purple-400/40 flex items-center justify-center text-bx-primary dark:text-purple-300 shrink-0">
-                <GraduationCap class="w-4 h-4" />
-              </div>
-              <div>
-                <h3 class="font-black text-sm text-bx-title font-display block leading-tight">{{ grp.class_name }}</h3>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <span class="text-[10px] font-semibold text-bx-muted px-2 py-0.5 rounded-full border border-[#B4AED8]/60 dark:border-white/10 bg-[var(--bx-surface-solid)]">
-                    {{ grp.sections?.length || 0 }} شُعب دراسية
-                  </span>
-                  <span class="text-[10px] font-bold text-bx-primary px-2 py-0.5 rounded-full border border-purple-500/30 dark:border-purple-400/30 bg-purple-500/10">
-                    {{ grp.totalAssignmentsCount }} إسنادات مسجلة
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                @click="openCreateDrawer(grp.class_id)"
-                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/60 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-                title="إسناد مادة لهذا الصف الدراسي"
-              >
-                <Plus class="w-3.5 h-3.5" />
-                <span>إسناد مادة لهذا الصف</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- If class has no sections -->
-          <div v-if="!grp.sections || grp.sections.length === 0" class="p-8 text-center text-xs text-bx-muted space-y-2">
-            <AlertCircle class="w-8 h-8 text-amber-500 mx-auto opacity-70" />
-            <p class="font-bold text-bx-title">لم يتم تسجيل شُعب دراسية لهذا الصف حتى الآن</p>
-            <p class="text-[11px]">يرجى إضافة شُعب دراسية في تبويب الهيكل الأكاديمي لتتمكن من توزيع الكادر التعليمي.</p>
-          </div>
-
-          <!-- Class Matrix Table -->
-          <div v-else class="overflow-x-auto">
-            <table class="w-full text-start border-collapse text-[11px]">
-              <thead>
-                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted text-[11px]">
-                  <th class="py-2.5 px-3.5 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
-                  <th class="py-2.5 px-3.5 font-bold text-start min-w-[190px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5">
-                      <BookOpen class="w-3 h-3 text-bx-primary" />
-                      <span>المادة الدراسية</span>
-                    </div>
-                  </th>
-                  <!-- Dynamic Section Headers for THIS class -->
-                  <th
-                    v-for="sec in (grp.sections || [])"
-                    :key="sec.class_section_id"
-                    class="py-2.5 px-3 font-bold text-center min-w-[195px] border-e border-[#B4AED8]/50 dark:border-white/10"
-                  >
-                    <div class="inline-flex items-center justify-center gap-1.5 font-bold text-bx-title text-[11px]">
-                      <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                      <span>{{ sec.section_name }}</span>
-                    </div>
-                  </th>
-                  <th class="py-2.5 px-3 font-bold text-center w-24 last:border-e-0">نسبة التغطية</th>
-                </tr>
-              </thead>
-
-              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
-                <!-- Empty subjects row -->
-                <tr v-if="!grp.subjects || grp.subjects.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
-                  <td :colspan="3 + (grp.sections?.length || 0)" class="py-8 px-4 text-center text-bx-muted text-[11px]">
-                    <div class="flex flex-col items-center justify-center gap-2">
-                      <AlertCircle class="w-7 h-7 text-bx-muted opacity-40" />
-                      <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
-                      <button
-                        @click="openCreateDrawer(grp.class_id)"
-                        class="text-bx-primary font-bold hover:underline cursor-pointer inline-flex items-center gap-1 text-[11px] mt-1"
-                      >
-                        <Plus class="w-3 h-3" />
-                        <span>إسناد أول مادة الآن</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-
-                <!-- Subject Rows -->
-                <tr
-                  v-for="(row, idx) in grp.subjects"
-                  :key="row.subject_id"
-                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150"
-                >
-                  <!-- Index -->
-                  <td class="py-2.5 px-3.5 font-['Alexandria',sans-serif] font-bold text-bx-muted text-[10px] whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    {{ idx + 1 }}
-                  </td>
-
-                  <!-- Subject Name (Clean without icon) -->
-                  <td class="py-2.5 px-3.5 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span class="font-black text-[11px] text-bx-title block leading-tight">
-                      {{ row.subject_name }}
-                    </span>
-                  </td>
-
-                  <!-- Columns per Section showing Teacher Name -->
-                  <td
-                    v-for="sec in grp.sections"
-                    :key="sec.class_section_id"
-                    class="py-2 px-2.5 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10"
-                  >
-                    <!-- Assigned: Interactive Teacher Capsule (Clean without avatar icon) -->
-                    <div
-                      v-if="row.assignmentsBySection[sec.class_section_id]"
-                      @click="openEditDrawer(row.assignmentsBySection[sec.class_section_id], grp.class_id, sec.class_section_id)"
-                      class="inline-flex items-center justify-between gap-2 h-[34px] px-3 rounded-full border transition-all cursor-pointer group/pill shadow-2xs max-w-[200px] w-full"
-                      :class="[
-                        appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
-                          ? 'border-bx-primary ring-2 ring-bx-primary/50 bg-purple-500/15 dark:bg-purple-500/25 shadow-md scale-[1.01]'
-                          : 'border-[#B4AED8]/70 dark:border-white/15 bg-purple-500/[0.04] dark:bg-slate-800/80 hover:border-bx-primary hover:bg-purple-500/[0.08] dark:hover:border-purple-400 dark:hover:bg-purple-900/30'
-                      ]"
-                      :title="'انقر لتعديل إسناد المعلم ' + row.assignmentsBySection[sec.class_section_id].teacher_name"
-                    >
-                      <!-- Teacher Info -->
-                      <div class="flex-1 min-w-0 text-start leading-tight">
-                        <div class="flex items-center gap-1">
-                          <span
-                            v-if="appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)"
-                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse"
-                            title="المعلم المختار"
-                          ></span>
-                          <div
-                            class="font-bold text-[11px] group-hover/pill:text-bx-primary transition-colors truncate"
-                            :class="appliedTeacherFilter !== 'all' && Number(appliedTeacherFilter) === Number(row.assignmentsBySection[sec.class_section_id].teacher_id)
-                              ? 'text-bx-primary font-black'
-                              : 'text-bx-title'"
-                            dir="auto"
-                          >
-                            {{ row.assignmentsBySection[sec.class_section_id].teacher_name }}
-                          </div>
-                        </div>
-                        <div class="text-[9px] text-bx-muted font-mono leading-none mt-0.5">
-                          {{ row.assignmentsBySection[sec.class_section_id].teacher_code }}
-                        </div>
-                      </div>
-
-                      <div class="flex items-center gap-1 shrink-0">
-                        <!-- Workload Button -->
-                        <button
-                          @click.stop="openWorkloadDrawer(row.assignmentsBySection[sec.class_section_id].teacher_id)"
-                          class="w-6 h-6 rounded-full border border-[#B4AED8] bg-white text-bx-primary hover:bg-bx-primary hover:text-white dark:border-white/20 dark:bg-slate-800 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
-                          title="عرض النصاب التدريسي للمعلم"
-                        >
-                          <UserCheck class="w-3 h-3" />
-                        </button>
-
-                        <!-- Approved Taqniya Delete Button (Circular with High Contrast in Dark Mode) -->
-                        <button
-                          @click.stop="confirmDelete(row.assignmentsBySection[sec.class_section_id])"
-                          class="w-6 h-6 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                          title="فك وإلغاء إسناد المادة"
-                        >
-                          <Trash2 class="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Unassigned: + تعيين معلم button (Matching pill geometry) -->
-                    <button
-                      v-else
-                      @click="openCreateDrawer(grp.class_id, sec.class_section_id, row.subject_id)"
-                      class="inline-flex items-center justify-center gap-1.5 h-[36px] px-2.5 rounded-full border border-dashed border-[#B4AED8]/70 dark:border-slate-600 bg-transparent hover:bg-bx-primary/5 hover:border-bx-primary text-bx-muted hover:text-bx-primary dark:text-slate-400 dark:hover:text-purple-300 text-[11px] font-bold transition-all cursor-pointer max-w-[210px] w-full shadow-2xs active:scale-95"
-                      title="إسناد معلم لهذه المادة في هذه الشعبة"
-                    >
-                      <Plus class="w-3 h-3" />
-                      <span>تعيين معلم</span>
-                    </button>
-                  </td>
-
-                  <!-- Coverage Badge -->
-                  <td class="py-2 px-3 text-center whitespace-nowrap last:border-e-0">
-                    <span
-                      class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border shadow-2xs"
-                      :class="row.assignedCount === row.totalSections && row.totalSections > 0
-                        ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/40 dark:border-emerald-400/50'
-                        : row.assignedCount > 0
-                        ? 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-950/40 dark:border-amber-400/50'
-                        : 'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10 dark:bg-rose-950/40 dark:border-rose-400/50'"
-                    >
-                      <span class="font-mono font-black">{{ row.assignedCount }}</span>
-                      <span class="text-[9px] opacity-70">من</span>
-                      <span class="font-mono font-black">{{ row.totalSections }}</span>
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Pagination Footer -->
-        <div
-          v-if="meta.last_page > 1"
-          class="p-4 rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-table-header)] flex items-center justify-between gap-4"
-        >
-          <div class="text-xs text-bx-muted">
-            الصفحة <span class="font-bold text-bx-title">{{ meta.current_page }}</span> من <span class="font-bold text-bx-title">{{ meta.last_page }}</span>
-          </div>
-
-          <div class="flex items-center gap-1.5">
-            <button
-              :disabled="currentPage <= 1"
-              @click="currentPage--"
-              class="p-1.5 rounded-lg border border-[#B4AED8] dark:border-white/[0.12] hover:bg-[var(--bx-pill)] disabled:opacity-40 transition-colors cursor-pointer"
-            >
-              <ChevronRight class="w-4 h-4" />
-            </button>
-            <button
-              :disabled="currentPage >= meta.last_page"
-              @click="currentPage++"
-              class="p-1.5 rounded-lg border border-[#B4AED8] dark:border-white/[0.12] hover:bg-[var(--bx-pill)] disabled:opacity-40 transition-colors cursor-pointer"
-            >
-              <ChevronLeft class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Create / Edit Teaching Assignment Drawer -->
-    <TaqniyaDrawer
-      :is-open="showDrawer"
-      :title="drawerMode === 'create' ? 'إسناد تدريس مادة لمعلم' : 'تعديل إسناد التدريس الأكاديمي'"
-      :subtitle="drawerMode === 'create' ? 'تكليف معلم مسؤول عن تدريس مادة بشعبة دراسية' : 'تغيير المعلم المكلف أو تعديل بيانات التكليف'"
-      :icon="GraduationCap"
-      @close="showDrawer = false"
-    >
-      <form @submit.prevent="handleSubmit" class="space-y-4">
-        <!-- Conflict or Form Error Alert -->
-        <div
-          v-if="formErrorMessage"
-          class="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-start gap-2"
-        >
-          <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{{ formErrorMessage }}</span>
-        </div>
-
-        <!-- Academic Year -->
-        <div>
-          <label class="block text-xs font-bold text-bx-title mb-1">
-            العام الدراسي <span class="text-rose-500">*</span>
-          </label>
-          <TaqniyaSelect
-            v-model="form.academic_year_id"
-            :options="yearOptions"
-            placeholder="اختر العام الدراسي..."
-            full-width
-            :disabled="drawerMode === 'edit'"
-          />
-        </div>
-
-        <!-- Class Selection -->
-        <div>
-          <label class="block text-xs font-bold text-bx-title mb-1">
-            الصف الدراسي <span class="text-rose-500">*</span>
-          </label>
-          <TaqniyaSelect
-            v-model="form.class_id"
-            :options="allClasses.map((c) => ({ value: c.id, label: c.name }))"
-            placeholder="اختر الصف..."
-            full-width
-            :disabled="drawerMode === 'edit'"
-          />
-        </div>
-
-        <!-- Section Selection -->
-        <div>
-          <label class="block text-xs font-bold text-bx-title mb-1">
-            الشعبة الدراسية <span class="text-rose-500">*</span>
-          </label>
-          <TaqniyaSelect
-            v-model="form.class_section_id"
-            :options="availableClassSections"
-            placeholder="اختر الشعبة..."
-            full-width
-            :disabled="drawerMode === 'edit'"
-          />
-          <p v-if="fieldErrors.class_section_id" class="text-[11px] text-rose-500 mt-1 font-bold">
-            {{ fieldErrors.class_section_id[0] }}
-          </p>
-        </div>
-
-        <!-- Subject Selection -->
-        <div>
-          <label class="block text-xs font-bold text-bx-title mb-1">
-            المادة التعليمية <span class="text-rose-500">*</span>
-          </label>
-          <TaqniyaSelect
-            v-model="form.subject_id"
-            :options="formSubjectOptions"
-            placeholder="اختر المادة..."
-            full-width
-            :disabled="drawerMode === 'edit'"
-          />
-          <p v-if="fieldErrors.subject_id" class="text-[11px] text-rose-500 mt-1 font-bold">
-            {{ fieldErrors.subject_id[0] }}
-          </p>
-        </div>
-
-        <!-- Teacher Selection -->
-        <div>
-          <label class="block text-xs font-bold text-bx-title mb-1">
-            المعلم المسؤول المكلف <span class="text-rose-500">*</span>
-          </label>
-          <TaqniyaSelect
-            v-model="form.teacher_id"
-            :options="formTeacherOptions"
-            placeholder="اختر المعلم المكلف..."
-            full-width
-          />
-          <p v-if="fieldErrors.teacher_id" class="text-[11px] text-rose-500 mt-1 font-bold">
-            {{ fieldErrors.teacher_id[0] }}
-          </p>
-        </div>
-
-        <!-- Actions -->
-        <div class="pt-4 border-t border-[#B4AED8] dark:border-white/[0.08] flex items-center justify-end gap-2.5">
-          <button
-            type="button"
-            @click="showDrawer = false"
-            class="px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-          >
-            إلغاء
-          </button>
-          <button
-            type="submit"
-            :disabled="isSubmitting"
-            class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-sm"
-          >
-            <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
-            <Save v-else class="w-3.5 h-3.5" />
-            <span>{{ drawerMode === 'create' ? 'إسناد المادة الآن' : 'حفظ التعديلات' }}</span>
-          </button>
-        </div>
-      </form>
-    </TaqniyaDrawer>
-
-    <!-- Teacher Workload Drawer (Modern Taqniya Standards) -->
-    <TaqniyaDrawer
-      :is-open="showWorkloadDrawer"
-      :title="selectedWorkloadTeacher ? `النصاب التدريسي: ${selectedWorkloadTeacher.full_name}` : 'النصاب التدريسي'"
-      :subtitle="selectedWorkloadTeacher ? `كشف الشعب والمناهج المسندة للمعلم (${selectedWorkloadTeacher.user_code})` : ''"
-      :icon="GraduationCap"
-      max-width="max-w-[560px]"
-      @close="showWorkloadDrawer = false"
-    >
-      <!-- 1. Loading State -->
-      <div v-if="loadingWorkload" class="py-16 text-center space-y-3">
-        <Loader2 class="w-8 h-8 animate-spin mx-auto text-bx-primary" />
-        <span class="text-xs font-bold text-bx-muted block">جاري استرجاع النصاب التدريسي للمعلم...</span>
-      </div>
-
-      <!-- 2. Empty State -->
-      <div
-        v-else-if="teacherWorkload.length === 0"
-        class="py-14 text-center space-y-3 rounded-2xl border border-dashed border-bx-border bg-bx-surface p-8"
-      >
-        <div class="w-14 h-14 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center mx-auto shadow-xs">
-          <BookOpen class="w-7 h-7" />
-        </div>
-        <h4 class="text-sm font-black font-display text-bx-title">لا توجد مهام تدريسية مسندة</h4>
-        <p class="text-xs text-bx-muted max-w-xs mx-auto leading-relaxed">
-          لم يتم تسكين أو إسناد أي مواد وشعب دراسية لهذا المعلم في العام الدراسي المحدد حتى الآن.
-        </p>
-        <button
-          v-if="selectedWorkloadTeacher"
-          @click="openAssignForTeacher(selectedWorkloadTeacher.id)"
-          class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer mt-2"
-        >
-          <Plus class="w-3.5 h-3.5" />
-          <span>إسناد مادة جديدة للمعلم</span>
-        </button>
-      </div>
-
-      <!-- 3. Rich Workload State -->
-      <div v-else class="space-y-4">
-        <!-- 3.1 Teacher Overview Card -->
-        <div class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-3.5 shadow-xs">
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="w-11 h-11 rounded-2xl bg-purple-500/10 text-bx-primary flex items-center justify-center font-bold border border-purple-500/20 shrink-0 shadow-2xs">
-                <Users class="w-5 h-5" />
-              </div>
-              <div>
-                <h4 class="font-black text-sm text-bx-title font-display">
-                  {{ selectedWorkloadTeacher?.full_name }}
-                </h4>
-                <div class="flex flex-wrap items-center gap-1.5 mt-1">
-                  <span class="font-mono text-[11px] font-bold text-bx-muted px-2.5 py-0.5 rounded-full border border-bx-border bg-bx-surface">
-                    {{ selectedWorkloadTeacher?.user_code }}#
-                  </span>
-                  <span
-                    v-if="selectedWorkloadTeacher?.specialization"
-                    class="text-[11px] font-bold text-purple-600 dark:text-purple-400 px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20"
-                  >
-                    {{ selectedWorkloadTeacher?.specialization }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Status Badge -->
-            <span
-              v-if="selectedWorkloadTeacher"
-              class="text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0"
-              :class="selectedWorkloadTeacher.is_active === 1
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'"
-            >
-              {{ selectedWorkloadTeacher.is_active === 1 ? 'معلم نشط' : 'معطل' }}
-            </span>
-          </div>
-
-          <!-- Micro KPI Stats Ribbon -->
-          <div class="grid grid-cols-3 gap-2.5 pt-2 border-t border-bx-divider">
-            <div class="p-2.5 rounded-xl bg-purple-500/[0.04] dark:bg-white/[0.02] border border-bx-divider text-center">
-              <span class="text-[10px] text-bx-muted font-bold block">إجمالي الإسنادات</span>
-              <span class="text-sm font-black font-mono text-bx-primary">{{ workloadStats.totalAssignments }}</span>
-            </div>
-            <div class="p-2.5 rounded-xl bg-emerald-500/[0.04] dark:bg-white/[0.02] border border-bx-divider text-center">
-              <span class="text-[10px] text-bx-muted font-bold block">المواد الدراسية</span>
-              <span class="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">{{ workloadStats.uniqueSubjects }}</span>
-            </div>
-            <div class="p-2.5 rounded-xl bg-blue-500/[0.04] dark:bg-white/[0.02] border border-bx-divider text-center">
-              <span class="text-[10px] text-bx-muted font-bold block">الشعب المسندة</span>
-              <span class="text-sm font-black font-mono text-blue-600 dark:text-blue-400">{{ workloadStats.uniqueSections }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3.2 Section Header -->
-        <div class="flex items-center justify-between px-1 pt-1">
-          <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
-            <Layers class="w-4 h-4 text-bx-primary" />
-            <span>النصاب موزّع حسب الفصول والشعب</span>
-          </div>
-          <span class="text-[11px] text-bx-muted font-mono font-bold">
-            {{ groupedTeacherWorkload.length }} فصول • {{ teacherWorkload.length }} مساق
-          </span>
-        </div>
-
-        <!-- 3.3 Workload Grouped by Class Cards -->
-        <div class="space-y-3.5">
-          <div
-            v-for="grp in groupedTeacherWorkload"
-            :key="grp.class_id"
-            class="rounded-2xl border border-bx-border bg-bx-surface overflow-hidden shadow-xs"
-          >
-            <!-- Class / Grade Header Ribbon -->
-            <div class="bg-purple-500/[0.05] dark:bg-white/[0.03] px-4 py-3 border-b border-bx-divider flex items-center justify-between">
-              <div class="flex items-center gap-2.5">
-                <div class="w-7 h-7 rounded-xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-bold">
-                  <School class="w-4 h-4" />
-                </div>
-                <h5 class="font-black text-xs sm:text-sm text-bx-title font-display">
-                  {{ grp.class_name }}
-                </h5>
-              </div>
-              <span class="text-[11px] font-bold text-bx-muted px-2.5 py-0.5 rounded-full border border-bx-divider bg-bx-surface">
-                {{ grp.items.length }} {{ grp.items.length === 1 ? 'مادة / شعبة' : 'مواد وشعب' }}
+                <Calendar class="w-3.5 h-3.5" />
+                <span>العام الدراسي النشط: {{ activeAcademicYear.name }}</span>
               </span>
             </div>
-
-            <!-- Subject Rows for this Class (المادة ──> الشعبة) -->
-            <div class="p-3 divide-y divide-bx-divider">
-              <div
-                v-for="(item, idx) in grp.items"
-                :key="item.id"
-                class="py-2.5 first:pt-1 last:pb-1 flex items-center justify-between gap-3 group"
-              >
-                <!-- Subject Info -->
-                <div class="flex items-center gap-2.5">
-                  <span class="w-6 h-6 rounded-lg bg-purple-500/10 text-bx-primary flex items-center justify-center font-mono font-bold text-[11px] shrink-0 group-hover:scale-105 transition-transform">
-                    {{ idx + 1 }}
-                  </span>
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <span class="font-black text-xs text-bx-title group-hover:text-bx-primary transition-colors">
-                        {{ item.subject_name }}
-                      </span>
-                      <span
-                        v-if="item.subject_code"
-                        class="text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-md bg-purple-500/[0.06] border border-purple-500/20"
-                      >
-                        {{ item.subject_code }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Section Badge (المادة ──> الشعبة) -->
-                <div class="flex items-center gap-2 shrink-0">
-                  <span class="text-[10px] text-bx-muted font-bold hidden sm:inline">الشعبة:</span>
-                  <span class="px-3 py-1 rounded-full bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-500/30 dark:border-purple-400/30 shadow-2xs">
-                    {{ item.section_name }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Fixed Footer Template -->
-      <template #footer>
-        <button
-          type="button"
-          @click="showWorkloadDrawer = false"
-          class="px-5 py-2 rounded-full border border-bx-border text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
-        >
-          إغلاق
-        </button>
-        <button
-          v-if="selectedWorkloadTeacher"
-          type="button"
-          @click="openAssignForTeacher(selectedWorkloadTeacher.id)"
-          class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer"
-        >
-          <Plus class="w-3.5 h-3.5" />
-          <span>إسناد مادة أخرى</span>
-        </button>
-      </template>
-    </TaqniyaDrawer>
-
-    <!-- Delete Confirmation Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showDeleteModal"
-        class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
-        dir="rtl"
-      >
-        <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-          <div class="w-12 h-12 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
-            <AlertCircle class="w-6 h-6" />
-          </div>
-
-          <div class="text-center space-y-1">
-            <h3 class="text-base font-black text-bx-title">تأكيد فك وإلغاء إسناد التدريس</h3>
-            <p class="text-xs text-bx-muted leading-relaxed">
-              هل أنت متأكد من رغبتك في إلغاء إسناد مادة
-              <strong class="text-bx-title font-bold">({{ assignmentToDelete?.subject_name }})</strong>
-              للمعلم
-              <strong class="text-bx-title font-bold">({{ assignmentToDelete?.teacher_name }})</strong>؟
+            <p class="text-xs text-bx-muted font-medium mt-1">
+              إدارة توزيع وتكليف المعلمين بالمواد المقررة لكل شعبة، وفحص النصاب والقيود الأكاديمية
             </p>
           </div>
 
-          <div
-            v-if="deleteErrorMessage"
-            class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold text-center"
-          >
-            {{ deleteErrorMessage }}
-          </div>
+          <!-- Controls: Add Button + Quick Search Input -->
+          <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            <!-- Add Button -->
+            <button
+              type="button"
+              @click="handleOpenCreate()"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer"
+            >
+              <Plus class="w-3.5 h-3.5" />
+              <span>+ إسناد تدريس جديد</span>
+            </button>
 
-          <div class="flex items-center justify-end gap-2.5 pt-2">
-            <button
-              @click="showDeleteModal = false"
-              class="px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-            >
-              تراجع
-            </button>
-            <button
-              @click="handleDelete"
-              :disabled="isDeleting"
-              class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-rose-500 text-white text-xs font-bold hover:bg-rose-600 disabled:opacity-50 transition-all cursor-pointer"
-            >
-              <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
-              <Trash2 v-else class="w-3.5 h-3.5" />
-              <span>تأكيد فك الإسناد</span>
-            </button>
+            <!-- Search Input with Explicit Search Trigger -->
+            <div class="relative flex-1 sm:w-72 flex items-center gap-1.5">
+              <div class="relative flex-1">
+                <Search class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-bx-muted pointer-events-none" />
+                <input
+                  v-model="search"
+                  @keydown.enter="applyFilters"
+                  type="text"
+                  placeholder="بحث باسم المعلم أو المادة أو الشعبة..."
+                  class="w-full pr-10 pl-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-start"
+                />
+              </div>
+              <button
+                type="button"
+                @click="applyFilters"
+                :disabled="loading"
+                class="h-8 px-3 rounded-full bg-purple-500/10 hover:bg-bx-primary text-bx-primary hover:text-white border border-purple-500/30 dark:border-purple-400/30 text-xs font-bold transition-all cursor-pointer flex items-center justify-center shrink-0"
+                title="بحث فوري (أو اضغط Enter)"
+              >
+                <Search class="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
+
+        <!-- Full Comprehensive Filter Bar: Year, Class, Section, Subject, Teacher -->
+        <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <!-- 1. Academic Year Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">العام الدراسي</label>
+              <TaqniyaSelect
+                v-model="selectedYearId"
+                :options="yearOptions"
+                placeholder="اختر العام..."
+                full-width
+              />
+            </div>
+
+            <!-- 2. Class Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">الصف الدراسي</label>
+              <TaqniyaSelect
+                v-model="selectedClassFilter"
+                :options="classFilterOptions"
+                placeholder="كافة الصفوف..."
+                full-width
+              />
+            </div>
+
+            <!-- 3. Section Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">الشعبة الدراسية</label>
+              <TaqniyaSelect
+                v-model="selectedSectionFilter"
+                :options="sectionFilterOptions"
+                placeholder="كافة الشعب..."
+                full-width
+              />
+            </div>
+
+            <!-- 4. Subject Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">المادة التعليمية</label>
+              <TaqniyaSelect
+                v-model="selectedSubjectFilter"
+                :options="subjectFilterOptions"
+                placeholder="كافة المواد..."
+                full-width
+              />
+            </div>
+
+            <!-- 5. Teacher Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">المعلم المكلف</label>
+              <TaqniyaSelect
+                v-model="selectedTeacherFilter"
+                :options="teacherFilterOptions"
+                placeholder="كافة المعلمين..."
+                full-width
+              />
+            </div>
+          </div>
+
+          <!-- Filter Action Toolbar: Apply, Reset, Active Indicator -->
+          <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                @click="applyFilters"
+                :disabled="loading"
+                class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+              >
+                <Filter class="w-3.5 h-3.5" />
+                <span>تطبيق التصفية</span>
+              </button>
+
+              <button
+                type="button"
+                @click="resetFilters"
+                :disabled="loading"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] disabled:opacity-50 transition-all cursor-pointer"
+              >
+                <RotateCcw class="w-3.5 h-3.5" />
+                <span>إعادة تعيين الفلاتر</span>
+              </button>
+            </div>
+
+            <!-- Active Filter Indicator Badge -->
+            <div v-if="hasActiveFilters" class="flex items-center gap-2 text-[11px] text-bx-primary font-bold">
+              <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
+              <span>يتم تطبيق فلاتر مخصصة (انقر تطبيق التصفية لتحديث النتائج)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
+          <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
+          <span class="text-xs font-bold">جاري تحميل كشوفات إسناد التدريس...</span>
+        </div>
+
+        <!-- Class Assignments Matrix Component -->
+        <ClassAssignmentsMatrix
+          v-else
+          :groups="classMatrixGroups"
+          :applied-teacher-filter="appliedTeacherFilter"
+          @create="handleOpenCreate"
+          @edit="handleOpenEdit"
+          @delete="handleConfirmDelete"
+          @view-workload="handleOpenWorkload"
+        />
+
+        <!-- Shared TaqniyaPagination Component -->
+        <div v-if="meta.last_page > 1" class="mt-6">
+          <TaqniyaPagination
+            :current-page="meta.current_page"
+            :total-pages="meta.last_page"
+            :total="meta.total"
+            item-name="صف دراسي"
+            :is-loading="loading"
+            @page-change="onPageChange"
+          />
+        </div>
       </div>
-    </Teleport>
-  </div>
-</TaqniyaErrorBoundary>
+
+      <!-- Feature Drawer: Create / Edit Teaching Assignment -->
+      <AssignmentFormDrawer
+        :is-open="showFormDrawer"
+        :mode="formDrawerMode"
+        :assignment-id="activeAssignmentId"
+        :initial-data="formInitialData"
+        :academic-years="academicYears"
+        :all-classes="allClasses"
+        :all-class-sections="allClassSections"
+        :all-subjects="allSubjects"
+        :all-teachers="allTeachers"
+        @close="showFormDrawer = false"
+        @saved="fetchAssignments"
+      />
+
+      <!-- Feature Drawer: Teacher Workload Inspector -->
+      <TeacherWorkloadDrawer
+        :is-open="showWorkloadDrawer"
+        :teacher="selectedWorkloadTeacher"
+        :academic-year-id="appliedYearId"
+        @close="showWorkloadDrawer = false"
+        @assign-more="() => { showWorkloadDrawer = false; handleOpenCreate(); }"
+      />
+
+      <!-- Feature Modal: Delete Confirmation (wrapping TaqniyaModal) -->
+      <AssignmentDeleteModal
+        :is-open="showDeleteModal"
+        :assignment="assignmentToDelete"
+        @close="showDeleteModal = false"
+        @deleted="fetchAssignments"
+      />
+    </div>
+  </TaqniyaErrorBoundary>
 </template>
-
-

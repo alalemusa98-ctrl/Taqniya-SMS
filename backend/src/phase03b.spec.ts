@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from './app.module.js';
 import { TeachingAssignmentsService } from './modules/teaching-assignments/teaching-assignments.service.js';
 import { PrismaService } from './common/prisma/prisma.service.js';
-import { ConflictException, NotFoundException, ForbiddenException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, UnprocessableEntityException } from '@nestjs/common';
 import { RoleType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -387,4 +387,57 @@ describe('Phase 03-B: Teaching Assignments Registry (TDD Verification)', () => {
       expect(deletedRecord?.deleted_at).not.toBeNull();
     });
   });
+
+  describe('Group 6: Security, RBAC & Audit Verification (TC-AUTH-01, TC-AUTH-02, TC-RBAC-01, TC-AUDIT-01)', () => {
+    it('TC-AUTH-01 & TC-AUTH-02: Verifies TeachingAssignmentsController is protected with JwtAuthGuard and RolesGuard', async () => {
+      const { TeachingAssignmentsController } = await import('./modules/teaching-assignments/teaching-assignments.controller.js');
+      const { JwtAuthGuard } = await import('./common/guards/jwt-auth.guard.js');
+      const { RolesGuard } = await import('./common/guards/roles.guard.js');
+
+      const guards = Reflect.getMetadata('__guards__', TeachingAssignmentsController);
+      expect(guards).toBeDefined();
+      expect(guards).toContain(JwtAuthGuard);
+      expect(guards).toContain(RolesGuard);
+    });
+
+    it('TC-RBAC-01: Verifies assignment mutation endpoints strictly require admin role and exclude teacher/student/parent', async () => {
+      const { TeachingAssignmentsController } = await import('./modules/teaching-assignments/teaching-assignments.controller.js');
+      const { ROLES_KEY } = await import('./common/decorators/roles.decorator.js');
+
+      const createRoles = Reflect.getMetadata(ROLES_KEY, TeachingAssignmentsController.prototype.create);
+      expect(createRoles).toEqual([RoleType.admin]);
+
+      const updateRoles = Reflect.getMetadata(ROLES_KEY, TeachingAssignmentsController.prototype.update);
+      expect(updateRoles).toEqual([RoleType.admin]);
+
+      const deleteRoles = Reflect.getMetadata(ROLES_KEY, TeachingAssignmentsController.prototype.delete);
+      expect(deleteRoles).toEqual([RoleType.admin]);
+
+      const findAllRoles = Reflect.getMetadata(ROLES_KEY, TeachingAssignmentsController.prototype.findAll);
+      expect(findAllRoles).toEqual([RoleType.admin]);
+
+      // Ensure teacher, student, and parent roles are strictly forbidden from mutating assignments
+      [createRoles, updateRoles, deleteRoles, findAllRoles].forEach((roles) => {
+        expect(roles).not.toContain(RoleType.teacher);
+        expect(roles).not.toContain(RoleType.student);
+        expect(roles).not.toContain(RoleType.parent);
+      });
+    });
+
+    it('TC-AUDIT-01: Verifies audit log records were created for assignment actions', async () => {
+      const auditEntries = await prisma.auditLog.findMany({
+        where: {
+          entity_type: 'teaching_assignments',
+          entity_id: BigInt(createdAssignmentId),
+        },
+      });
+
+      expect(auditEntries.length).toBeGreaterThan(0);
+      const actions = auditEntries.map((e) => e.action);
+      expect(actions).toContain('TEACHING_ASSIGNMENT_CREATED');
+      expect(actions).toContain('TEACHING_ASSIGNMENT_UPDATED');
+      expect(actions).toContain('TEACHING_ASSIGNMENT_DELETED');
+    });
+  });
 });
+

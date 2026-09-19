@@ -368,23 +368,25 @@ export class TeachingAssignmentsService {
       );
     }
 
-    // 3. Create or Reactivate Teaching Assignment
-    const created = existing
-      ? await this.prisma.teachingAssignment.update({
-          where: { id: existing.id },
-          data: {
-            teacher_id: BigInt(dto.teacher_id),
-            deleted_at: null,
-          },
-        })
-      : await this.prisma.teachingAssignment.create({
-          data: {
-            academic_year_id: BigInt(dto.academic_year_id),
-            class_section_id: BigInt(dto.class_section_id),
-            subject_id: BigInt(dto.subject_id),
-            teacher_id: BigInt(dto.teacher_id),
-          },
-        });
+    // 3. Create or Reactivate Teaching Assignment within transaction
+    const created = await this.prisma.$transaction(async (tx) => {
+      return existing
+        ? tx.teachingAssignment.update({
+            where: { id: existing.id },
+            data: {
+              teacher_id: BigInt(dto.teacher_id),
+              deleted_at: null,
+            },
+          })
+        : tx.teachingAssignment.create({
+            data: {
+              academic_year_id: BigInt(dto.academic_year_id),
+              class_section_id: BigInt(dto.class_section_id),
+              subject_id: BigInt(dto.subject_id),
+              teacher_id: BigInt(dto.teacher_id),
+            },
+          });
+    });
 
     // 4. Audit Log
     await this.auditService.log({
@@ -488,15 +490,17 @@ export class TeachingAssignmentsService {
       teacher_id: Number(existing.teacher_id),
     };
 
-    // 3. Update assignment
-    const updated = await this.prisma.teachingAssignment.update({
-      where: { id: BigInt(id) },
-      data: {
-        academic_year_id: BigInt(dto.academic_year_id),
-        class_section_id: BigInt(dto.class_section_id),
-        subject_id: BigInt(dto.subject_id),
-        teacher_id: BigInt(dto.teacher_id),
-      },
+    // 3. Update assignment within transaction
+    const updated = await this.prisma.$transaction(async (tx) => {
+      return tx.teachingAssignment.update({
+        where: { id: BigInt(id) },
+        data: {
+          academic_year_id: BigInt(dto.academic_year_id),
+          class_section_id: BigInt(dto.class_section_id),
+          subject_id: BigInt(dto.subject_id),
+          teacher_id: BigInt(dto.teacher_id),
+        },
+      });
     });
 
     // 4. Audit Log
@@ -570,10 +574,12 @@ export class TeachingAssignmentsService {
       );
     }
 
-    // Soft delete
-    await this.prisma.teachingAssignment.update({
-      where: { id: BigInt(id) },
-      data: { deleted_at: new Date() },
+    // Soft delete within transaction
+    await this.prisma.$transaction(async (tx) => {
+      await tx.teachingAssignment.update({
+        where: { id: BigInt(id) },
+        data: { deleted_at: new Date() },
+      });
     });
 
     // Audit Log

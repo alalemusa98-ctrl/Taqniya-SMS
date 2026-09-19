@@ -17,6 +17,7 @@ import { TeachingAssignmentsService } from './teaching-assignments.service.js';
 import { CreateTeachingAssignmentDto } from './dto/create-teaching-assignment.dto.js';
 import { UpdateTeachingAssignmentDto } from './dto/update-teaching-assignment.dto.js';
 import { FindTeachingAssignmentsQueryDto } from './dto/find-teaching-assignments-query.dto.js';
+import { FindTeacherAssignmentsQueryDto } from './dto/find-teacher-assignments-query.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
@@ -47,7 +48,7 @@ export class TeachingAssignmentsController {
   @Roles(RoleType.admin, RoleType.teacher)
   async findTeacherAssignments(
     @Param('teacher_id', ParseIntPipe) teacherId: number,
-    @Query() query: any,
+    @Query() query: FindTeacherAssignmentsQueryDto,
     @CurrentUser() user: any,
   ) {
     return this.assignmentsService.findTeacherAssignments(teacherId, query, user);
