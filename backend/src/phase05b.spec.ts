@@ -493,6 +493,22 @@ describe('Phase 05-B: Timetables Registry & Conflict Resolution (TDD Verificatio
   });
 
   describe('RBAC & Security Constraints', () => {
+    it('TC-AUTH-01: Controller should be guarded with JwtAuthGuard and RolesGuard', () => {
+      const guards = Reflect.getMetadata('__guards__', TimetablesController);
+      expect(guards).toBeDefined();
+      expect(guards.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('TC-NOTFOUND-01: Should throw NotFoundException when updating or deleting non-existent slot', async () => {
+      await expect(
+        timetablesService.update(999999, { period_slot_id: testPeriod1Id }, testAdminId),
+      ).rejects.toThrow(NotFoundException);
+
+      await expect(
+        timetablesService.remove(999999, testAdminId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
     it('TC-TT-11: Non-admin users cannot manage timetable slots or view completion status', async () => {
       const teacherUser = { id: testTeacherUserId, role_type: RoleType.teacher };
 

@@ -1,0 +1,62 @@
+$kind: http-request
+name: 1.6 استعراض مصفوفة جدول المعلم الأسبوعي (Get Teacher Timetable)
+description: |-
+  استرجاع جدول الحصص الأسبوعي لمعلم محدد موزعة عبر أيام الأسبوع والشعب والمواد التي يقوم بتدريسها، وفق routes.md.
+url: "{{baseUrl}}/timetables/teachers/1?academic_year_id={{academicYearId}}"
+method: GET
+headers:
+  Accept: application/json
+pathVariables:
+  - key: id
+    value: "1"
+    description: معرّف المعلم المطلوب استعراض جدوله الأسبوعي
+queryParams:
+  - key: academic_year_id
+    value: "{{academicYearId}}"
+    description: معرّف العام الدراسي (اختياري - يستخدم العام النشط في حال الإغفال)
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم جلب جدول المعلم بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم جلب جدول المعلم بنجاح."
+      data:
+        teacher_id: 1
+        teacher_name: "أحمد بن عبد الله"
+        total_weekly_slots: 18
+        days:
+          - day_of_week: "sunday"
+            slots:
+              - id: 1
+                period_slot_id: 1
+                period_name: "الحصة الأولى"
+                slot_number: 1
+                start_time: "08:00:00"
+                end_time: "08:45:00"
+                subject_name: "الرياضيات"
+                class_name: "الصف الأول الابتدائي"
+                section_name: "الشعبة أ"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 OK - تم جلب جدول المعلم", function () {
+          pm.response.to.have.status(200);
+      });
+
+      if (pm.response.code === 200) {
+          var res = pm.response.json();
+          pm.test("Teacher timetable structure matches SSoT", function () {
+              pm.expect(res.success).to.eql(true);
+              pm.expect(res.data).to.have.property('teacher_id');
+              pm.expect(res.data).to.have.property('days');
+          });
+      }
+    language: text/javascript
+order: 6000

@@ -1,0 +1,14 @@
+$kind: collection
+name: "Phase 05-B: جدول الحصص الأسبوعي وتوزيع الشعب (Timetables Registry)"
+description: |-
+  توثيق واختبارات تكاملية شاملة ومكتملة لجميع مسارات المرحلة 05-B (7 مسارات معتمدة) لإدارة وتسكين جدول الحصص الأسبوعي وتوزيع الشعب الدراسية وجداول المعلمين، وفق العقد المعماري والشبكي الرسمي `MD/phases/phase_05_timetables_b/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).
+
+  المجموعات المشمولة:
+  0. المصادقة وإعداد الجلسة (Authentication & Setup)
+  1. إدارة وتسكين الجدول الأسبوعي للحصص (Weekly Timetables Registry)
+auth:
+  - id: 5a8e7f91-1234-4a5b-9c7d-8e9f0a1b2c3d
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{authToken}}"

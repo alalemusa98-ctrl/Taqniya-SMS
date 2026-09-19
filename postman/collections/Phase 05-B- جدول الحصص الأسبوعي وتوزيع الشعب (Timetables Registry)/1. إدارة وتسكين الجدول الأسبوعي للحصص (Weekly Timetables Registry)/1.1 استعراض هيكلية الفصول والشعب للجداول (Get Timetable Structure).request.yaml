@@ -1,0 +1,53 @@
+$kind: http-request
+name: 1.1 استعراض هيكلية الفصول والشعب للجداول (Get Timetable Structure)
+description: |-
+  استرجاع هيكلية المراحل والصفوف والشعب الدراسية التابعة للعام الأكاديمي، لعرض قوائم التنقل واختيار الشعب لتسكين الجداول وفق routes.md.
+url: "{{baseUrl}}/timetables/structure?academic_year_id={{academicYearId}}"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: academic_year_id
+    value: "{{academicYearId}}"
+    description: معرّف العام الدراسي (اختياري - في حال عدم تمريره يتم استخدام العام الدراسي النشط تلقائياً)
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم جلب هيكلية الفصول والشعب بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم جلب هيكلية الفصول والشعب بنجاح."
+      data:
+        - class_id: 1
+          class_name: "الصف الأول الابتدائي"
+          grade_level: 1
+          sections:
+            - class_section_id: 1
+              section_name: "الشعبة أ"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - تم جلب هيكلية الفصول بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      if (pm.response.code === 200) {
+          var res = pm.response.json();
+          pm.test("Structure response adheres to SSoT", function () {
+              pm.expect(res.success).to.eql(true);
+              pm.expect(res.data).to.be.an('array');
+          });
+
+          if (res.data && res.data.length > 0 && res.data[0].sections && res.data[0].sections.length > 0) {
+              pm.environment.set("testClassSectionId", res.data[0].sections[0].class_section_id);
+              console.log("✅ تم حفظ testClassSectionId: " + res.data[0].sections[0].class_section_id);
+          }
+      }
+    language: text/javascript
+order: 1000

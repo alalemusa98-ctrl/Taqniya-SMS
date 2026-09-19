@@ -1,0 +1,76 @@
+$kind: http-request
+name: 1.4 تعديل ونقل موعد الحصة الأسبوعية (Update Timetable Slot)
+description: |-
+  تعديل وتحديث موعد الحصة أو اليوم أو التكليف، مع فحص ومنع أي تعارض في التسكين بالجدول الدراسي للشعبة أو المعلم.
+url: "{{baseUrl}}/timetables/slots/{{createdTimetableSlotId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+pathVariables:
+  - key: createdTimetableSlotId
+    value: "{{createdTimetableSlotId}}"
+    description: معرّف الحصة الأسبوعية المراد تعديلها
+body:
+  type: text
+  content: |-
+    {
+      "academic_year_id": {{academicYearId}},
+      "class_section_id": {{testClassSectionId}},
+      "day_of_week": "monday",
+      "period_slot_id": 2,
+      "teaching_assignment_id": 1
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم تحديث وتعديل الحصة بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم تحديث وتعديل الحصة بالجدول الأسبوعي بنجاح."
+      data:
+        id: 10
+        academic_year_id: 1
+        class_section_id: 1
+        day_of_week: "monday"
+        period_slot_id: 2
+        teaching_assignment_id: 1
+        updated_at: "2026-08-29T10:15:00Z"
+  - name: 409 Conflict - تعارض في الجدول
+    status: Conflict
+    code: 409
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "تعارض في الجدول: المعلم مرتبط بحصة تدريس أخرى في نفس اليوم والتوقيت."
+  - name: 422 Unprocessable Entity - مدخلات غير صالحة
+    status: Unprocessable Entity
+    code: 422
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "بيانات تسكين الحصة غير صالحة."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 OK or 409 Conflict (Handled)", function () {
+          pm.expect([200, 409]).to.include(pm.response.code);
+      });
+
+      if (pm.response.code === 200) {
+          var res = pm.response.json();
+          pm.test("Slot updated successfully", function () {
+              pm.expect(res.success).to.eql(true);
+              pm.expect(res.data.day_of_week).to.eql("monday");
+          });
+      }
+    language: text/javascript
+order: 4000

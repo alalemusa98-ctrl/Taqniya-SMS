@@ -147,25 +147,86 @@ export interface TimetableSlotDetailResponse {
   };
 }
 
+// SWR Cache for Timetables (client_caching_swr)
+const CACHE_TTL_MS = 60000;
+const structureCache = new Map<string, { timestamp: number; data: TimetableStructureResponse }>();
+const sectionTimetableCache = new Map<number, { timestamp: number; data: SectionTimetableResponse }>();
+const teacherTimetableCache = new Map<number, { timestamp: number; data: TeacherTimetableResponse }>();
+const completionCache = new Map<string, { timestamp: number; data: TimetableCompletionStatusResponse }>();
+
+const clearAllTimetableCaches = () => {
+  structureCache.clear();
+  sectionTimetableCache.clear();
+  teacherTimetableCache.clear();
+  completionCache.clear();
+};
+
 export const timetablesApi = {
-  getStructure: (params?: { academic_year_id?: number; class_id?: number }, signal?: AbortSignal) =>
-    deduplicatedGet<TimetableStructureResponse>('/timetable-slots', { params, signal }),
+  getStructure: async (params?: { academic_year_id?: number; class_id?: number }, signal?: AbortSignal) => {
+    const res = await deduplicatedGet<TimetableStructureResponse>('/timetable-slots', { params, signal });
+    if (res.data && res.data.success) {
+      const key = JSON.stringify(params || {});
+      structureCache.set(key, { timestamp: Date.now(), data: res.data });
+    }
+    return res;
+  },
 
-  getCompletionStatus: (params?: { academic_year_id?: number; class_id?: number }, signal?: AbortSignal) =>
-    deduplicatedGet<TimetableCompletionStatusResponse>('/timetable-slots/completion-status', { params, signal }),
+  getCachedStructure: (params?: { academic_year_id?: number; class_id?: number }): TimetableStructureResponse | null => {
+    const key = JSON.stringify(params || {});
+    const cached = structureCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+    return null;
+  },
 
-  getSectionTimetable: (classSectionId: number, signal?: AbortSignal) =>
-    deduplicatedGet<SectionTimetableResponse>(`/class-sections/${classSectionId}/timetable`, { signal }),
+  getCompletionStatus: async (params?: { academic_year_id?: number; class_id?: number }, signal?: AbortSignal) => {
+    const res = await deduplicatedGet<TimetableCompletionStatusResponse>('/timetable-slots/completion-status', { params, signal });
+    if (res.data && res.data.success) {
+      const key = JSON.stringify(params || {});
+      completionCache.set(key, { timestamp: Date.now(), data: res.data });
+    }
+    return res;
+  },
 
-  getTeacherTimetable: (teacherId: number, signal?: AbortSignal) =>
-    deduplicatedGet<TeacherTimetableResponse>(`/teachers/${teacherId}/timetable`, { signal }),
+  getSectionTimetable: async (classSectionId: number, signal?: AbortSignal) => {
+    const res = await deduplicatedGet<SectionTimetableResponse>(`/class-sections/${classSectionId}/timetable`, { signal });
+    if (res.data && res.data.success) {
+      sectionTimetableCache.set(classSectionId, { timestamp: Date.now(), data: res.data });
+    }
+    return res;
+  },
 
-  createTimetableSlot: (payload: CreateTimetableSlotPayload) =>
-    apiClient.post<TimetableSlotDetailResponse>('/timetable-slots', payload),
+  getCachedSectionTimetable: (classSectionId: number): SectionTimetableResponse | null => {
+    const cached = sectionTimetableCache.get(classSectionId);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+    return null;
+  },
 
-  updateTimetableSlot: (id: number, payload: UpdateTimetableSlotPayload) =>
-    apiClient.put<TimetableSlotDetailResponse>(`/timetable-slots/${id}`, payload),
+  getTeacherTimetable: async (teacherId: number, signal?: AbortSignal) => {
+    const res = await deduplicatedGet<TeacherTimetableResponse>(`/teachers/${teacherId}/timetable`, { signal });
+    if (res.data && res.data.success) {
+      teacherTimetableCache.set(teacherId, { timestamp: Date.now(), data: res.data });
+    }
+    return res;
+  },
 
-  deleteTimetableSlot: (id: number) =>
-    apiClient.delete<{ success: boolean; message: string }>(`/timetable-slots/${id}`),
+  clearCache: clearAllTimetableCaches,
+
+  createTimetableSlot: async (payload: CreateTimetableSlotPayload) => {
+    clearAllTimetableCaches();
+    return apiClient.post<TimetableSlotDetailResponse>('/timetable-slots', payload);
+  },
+
+  updateTimetableSlot: async (id: number, payload: UpdateTimetableSlotPayload) => {
+    clearAllTimetableCaches();
+    return apiClient.put<TimetableSlotDetailResponse>(`/timetable-slots/${id}`, payload);
+  },
+
+  deleteTimetableSlot: async (id: number) => {
+    clearAllTimetableCaches();
+    return apiClient.delete<{ success: boolean; message: string }>(`/timetable-slots/${id}`);
+  },
 };

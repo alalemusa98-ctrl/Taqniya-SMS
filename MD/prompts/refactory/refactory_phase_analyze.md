@@ -29,7 +29,7 @@ Do not analyze any layer in isolation.
 The target folder is:
 
 ```text
-[phase_05_timetables_a]
+[phase_05_timetables_b]
 ```
 
 The audit scope is primarily this folder and everything it directly implements.

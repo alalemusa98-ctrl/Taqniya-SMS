@@ -1,13 +1,13 @@
 {
   "info": {
-    "name": "Phase 05-A: فترات وتوقيتات الحصص والفسح اليومية (Daily Period Slots Registry)",
-    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 05-A (4 مسارات معتمدة) لإدارة فترات وتوقيتات الحصص والفسح اليومية باليوم المدرسي، وفق العقد المعماري والشبكي الرسمي `MD/phases/phase_05_timetables_a/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (Authentication & Setup)\n1. إدارة فترات وتوقيتات الحصص والفسح اليومية (Daily Period Slots Registry)",
+    "name": "Phase 05-B: جدول الحصص الأسبوعي وتوزيع الشعب (Timetables Registry)",
+    "description": "توثيق واختبارات تكاملية شاملة ومكتملة لجميع مسارات المرحلة 05-B (7 مسارات معتمدة) لإدارة وتسكين جدول الحصص الأسبوعي وتوزيع الشعب الدراسية وجداول المعلمين، وفق العقد المعماري والشبكي الرسمي `MD/phases/phase_05_timetables_b/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (Authentication & Setup)\n1. إدارة وتسكين الجدول الأسبوعي للحصص (Weekly Timetables Registry)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "0. المصادقة وإعداد الجلسة (Authentication & Setup)",
-      "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة authToken لاختبارات المرحلة 05-A.",
+      "description": "تهيئة جلسة الاختبار وتسجيل الدخول كمدير النظام لاستخراج التوكن وحفظه في متغير البيئة.",
       "item": [
         {
           "name": "تسجيل الدخول كمدير النظام (Login as Admin)",
@@ -26,7 +26,7 @@
               }
             ],
             "url": "{{baseUrl}}/auth/login",
-            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 05-A.",
+            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 05-B.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
@@ -56,7 +56,7 @@
                   "    ",
                   "    if (jsonData.data && jsonData.data.token) {",
                   "        pm.environment.set(\"authToken\", jsonData.data.token);",
-                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 05-A.\");",
+                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 05-B.\");",
                   "    }",
                   "}"
                 ]
@@ -81,7 +81,7 @@
                   }
                 ],
                 "url": "{{baseUrl}}/auth/login",
-                "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 05-A.",
+                "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 05-B.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
@@ -109,11 +109,11 @@
       ]
     },
     {
-      "name": "1. إدارة فترات وتوقيتات الحصص اليومية (Daily Period Slots Registry)",
-      "description": "مسارات استعراض وبحث فترات وتوقيتات الحصص والفسح اليومية، وإضافة فترة جديدة، وتعديل بياناتها وتوقيتاتها، وحذفها مع فحص الحماية المرجعية (RESTRICT) وفق routes.md.",
+      "name": "1. إدارة وتسكين الجدول الأسبوعي للحصص (Weekly Timetables Registry)",
+      "description": "المسارات السبعة المعتمدة لإدارة وتسكين جدول الحصص الأسبوعي للشعب والمعلمين وتدقيق اكتمال التسكين وفق routes.md.",
       "item": [
         {
-          "name": "1.1 استعراض وبحث فترات وتوقيتات الحصص والفسح اليومية (List Period Slots)",
+          "name": "1.1 استعراض هيكلية الفصول والشعب للجداول (Get Timetable Structure)",
           "request": {
             "method": "GET",
             "header": [
@@ -123,8 +123,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/period-slots?search=&is_break=&sort_by=slot_number&sort_order=asc&page=1&per_page=15",
-            "description": "استرجاع قائمة الفترات الزمنية للحصص والفسح باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفلترة بحالة الاستراحة والبحث والترقيم الصفحي وفق routes.md.",
+            "url": "{{baseUrl}}/timetables/structure?academic_year_id={{academicYearId}}",
+            "description": "استرجاع هيكلية المراحل والصفوف والشعب الدراسية التابعة للعام الأكاديمي، لعرض قوائم التنقل واختيار الشعب لتسكين الجداول وفق routes.md.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -142,23 +142,20 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - تم جلب فترات الحصص بنجاح\", function () {",
+                  "pm.test(\"Status code is 200 - تم جلب هيكلية الفصول بنجاح\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
                   "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Response contains period slots data array and meta pagination\", function () {",
-                  "        pm.expect(jsonData.success).to.eql(true);",
-                  "        pm.expect(jsonData.data).to.be.an('array');",
-                  "        pm.expect(jsonData.meta).to.be.an('object');",
+                  "    var res = pm.response.json();",
+                  "    pm.test(\"Structure response adheres to SSoT\", function () {",
+                  "        pm.expect(res.success).to.eql(true);",
+                  "        pm.expect(res.data).to.be.an('array');",
                   "    });",
                   "",
-                  "    // Save first periodSlot ID if available for subsequent tests",
-                  "    if (jsonData.data && jsonData.data.length > 0) {",
-                  "        var firstSlot = jsonData.data[0];",
-                  "        pm.environment.set(\"periodSlotId\", String(firstSlot.id));",
-                  "        console.log(\"✅ تم حفظ periodSlotId:\", firstSlot.id);",
+                  "    if (res.data && res.data.length > 0 && res.data[0].sections && res.data[0].sections.length > 0) {",
+                  "        pm.environment.set(\"testClassSectionId\", res.data[0].sections[0].class_section_id);",
+                  "        console.log(\"✅ تم حفظ testClassSectionId: \" + res.data[0].sections[0].class_section_id);",
                   "    }",
                   "}"
                 ]
@@ -167,7 +164,7 @@
           ],
           "response": [
             {
-              "name": "200 OK - تم جلب فترات الحصص اليومية بنجاح",
+              "name": "200 OK - تم جلب هيكلية الفصول والشعب بنجاح",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -177,8 +174,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/period-slots?search=&is_break=&sort_by=slot_number&sort_order=asc&page=1&per_page=15",
-                "description": "استرجاع قائمة الفترات الزمنية للحصص والفسح باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفلترة بحالة الاستراحة والبحث والترقيم الصفحي وفق routes.md.",
+                "url": "{{baseUrl}}/timetables/structure?academic_year_id={{academicYearId}}",
+                "description": "استرجاع هيكلية المراحل والصفوف والشعب الدراسية التابعة للعام الأكاديمي، لعرض قوائم التنقل واختيار الشعب لتسكين الجداول وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -200,120 +197,96 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب فترات الحصص اليومية بنجاح.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"name\": \"الحصة الأولى\",\n      \"slot_number\": 1,\n      \"start_time\": \"08:00:00\",\n      \"end_time\": \"08:45:00\",\n      \"is_break\": 0,\n      \"created_at\": \"2026-08-29T08:00:00Z\"\n    },\n    {\n      \"id\": 2,\n      \"name\": \"الحصة الثانية\",\n      \"slot_number\": 2,\n      \"start_time\": \"08:45:00\",\n      \"end_time\": \"09:30:00\",\n      \"is_break\": 0,\n      \"created_at\": \"2026-08-29T08:00:00Z\"\n    },\n    {\n      \"id\": 3,\n      \"name\": \"الفسحة / الاستراحة\",\n      \"slot_number\": 3,\n      \"start_time\": \"09:30:00\",\n      \"end_time\": \"10:00:00\",\n      \"is_break\": 1,\n      \"created_at\": \"2026-08-29T08:00:00Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 3,\n    \"last_page\": 1\n  }\n}"
-            },
-            {
-              "name": "200 OK - القائمة فارغة",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/period-slots?search=&is_break=&sort_by=slot_number&sort_order=asc&page=1&per_page=15",
-                "description": "استرجاع قائمة الفترات الزمنية للحصص والفسح باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفلترة بحالة الاستراحة والبحث والترقيم الصفحي وفق routes.md.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"لا توجد فترات حصص تطابق محددات البحث.\",\n  \"data\": [],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 0,\n    \"last_page\": 1\n  }\n}"
-            },
-            {
-              "name": "401 Unauthorized - غير مصرح بالوصول",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/period-slots?search=&is_break=&sort_by=slot_number&sort_order=asc&page=1&per_page=15",
-                "description": "استرجاع قائمة الفترات الزمنية للحصص والفسح باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفلترة بحالة الاستراحة والبحث والترقيم الصفحي وفق routes.md.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
-            },
-            {
-              "name": "403 Forbidden - صلاحيات غير كافية",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/period-slots?search=&is_break=&sort_by=slot_number&sort_order=asc&page=1&per_page=15",
-                "description": "استرجاع قائمة الفترات الزمنية للحصص والفسح باليوم المدرسي مرتبة تسلسلياً بحسب `slot_number` مع دعم الفلترة بحالة الاستراحة والبحث والترقيم الصفحي وفق routes.md.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "status": "Forbidden",
-              "code": 403,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب هيكلية الفصول والشعب بنجاح.\",\n  \"data\": [\n    {\n      \"class_id\": 1,\n      \"class_name\": \"الصف الأول الابتدائي\",\n      \"grade_level\": 1,\n      \"sections\": [\n        {\n          \"class_section_id\": 1,\n          \"section_name\": \"الشعبة أ\"\n        }\n      ]\n    }\n  ]\n}"
             }
           ]
         },
         {
-          "name": "1.2 إضافة فترة حصة أو استراحة جديدة (Create Period Slot)",
+          "name": "1.2 استعراض مصفوفة جدول الشعبة الأسبوعي (Get Section Timetable)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/timetables/sections/{{testClassSectionId}}?academic_year_id={{academicYearId}}",
+            "description": "استرجاع مصفوفة الحصص الأسبوعية الموزعة حسب أيام الأسبوع (من الأحد إلى الخميس) لشعبة دراسية محددة وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم جلب جدول الشعبة الأسبوعي\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    pm.test(\"Timetable days array is returned\", function () {",
+                  "        pm.expect(res.success).to.eql(true);",
+                  "        pm.expect(res.data).to.be.an('array');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم جلب جدول الشعبة بنجاح",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/timetables/sections/{{testClassSectionId}}?academic_year_id={{academicYearId}}",
+                "description": "استرجاع مصفوفة الحصص الأسبوعية الموزعة حسب أيام الأسبوع (من الأحد إلى الخميس) لشعبة دراسية محددة وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب جدول الشعبة بنجاح.\",\n  \"data\": [\n    {\n      \"day_of_week\": \"sunday\",\n      \"slots\": [\n        {\n          \"id\": 1,\n          \"period_slot_id\": 1,\n          \"teaching_assignment_id\": 1,\n          \"period_name\": \"الحصة الأولى\",\n          \"slot_number\": 1,\n          \"start_time\": \"08:00:00\",\n          \"end_time\": \"08:45:00\",\n          \"subject_name\": \"الرياضيات\",\n          \"teacher_name\": \"أحمد بن عبد الله\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "1.3 تسكين وإضافة حصة أسبوعية بالجدول (Create Timetable Slot)",
           "request": {
             "method": "POST",
             "header": [
@@ -328,8 +301,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/period-slots",
-            "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
+            "url": "{{baseUrl}}/timetables/slots",
+            "description": "إضافة وتسكين حصة جديدة في الجدول الأسبوعي لشعبة محددة، مع التحقق الإجباري من عدم تعارض جدول الشعبة والمعلم (BR-TT-01 و BR-TT-02) وصلاحية التكليف وفترة الحصة، مع إرجاع 422 في حال عدم صحة المدخلات.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -342,7 +315,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
+              "raw": "{\n  \"academic_year_id\": {{academicYearId}},\n  \"class_section_id\": {{testClassSectionId}},\n  \"day_of_week\": \"sunday\",\n  \"period_slot_id\": 1,\n  \"teaching_assignment_id\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -356,22 +329,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 201 - تم إنشاء فترة الحصة بنجاح\", function () {",
-                  "    pm.response.to.have.status(201);",
+                  "pm.test(\"Status code is 201 Created or 409 Conflict (Handled)\", function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
                   "});",
                   "",
                   "if (pm.response.code === 201) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Response contains newly created slot data with ID\", function () {",
-                  "        pm.expect(jsonData.success).to.eql(true);",
-                  "        pm.expect(jsonData.data).to.be.an('object');",
-                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "    var res = pm.response.json();",
+                  "    pm.test(\"Slot created with valid ID\", function () {",
+                  "        pm.expect(res.success).to.eql(true);",
+                  "        pm.expect(res.data.id).to.be.a('number');",
                   "    });",
-                  "",
-                  "    if (jsonData.data && jsonData.data.id) {",
-                  "        pm.environment.set(\"createdPeriodSlotId\", String(jsonData.data.id));",
-                  "        console.log(\"✅ تم حفظ createdPeriodSlotId بنجاح للاختبارات التالية:\", jsonData.data.id);",
-                  "    }",
+                  "    pm.environment.set(\"createdTimetableSlotId\", res.data.id);",
+                  "    console.log(\"✅ تم حفظ createdTimetableSlotId: \" + res.data.id);",
                   "}"
                 ]
               }
@@ -379,7 +348,7 @@
           ],
           "response": [
             {
-              "name": "201 Created - تم إنشاء فترة الحصة اليومية بنجاح",
+              "name": "201 Created - تم إضافة وتسكين الحصة بالجدول بنجاح",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -394,8 +363,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/period-slots",
-                "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
+                "url": "{{baseUrl}}/timetables/slots",
+                "description": "إضافة وتسكين حصة جديدة في الجدول الأسبوعي لشعبة محددة، مع التحقق الإجباري من عدم تعارض جدول الشعبة والمعلم (BR-TT-01 و BR-TT-02) وصلاحية التكليف وفترة الحصة، مع إرجاع 422 في حال عدم صحة المدخلات.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -408,7 +377,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
+                  "raw": "{\n  \"academic_year_id\": {{academicYearId}},\n  \"class_section_id\": {{testClassSectionId}},\n  \"day_of_week\": \"sunday\",\n  \"period_slot_id\": 1,\n  \"teaching_assignment_id\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -426,10 +395,10 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم إنشاء فترة الحصة اليومية بنجاح.\",\n  \"data\": {\n    \"id\": 99,\n    \"name\": \"الحصة السادسة التجريبية\",\n    \"slot_number\": 99,\n    \"start_time\": \"13:00:00\",\n    \"end_time\": \"13:45:00\",\n    \"is_break\": 0,\n    \"created_at\": \"2026-08-29T13:00:00Z\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم إضافة وتسكين الحصة بالجدول الأسبوعي بنجاح.\",\n  \"data\": {\n    \"id\": 10,\n    \"academic_year_id\": 1,\n    \"class_section_id\": 1,\n    \"day_of_week\": \"sunday\",\n    \"period_slot_id\": 1,\n    \"teaching_assignment_id\": 1,\n    \"created_at\": \"2026-08-29T10:00:00Z\"\n  }\n}"
             },
             {
-              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "name": "409 Conflict - تعارض في الجدول للشعبة أو المعلم",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -444,8 +413,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/period-slots",
-                "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
+                "url": "{{baseUrl}}/timetables/slots",
+                "description": "إضافة وتسكين حصة جديدة في الجدول الأسبوعي لشعبة محددة، مع التحقق الإجباري من عدم تعارض جدول الشعبة والمعلم (BR-TT-01 و BR-TT-02) وصلاحية التكليف وفترة الحصة، مع إرجاع 422 في حال عدم صحة المدخلات.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -458,107 +427,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
-            },
-            {
-              "name": "403 Forbidden - صلاحيات غير كافية",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/period-slots",
-                "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Forbidden",
-              "code": 403,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
-            },
-            {
-              "name": "409 Conflict - الرقم التسلسلي مسجل مسبقاً",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/period-slots",
-                "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
+                  "raw": "{\n  \"academic_year_id\": {{academicYearId}},\n  \"class_section_id\": {{testClassSectionId}},\n  \"day_of_week\": \"sunday\",\n  \"period_slot_id\": 1,\n  \"teaching_assignment_id\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -576,10 +445,10 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"الرقم التسلسلي للحصة مسجل مسبقاً (uq_period_slots_number).\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"تعارض في الجدول: الشعبة الدراسية مرتبطة بالفعل بحصة أخرى في نفس اليوم والتوقيت.\"\n}"
             },
             {
-              "name": "422 Unprocessable Entity - بيانات غير صالحة",
+              "name": "422 Unprocessable Entity - مدخلات غير صالحة",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -594,8 +463,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/period-slots",
-                "description": "إضافة فترة حصة أو استراحة جديدة باليوم المدرسي مع فحص تفرد الرقم التسلسلي للحصة (`uq_period_slots_number`) وأسبقية وقت البداية على النهاية وفق routes.md.",
+                "url": "{{baseUrl}}/timetables/slots",
+                "description": "إضافة وتسكين حصة جديدة في الجدول الأسبوعي لشعبة محددة، مع التحقق الإجباري من عدم تعارض جدول الشعبة والمعلم (BR-TT-01 و BR-TT-02) وصلاحية التكليف وفترة الحصة، مع إرجاع 422 في حال عدم صحة المدخلات.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -608,7 +477,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة التجريبية\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:45:00\",\n  \"is_break\": 0\n}",
+                  "raw": "{\n  \"academic_year_id\": {{academicYearId}},\n  \"class_section_id\": {{testClassSectionId}},\n  \"day_of_week\": \"sunday\",\n  \"period_slot_id\": 1,\n  \"teaching_assignment_id\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -626,12 +495,12 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات فترة الحصة غير صالحة.\",\n  \"errors\": {\n    \"end_time\": [\n      \"وقت النهاية يجب أن يكون لاحقاً لوقت البداية.\"\n    ],\n    \"slot_number\": [\n      \"الرقم التسلسلي للحصة مطلوب ويجب أن يكون رقماً صحيحاً موجباً.\"\n    ]\n  }\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات تسكين الحصة غير صالحة.\",\n  \"errors\": {\n    \"day_of_week\": [\n      \"day_of_week must be one of the following values: sunday, monday, tuesday, wednesday, thursday\"\n    ]\n  }\n}"
             }
           ]
         },
         {
-          "name": "1.3 تعديل مسمى وتوقيتات فترة الحصة أو الاستراحة (Update Period Slot)",
+          "name": "1.4 تعديل ونقل موعد الحصة الأسبوعية (Update Timetable Slot)",
           "request": {
             "method": "PUT",
             "header": [
@@ -646,8 +515,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-            "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+            "url": "{{baseUrl}}/timetables/slots/{{createdTimetableSlotId}}",
+            "description": "تعديل وتحديث موعد الحصة أو اليوم أو التكليف، مع فحص ومنع أي تعارض في التسكين بالجدول الدراسي للشعبة أو المعلم.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -660,7 +529,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+              "raw": "{\n  \"academic_year_id\": {{academicYearId}},\n  \"class_section_id\": {{testClassSectionId}},\n  \"day_of_week\": \"monday\",\n  \"period_slot_id\": 2,\n  \"teaching_assignment_id\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -674,15 +543,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - تم تحديث فترة الحصة بنجاح\", function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test(\"Status code is 200 OK or 409 Conflict (Handled)\", function () {",
+                  "    pm.expect([200, 409]).to.include(pm.response.code);",
                   "});",
                   "",
                   "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Response indicates update success and contains updated attributes\", function () {",
-                  "        pm.expect(jsonData.success).to.eql(true);",
-                  "        pm.expect(jsonData.data.name).to.eql(\"الحصة السادسة المعدلة\");",
+                  "    var res = pm.response.json();",
+                  "    pm.test(\"Slot updated successfully\", function () {",
+                  "        pm.expect(res.success).to.eql(true);",
+                  "        pm.expect(res.data.day_of_week).to.eql(\"monday\");",
                   "    });",
                   "}"
                 ]
@@ -691,7 +560,7 @@
           ],
           "response": [
             {
-              "name": "200 OK - تم تحديث فترة الحصة اليومية بنجاح",
+              "name": "200 OK - تم تحديث وتعديل الحصة بنجاح",
               "originalRequest": {
                 "method": "PUT",
                 "header": [
@@ -706,8 +575,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+                "url": "{{baseUrl}}/timetables/slots/{{createdTimetableSlotId}}",
+                "description": "تعديل وتحديث موعد الحصة أو اليوم أو التكليف، مع فحص ومنع أي تعارض في التسكين بالجدول الدراسي للشعبة أو المعلم.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -720,7 +589,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+                  "raw": "{\n  \"academic_year_id\": {{academicYearId}},\n  \"class_section_id\": {{testClassSectionId}},\n  \"day_of_week\": \"monday\",\n  \"period_slot_id\": 2,\n  \"teaching_assignment_id\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -738,10 +607,10 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم تحديث فترة الحصة اليومية بنجاح.\",\n  \"data\": {\n    \"id\": 99,\n    \"name\": \"الحصة السادسة المعدلة\",\n    \"slot_number\": 99,\n    \"start_time\": \"13:00:00\",\n    \"end_time\": \"13:50:00\",\n    \"is_break\": 0\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم تحديث وتعديل الحصة بالجدول الأسبوعي بنجاح.\",\n  \"data\": {\n    \"id\": 10,\n    \"academic_year_id\": 1,\n    \"class_section_id\": 1,\n    \"day_of_week\": \"monday\",\n    \"period_slot_id\": 2,\n    \"teaching_assignment_id\": 1,\n    \"updated_at\": \"2026-08-29T10:15:00Z\"\n  }\n}"
             },
             {
-              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "name": "409 Conflict - تعارض في الجدول",
               "originalRequest": {
                 "method": "PUT",
                 "header": [
@@ -756,8 +625,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+                "url": "{{baseUrl}}/timetables/slots/{{createdTimetableSlotId}}",
+                "description": "تعديل وتحديث موعد الحصة أو اليوم أو التكليف، مع فحص ومنع أي تعارض في التسكين بالجدول الدراسي للشعبة أو المعلم.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -770,157 +639,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
-            },
-            {
-              "name": "403 Forbidden - صلاحيات غير كافية",
-              "originalRequest": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Forbidden",
-              "code": 403,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
-            },
-            {
-              "name": "404 Not Found - فترة الحصة غير موجودة",
-              "originalRequest": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Not Found",
-              "code": 404,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"فترة الحصة غير موجودة.\"\n}"
-            },
-            {
-              "name": "409 Conflict - تعارض في الرقم التسلسلي",
-              "originalRequest": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+                  "raw": "{\n  \"academic_year_id\": {{academicYearId}},\n  \"class_section_id\": {{testClassSectionId}},\n  \"day_of_week\": \"monday\",\n  \"period_slot_id\": 2,\n  \"teaching_assignment_id\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -938,10 +657,10 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"الرقم التسلسلي للحصة مسجل مسبقاً (uq_period_slots_number).\"\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"تعارض في الجدول: المعلم مرتبط بحصة تدريس أخرى في نفس اليوم والتوقيت.\"\n}"
             },
             {
-              "name": "422 Unprocessable Entity - بيانات غير صالحة",
+              "name": "422 Unprocessable Entity - مدخلات غير صالحة",
               "originalRequest": {
                 "method": "PUT",
                 "header": [
@@ -956,8 +675,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "تحديث مسمى وتوقيتات ونوع فترة الحصة اليومية المنشأة في الاختبار السابق، مع فحص وجود الحصة وصحة التوقيتات وتفرد التسلسل وفق routes.md.",
+                "url": "{{baseUrl}}/timetables/slots/{{createdTimetableSlotId}}",
+                "description": "تعديل وتحديث موعد الحصة أو اليوم أو التكليف، مع فحص ومنع أي تعارض في التسكين بالجدول الدراسي للشعبة أو المعلم.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -970,7 +689,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"الحصة السادسة المعدلة\",\n  \"slot_number\": 99,\n  \"start_time\": \"13:00:00\",\n  \"end_time\": \"13:50:00\",\n  \"is_break\": 0\n}",
+                  "raw": "{\n  \"academic_year_id\": {{academicYearId}},\n  \"class_section_id\": {{testClassSectionId}},\n  \"day_of_week\": \"monday\",\n  \"period_slot_id\": 2,\n  \"teaching_assignment_id\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -988,12 +707,12 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات فترة الحصة غير صالحة.\",\n  \"errors\": {\n    \"end_time\": [\n      \"وقت النهاية يجب أن يكون لاحقاً لوقت البداية.\"\n    ]\n  }\n}"
+              "body": "{\n  \"success\": false,\n  \"message\": \"بيانات تسكين الحصة غير صالحة.\"\n}"
             }
           ]
         },
         {
-          "name": "1.4 حذف فترة الحصة مع فحص الحماية المرجعية (Delete Period Slot)",
+          "name": "1.5 فك وإلغاء الحصة من الجدول الأسبوعي (Delete Timetable Slot)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -1003,8 +722,8 @@
                 "type": "text"
               }
             ],
-            "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-            "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
+            "url": "{{baseUrl}}/timetables/slots/{{createdTimetableSlotId}}",
+            "description": "فك الحصة الدراسية وإفراغ الموعد بالجدول الأسبوعي للشعبة والمعلم نهائياً وفق routes.md.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1022,20 +741,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200 - تم حذف فترة الحصة بنجاح\", function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test(\"Status code is 200 OK - تم حذف الحصة بنجاح\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
                   "});",
                   "",
                   "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.test(\"Response confirms slot deletion\", function () {",
-                  "        pm.expect(jsonData.success).to.eql(true);",
-                  "        pm.expect(jsonData.message).to.eql(\"تم حذف فترة الحصة بنجاح.\");",
+                  "    var res = pm.response.json();",
+                  "    pm.test(\"Success property is true\", function () {",
+                  "        pm.expect(res.success).to.eql(true);",
                   "    });",
-                  "",
-                  "    // Reset temporary slot variable",
-                  "    pm.environment.set(\"createdPeriodSlotId\", \"\");",
-                  "    console.log(\"✅ تم تفريغ createdPeriodSlotId بنجاح بعد اكتمال دورة الاختبار الحيوية.\");",
                   "}"
                 ]
               }
@@ -1043,7 +757,7 @@
           ],
           "response": [
             {
-              "name": "200 OK - تم حذف فترة الحصة بنجاح",
+              "name": "200 OK - تم حذف وإلغاء الحصة بنجاح",
               "originalRequest": {
                 "method": "DELETE",
                 "header": [
@@ -1053,8 +767,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
+                "url": "{{baseUrl}}/timetables/slots/{{createdTimetableSlotId}}",
+                "description": "فك الحصة الدراسية وإفراغ الموعد بالجدول الأسبوعي للشعبة والمعلم نهائياً وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1076,10 +790,10 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم حذف فترة الحصة بنجاح.\"\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم حذف وإلغاء الحصة من الجدول الأسبوعي بنجاح.\"\n}"
             },
             {
-              "name": "401 Unauthorized - غير مصرح بالوصول",
+              "name": "404 Not Found - الحصة غير موجودة",
               "originalRequest": {
                 "method": "DELETE",
                 "header": [
@@ -1089,80 +803,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية.\"\n}"
-            },
-            {
-              "name": "403 Forbidden - صلاحيات غير كافية",
-              "originalRequest": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{authToken}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "status": "Forbidden",
-              "code": 403,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.\"\n}"
-            },
-            {
-              "name": "404 Not Found - فترة الحصة غير موجودة",
-              "originalRequest": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
+                "url": "{{baseUrl}}/timetables/slots/{{createdTimetableSlotId}}",
+                "description": "فك الحصة الدراسية وإفراغ الموعد بالجدول الأسبوعي للشعبة والمعلم نهائياً وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1184,12 +826,61 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"فترة الحصة غير موجودة.\"\n}"
-            },
+              "body": "{\n  \"success\": false,\n  \"message\": \"الحصة غير موجودة بالجدول الأسبوعي.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "1.6 استعراض مصفوفة جدول المعلم الأسبوعي (Get Teacher Timetable)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/timetables/teachers/1?academic_year_id={{academicYearId}}",
+            "description": "استرجاع جدول الحصص الأسبوعي لمعلم محدد موزعة عبر أيام الأسبوع والشعب والمواد التي يقوم بتدريسها، وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
             {
-              "name": "409 Conflict - حماية النزاهة المرجعية",
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK - تم جلب جدول المعلم\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    pm.test(\"Teacher timetable structure matches SSoT\", function () {",
+                  "        pm.expect(res.success).to.eql(true);",
+                  "        pm.expect(res.data).to.have.property('teacher_id');",
+                  "        pm.expect(res.data).to.have.property('days');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم جلب جدول المعلم بنجاح",
               "originalRequest": {
-                "method": "DELETE",
+                "method": "GET",
                 "header": [
                   {
                     "key": "Accept",
@@ -1197,8 +888,8 @@
                     "type": "text"
                   }
                 ],
-                "url": "{{baseUrl}}/period-slots/{{createdPeriodSlotId}}",
-                "description": "حذف فترة الحصة المنشأة في الاختبار السابق بالمعرف `createdPeriodSlotId` ناعماً (Soft Delete) مع التحقق الإجباري من عدم استخدامها في أي جدول حصص أسبوعي نشط (Foreign Key Restrict) وفق routes.md.",
+                "url": "{{baseUrl}}/timetables/teachers/1?academic_year_id={{academicYearId}}",
+                "description": "استرجاع جدول الحصص الأسبوعي لمعلم محدد موزعة عبر أيام الأسبوع والشعب والمواد التي يقوم بتدريسها، وفق routes.md.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1210,8 +901,8 @@
                   ]
                 }
               },
-              "status": "Conflict",
-              "code": 409,
+              "status": "OK",
+              "code": 200,
               "_postman_previewlanguage": "json",
               "header": [
                 {
@@ -1220,7 +911,92 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"message\": \"لا يمكن حذف فترة الحصة لارتباطها بحصص مجدولة في الجداول الأسبوعية (Foreign Key Restrict).\"\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب جدول المعلم بنجاح.\",\n  \"data\": {\n    \"teacher_id\": 1,\n    \"teacher_name\": \"أحمد بن عبد الله\",\n    \"total_weekly_slots\": 18,\n    \"days\": [\n      {\n        \"day_of_week\": \"sunday\",\n        \"slots\": [\n          {\n            \"id\": 1,\n            \"period_slot_id\": 1,\n            \"period_name\": \"الحصة الأولى\",\n            \"slot_number\": 1,\n            \"start_time\": \"08:00:00\",\n            \"end_time\": \"08:45:00\",\n            \"subject_name\": \"الرياضيات\",\n            \"class_name\": \"الصف الأول الابتدائي\",\n            \"section_name\": \"الشعبة أ\"\n          }\n        ]\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "1.7 تدقيق ومطابقة اكتمال الجداول المدرسية (Timetable Completion Audit)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/timetables/completion-audit?academic_year_id={{academicYearId}}",
+            "description": "تدقيق شامل ومقارنة بين الحصص المطلوبة وفق خطة المنهج الدراسي والحصص المسكنة فعلياً في الجدول لكل شعبة، وإرجاع نواقص التسكين والشواغر وفق routes.md.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK - تم تدقيق اكتمال الجداول\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    pm.test(\"Audit response contains total_unscheduled_slots and classes\", function () {",
+                  "        pm.expect(res.success).to.eql(true);",
+                  "        pm.expect(res.data).to.have.property('total_unscheduled_slots');",
+                  "        pm.expect(res.data.classes).to.be.an('array');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK - تم فحص وتدقيق اكتمال تسكين الجداول بنجاح",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": "{{baseUrl}}/timetables/completion-audit?academic_year_id={{academicYearId}}",
+                "description": "تدقيق شامل ومقارنة بين الحصص المطلوبة وفق خطة المنهج الدراسي والحصص المسكنة فعلياً في الجدول لكل شعبة، وإرجاع نواقص التسكين والشواغر وفق routes.md.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم فحص وتدقيق اكتمال تسكين الجداول بنجاح.\",\n  \"data\": {\n    \"total_unscheduled_slots\": 4,\n    \"classes\": [\n      {\n        \"class_id\": 1,\n        \"class_name\": \"الصف الأول الابتدائي\",\n        \"total_unscheduled_slots\": 2,\n        \"is_fully_scheduled\": false,\n        \"sections\": [\n          {\n            \"class_section_id\": 1,\n            \"section_name\": \"الشعبة أ\",\n            \"required_slots_count\": 30,\n            \"scheduled_slots_count\": 28,\n            \"unscheduled_slots_count\": 2,\n            \"is_fully_scheduled\": false\n          }\n        ]\n      }\n    ]\n  }\n}"
             }
           ]
         }

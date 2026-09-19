@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';

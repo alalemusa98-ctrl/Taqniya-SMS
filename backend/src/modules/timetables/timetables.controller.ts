@@ -13,6 +13,9 @@ import {
   HttpCode,
   HttpStatus,
   ForbiddenException,
+  UsePipes,
+  ValidationPipe,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { TimetablesService } from './timetables.service.js';
 import { CreateTimetableSlotDto } from './dto/create-timetable-slot.dto.js';
@@ -27,6 +30,26 @@ import type { Request } from 'express';
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+    exceptionFactory: (validationErrors = []) => {
+      const errors: Record<string, string[]> = {};
+      for (const err of validationErrors) {
+        if (err.constraints) {
+          errors[err.property] = Object.values(err.constraints);
+        }
+      }
+      return new UnprocessableEntityException({
+        success: false,
+        message: 'بيانات تسكين الحصة غير صالحة.',
+        errors,
+      });
+    },
+  }),
+)
 export class TimetablesController {
   constructor(private readonly timetablesService: TimetablesService) {}
 

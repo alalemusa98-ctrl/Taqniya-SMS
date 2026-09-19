@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import {
-  Plus,
   Calendar,
-  Clock,
   Loader2,
-  AlertCircle,
   BarChart3,
   School,
   CheckCircle2,
   TrendingUp,
-  Save,
   Trash2,
+  Search,
+  UserCheck,
 } from 'lucide-vue-next';
 import {
   timetablesApi,
@@ -31,12 +29,9 @@ import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
-import TimetableSlotCard from '../components/timetables/TimetableSlotCard.vue';
-import TimetableEmptySlot from '../components/timetables/TimetableEmptySlot.vue';
-import TeacherSlotCard from '../components/timetables/TeacherSlotCard.vue';
-
-// 1. Lazy loaded Drawer
-const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
+import TaqniyaModal from '../components/ui/TaqniyaModal.vue';
+import TimetableMatrixGrid from '../components/timetables/TimetableMatrixGrid.vue';
+import TimetableSlotDrawer from '../components/timetables/TimetableSlotDrawer.vue';
 
 const authStore = useAuthStore();
 const toast = useToast();
@@ -389,7 +384,10 @@ function openEditDrawer(slot: TimetableSlotItem, day: DayOfWeek) {
 }
 
 // Submit Drawer Form
-async function submitDrawer() {
+async function submitDrawer(payload?: typeof formData.value) {
+  if (payload) {
+    formData.value = { ...formData.value, ...payload };
+  }
   formErrors.value = {};
   formErrorMessage.value = null;
 
@@ -809,274 +807,64 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- 5. Timetable Matrix Grid (Standard Taqniya Table Layout) -->
-        <div class="rounded-3xl border border-bx-border overflow-hidden bg-bx-surface shadow-xs">
-          <!-- Matrix Card Header -->
-          <div class="p-4 sm:p-5 bg-purple-500/[0.03] dark:bg-white/[0.02] border-b border-bx-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-2xl bg-purple-500/10 text-bx-primary flex items-center justify-center border border-purple-500/20 shadow-xs">
-                <Clock class="w-4 h-4" />
-              </div>
-              <div>
-                <h3 class="text-sm sm:text-base font-black text-bx-title font-display">
-                  {{
-                    activeViewTab === 'sections'
-                      ? selectedSectionInfo
-                        ? `مصفوفة الحصص: ${selectedSectionInfo.class_name} — ${selectedSectionInfo.section_name}`
-                        : 'يرجى اختيار شعبة لعرض جدولها'
-                      : teacherTimetableData
-                      ? `مصفوفة جدول المعلم: ${teacherTimetableData.teacher_name}`
-                      : 'يرجى اختيار معلم لعرض جدوله'
-                  }}
-                </h3>
-                <p v-if="activeViewTab === 'sections' && selectedSectionInfo" class="text-[11px] text-bx-muted font-medium mt-0.5">
-                  انقر على أي مربع فارغ لتسكين حصة مباشرة، أو مرر فوق الحصة لتعديلها أو إلغائها
-                </p>
-              </div>
-            </div>
-
-            <div v-if="activeViewTab === 'sections' && selectedSectionId && isAdmin">
-              <button
-                @click="openCreateDrawer()"
-                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-bx-primary bg-purple-500/10 hover:bg-bx-primary hover:text-white border border-purple-500/30 transition-all duration-200 cursor-pointer shadow-2xs"
-              >
-                <Plus class="w-3.5 h-3.5" />
-                <span>تسكين حصة جديدة للشعبة</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Loading State -->
-          <div v-if="matrixLoading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
-            <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
-            <span class="text-xs font-bold">جاري تحميل مصفوفة الجدول الأسبوعي...</span>
-          </div>
-
-          <!-- Table Content -->
-          <div v-else class="overflow-x-auto">
-            <table class="w-full text-start border-collapse min-w-[800px]">
-              <thead>
-                <tr class="bg-purple-500/[0.03] dark:bg-white/[0.02] border-b border-[#B4AED8]/60 dark:border-white/10">
-                  <!-- Corner Header (Day / Period) -->
-                  <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10 font-display text-bx-title text-xs">
-                    اليوم / الحصة
-                  </th>
-
-                  <!-- Period Columns Headers -->
-                  <th
-                    v-for="period in teachingPeriods"
-                    :key="period.id"
-                    class="py-3 px-3 text-center border-e border-[#B4AED8]/50 dark:border-white/10 min-w-[140px]"
-                  >
-                    <div class="font-bold text-xs sm:text-sm text-bx-title font-display leading-tight">
-                      {{ period.name }}
-                    </div>
-                    <div class="text-[11px] sm:text-xs text-bx-muted font-mono mt-1 font-medium" dir="ltr">
-                      {{ period.start_time.substring(0, 5) }} - {{ period.end_time.substring(0, 5) }}
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10 text-xs font-medium text-bx-title">
-                <!-- Section View Rows -->
-                <template v-if="activeViewTab === 'sections'">
-                  <tr
-                    v-for="day in daysOfWeekOptions"
-                    :key="day.id"
-                    class="hover:bg-purple-500/[0.015] dark:hover:bg-white/[0.01] transition-colors duration-150"
-                  >
-                    <!-- Day Title Column (Clean without dot/circle) -->
-                    <td class="py-4 px-4 font-bold font-display text-bx-title whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10 bg-purple-500/[0.02] dark:bg-white/[0.02] text-center align-middle text-sm">
-                      {{ day.name }}
-                    </td>
-
-                    <!-- Periods Slots Columns -->
-                    <td
-                      v-for="period in teachingPeriods"
-                      :key="period.id"
-                      class="p-1 border-e border-[#B4AED8]/50 dark:border-white/10 align-top h-20 min-w-[140px]"
-                    >
-                      <!-- Scheduled Slot Component -->
-                      <TimetableSlotCard
-                        v-if="getSlotFor(day.id, period.id)"
-                        :slot-data="getSlotFor(day.id, period.id)!"
-                        :is-admin="isAdmin"
-                        @edit="openEditDrawer($event, day.id)"
-                        @delete="promptDeleteSlot($event)"
-                      />
-
-                      <!-- Empty Slot Component (Full Box Clickable) -->
-                      <TimetableEmptySlot
-                        v-else
-                        :is-admin="isAdmin"
-                        @click="openCreateDrawer(day.id, period.id)"
-                      />
-                    </td>
-                  </tr>
-                </template>
-
-                <!-- Teacher View Rows -->
-                <template v-else>
-                  <tr
-                    v-for="day in daysOfWeekOptions"
-                    :key="day.id"
-                    class="hover:bg-emerald-500/[0.015] dark:hover:bg-white/[0.01] transition-colors duration-150"
-                  >
-                    <td class="py-4 px-4 font-bold font-display text-emerald-950 dark:text-emerald-200 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10 bg-emerald-500/[0.02] dark:bg-white/[0.02] text-center align-middle text-sm">
-                      {{ day.name }}
-                    </td>
-                    <td
-                      v-for="period in teachingPeriods"
-                      :key="period.id"
-                      class="p-1 border-e border-[#B4AED8]/50 dark:border-white/10 align-top h-20 min-w-[140px]"
-                    >
-                      <TeacherSlotCard
-                        v-if="getTeacherSlotFor(day.id, period.id)"
-                        :subject-name="getTeacherSlotFor(day.id, period.id)?.subject_name"
-                        :class-name="getTeacherSlotFor(day.id, period.id)?.class_name"
-                        :section-name="getTeacherSlotFor(day.id, period.id)?.section_name"
-                      />
-                      <div
-                        v-else
-                        class="w-full h-full min-h-[78px] rounded-2xl border border-dashed border-[#B4AED8]/40 bg-gray-50/40 dark:bg-white/[0.01] flex items-center justify-center text-[11px] font-medium text-bx-muted/50 select-none"
-                      >
-                        فراغ
-                      </div>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <!-- 5. Timetable Matrix Grid Feature Component -->
+        <TimetableMatrixGrid
+          :active-view-tab="activeViewTab"
+          :matrix-loading="matrixLoading"
+          :is-admin="isAdmin"
+          :teaching-periods="teachingPeriods"
+          :days="daysOfWeekOptions"
+          :selected-section-id="selectedSectionId"
+          :selected-section-info="selectedSectionInfo"
+          :teacher-timetable-data="teacherTimetableData"
+          :get-slot-for="getSlotFor"
+          :get-teacher-slot-for="getTeacherSlotFor"
+          @create-slot="openCreateDrawer"
+          @edit-slot="openEditDrawer"
+          @delete-slot="promptDeleteSlot"
+        />
       </div>
 
-      <!-- 6. Slide-Over Drawer for Slot Create / Update -->
-      <TaqniyaDrawer
+      <!-- 6. Slide-Over Drawer Feature Component for Slot Create / Update -->
+      <TimetableSlotDrawer
         :is-open="showDrawer"
-        @close="showDrawer = false"
-        :title="drawerMode === 'create' ? 'تسكين حصة جديدة بالجدول الأسبوعي' : 'تعديل وتحديث موعد الحصة'"
+        :drawer-mode="drawerMode"
         :subtitle="selectedSectionInfo ? `${selectedSectionInfo.class_name} — ${selectedSectionInfo.section_name}` : ''"
-        :icon="Calendar"
+        :initial-data="formData"
+        :day-options="daySelectOptions"
+        :period-options="formPeriodOptions"
+        :assignment-options="formAssignmentOptions"
+        :is-submitting="isSubmitting"
+        :form-errors="formErrors"
+        :form-error-message="formErrorMessage"
+        :slot-to-edit="slotToEdit"
+        @close="showDrawer = false"
+        @submit="submitDrawer"
+        @unassign="handleUnassignFromDrawer"
+      />
+
+      <!-- 7. Confirmation Modal for Delete (Shared TaqniyaModal) -->
+      <TaqniyaModal
+        :is-open="showDeleteModal"
+        title="إلغاء وتفريغ الحصة من الجدول"
+        subtitle="تأكيد حذف الحصة وإخلاء الفترة الزمنية بالشعبة"
+        max-width="md"
+        @close="showDeleteModal = false"
       >
-        <form @submit.prevent="submitDrawer" class="space-y-4 p-1">
-          <!-- General Form Error Banner -->
-          <div
-            v-if="formErrorMessage"
-            class="p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-600 dark:text-red-400 text-xs flex items-start gap-2"
-          >
-            <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{{ formErrorMessage }}</span>
+        <template #icon>
+          <div class="p-2.5 rounded-2xl bg-red-500/10 text-red-600">
+            <Trash2 class="w-6 h-6" />
           </div>
+        </template>
 
-          <!-- Day of Week -->
-          <div>
-            <label class="block text-xs font-bold text-bx-title mb-1.5">
-              يوم الحصة في الأسبوع <span class="text-red-500">*</span>
-            </label>
-            <TaqniyaSelect
-              v-model="formData.day_of_week"
-              :options="daySelectOptions"
-              placeholder="اختر اليوم..."
-              full-width
-            />
-          </div>
+        <div class="p-3 bg-purple-500/[0.03] border border-bx-border rounded-2xl text-xs space-y-1.5 text-bx-title">
+          <div><span class="text-bx-muted">المادة:</span> <strong>{{ slotToDelete?.subject_name }}</strong></div>
+          <div><span class="text-bx-muted">المعلم:</span> <strong>{{ slotToDelete?.teacher_name }}</strong></div>
+          <div><span class="text-bx-muted">الحصة:</span> <strong>{{ slotToDelete?.period_name }}</strong></div>
+        </div>
 
-          <!-- Period Slot -->
-          <div>
-            <label class="block text-xs font-bold text-bx-title mb-1.5">
-              الحصة اليومية والتوقيت <span class="text-red-500">*</span>
-            </label>
-            <TaqniyaSelect
-              v-model="formData.period_slot_id"
-              :options="formPeriodOptions"
-              placeholder="اختر توقيت الحصة..."
-              full-width
-            />
-            <p v-if="formErrors.period_slot_id" class="text-xs text-red-500 mt-1">
-              {{ formErrors.period_slot_id }}
-            </p>
-          </div>
-
-          <!-- Teaching Assignment -->
-          <div>
-            <label class="block text-xs font-bold text-bx-title mb-1.5">
-              المادة والمعلم المكلف <span class="text-red-500">*</span>
-            </label>
-            <TaqniyaSelect
-              v-model="formData.teaching_assignment_id"
-              :options="formAssignmentOptions"
-              placeholder="اختر المادة والمعلم..."
-              full-width
-            />
-            <p v-if="formErrors.teaching_assignment_id" class="text-xs text-red-500 mt-1">
-              {{ formErrors.teaching_assignment_id }}
-            </p>
-            <p class="text-[11px] text-bx-muted mt-1.5 leading-relaxed">
-              💡 <strong>الربط التلقائي:</strong> يتم جلب المعلم المكلف بتدريس المادة في هذه الشعبة مباشرة من سجلات التكليفات دون حاجة لاختيار المعلم يدوياً.
-            </p>
-          </div>
-
-          <!-- Actions -->
-          <div class="pt-4 border-t border-bx-divider flex items-center justify-between gap-2.5">
-            <!-- Unassign Slot Button (Edit Mode Only) -->
-            <button
-              v-if="drawerMode === 'edit' && slotToEdit"
-              type="button"
-              @click="handleUnassignFromDrawer"
-              class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-red-300 dark:border-red-500/40 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-              title="فك هذه الحصة وإفراغ الموعد بالجدول"
-            >
-              <Trash2 class="w-3.5 h-3.5" />
-              <span>فك الحصة</span>
-            </button>
-            <div v-else></div>
-
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                @click="showDrawer = false"
-                class="px-4 py-2 rounded-full border border-bx-border text-xs font-bold text-bx-title hover:bg-purple-500/[0.04] transition-colors"
-              >
-                إلغاء
-              </button>
-              <button
-                type="submit"
-                :disabled="isSubmitting"
-                class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-bx-primary hover:bg-bx-primary-hover text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
-              >
-                <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
-                <Save v-else class="w-3.5 h-3.5" />
-                <span>{{ drawerMode === 'create' ? 'تسكين الحصة الآن' : 'تحديث الحصة' }}</span>
-              </button>
-            </div>
-          </div>
-        </form>
-      </TaqniyaDrawer>
-
-      <!-- 7. Confirmation Modal for Delete -->
-      <div
-        v-if="showDeleteModal"
-        class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
-      >
-        <div class="bg-bx-surface rounded-3xl border border-bx-border p-6 max-w-md w-full shadow-xl space-y-4 font-sans" dir="rtl">
-          <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-2xl bg-red-500/10 text-red-600">
-              <Trash2 class="w-6 h-6" />
-            </div>
-            <div>
-              <h3 class="font-black text-sm text-bx-title font-display">إلغاء وتفريغ الحصة من الجدول</h3>
-              <p class="text-xs text-bx-muted">تأكيد حذف الحصة وإخلاء الفترة الزمنية بالشعبة</p>
-            </div>
-          </div>
-
-          <div class="p-3 bg-purple-500/[0.03] border border-bx-border rounded-2xl text-xs space-y-1.5 text-bx-title">
-            <div><span class="text-bx-muted">المادة:</span> <strong>{{ slotToDelete?.subject_name }}</strong></div>
-            <div><span class="text-bx-muted">المعلم:</span> <strong>{{ slotToDelete?.teacher_name }}</strong></div>
-            <div><span class="text-bx-muted">الحصة:</span> <strong>{{ slotToDelete?.period_name }}</strong></div>
-          </div>
-
-          <div class="flex items-center justify-end gap-2.5 pt-2">
+        <template #footer>
+          <div class="flex items-center justify-end gap-2.5">
             <button
               type="button"
               @click="showDeleteModal = false"
@@ -1094,8 +882,8 @@ onMounted(async () => {
               <span>تأكيد الإلغاء</span>
             </button>
           </div>
-        </div>
-      </div>
+        </template>
+      </TaqniyaModal>
     </div>
   </TaqniyaErrorBoundary>
 </template>

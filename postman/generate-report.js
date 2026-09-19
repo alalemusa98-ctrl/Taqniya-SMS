@@ -149,7 +149,9 @@ for (const dir of collDirs) {
   
   // Clean name for files
   let safeName = dir.name.replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_').replace(/_+/g, '_').trim();
-  if (dir.name.includes('05-A') || dir.name.includes('Period Slots') || dir.name.includes('فترات الحصص') || dir.name.includes('فترات وتوقيتات الحصص')) {
+  if (dir.name.includes('05-B') || dir.name.includes('Timetables Registry') || dir.name.includes('جدول الحصص الأسبوعي')) {
+    safeName = 'Phase_05_B_Timetables_Registry';
+  } else if (dir.name.includes('05-A') || dir.name.includes('Period Slots') || dir.name.includes('فترات الحصص') || dir.name.includes('فترات وتوقيتات الحصص')) {
     safeName = 'Phase_05_A_Period_Slots_Registry';
   } else if (dir.name.includes('04-B') || dir.name.includes('Student Enrollments') || dir.name.includes('تسكين وتسجيل الطلاب')) {
     safeName = 'Phase_04_B_Student_Enrollments_Registry';
