@@ -77,7 +77,8 @@ defineEmits<{
       <div
         v-for="grp in groups"
         :key="grp.id"
-        class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] shadow-xs"
+        :id="grp.domId || ('class-group-' + grp.id)"
+        class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] shadow-xs transition-all duration-300"
       >
         <!-- Group Header Bar -->
         <div class="bg-purple-500/[0.04] dark:bg-white/[0.03] py-3.5 px-5 border-b border-[#B4AED8]/60 dark:border-white/10 flex items-center justify-between rounded-t-2xl">
@@ -135,13 +136,15 @@ defineEmits<{
                   }"
                 >
                   <slot :name="`header-${col.key}`" :column="col" :group="grp">
-                    <div
-                      class="flex items-center gap-1.5"
-                      :class="{ 'justify-center': col.align === 'center', 'justify-end': col.align === 'end' }"
-                    >
-                      <component :is="col.icon" v-if="col.icon" class="w-3 h-3 text-bx-primary" />
-                      <span>{{ col.label }}</span>
-                    </div>
+                    <slot name="header" :column="col" :group="grp">
+                      <div
+                        class="flex items-center gap-1.5"
+                        :class="{ 'justify-center': col.align === 'center', 'justify-end': col.align === 'end' }"
+                      >
+                        <component :is="col.icon" v-if="col.icon" class="w-3 h-3 text-bx-primary" />
+                        <span>{{ col.label }}</span>
+                      </div>
+                    </slot>
                   </slot>
                 </th>
               </tr>
