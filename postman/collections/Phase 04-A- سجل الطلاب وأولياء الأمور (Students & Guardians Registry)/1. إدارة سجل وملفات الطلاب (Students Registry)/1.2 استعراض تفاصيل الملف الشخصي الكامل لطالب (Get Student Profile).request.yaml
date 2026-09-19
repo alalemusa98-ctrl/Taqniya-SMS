@@ -28,6 +28,27 @@ responses:
         birth_date: "2015-05-12"
         gender: "male"
         class_section: "الصف الخامس - شعبة أ"
+        class_id: 5
+        class_section_id: 12
+        seating_number: "101"
+        guardians:
+          - id: 1
+            guardian_id: 1
+            user_id: 201
+            user_code: "PAR-4001"
+            full_name: "علي محمد الفيتوري"
+            phone: "0912222222"
+            relationship: "father"
+            is_primary: true
+        primary_guardian:
+          id: 1
+          guardian_id: 1
+          user_id: 201
+          user_code: "PAR-4001"
+          full_name: "علي محمد الفيتوري"
+          phone: "0912222222"
+          relationship: "father"
+          is_primary: true
         created_at: "2026-08-29T10:00:00Z"
   - name: 404 Not Found - ملف الطالب غير موجود
     status: Not Found

@@ -196,7 +196,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب قائمة الطلاب بنجاح.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"user_id\": 101,\n      \"user_code\": \"STU-3001\",\n      \"full_name\": \"محمد علي الفيتوري\",\n      \"phone\": \"0911111111\",\n      \"birth_date\": \"2015-05-12\",\n      \"gender\": \"male\",\n      \"class_section\": \"الصف الخامس - شعبة أ\",\n      \"created_at\": \"2026-08-29T10:00:00Z\"\n    },\n    {\n      \"id\": 2,\n      \"user_id\": 102,\n      \"user_code\": \"STU-3002\",\n      \"full_name\": \"فاطمة أحمد سالم\",\n      \"phone\": \"0922222222\",\n      \"birth_date\": \"2016-03-20\",\n      \"gender\": \"female\",\n      \"class_section\": \"الصف الرابع - شعبة ب\",\n      \"created_at\": \"2026-08-29T10:05:00Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 2,\n    \"last_page\": 1\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب قائمة الطلاب بنجاح.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"user_id\": 101,\n      \"user_code\": \"STU-3001\",\n      \"full_name\": \"محمد علي الفيتوري\",\n      \"phone\": \"0911111111\",\n      \"birth_date\": \"2015-05-12\",\n      \"gender\": \"male\",\n      \"class_section\": \"الصف الخامس - شعبة أ\",\n      \"class_id\": 5,\n      \"class_section_id\": 12,\n      \"seating_number\": \"101\",\n      \"guardians\": [\n        {\n          \"id\": 1,\n          \"guardian_id\": 1,\n          \"user_id\": 201,\n          \"user_code\": \"PAR-4001\",\n          \"full_name\": \"علي محمد الفيتوري\",\n          \"phone\": \"0912222222\",\n          \"relationship\": \"father\",\n          \"is_primary\": true\n        }\n      ],\n      \"primary_guardian\": {\n        \"id\": 1,\n        \"guardian_id\": 1,\n        \"user_id\": 201,\n        \"user_code\": \"PAR-4001\",\n        \"full_name\": \"علي محمد الفيتوري\",\n        \"phone\": \"0912222222\",\n        \"relationship\": \"father\",\n        \"is_primary\": true\n      },\n      \"created_at\": \"2026-08-29T10:00:00Z\"\n    },\n    {\n      \"id\": 2,\n      \"user_id\": 102,\n      \"user_code\": \"STU-3002\",\n      \"full_name\": \"فاطمة أحمد سالم\",\n      \"phone\": \"0922222222\",\n      \"birth_date\": \"2016-03-20\",\n      \"gender\": \"female\",\n      \"class_section\": \"الصف الرابع - شعبة ب\",\n      \"class_id\": 4,\n      \"class_section_id\": 10,\n      \"seating_number\": \"102\",\n      \"guardians\": [],\n      \"primary_guardian\": null,\n      \"created_at\": \"2026-08-29T10:05:00Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 2,\n    \"last_page\": 1\n  }\n}"
             },
             {
               "name": "401 Unauthorized - غير مصرح بالوصول",
@@ -354,7 +354,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب تفاصيل ملف الطالب بنجاح.\",\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 101,\n    \"user_code\": \"STU-3001\",\n    \"full_name\": \"محمد علي الفيتوري\",\n    \"phone\": \"0911111111\",\n    \"birth_date\": \"2015-05-12\",\n    \"gender\": \"male\",\n    \"class_section\": \"الصف الخامس - شعبة أ\",\n    \"created_at\": \"2026-08-29T10:00:00Z\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"تم جلب تفاصيل ملف الطالب بنجاح.\",\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 101,\n    \"user_code\": \"STU-3001\",\n    \"full_name\": \"محمد علي الفيتوري\",\n    \"phone\": \"0911111111\",\n    \"birth_date\": \"2015-05-12\",\n    \"gender\": \"male\",\n    \"class_section\": \"الصف الخامس - شعبة أ\",\n    \"class_id\": 5,\n    \"class_section_id\": 12,\n    \"seating_number\": \"101\",\n    \"guardians\": [\n      {\n        \"id\": 1,\n        \"guardian_id\": 1,\n        \"user_id\": 201,\n        \"user_code\": \"PAR-4001\",\n        \"full_name\": \"علي محمد الفيتوري\",\n        \"phone\": \"0912222222\",\n        \"relationship\": \"father\",\n        \"is_primary\": true\n      }\n    ],\n    \"primary_guardian\": {\n      \"id\": 1,\n      \"guardian_id\": 1,\n      \"user_id\": 201,\n      \"user_code\": \"PAR-4001\",\n      \"full_name\": \"علي محمد الفيتوري\",\n      \"phone\": \"0912222222\",\n      \"relationship\": \"father\",\n      \"is_primary\": true\n    },\n    \"created_at\": \"2026-08-29T10:00:00Z\"\n  }\n}"
             },
             {
               "name": "404 Not Found - ملف الطالب غير موجود",
@@ -424,7 +424,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"class_section_id\": 5,\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
+              "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -494,7 +494,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"class_section_id\": 5,\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
+                  "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -544,7 +544,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"class_section_id\": 5,\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
+                  "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -594,7 +594,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"class_section_id\": 5,\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
+                  "raw": "{\n  \"full_name\": \"طارق زياد الورفلي\",\n  \"phone\": \"0933333333\",\n  \"birth_date\": \"2015-08-10\",\n  \"gender\": \"male\",\n  \"password\": \"Password123!\",\n  \"academic_year_id\": 1,\n  \"seating_number\": \"105\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"

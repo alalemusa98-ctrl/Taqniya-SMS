@@ -101,6 +101,31 @@
       "birth_date": "2015-05-12",
       "gender": "male",
       "class_section": "الصف الخامس - شعبة أ",
+      "class_id": 5,
+      "class_section_id": 12,
+      "seating_number": "101",
+      "guardians": [
+        {
+          "id": 1,
+          "guardian_id": 1,
+          "user_id": 201,
+          "user_code": "PAR-4001",
+          "full_name": "علي محمد الفيتوري",
+          "phone": "0912222222",
+          "relationship": "father",
+          "is_primary": true
+        }
+      ],
+      "primary_guardian": {
+        "id": 1,
+        "guardian_id": 1,
+        "user_id": 201,
+        "user_code": "PAR-4001",
+        "full_name": "علي محمد الفيتوري",
+        "phone": "0912222222",
+        "relationship": "father",
+        "is_primary": true
+      },
       "created_at": "2026-08-29T10:00:00Z"
     },
     {
@@ -112,6 +137,11 @@
       "birth_date": "2016-03-20",
       "gender": "female",
       "class_section": "الصف الرابع - شعبة ب",
+      "class_id": 4,
+      "class_section_id": 10,
+      "seating_number": "102",
+      "guardians": [],
+      "primary_guardian": null,
       "created_at": "2026-08-29T10:05:00Z"
     }
   ],
@@ -145,7 +175,7 @@
 
 ### 1.2 `GET /api/v1/students/:id` — استعراض تفاصيل ملف طالب محدد
 
-> **الوصف الوظيفي:** استرجاع الملف الشخصي الكامل للطالب متضمناً حساب دخوله الموحد والصف والشعبة وبيانات التواصل.
+> **الوصف الوظيفي:** استرجاع الملف الشخصي الكامل للطالب متضمناً حساب دخوله الموحد والصف والشعبة وبيانات التواصل والوصاية الأسرية.
 
 #### استجابات هذا الرابط (Responses):
 
@@ -163,6 +193,31 @@
     "birth_date": "2015-05-12",
     "gender": "male",
     "class_section": "الصف الخامس - شعبة أ",
+    "class_id": 5,
+    "class_section_id": 12,
+    "seating_number": "101",
+    "guardians": [
+      {
+        "id": 1,
+        "guardian_id": 1,
+        "user_id": 201,
+        "user_code": "PAR-4001",
+        "full_name": "علي محمد الفيتوري",
+        "phone": "0912222222",
+        "relationship": "father",
+        "is_primary": true
+      }
+    ],
+    "primary_guardian": {
+      "id": 1,
+      "guardian_id": 1,
+      "user_id": 201,
+      "user_code": "PAR-4001",
+      "full_name": "علي محمد الفيتوري",
+      "phone": "0912222222",
+      "relationship": "father",
+      "is_primary": true
+    },
     "created_at": "2026-08-29T10:00:00Z"
   }
 }
