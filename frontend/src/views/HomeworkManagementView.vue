@@ -1183,6 +1183,7 @@ onMounted(() => {
         :mode="formDrawerMode"
         :item-to-edit="itemToEdit"
         :academic-year-id="selectedYearId"
+        :academic-year-name="currentYearName || activeAcademicYear?.name"
         :academic-term-id="selectedTermId"
         :teachers="allTeachers"
         :class-academic-terms="allClassAcademicTerms"

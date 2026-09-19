@@ -23,6 +23,7 @@ import {
   UserCheck,
   School,
   Layers,
+  CheckCircle2,
 } from 'lucide-vue-next';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../ui/TaqniyaSelect.vue';
 import type { HomeworkAttachment, HomeworkDetailData } from '../../api/homework.api';
@@ -37,6 +38,7 @@ const props = defineProps<{
   mode: 'create' | 'edit';
   itemToEdit?: HomeworkDetailData | null;
   academicYearId: number;
+  academicYearName?: string;
   academicTermId?: number | null;
   classAcademicTerms?: any[];
   teachers?: Teacher[];
@@ -206,9 +208,19 @@ const selectedClassTermsInfo = computed(() => {
   };
 });
 
+const displayYearName = computed(() => {
+  if (props.mode === 'edit' && props.itemToEdit) {
+    return props.itemToEdit.academic_year_name || `العام الدراسي ${props.itemToEdit.academic_year_id}`;
+  }
+  return props.academicYearName || 'العام الأكاديمي النشط';
+});
+
 const displayTermName = computed(() => {
+  if (props.mode === 'edit' && props.itemToEdit) {
+    return props.itemToEdit.term_name || props.itemToEdit.academic_term_name || `الفصل الدراسي ${props.itemToEdit.academic_term_id}`;
+  }
   if (!selectedClassId.value) {
-    return 'حدد الصف الدراسي أولاً لتحديد فترته النشطة';
+    return 'محدد تلقائياً فور اختيار الصف';
   }
   const termInfo = selectedClassTermsInfo.value.activeTerm;
   if (termInfo) {
@@ -669,6 +681,50 @@ const handleSubmit = () => {
         >
           <AlertCircle class="w-4 h-4 shrink-0" />
           <span>{{ generalError }}</span>
+        </div>
+
+        <!-- Active Academic Context Cards (Year & Term) - Matching Teaching Assignments Drawer Standard -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- 1. Academic Year Context -->
+          <div class="p-3 rounded-2xl bg-bx-surface-2/80 border border-bx-border flex items-center justify-between shadow-2xs">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                <Calendar class="w-4 h-4" />
+              </div>
+              <div>
+                <div class="text-[11px] font-bold text-bx-subtitle">العام الدراسي المستهدف</div>
+                <div class="text-xs font-black text-bx-title">
+                  {{ displayYearName }}
+                </div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <CheckCircle2 class="w-3 h-3" />
+              {{ mode === 'edit' ? 'مثبت للواجب' : 'محدد تلقائياً' }}
+            </span>
+          </div>
+
+          <!-- 2. Academic Term Context -->
+          <div class="p-3 rounded-2xl bg-bx-surface-2/80 border border-bx-border flex items-center justify-between shadow-2xs">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center shrink-0 border border-purple-500/20">
+                <Layers class="w-4 h-4" />
+              </div>
+              <div>
+                <div class="text-[11px] font-bold text-bx-subtitle">الفصل الدراسي</div>
+                <div class="text-xs font-black text-bx-title">
+                  {{ displayTermName }}
+                </div>
+              </div>
+            </div>
+            <span
+              class="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold rounded-lg border"
+              :class="selectedClassId || mode === 'edit' ? 'bg-purple-500/10 text-bx-primary border-purple-500/20' : 'bg-slate-500/10 text-bx-muted border-slate-500/20'"
+            >
+              <CheckCircle2 class="w-3 h-3" />
+              {{ mode === 'edit' ? 'فصل الواجب' : selectedClassId ? 'نشط للصف' : 'آلي حسب الصف' }}
+            </span>
+          </div>
         </div>
 
         <!-- 1. Teacher Selector (Step 1: On-Select triggers GET /teachers/:id/assignments) -->
