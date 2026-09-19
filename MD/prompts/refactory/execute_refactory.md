@@ -25,7 +25,7 @@ Your responsibility is:
 Target folder:
 
 ```text
-[phase_03_teachers_assignments_b]
+[phase_04_students_guardians_a]
 ```
 
 
