@@ -218,20 +218,6 @@ const enrichedStudents = computed(() => {
   });
 });
 
-// Quick Metrics Ribbon Stats
-const stats = computed(() => {
-  const total = meta.value.total;
-  const maleCount = students.value.filter((s) => s.gender === 'male').length;
-  const femaleCount = students.value.filter((s) => s.gender === 'female').length;
-  const enrolledCount = students.value.filter((s) => !!s.class_section).length;
-  return {
-    total,
-    maleCount,
-    femaleCount,
-    enrolledCount,
-  };
-});
-
 // Table Column Definitions
 const tableColumns: TableColumn[] = [
   { key: 'indexNumber', label: '#', width: '50px', align: 'start' },
@@ -405,49 +391,6 @@ onMounted(() => {
               >
                 إناث
               </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick Metrics Banner -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-6">
-          <div class="p-3.5 rounded-2xl border border-bx-border bg-purple-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
-              <GraduationCap class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">إجمالي الطلاب</span>
-              <span class="text-base font-black font-display text-bx-title font-mono">{{ stats.total }}</span>
-            </div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl border border-bx-border bg-blue-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-              <GraduationCap class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">الطلاب (ذكور)</span>
-              <span class="text-base font-black font-display text-blue-600 dark:text-blue-400 font-mono">{{ stats.maleCount }}</span>
-            </div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl border border-bx-border bg-pink-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center font-bold">
-              <GraduationCap class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">الطالبات (إناث)</span>
-              <span class="text-base font-black font-display text-pink-500 font-mono">{{ stats.femaleCount }}</span>
-            </div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl border border-bx-border bg-emerald-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-              <School class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">المسكنون بالشعب</span>
-              <span class="text-base font-black font-display text-emerald-600 dark:text-emerald-400 font-mono">{{ stats.enrolledCount }}</span>
             </div>
           </div>
         </div>

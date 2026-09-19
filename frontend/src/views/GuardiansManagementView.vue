@@ -8,9 +8,7 @@ import {
   Trash2,
   AlertCircle,
   Link,
-  HeartHandshake,
   GraduationCap,
-  Users,
 } from 'lucide-vue-next';
 import {
   guardiansApi,
@@ -135,20 +133,6 @@ const enrichedGuardians = computed(() => {
       code,
     };
   });
-});
-
-// Quick Metrics Ribbon Stats
-const stats = computed(() => {
-  const total = meta.value.total;
-  const withStudents = guardians.value.filter((g) => g.students_count > 0).length;
-  const fatherCount = guardians.value.filter((g) => g.relationship === 'father').length;
-  const otherCount = guardians.value.filter((g) => g.relationship !== 'father').length;
-  return {
-    total,
-    withStudents,
-    fatherCount,
-    otherCount,
-  };
 });
 
 // Table Column Definitions
@@ -364,48 +348,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Quick Metrics Banner -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-6">
-          <div class="p-3.5 rounded-2xl border border-bx-border bg-purple-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
-              <Users class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">إجمالي أولياء الأمور</span>
-              <span class="text-base font-black font-display text-bx-title font-mono">{{ stats.total }}</span>
-            </div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl border border-bx-border bg-emerald-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-              <GraduationCap class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">مرتبطون بأبناء</span>
-              <span class="text-base font-black font-display text-emerald-600 dark:text-emerald-400 font-mono">{{ stats.withStudents }}</span>
-            </div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl border border-bx-border bg-blue-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-              <HeartHandshake class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">صفة (أب)</span>
-              <span class="text-base font-black font-display text-blue-600 dark:text-blue-400 font-mono">{{ stats.fatherCount }}</span>
-            </div>
-          </div>
-
-          <div class="p-3.5 rounded-2xl border border-bx-border bg-amber-500/[0.03] flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-              <Users class="w-4 h-4" />
-            </div>
-            <div>
-              <span class="text-[11px] text-bx-muted font-bold block">أوصياء وقرابات أخرى</span>
-              <span class="text-base font-black font-display text-amber-600 dark:text-amber-400 font-mono">{{ stats.otherCount }}</span>
-            </div>
-          </div>
-        </div>
 
         <!-- Shared TaqniyaTable Component -->
         <TaqniyaTable
