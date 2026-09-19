@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import {
   Plus,
   Search,
@@ -417,6 +417,35 @@ function onPageChange(page: number) {
   currentPage.value = page;
 }
 
+// Seamless Scroll Preservation and Class-Card Anchoring
+async function handleSaved(target?: { class_id?: number; section_id?: number }) {
+  const currentScrollY = window.scrollY;
+  const targetClassId = target?.class_id || formInitialData.value.class_id;
+
+  await fetchAssignments();
+
+  await nextTick();
+  if (targetClassId) {
+    const el = document.getElementById(`class-group-${targetClassId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      el.classList.add('ring-2', 'ring-emerald-500/50');
+      setTimeout(() => {
+        el.classList.remove('ring-2', 'ring-emerald-500/50');
+      }, 2000);
+      return;
+    }
+  }
+  window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+}
+
+async function handleDeleted() {
+  const currentScrollY = window.scrollY;
+  await fetchAssignments();
+  await nextTick();
+  window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+}
+
 onMounted(async () => {
   await fetchPrerequisites();
   await fetchAssignments();
@@ -577,22 +606,33 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Loading State -->
-        <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
+        <!-- Loading State for Initial Load -->
+        <div v-if="loading && (!hierarchyData || !hierarchyData.classes || hierarchyData.classes.length === 0)" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
           <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
           <span class="text-xs font-bold">جاري تحميل كشوفات إسناد التدريس...</span>
         </div>
 
-        <!-- Class Assignments Matrix Component -->
-        <ClassAssignmentsMatrix
-          v-else
-          :groups="classMatrixGroups"
-          :applied-teacher-filter="appliedTeacherFilter"
-          @create="handleOpenCreate"
-          @edit="handleOpenEdit"
-          @delete="handleConfirmDelete"
-          @view-workload="handleOpenWorkload"
-        />
+        <!-- Class Assignments Matrix Component with Non-Destructive Refresh Overlay -->
+        <div v-else class="relative">
+          <div
+            v-if="loading"
+            class="absolute inset-0 bg-[var(--bx-surface-solid)]/60 backdrop-blur-[0.5px] z-20 flex items-start justify-center pt-24 transition-all duration-200 pointer-events-none rounded-2xl"
+          >
+            <div class="px-4 py-2 rounded-full bg-white dark:bg-zinc-900 border border-bx-border shadow-md flex items-center gap-2 text-xs font-bold text-bx-primary">
+              <Loader2 class="w-4 h-4 animate-spin" />
+              <span>جاري تحديث البيانات...</span>
+            </div>
+          </div>
+
+          <ClassAssignmentsMatrix
+            :groups="classMatrixGroups"
+            :applied-teacher-filter="appliedTeacherFilter"
+            @create="handleOpenCreate"
+            @edit="handleOpenEdit"
+            @delete="handleConfirmDelete"
+            @view-workload="handleOpenWorkload"
+          />
+        </div>
 
         <!-- Shared TaqniyaPagination Component -->
         <div v-if="meta.last_page > 1" class="mt-6">
@@ -619,7 +659,7 @@ onMounted(async () => {
         :all-subjects="allSubjects"
         :all-teachers="allTeachers"
         @close="showFormDrawer = false"
-        @saved="fetchAssignments"
+        @saved="handleSaved"
       />
 
       <!-- Feature Drawer: Teacher Workload Inspector -->
@@ -636,7 +676,7 @@ onMounted(async () => {
         :is-open="showDeleteModal"
         :assignment="assignmentToDelete"
         @close="showDeleteModal = false"
-        @deleted="fetchAssignments"
+        @deleted="handleDeleted"
       />
     </div>
   </TaqniyaErrorBoundary>

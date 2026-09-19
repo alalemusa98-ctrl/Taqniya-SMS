@@ -71,7 +71,8 @@ const emit = defineEmits<{
       <div
         v-for="grp in groups"
         :key="grp.class_id"
-        class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs"
+        :id="'class-group-' + grp.class_id"
+        class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs transition-all duration-300"
       >
         <!-- Class Header Bar -->
         <div class="bg-purple-500/[0.04] dark:bg-white/[0.03] py-3.5 px-5 border-b border-[#B4AED8]/60 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">

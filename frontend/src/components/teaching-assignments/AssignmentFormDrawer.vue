@@ -29,7 +29,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'saved'): void;
+  (e: 'saved', target?: { class_id?: number; section_id?: number }): void;
 }>();
 
 const toast = useToast();
@@ -157,7 +157,11 @@ async function handleSubmit() {
       toast.success(res.data.message || 'تم تحديث وتعديل إسناد التدريس بنجاح.');
     }
 
-    emit('saved');
+    const savedTarget = {
+      class_id: form.value.class_id,
+      section_id: form.value.class_section_id,
+    };
+    emit('saved', savedTarget);
     emit('close');
   } catch (err: any) {
     const statusCode = err.response?.status;
