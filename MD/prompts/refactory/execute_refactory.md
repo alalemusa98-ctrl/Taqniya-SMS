@@ -25,7 +25,7 @@ Your responsibility is:
 Target folder:
 
 ```text
-[phase_05_timetables_b]
+[phase_06_homework]
 ```
 
 

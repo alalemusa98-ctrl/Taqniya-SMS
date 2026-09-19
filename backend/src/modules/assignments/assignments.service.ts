@@ -83,9 +83,11 @@ export class AssignmentsService {
           classes: [],
         },
         meta: {
-          total: 0,
-          page: query.page || 1,
+          current_page: query.page || 1,
           per_page: query.per_page || 15,
+          total: 0,
+          last_page: 1,
+          page: query.page || 1,
           total_pages: 0,
         },
       };
@@ -132,7 +134,14 @@ export class AssignmentsService {
               academic_term_name: term ? term.name : '',
               classes: [],
             },
-            meta: { total: 0, page: 1, per_page: query.per_page || 15, total_pages: 0 },
+            meta: {
+              current_page: 1,
+              per_page: query.per_page || 15,
+              total: 0,
+              last_page: 1,
+              page: 1,
+              total_pages: 0,
+            },
           };
         }
       }
@@ -164,7 +173,14 @@ export class AssignmentsService {
               academic_term_name: term ? term.name : '',
               classes: [],
             },
-            meta: { total: 0, page: 1, per_page: query.per_page || 15, total_pages: 0 },
+            meta: {
+              current_page: 1,
+              per_page: query.per_page || 15,
+              total: 0,
+              last_page: 1,
+              page: 1,
+              total_pages: 0,
+            },
           };
         }
         if (query.class_section_id) {
@@ -217,19 +233,21 @@ export class AssignmentsService {
       ];
     }
 
-    if (query.teacher_id || query.subject_id || query.class_id) {
-      where.teaching_assignment = {};
-      if (query.teacher_id) {
-        where.teaching_assignment.teacher_id = BigInt(query.teacher_id);
-      }
-      if (query.subject_id) {
-        where.teaching_assignment.subject_id = BigInt(query.subject_id);
-      }
-      if (query.class_id) {
-        where.class_section = {
-          class_id: BigInt(query.class_id),
-        };
-      }
+    if (query.teacher_id || query.subject_id) {
+      where.teaching_assignment = {
+        ...(where.teaching_assignment || {}),
+        deleted_at: null,
+        ...(query.teacher_id ? { teacher_id: BigInt(query.teacher_id) } : {}),
+        ...(query.subject_id ? { subject_id: BigInt(query.subject_id) } : {}),
+      };
+    }
+
+    if (query.class_id) {
+      where.class_section = {
+        ...(where.class_section || {}),
+        deleted_at: null,
+        class_id: BigInt(query.class_id),
+      };
     }
 
     const total = await this.prisma.assignment.count({ where });
@@ -330,9 +348,11 @@ export class AssignmentsService {
         classes: classesArray,
       },
       meta: {
-        total,
-        page,
+        current_page: page,
         per_page: perPage,
+        total,
+        last_page: Math.ceil(total / perPage) || 1,
+        page,
         total_pages: Math.ceil(total / perPage) || 1,
       },
     };
@@ -427,6 +447,7 @@ export class AssignmentsService {
         academic_year_id: Number(assignment.academic_year_id),
         academic_year_name: assignment.academic_year?.name || '',
         academic_term_id: Number(assignment.academic_term_id),
+        term_name: assignment.academic_term?.name || '',
         academic_term_name: assignment.academic_term?.name || '',
         class_id: Number(assignment.class_section?.class.id || 0),
         class_name: assignment.class_section?.class.name || '',
@@ -438,6 +459,7 @@ export class AssignmentsService {
         teacher_id: Number(assignment.teaching_assignment?.teacher.id || 0),
         teacher_name: assignment.teaching_assignment?.teacher.full_name || '',
         created_by_user_id: Number(assignment.created_by_user_id),
+        created_by_name: assignment.creator?.user_code || '',
         creator_name: assignment.creator?.user_code || '',
         creator_role: assignment.creator?.role_type,
         title: assignment.title,
@@ -470,9 +492,11 @@ export class AssignmentsService {
     if (dueDate < assignedDate) {
       throw new UnprocessableEntityException({
         success: false,
-        message: 'فشل التحقق من صحة البيانات.',
+        message: 'فشل التحقق من مدخلات الواجب المدرسي.',
         errors: {
-          due_date: ['تاريخ الاستحقاق لا يمكن أن يكون سابقاً لتاريخ التكليف.'],
+          due_date: [
+            'تاريخ الاستحقاق يجب أن يكون بعد أو يطابق تاريخ النشر والتكليف (assigned_date).',
+          ],
         },
       });
     }
@@ -490,6 +514,22 @@ export class AssignmentsService {
 
     if (!teachingAssignment || teachingAssignment.deleted_at !== null) {
       throw new NotFoundException('إسناد التدريس المحدد غير موجود أو ملغي.');
+    }
+
+    // Validate that the chosen teaching_assignment_id is valid for the chosen class_section_id
+    if (
+      dto.class_section_id &&
+      BigInt(dto.class_section_id) !== teachingAssignment.class_section_id
+    ) {
+      throw new UnprocessableEntityException({
+        success: false,
+        message: 'فشل التحقق من مدخلات الواجب المدرسي.',
+        errors: {
+          teaching_assignment_id: [
+            'إسناد التدريس المختار غير صالح للشعبة المحددة.',
+          ],
+        },
+      });
     }
 
     // 2. Role check: if teacher, ensure they own this teaching_assignment
@@ -594,6 +634,7 @@ export class AssignmentsService {
           academic_term_id: Number(created.academic_term_id),
           class_section_id: Number(created.class_section_id),
           teaching_assignment_id: Number(created.teaching_assignment_id),
+          created_by_user_id: Number(created.created_by_user_id),
           subject_name: created.teaching_assignment?.subject.name || '',
           teacher_name: created.teaching_assignment?.teacher.full_name || '',
           title: created.title,
@@ -606,6 +647,13 @@ export class AssignmentsService {
         },
       };
     } catch (err: any) {
+      if (
+        err instanceof UnprocessableEntityException ||
+        err instanceof ForbiddenException ||
+        err instanceof NotFoundException
+      ) {
+        throw err;
+      }
       console.error('Error creating assignment:', err);
       throw new UnprocessableEntityException({
         success: false,
@@ -666,9 +714,11 @@ export class AssignmentsService {
     if (dueDate < assignedDate) {
       throw new UnprocessableEntityException({
         success: false,
-        message: 'فشل التحقق من صحة البيانات.',
+        message: 'فشل التحقق من مدخلات الواجب المدرسي.',
         errors: {
-          due_date: ['تاريخ الاستحقاق لا يمكن أن يكون سابقاً لتاريخ التكليف.'],
+          due_date: [
+            'تاريخ الاستحقاق يجب أن يكون بعد أو يطابق تاريخ النشر والتكليف (assigned_date).',
+          ],
         },
       });
     }
@@ -686,17 +736,41 @@ export class AssignmentsService {
 
     // Safe teaching assignment resolution if changed
     if (
-      dto.teaching_assignment_id !== undefined &&
-      Number(dto.teaching_assignment_id) !== Number(assignment.teaching_assignment_id)
+      dto.teaching_assignment_id !== undefined ||
+      dto.class_section_id !== undefined
     ) {
+      const targetTaId =
+        dto.teaching_assignment_id !== undefined
+          ? BigInt(dto.teaching_assignment_id)
+          : assignment.teaching_assignment_id;
+
       const ta = await this.prisma.teachingAssignment.findUnique({
-        where: { id: BigInt(dto.teaching_assignment_id) },
+        where: { id: targetTaId },
       });
-      if (ta && ta.deleted_at === null) {
-        updateData.teaching_assignment_id = ta.id;
-        updateData.class_section_id = ta.class_section_id;
-        updateData.academic_year_id = ta.academic_year_id;
+      if (!ta || ta.deleted_at !== null) {
+        throw new NotFoundException('إسناد التدريس المحدد غير موجود أو ملغي.');
       }
+
+      const targetSectionId =
+        dto.class_section_id !== undefined
+          ? BigInt(dto.class_section_id)
+          : ta.class_section_id;
+
+      if (ta.class_section_id !== targetSectionId) {
+        throw new UnprocessableEntityException({
+          success: false,
+          message: 'فشل التحقق من مدخلات الواجب المدرسي.',
+          errors: {
+            teaching_assignment_id: [
+              'إسناد التدريس المختار غير صالح للشعبة المحددة.',
+            ],
+          },
+        });
+      }
+
+      updateData.teaching_assignment_id = ta.id;
+      updateData.class_section_id = ta.class_section_id;
+      updateData.academic_year_id = ta.academic_year_id;
     }
 
     // Safe academic term check
@@ -748,7 +822,7 @@ export class AssignmentsService {
 
       return {
         success: true,
-        message: 'تم تحديث بيانات الواجب المدرسي بنجاح.',
+        message: 'تم تحديث الواجب المدرسي بنجاح.',
         data: {
           id: Number(updated.id),
           academic_year_id: Number(updated.academic_year_id),
@@ -769,6 +843,13 @@ export class AssignmentsService {
         },
       };
     } catch (err: any) {
+      if (
+        err instanceof UnprocessableEntityException ||
+        err instanceof ForbiddenException ||
+        err instanceof NotFoundException
+      ) {
+        throw err;
+      }
       console.error('Error updating assignment:', err);
       throw new UnprocessableEntityException({
         success: false,
@@ -837,7 +918,7 @@ export class AssignmentsService {
 
     return {
       success: true,
-      message: 'تم حذف وإلغاء الواجب المدرسي بنجاح.',
+      message: 'تم حذف الواجب المدرسي بنجاح.',
     };
   }
 }

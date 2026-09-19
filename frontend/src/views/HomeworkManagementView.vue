@@ -16,6 +16,9 @@ import {
   Edit2,
   Paperclip,
   FileText,
+  Calendar,
+  LayoutGrid,
+  List,
 } from 'lucide-vue-next';
 import {
   homeworkApi,
@@ -32,8 +35,12 @@ import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
+import TaqniyaModal from '../components/ui/TaqniyaModal.vue';
+import TaqniyaPagination from '../components/ui/TaqniyaPagination.vue';
 import HomeworkDetailDrawer from '../components/homework/HomeworkDetailDrawer.vue';
 import HomeworkDrawerForm from '../components/homework/HomeworkDrawerForm.vue';
+import HomeworkCard from '../components/homework/HomeworkCard.vue';
+import HomeworkEmptyState from '../components/homework/HomeworkEmptyState.vue';
 
 const authStore = useAuthStore();
 const toast = useToast();
@@ -45,6 +52,9 @@ const canManage = computed(() => isAdmin.value || isTeacher.value);
 // State Management
 const loading = ref(false);
 const isSubmitting = ref(false);
+const viewMode = ref<'table' | 'grid'>('table');
+let abortController: AbortController | null = null;
+let searchDebounceTimer: any = null;
 
 // Academic Years & Structure
 const academicYears = ref<AcademicYearItem[]>([]);
@@ -446,8 +456,26 @@ const loadInitialData = async () => {
   await fetchHomework();
 };
 
-// Fetch Homework List with Full Filters
+const selectedTermId = computed(() => {
+  return selectedTermFilter.value !== 'all' ? Number(selectedTermFilter.value) : null;
+});
+
+// Debounce search query input (400ms)
+watch(searchQuery, (newVal) => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    appliedSearchQuery.value = newVal;
+    fetchHomework(1);
+  }, 400);
+});
+
+// Fetch Homework List with Full Filters & AbortController
 const fetchHomework = async (page = 1) => {
+  if (abortController) {
+    abortController.abort();
+  }
+  abortController = new AbortController();
+
   loading.value = true;
   try {
     const params: any = {
@@ -481,7 +509,7 @@ const fetchHomework = async (page = 1) => {
       params.due_date = appliedDueDate.value;
     }
 
-    const res = await homeworkApi.getAll(params);
+    const res = await homeworkApi.getAll(params, abortController.signal);
     if (res.data?.data) {
       currentYearName.value = res.data.data.academic_year_name;
       currentTermName.value = res.data.data.academic_term_name;
@@ -491,6 +519,9 @@ const fetchHomework = async (page = 1) => {
       paginationMeta.value = res.data.meta;
     }
   } catch (err: any) {
+    if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED' || err?.name === 'AbortError') {
+      return;
+    }
     toast.error('حدث خطأ أثناء تحميل كشوفات الواجبات المدرسية');
   } finally {
     loading.value = false;
@@ -650,8 +681,32 @@ onMounted(() => {
             </p>
           </div>
 
-          <!-- Controls: Add Button + Search Trigger -->
+          <!-- Controls: Add Button + Search Trigger + View Mode -->
           <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            <!-- View Mode Toggle (Table / Hierarchical Grid) -->
+            <div class="flex items-center p-0.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-purple-500/[0.03]">
+              <button
+                type="button"
+                @click="viewMode = 'table'"
+                :class="viewMode === 'table' ? 'bg-bx-primary text-white shadow-2xs' : 'text-bx-muted hover:text-bx-title'"
+                class="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer"
+                title="عرض جدولي"
+              >
+                <List class="w-3.5 h-3.5" />
+                <span class="hidden sm:inline">جدول</span>
+              </button>
+              <button
+                type="button"
+                @click="viewMode = 'grid'"
+                :class="viewMode === 'grid' ? 'bg-bx-primary text-white shadow-2xs' : 'text-bx-muted hover:text-bx-title'"
+                class="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer"
+                title="عرض هرمي (بطاقات)"
+              >
+                <LayoutGrid class="w-3.5 h-3.5" />
+                <span class="hidden sm:inline">بطاقات هرمية</span>
+              </button>
+            </div>
+
             <!-- Add Button (Admin / Teacher) -->
             <button
               v-if="canManage"
@@ -859,239 +914,258 @@ onMounted(() => {
           <span class="text-xs font-bold">جاري تحميل كشوفات الواجبات والتكاليف المدرسية...</span>
         </div>
 
-        <!-- 5. Empty State -->
-        <div
+        <!-- 5. Reusable Empty State Component -->
+        <HomeworkEmptyState
           v-else-if="classesData.length === 0"
-          class="py-14 text-center space-y-3 rounded-2xl border border-dashed border-[#B4AED8] dark:border-white/[0.12] p-8"
-        >
-          <div class="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-950/40 text-bx-primary flex items-center justify-center mx-auto">
-            <BookOpen class="w-6 h-6" />
+          :can-create="canManage"
+          message="لا توجد واجبات مدرسية مسجلة تطابق محددات البحث"
+          @create="handleOpenCreate"
+        />
+
+        <!-- 6. Content Section (Hierarchical Card Grid or Unified Datatable) -->
+        <div v-else class="space-y-6">
+          <!-- 6A. Hierarchical Card Grid (Grouped by Class -> Section) -->
+          <div v-if="viewMode === 'grid'" class="space-y-6">
+            <div
+              v-for="cls in classesData"
+              :key="cls.class_id"
+              class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-purple-500/[0.01] p-5 sm:p-6 space-y-4"
+            >
+              <!-- Class Header -->
+              <div class="flex items-center justify-between pb-3 border-b border-[#B4AED8]/40 dark:border-white/10">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center border border-purple-500/20">
+                    <School class="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-black text-bx-title font-display">{{ cls.class_name }}</h3>
+                    <p class="text-[11px] text-bx-muted">المستوى الدراسي: {{ cls.grade_level }}</p>
+                  </div>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20">
+                  {{ cls.sections?.reduce((acc, s) => acc + (s.assignments?.length || 0), 0) }} واجبات
+                </span>
+              </div>
+
+              <!-- Sections & Assignments Grid -->
+              <div v-for="sec in cls.sections" :key="sec.class_section_id" class="space-y-3 ps-1">
+                <div class="flex items-center gap-2 text-xs font-black text-bx-primary">
+                  <span class="w-2 h-2 rounded-full bg-bx-primary"></span>
+                  <span>شعبة: {{ sec.section_name }}</span>
+                  <span class="text-[11px] text-bx-muted font-normal">({{ sec.assignments?.length || 0 }} تكليف)</span>
+                </div>
+
+                <div v-if="sec.assignments && sec.assignments.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                  <HomeworkCard
+                    v-for="hw in sec.assignments"
+                    :key="hw.id"
+                    :homework="hw"
+                    :can-manage="canManage"
+                    @view="handleOpenView"
+                    @edit="handleOpenEdit"
+                    @delete="handleOpenDelete"
+                  />
+                </div>
+                <div v-else class="text-center py-4 text-xs text-bx-muted border border-dashed border-[#B4AED8]/40 rounded-xl">
+                  لا توجد تكاليف مسجلة لهذه الشعبة حالياً
+                </div>
+              </div>
+            </div>
           </div>
-          <h3 class="text-sm font-bold text-bx-title">لا توجد واجبات مدرسية مسجلة تطابق محددات البحث</h3>
-          <p class="text-xs text-bx-muted max-w-sm mx-auto">
-            يمكنك البدء بإنشاء ونشر أول تكليف منزلي للطلاب وإرفاق الملازم ومواعيد التسليم.
-          </p>
-          <button
-            v-if="canManage"
-            @click="handleOpenCreate"
-            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer mt-2"
-          >
-            <Plus class="w-3.5 h-3.5" />
-            <span>إنشاء أول واجب الآن</span>
-          </button>
-        </div>
 
-        <!-- 6. Unified Datatable Content: Enclosed in a Bordered Card -->
-        <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
-          <div class="overflow-x-auto">
-            <table class="w-full text-start border-collapse text-xs">
-              <!-- Table Header with Distinct Background and Crisp Dividers -->
-              <thead>
-                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
-                  <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
-                  
-                  <!-- 1. Subject & Teacher combined -->
-                  <th class="py-3 px-4 font-bold text-start min-w-[190px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5">
-                      <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>المادة والمعلم</span>
-                    </div>
-                  </th>
-
-                  <!-- 2. Homework Title -->
-                  <th class="py-3 px-4 font-bold text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5">
-                      <FileText class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>عنوان الواجب</span>
-                    </div>
-                  </th>
-
-                  <!-- 3. Class & Section -->
-                  <th class="py-3 px-4 font-bold text-start min-w-[150px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5">
-                      <School class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>الصف والشعبة</span>
-                    </div>
-                  </th>
-
-                  <!-- 4. Dates & Deadline -->
-                  <th class="py-3 px-4 font-bold text-start min-w-[160px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5">
-                      <Clock class="w-3.5 h-3.5 text-rose-500" />
-                      <span>تاريخ النشر والاستحقاق</span>
-                    </div>
-                  </th>
-
-                  <!-- 5. Attachments -->
-                  <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>المرفقات</span>
-                    </div>
-                  </th>
-
-                  <!-- 6. Status -->
-                  <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">الحالة</th>
-                  
-                  <!-- 7. Actions -->
-                  <th class="py-3 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
-                </tr>
-              </thead>
-
-              <!-- Table Body with Crisp Dividers -->
-              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
-                <tr
-                  v-for="(row, idx) in allHomeworkRows"
-                  :key="row.id"
-                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
-                >
-                  <!-- Sequence Counter # -->
-                  <td class="py-3.5 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    {{ (paginationMeta.current_page - 1) * paginationMeta.per_page + idx + 1 }}
-                  </td>
-
-                  <!-- 1. Subject & Teacher (Combined) -->
-                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="space-y-1">
-                      <div>
-                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
-                          {{ row.subject_name }}
-                        </span>
+          <!-- 6B. Unified Datatable Content: Enclosed in a Bordered Card -->
+          <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
+            <div class="overflow-x-auto">
+              <table class="w-full text-start border-collapse text-xs">
+                <!-- Table Header with Distinct Background and Crisp Dividers -->
+                <thead>
+                  <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
+                    <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
+                    
+                    <!-- 1. Subject & Teacher combined -->
+                    <th class="py-3 px-4 font-bold text-start min-w-[190px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>المادة والمعلم</span>
                       </div>
-                      <div class="text-xs text-bx-title font-medium">
-                        {{ row.teacher_name }}
+                    </th>
+
+                    <!-- 2. Homework Title -->
+                    <th class="py-3 px-4 font-bold text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <FileText class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>عنوان الواجب</span>
                       </div>
-                    </div>
-                  </td>
+                    </th>
 
-                  <!-- 2. Homework Title -->
-                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span
-                      class="font-black text-xs sm:text-sm text-bx-title block leading-snug group-hover:text-bx-primary transition-colors cursor-pointer"
-                      @click="handleOpenView(row.raw)"
-                    >
-                      {{ row.title }}
-                    </span>
-                  </td>
-
-                  <!-- 3. Class & Section -->
-                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="font-bold text-xs text-bx-title">
-                      <span>{{ row.class_name }}</span>
-                      <span class="text-bx-muted mx-1">•</span>
-                      <span class="text-bx-primary">{{ row.section_name }}</span>
-                    </div>
-                  </td>
-
-                  <!-- 4. Dates -->
-                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="space-y-1 text-[11px]">
-                      <div class="text-bx-muted font-mono">
-                        نشر: {{ row.assigned_date.slice(0, 10) }}
+                    <!-- 3. Class & Section -->
+                    <th class="py-3 px-4 font-bold text-start min-w-[150px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <School class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>الصف والشعبة</span>
                       </div>
-                      <div class="font-mono font-medium text-bx-title">
-                        استحقاق: {{ row.due_date.slice(0, 10) }}
+                    </th>
+
+                    <!-- 4. Dates & Deadline -->
+                    <th class="py-3 px-4 font-bold text-start min-w-[160px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <Clock class="w-3.5 h-3.5 text-rose-500" />
+                        <span>تاريخ النشر والاستحقاق</span>
                       </div>
-                    </div>
-                  </td>
+                    </th>
 
-                  <!-- 5. Attachments Count Badge -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span
-                      v-if="row.attachments_count > 0"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
-                    >
-                      <Paperclip class="w-3.5 h-3.5" />
-                      <span>{{ row.attachments_count }} مرفقات</span>
-                    </span>
-                    <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
-                  </td>
+                    <!-- 5. Attachments -->
+                    <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center justify-center gap-1.5">
+                        <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>المرفقات</span>
+                      </div>
+                    </th>
 
-                  <!-- 6. Status Badge (Displays dynamic remaining days or expired notice) -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span
-                      class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
-                      :class="
-                        row.status === 'expired' || row.deadlineInfo?.isExpired
-                          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                          : row.deadlineInfo?.isUrgent
-                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
-                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                      "
-                    >
-                      {{ row.deadlineInfo?.label || (row.status === 'active' ? 'ساري للتسليم' : 'منتهي الصلاحية') }}
-                    </span>
-                  </td>
+                    <!-- 6. Status -->
+                    <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">الحالة</th>
+                    
+                    <!-- 7. Actions -->
+                    <th class="py-3 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
+                  </tr>
+                </thead>
 
-                  <!-- 7. Action Buttons Toolbar -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap last:border-e-0">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <!-- View Button -->
-                      <button
-                        type="button"
+                <!-- Table Body with Crisp Dividers -->
+                <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
+                  <tr
+                    v-for="(row, idx) in allHomeworkRows"
+                    :key="row.id"
+                    class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
+                  >
+                    <!-- Sequence Counter # -->
+                    <td class="py-3.5 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      {{ (paginationMeta.current_page - 1) * paginationMeta.per_page + idx + 1 }}
+                    </td>
+
+                    <!-- 1. Subject & Teacher (Combined) -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="space-y-1">
+                        <div>
+                          <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
+                            {{ row.subject_name }}
+                          </span>
+                        </div>
+                        <div class="text-xs text-bx-title font-medium">
+                          {{ row.teacher_name }}
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- 2. Homework Title -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <span
+                        class="font-black text-xs sm:text-sm text-bx-title block leading-snug group-hover:text-bx-primary transition-colors cursor-pointer"
                         @click="handleOpenView(row.raw)"
-                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-                        title="معاينة التفاصيل والمرفقات"
                       >
-                        <Eye class="w-3.5 h-3.5" />
-                      </button>
+                        {{ row.title }}
+                      </span>
+                    </td>
 
-                      <!-- Edit Button (Teachers / Admins) -->
-                      <button
-                        v-if="canManage"
-                        type="button"
-                        @click="handleOpenEdit(row.raw)"
-                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-                        title="تعديل بيانات الواجب"
-                      >
-                        <Edit2 class="w-3.5 h-3.5" />
-                      </button>
+                    <!-- 3. Class & Section -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="font-bold text-xs text-bx-title">
+                        <span>{{ row.class_name }}</span>
+                        <span class="text-bx-muted mx-1">•</span>
+                        <span class="text-bx-primary">{{ row.section_name }}</span>
+                      </div>
+                    </td>
 
-                      <!-- Delete Button (Teachers / Admins) -->
-                      <button
-                        v-if="canManage"
-                        type="button"
-                        @click="handleOpenDelete(row.raw)"
-                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-                        title="حذف الواجب المدرسي"
+                    <!-- 4. Dates -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="space-y-1 text-[11px]">
+                        <div class="text-bx-muted font-mono">
+                          نشر: {{ row.assigned_date.slice(0, 10) }}
+                        </div>
+                        <div class="font-mono font-medium text-bx-title">
+                          استحقاق: {{ row.due_date.slice(0, 10) }}
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- 5. Attachments Count Badge -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <span
+                        v-if="row.attachments_count > 0"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
                       >
-                        <Trash2 class="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                        <Paperclip class="w-3.5 h-3.5" />
+                        <span>{{ row.attachments_count }} مرفقات</span>
+                      </span>
+                      <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
+                    </td>
+
+                    <!-- 6. Status Badge (Displays dynamic remaining days or expired notice) -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <span
+                        class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
+                        :class="
+                          row.status === 'expired' || row.deadlineInfo?.isExpired
+                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                            : row.deadlineInfo?.isUrgent
+                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        "
+                      >
+                        {{ row.deadlineInfo?.label || (row.status === 'active' ? 'ساري للتسليم' : 'منتهي الصلاحية') }}
+                      </span>
+                    </td>
+
+                    <!-- 7. Action Buttons Toolbar -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap last:border-e-0">
+                      <div class="flex items-center justify-center gap-1.5">
+                        <!-- View Button -->
+                        <button
+                          type="button"
+                          @click="handleOpenView(row.raw)"
+                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                          title="معاينة التفاصيل والمرفقات"
+                        >
+                          <Eye class="w-3.5 h-3.5" />
+                        </button>
+
+                        <!-- Edit Button (Teachers / Admins) -->
+                        <button
+                          v-if="canManage"
+                          type="button"
+                          @click="handleOpenEdit(row.raw)"
+                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                          title="تعديل بيانات الواجب"
+                        >
+                          <Edit2 class="w-3.5 h-3.5" />
+                        </button>
+
+                        <!-- Delete Button (Teachers / Admins) -->
+                        <button
+                          v-if="canManage"
+                          type="button"
+                          @click="handleOpenDelete(row.raw)"
+                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                          title="حذف الواجب المدرسي"
+                        >
+                          <Trash2 class="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        <!-- 7. Pagination Footer -->
-        <div
-          v-if="paginationMeta.total > 0 && paginationMeta.last_page > 1"
-          class="flex items-center justify-between pt-6 mt-6 border-t border-[#B4AED8]/60 dark:border-white/10 text-xs"
-        >
-          <span class="text-bx-muted">
-            عرض الصفحة {{ paginationMeta.current_page }} من {{ paginationMeta.last_page }} (إجمالي {{ paginationMeta.total }} واجب)
-          </span>
-
-          <div class="flex items-center gap-1.5">
-            <button
-              type="button"
-              :disabled="paginationMeta.current_page <= 1"
-              @click="fetchHomework(paginationMeta.current_page - 1)"
-              class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title disabled:opacity-40 hover:bg-[var(--bx-row-hover)] transition-colors cursor-pointer"
-            >
-              السابق
-            </button>
-            <button
-              type="button"
-              :disabled="paginationMeta.current_page >= paginationMeta.last_page"
-              @click="fetchHomework(paginationMeta.current_page + 1)"
-              class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title disabled:opacity-40 hover:bg-[var(--bx-row-hover)] transition-colors cursor-pointer"
-            >
-              التالي
-            </button>
-          </div>
+          <!-- 7. Reusable TaqniyaPagination Component -->
+          <TaqniyaPagination
+            :current-page="paginationMeta.current_page"
+            :total-pages="paginationMeta.last_page"
+            :total="paginationMeta.total"
+            :is-loading="loading"
+            item-name="واجب"
+            @page-change="fetchHomework"
+          />
         </div>
       </div>
 
@@ -1117,56 +1191,40 @@ onMounted(() => {
         @submit="handleFormSubmit"
       />
 
-      <!-- Delete Confirmation Modal (Matching Project Modal Standard) -->
-      <Teleport to="body">
-        <div
-          v-if="showDeleteModal"
-          class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          dir="rtl"
-        >
-          <div
-            class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-            @click="showDeleteModal = false"
-          />
-
-          <div class="relative z-10 w-full max-w-sm bg-[var(--bx-surface-solid)] rounded-3xl p-6 shadow-2xl border border-[#B4AED8] dark:border-white/[0.08] space-y-4 text-center">
-            <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto border border-rose-500/20">
-              <Trash2 class="w-6 h-6" />
-            </div>
-
-            <div class="space-y-1">
-              <h3 class="text-base font-black text-bx-title font-display">
-                حذف الواجب المدرسي
-              </h3>
-              <p class="text-xs text-bx-muted">
-                هل أنت متأكد من رغبتك في حذف هذا الواجب؟ سيتم إلغاؤه من سجلات الطلاب وأولياء الأمور.
-              </p>
-            </div>
-
-            <div class="flex items-center justify-center gap-2.5 pt-2">
-              <button
-                type="button"
-                @click="showDeleteModal = false"
-                class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-              >
-                إلغاء
-              </button>
-              <button
-                type="button"
-                @click="confirmDelete"
-                :disabled="isDeleting"
-                class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm disabled:opacity-50"
-              >
-                <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
-                <Trash2 v-else class="w-3.5 h-3.5" />
-                <span>نعم، حذف الواجب</span>
-              </button>
-            </div>
+      <!-- Delete Confirmation Modal (Using Shared TaqniyaModal Component) -->
+      <TaqniyaModal
+        :is-open="showDeleteModal"
+        max-width="sm"
+        title="حذف الواجب المدرسي"
+        subtitle="هل أنت متأكد من رغبتك في حذف هذا الواجب؟ سيتم إلغاؤه من سجلات الطلاب وأولياء الأمور."
+        @close="showDeleteModal = false"
+      >
+        <template #icon>
+          <div class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20">
+            <Trash2 class="w-5 h-5" />
           </div>
+        </template>
+
+        <div class="flex items-center justify-end gap-2.5 pt-2">
+          <button
+            type="button"
+            @click="showDeleteModal = false"
+            class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+          >
+            إلغاء
+          </button>
+          <button
+            type="button"
+            @click="confirmDelete"
+            :disabled="isDeleting"
+            class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm disabled:opacity-50"
+          >
+            <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
+            <Trash2 v-else class="w-3.5 h-3.5" />
+            <span>نعم، حذف الواجب</span>
+          </button>
         </div>
-      </Teleport>
+      </TaqniyaModal>
     </div>
   </TaqniyaErrorBoundary>
 </template>

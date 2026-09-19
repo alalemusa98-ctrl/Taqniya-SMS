@@ -374,6 +374,8 @@ describe('Phase 06: Homework & Assignments (TDD Verification)', () => {
 
       expect(result.success).toBe(true);
       expect(result.data.id).toBeDefined();
+      expect(result.data.created_by_user_id).toBe(testTeacher1UserId);
+      expect(result.message).toBe('تم إنشاء ونشر الواجب المدرسي بنجاح.');
       expect(result.data.title).toBe('حل تمارين ص 45 - الجبر');
       expect(result.data.attachments).toHaveLength(1);
       createdAssignment1Id = result.data.id;
@@ -390,6 +392,24 @@ describe('Phase 06: Homework & Assignments (TDD Verification)', () => {
             title: 'واجب غير صالح في التواريخ',
             assigned_date: '2026-09-20',
             due_date: '2026-09-10', // Invalid: prior to assigned_date
+          },
+          { id: testTeacher1UserId, role_type: RoleType.teacher },
+        ),
+      ).rejects.toThrow(UnprocessableEntityException);
+    });
+
+    it('TC-ASG-06b: Rejects assignment creation when teaching_assignment does not match section (422 Unprocessable Entity)', async () => {
+      // TeachingAssignment 1 belongs to Section 1, but section 2 is requested
+      await expect(
+        assignmentsService.create(
+          {
+            academic_year_id: testAcademicYearId,
+            academic_term_id: testAcademicTermId,
+            class_section_id: testClassSection2Id,
+            teaching_assignment_id: testTeachingAssignment1Id,
+            title: 'إسناد غير مطابق للشعبة',
+            assigned_date: '2026-09-10',
+            due_date: '2026-09-15',
           },
           { id: testTeacher1UserId, role_type: RoleType.teacher },
         ),
@@ -447,6 +467,8 @@ describe('Phase 06: Homework & Assignments (TDD Verification)', () => {
 
       expect(result.success).toBe(true);
       expect(result.data.academic_year_id).toBe(testAcademicYearId);
+      expect(result.meta.current_page).toBe(1);
+      expect(result.meta.last_page).toBe(1);
       expect(Array.isArray(result.data.classes)).toBe(true);
 
       const targetClass = result.data.classes.find((c: any) => c.class_id === testClassId);
@@ -498,6 +520,8 @@ describe('Phase 06: Homework & Assignments (TDD Verification)', () => {
       expect(result.success).toBe(true);
       expect(result.data.id).toBe(createdAssignment1Id);
       expect(result.data.title).toBe('حل تمارين ص 45 - الجبر');
+      expect(result.data.term_name).toBeDefined();
+      expect(result.data.created_by_name).toBeDefined();
       expect(result.data.description).toContain('يرجى حل المسائل');
       expect(result.data.attachments).toHaveLength(1);
     });
@@ -515,6 +539,7 @@ describe('Phase 06: Homework & Assignments (TDD Verification)', () => {
       );
 
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم تحديث الواجب المدرسي بنجاح.');
       expect(result.data.title).toContain('محدث وممدد');
       expect(result.data.due_date).toBe('2026-09-25');
     });
@@ -565,11 +590,18 @@ describe('Phase 06: Homework & Assignments (TDD Verification)', () => {
       });
 
       expect(result.success).toBe(true);
+      expect(result.message).toBe('تم حذف الواجب المدرسي بنجاح.');
 
       const deleted = await prisma.assignment.findUnique({
         where: { id: BigInt(createdAssignment2Id) },
       });
       expect(deleted?.deleted_at).not.toBeNull();
+    });
+
+    it('TC-ASG-12b: Verifies JwtAuthGuard & RolesGuard protect assignments controller (401/403 Security Check)', () => {
+      const guards = Reflect.getMetadata('__guards__', AssignmentsController);
+      expect(guards).toBeDefined();
+      expect(guards.length).toBeGreaterThanOrEqual(2);
     });
   });
 });

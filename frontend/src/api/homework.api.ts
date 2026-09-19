@@ -48,6 +48,7 @@ export interface HomeworkDetailData {
   academic_year_id: number;
   academic_year_name: string;
   academic_term_id: number;
+  term_name?: string;
   academic_term_name: string;
   class_id: number;
   class_name: string;
@@ -59,8 +60,9 @@ export interface HomeworkDetailData {
   teacher_id: number;
   teacher_name: string;
   created_by_user_id: number;
+  created_by_name?: string;
   creator_name: string;
-  creator_role: string;
+  creator_role?: string;
   title: string;
   description: string | null;
   assigned_date: string;

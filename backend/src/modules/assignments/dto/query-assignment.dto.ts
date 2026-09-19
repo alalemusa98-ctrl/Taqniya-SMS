@@ -49,7 +49,7 @@ export class QueryAssignmentDto {
 
   @IsOptional()
   @IsEnum(AssignmentStatusFilter)
-  status?: AssignmentStatusFilter = AssignmentStatusFilter.all;
+  status?: AssignmentStatusFilter = AssignmentStatusFilter.active;
 
   @IsOptional()
   @IsString()

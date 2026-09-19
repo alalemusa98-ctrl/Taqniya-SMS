@@ -26,7 +26,7 @@ import {
 } from 'lucide-vue-next';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../ui/TaqniyaSelect.vue';
 import type { HomeworkAttachment, HomeworkDetailData } from '../../api/homework.api';
-import { teachingAssignmentsApi, type TeacherWorkloadItem } from '../../api/teaching-assignments.api';
+import { teachingAssignmentsApi, type TeacherWorkloadItem, type AssignmentItem } from '../../api/teaching-assignments.api';
 import { teachersApi, type Teacher } from '../../api/teachers.api';
 import { useAuthStore } from '../../stores/auth.store';
 
@@ -700,9 +700,12 @@ const handleSubmit = () => {
 
         <!-- 2. Cascading Academic Structure Grid (Class, Section, Subject) -->
         <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] space-y-4">
-          <div class="text-[11px] font-black text-bx-primary flex items-center gap-1.5 pb-2 border-b border-[#B4AED8]/30 dark:border-white/10">
-            <Layers class="w-3.5 h-3.5" />
-            <span>نصاب وتكليف التدريس المسند للمعلم المختار</span>
+          <div class="text-[11px] font-black text-bx-primary flex items-center justify-between pb-2 border-b border-[#B4AED8]/30 dark:border-white/10">
+            <div class="flex items-center gap-1.5">
+              <Layers class="w-3.5 h-3.5" />
+              <span>نصاب وتكليف التدريس المسند للمعلم المختار</span>
+            </div>
+            <span v-if="selectedClassId" class="text-[10px] text-bx-muted font-normal">({{ displayTermName }})</span>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
