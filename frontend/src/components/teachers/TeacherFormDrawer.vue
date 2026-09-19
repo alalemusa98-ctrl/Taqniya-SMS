@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { UserPlus, Users, Save, AlertCircle, Lock, Phone, BookOpen, Calendar, User } from 'lucide-vue-next';
+import { UserPlus, Users, Save, AlertCircle, Lock, Phone, BookOpen, Calendar, User, Hash } from 'lucide-vue-next';
 import { teachersApi, type Teacher } from '../../api/teachers.api';
 import { useToast } from '../../composables/useToast';
 import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
@@ -22,6 +22,7 @@ const fieldErrors = ref<Record<string, string[]>>({});
 const datePickerInput = ref<HTMLInputElement | null>(null);
 
 const form = ref({
+  user_code: '',
   full_name: '',
   phone: '',
   specialization: '',
@@ -53,6 +54,7 @@ watch(
     fieldErrors.value = {};
     if (val) {
       form.value = {
+        user_code: val.user_code || '',
         full_name: val.full_name,
         phone: val.phone || '',
         specialization: val.specialization || '',
@@ -61,6 +63,7 @@ watch(
       };
     } else {
       form.value = {
+        user_code: '',
         full_name: '',
         phone: '',
         specialization: '',
@@ -91,6 +94,7 @@ async function handleSubmit() {
     if (props.teacher) {
       // Edit PUT
       const payload: any = {
+        user_code: form.value.user_code?.trim() || undefined,
         full_name: form.value.full_name,
         phone: form.value.phone || undefined,
         specialization: form.value.specialization || undefined,
@@ -104,6 +108,7 @@ async function handleSubmit() {
     } else {
       // Create POST
       await teachersApi.createTeacher({
+        user_code: form.value.user_code?.trim() || undefined,
         full_name: form.value.full_name,
         phone: form.value.phone || undefined,
         specialization: form.value.specialization || undefined,
@@ -149,6 +154,30 @@ async function handleSubmit() {
       >
         <AlertCircle class="w-4 h-4 shrink-0" />
         <span>{{ errorMessage }}</span>
+      </div>
+
+      <!-- User Code / Teacher Number -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-bx-title">
+          <div class="flex items-center gap-2">
+            <Hash class="w-4 h-4 text-bx-primary shrink-0" />
+            <label class="text-xs font-bold">الرمز المؤسسي / رقم المعلم (TCH-XXXX)</label>
+          </div>
+          <span class="text-[10px] text-bx-muted font-medium">
+            (اختياري - سيولد تسلسلياً تلقائياً إذا تُرك فارغاً)
+          </span>
+        </div>
+        <input
+          v-model="form.user_code"
+          type="text"
+          dir="ltr"
+          maxlength="30"
+          placeholder="مثال: TCH-2002 أو 2002"
+          class="w-full px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono font-bold text-start"
+        />
+        <p v-if="fieldErrors.user_code" class="text-[11px] text-red-500 font-medium">
+          {{ fieldErrors.user_code[0] }}
+        </p>
       </div>
 
       <!-- Full Name -->
@@ -272,8 +301,8 @@ async function handleSubmit() {
       </div>
 
       <div v-if="!teacher" class="p-3.5 rounded-2xl bg-purple-500/[0.06] border border-purple-500/20 text-[11px] text-bx-muted leading-relaxed">
-        <p class="font-bold text-bx-title mb-0.5">💡 توليد الرمز الموحد:</p>
-        <span>سيقوم النظام آلياً بتوليد كود الدخول بصيغة <span class="font-mono font-bold text-bx-primary">TCH-XXXX</span> وتشفير كلمة المرور ذرياً داخل قاعدة البيانات.</span>
+        <p class="font-bold text-bx-title mb-0.5">💡 الرمز المؤسسي الموحد:</p>
+        <span>يمكنك إدخال رقم/كود مخصص للمعلم أعلاه، أو تركه فارغاً ليقوم النظام آلياً بتوليد الكود التسلسلي التالي بصيغة <span class="font-mono font-bold text-bx-primary">TCH-XXXX</span> وتشفير كلمة المرور ذرياً.</span>
       </div>
     </form>
 

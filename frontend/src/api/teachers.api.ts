@@ -23,6 +23,7 @@ export interface GetTeachersParams {
 }
 
 export interface CreateTeacherPayload {
+  user_code?: string;
   full_name: string;
   phone?: string;
   specialization?: string;
@@ -31,6 +32,7 @@ export interface CreateTeacherPayload {
 }
 
 export interface UpdateTeacherPayload {
+  user_code?: string;
   full_name?: string;
   phone?: string;
   specialization?: string;

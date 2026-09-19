@@ -8,6 +8,7 @@ import {
 } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
 import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
+import TaqniyaMatrixTable, { type MatrixColumn, type MatrixRow } from '../ui/TaqniyaMatrixTable.vue';
 
 // Component Lazy Loading (component_lazy_loading)
 const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
@@ -16,8 +17,6 @@ import {
   Users2,
   Plus,
   Trash2,
-  Loader2,
-  AlertCircle,
   Eye,
   GraduationCap,
   Info,
@@ -226,6 +225,30 @@ const totalSectionsCount = computed(() => {
   return (filteredMatrixRows.value || []).reduce((acc, r) => acc + r.assignedCount, 0);
 });
 
+// Adapter computeds for TaqniyaMatrixTable component
+const matrixTableColumns = computed<MatrixColumn[]>(() =>
+  sortedSections.value.map((sec) => ({
+    id: sec.id,
+    name: sec.name,
+    subtext: `SEC-${String(sec.id).padStart(2, '0')}#`,
+    icon: Users2,
+  })),
+);
+
+const matrixTableRows = computed<MatrixRow[]>(() =>
+  filteredMatrixRows.value.map((row) => ({
+    id: row.class_id,
+    title: row.class_name,
+    badge: row.stage_name,
+    badgeClass: getStageBadgeClass(row.stage_name),
+    subtext: `${row.assignedCount} شُعب مسكنة`,
+    cells: row.cells,
+    class_id: row.class_id,
+    stage_name: row.stage_name,
+    assignedCount: row.assignedCount,
+  })),
+);
+
 function openDetails(row: UnifiedSectionRow) {
   activeRowDetails.value = row;
   drawerMode.value = 'details';
@@ -396,137 +419,67 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="loading" class="py-24 text-center text-bx-muted">
-        <Loader2 class="w-8 h-8 mx-auto animate-spin mb-2 text-bx-primary" />
-        <span class="text-xs font-bold">جاري تحميل مصفوفة تسكين الشُعب...</span>
-      </div>
-
-      <!-- Empty State -->
-      <div
-        v-else-if="!filteredMatrixRows || filteredMatrixRows.length === 0"
-        class="py-20 text-center border-t border-[#B4AED8] dark:border-white/[0.08] space-y-3"
+      <!-- Matrix Table Component (TaqniyaMatrixTable) -->
+      <TaqniyaMatrixTable
+        :columns="matrixTableColumns"
+        :rows="matrixTableRows"
+        :is-loading="loading"
+        loading-text="جاري تحميل مصفوفة تسكين الشُعب..."
+        empty-title="لا توجد صفوف تطابق محددات البحث والتصفية"
+        empty-subtitle="جرب تغيير محددات التصفية أو فتح شعبة جديدة لصف دراسي."
+        :y-axis-icon="GraduationCap"
+        y-axis-title="الصف الدراسي والمرحلة"
       >
-        <AlertCircle class="w-12 h-12 mx-auto text-bx-muted opacity-40" />
-        <h3 class="text-sm font-bold text-bx-title">لا توجد صفوف تطابق محددات البحث والتصفية</h3>
-        <p class="text-xs text-bx-muted">جرب تغيير محددات التصفية أو فتح شعبة جديدة لصف دراسي.</p>
-      </div>
+        <template #cell="{ row, column, cellData }">
+          <!-- CASE 1: Section Assigned to this Class -->
+          <div
+            v-if="cellData?.isAssigned && cellData?.row"
+            class="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-xl border border-emerald-500/50 bg-emerald-500/[0.06] dark:border-emerald-500/60 dark:bg-emerald-950/40 dark:ring-1 dark:ring-emerald-400/30 shadow-2xs transition-all duration-200 group hover:shadow-xs"
+          >
+            <!-- Active Assignment Check Badge -->
+            <span class="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-600 dark:bg-emerald-500/30 dark:border-emerald-400 dark:text-emerald-300 flex items-center justify-center shrink-0 shadow-2xs">
+              <Check class="w-4 h-4 stroke-[2.5]" />
+            </span>
 
-      <!-- Matrix Table Content: Enclosed in a Bordered Card -->
-      <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
-        <div class="overflow-x-auto">
-          <table class="w-full text-start border-collapse text-xs">
-            <!-- Table Header -->
-            <thead>
-              <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8] dark:border-white/15 text-bx-muted">
-                <!-- Column 1: Sticky Class & Stage Column (Constrained Width to Prevent Empty Gaps) -->
-                <th class="py-3.5 px-5 font-bold text-start whitespace-nowrap w-72 min-w-[240px] max-w-[280px] sticky start-0 bg-[var(--bx-table-header)] z-20 border-e border-[#B4AED8]/60 dark:border-white/15">
-                  <div class="flex items-center gap-2">
-                    <GraduationCap class="w-4 h-4 text-bx-primary" />
-                    <span>الصف الدراسي والمرحلة</span>
-                  </div>
-                </th>
+            <!-- Subtle Vertical Divider -->
+            <span class="w-[1px] h-4 bg-emerald-500/25 dark:bg-emerald-400/35"></span>
 
-                <!-- Dynamic Master Section Columns (Evenly Distributed) -->
-                <th
-                  v-for="sec in sortedSections"
-                  :key="sec.id"
-                  class="py-3 px-3 font-bold text-center whitespace-nowrap border-e border-[#B4AED8]/60 dark:border-white/15 last:border-e-0"
-                >
-                  <div class="flex flex-col items-center justify-center gap-1">
-                    <div class="flex items-center gap-1.5 text-bx-title font-black text-xs sm:text-sm">
-                      <Users2 class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>{{ sec.name }}</span>
-                    </div>
-                    <span class="text-[10px] font-mono text-bx-muted">SEC-{{ String(sec.id).padStart(2, '0') }}#</span>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-
-            <!-- Table Body with Crisp Dividers -->
-            <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/15">
-              <tr
-                v-for="row in filteredMatrixRows"
-                :key="row.class_id"
-                class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors"
+            <!-- Circular Action Buttons -->
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button
+                @click="openDetails(cellData.row!)"
+                class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                title="عرض تفاصيل تسكين الشعبة"
               >
-                <!-- Fixed First Column (Class Info) -->
-                <td class="py-3 px-5 whitespace-nowrap sticky start-0 bg-[var(--bx-surface-solid)] z-10 border-e border-[#B4AED8]/60 dark:border-white/15">
-                  <div class="space-y-1">
-                    <span class="font-black text-sm text-bx-title block leading-tight">{{ row.class_name }}</span>
-                    <div class="flex items-center gap-2">
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border" :class="getStageBadgeClass(row.stage_name)">
-                        {{ row.stage_name }}
-                      </span>
-                      <span class="text-[10px] font-semibold text-bx-muted">
-                        {{ row.assignedCount }} شُعب مسكنة
-                      </span>
-                    </div>
-                  </div>
-                </td>
+                <Eye class="w-3.5 h-3.5" />
+              </button>
 
-                <!-- Section Matrix Cells (Centered & Compact Element with High Contrast) -->
-                <td
-                  v-for="sec in sortedSections"
-                  :key="sec.id"
-                  class="py-2.5 px-3 text-center align-middle border-e border-[#B4AED8]/60 dark:border-white/15 last:border-e-0"
-                >
-                  <!-- CASE 1: Section Assigned to this Class (Tight Width, Clear High Contrast Dark Mode Borders) -->
-                  <div
-                    v-if="row.cells[sec.id]?.isAssigned && row.cells[sec.id]?.row"
-                    class="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-xl border border-emerald-500/50 bg-emerald-500/[0.06] dark:border-emerald-500/60 dark:bg-emerald-950/40 dark:ring-1 dark:ring-emerald-400/30 shadow-2xs transition-all duration-200 group hover:shadow-xs"
-                  >
-                    <!-- Active Assignment Check Badge -->
-                    <span class="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-600 dark:bg-emerald-500/30 dark:border-emerald-400 dark:text-emerald-300 flex items-center justify-center shrink-0 shadow-2xs">
-                      <Check class="w-4 h-4 stroke-[2.5]" />
-                    </span>
+              <button
+                @click="confirmDelete({ id: cellData.row!.id, name: cellData.row!.section_name })"
+                class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                title="فك ربط الشعبة من هذا الصف"
+              >
+                <Trash2 class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
 
-                    <!-- Subtle Vertical Divider -->
-                    <span class="w-[1px] h-4 bg-emerald-500/25 dark:bg-emerald-400/35"></span>
-
-                    <!-- Circular Action Buttons (High Contrast & Clear in Dark Mode) -->
-                    <div class="flex items-center gap-1.5 shrink-0">
-                      <!-- Details Button -->
-                      <button
-                        @click="openDetails(row.cells[sec.id]!.row!)"
-                        class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                        title="عرض تفاصيل تسكين الشعبة"
-                      >
-                        <Eye class="w-3.5 h-3.5" />
-                      </button>
-
-                      <!-- Unassign / Delete Button -->
-                      <button
-                        @click="confirmDelete({ id: row.cells[sec.id]!.row!.id, name: row.cells[sec.id]!.row!.section_name })"
-                        class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                        title="فك ربط الشعبة من هذا الصف"
-                      >
-                        <Trash2 class="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- CASE 2: Section Unassigned to this Class (Centered Compact Pill) -->
-                  <div
-                    v-else
-                    class="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl border border-dashed border-[#B4AED8]/70 dark:border-slate-600 bg-slate-500/[0.03] dark:bg-slate-800/30 transition-all duration-200 group hover:border-bx-primary/50 hover:bg-purple-500/[0.04]"
-                  >
-                    <span class="text-xs font-bold text-slate-400 dark:text-slate-300">—</span>
-                    <button
-                      @click="openCreateDrawer(row.class_id, sec.id)"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border border-purple-500/30 bg-purple-500/10 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/60 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white cursor-pointer transition-all duration-150 active:scale-95 shadow-2xs"
-                    >
-                      <Plus class="w-3 h-3" />
-                      <span>تسكين</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+          <!-- CASE 2: Section Unassigned to this Class -->
+          <div
+            v-else
+            class="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl border border-dashed border-[#B4AED8]/70 dark:border-slate-600 bg-slate-500/[0.03] dark:bg-slate-800/30 transition-all duration-200 group hover:border-bx-primary/50 hover:bg-purple-500/[0.04]"
+          >
+            <span class="text-xs font-bold text-slate-400 dark:text-slate-300">—</span>
+            <button
+              @click="openCreateDrawer(Number(row.class_id), Number(column.id))"
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border border-purple-500/30 bg-purple-500/10 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/60 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white cursor-pointer transition-all duration-150 active:scale-95 shadow-2xs"
+            >
+              <Plus class="w-3 h-3" />
+              <span>تسكين</span>
+            </button>
+          </div>
+        </template>
+      </TaqniyaMatrixTable>
 
       <!-- Table Footer: Records Info (Non-paginated full catalogue) -->
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 text-xs font-bold text-bx-muted">

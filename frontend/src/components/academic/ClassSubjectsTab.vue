@@ -9,6 +9,7 @@ import {
 } from '../../api/academic.api';
 import { useToast } from '../../composables/useToast';
 import TaqniyaSelect from '../ui/TaqniyaSelect.vue';
+import TaqniyaGroupedTable, { type GroupedTableColumn, type TableGroup } from '../ui/TaqniyaGroupedTable.vue';
 
 // Component Lazy Loading (component_lazy_loading)
 const TaqniyaDrawer = defineAsyncComponent(() => import('../ui/TaqniyaDrawer.vue'));
@@ -18,7 +19,6 @@ import {
   Plus,
   Trash2,
   Edit2,
-  Loader2,
   AlertCircle,
   Eye,
   GraduationCap,
@@ -298,8 +298,44 @@ const filteredGroups = computed(() => {
 });
 
 const totalSubjectsCount = computed(() => {
-  return (filteredGroups.value || []).reduce((acc, g) => acc + (g.subjects?.length || 0), 0);
+  return (filteredGroups.value || []).reduce((acc, grp) => acc + (grp.subjects?.length || 0), 0);
 });
+
+// Helper function to extract term score info for a row
+function getTermAssignment(row: any, columnKey: string, terms: any[]) {
+  const term = (terms || []).find((t: any) => `term_${t.id}` === columnKey);
+  return term && row.assignments ? row.assignments[term.term_name] : null;
+}
+
+// Adapter computed for TaqniyaGroupedTable
+const groupedTableData = computed<TableGroup[]>(() =>
+  filteredGroups.value.map((grp) => {
+    const columns: GroupedTableColumn[] = [
+      { key: 'code', label: 'الرمز', width: '6rem', align: 'start' },
+      { key: 'name', label: 'المادة الدراسية', minWidth: '190px', align: 'start', icon: BookOpenCheck },
+      ...(grp.terms || []).map((t) => ({
+        key: `term_${t.id}`,
+        label: t.term_name,
+        minWidth: '140px',
+        align: 'center' as const,
+        icon: CalendarDays,
+      })),
+      { key: 'actions', label: 'إجراءات', width: '8rem', align: 'center' as const },
+    ];
+
+    return {
+      id: grp.class_id,
+      title: grp.class_name,
+      badge: grp.stage_name,
+      badgeClass: getStageBadgeClass(grp.stage_name),
+      subtitle: `${grp.subjects?.length || 0} مواد مقررة (${grp.terms?.length || 0} فصول دراسية)`,
+      icon: GraduationCap,
+      columns,
+      items: grp.subjects || [],
+      terms: grp.terms || [],
+    };
+  }),
+);
 
 // Options for forms and filters
 const classFilterOptions = computed(() => [
@@ -532,188 +568,103 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="loading" class="py-24 text-center text-bx-muted">
-        <Loader2 class="w-8 h-8 mx-auto animate-spin mb-2 text-bx-primary" />
-        <span class="text-xs font-bold">جاري تحميل سجلات مناهج الصفوف...</span>
-      </div>
-
-      <!-- Empty State -->
-      <div
-        v-else-if="!filteredGroups || filteredGroups.length === 0"
-        class="py-20 text-center border-t border-[#B4AED8] dark:border-white/[0.08] space-y-3"
+      <!-- Grouped Curriculum Table Component (TaqniyaGroupedTable) -->
+      <TaqniyaGroupedTable
+        :groups="groupedTableData"
+        :is-loading="loading"
+        loading-text="جاري تحميل سجلات مناهج الصفوف..."
+        empty-title="لا توجد مقررات تطابق محددات البحث"
+        empty-subtitle="جرب تغيير محددات التصفية أو إسناد مادة دراسية جديدة لصفوف المدرسة."
+        group-empty-text="لا توجد مواد مسندة لهذا الصف بعد."
+        group-action-text="إسناد مادة"
+        :group-action-icon="Plus"
+        @group-action="openCreateDrawer(Number($event.id))"
       >
-        <AlertCircle class="w-12 h-12 mx-auto text-bx-muted opacity-40" />
-        <h3 class="text-sm font-bold text-bx-title">لا توجد مقررات تطابق محددات البحث</h3>
-        <p class="text-xs text-bx-muted">جرب تغيير محددات التصفية أو إسناد مادة دراسية جديدة لصفوف المدرسة.</p>
-      </div>
-
-      <!-- Classes Curriculum List: Each Class has its own Dynamic Headers & Semesters directly above subjects -->
-      <div v-else class="space-y-6">
-        <div
-          v-for="grp in filteredGroups"
-          :key="grp.class_id"
-          class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] shadow-xs"
-        >
-          <!-- Class Header Bar -->
-          <div class="bg-purple-500/[0.04] dark:bg-white/[0.03] py-3.5 px-5 border-b border-[#B4AED8]/60 dark:border-white/10 flex items-center justify-between rounded-t-2xl">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/30 dark:border-purple-400/40 flex items-center justify-center text-bx-primary dark:text-purple-300 shrink-0">
-                <GraduationCap class="w-4 h-4" />
-              </div>
-              <div>
-                <span class="font-black text-sm text-bx-title block leading-tight">{{ grp.class_name }}</span>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border" :class="getStageBadgeClass(grp.stage_name)">
-                    {{ grp.stage_name }}
-                  </span>
-                  <span class="text-[10px] font-semibold text-bx-muted">
-                    {{ grp.subjects?.length || 0 }} مواد مقررة ({{ grp.terms?.length || 0 }} فصول دراسية)
-                  </span>
-                </div>
-              </div>
-            </div>
+        <!-- Custom empty for group -->
+        <template #group-empty="{ group }">
+          <div class="flex flex-col items-center justify-center gap-2">
+            <AlertCircle class="w-7 h-7 text-bx-muted opacity-40" />
+            <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
             <button
-              @click="openCreateDrawer(grp.class_id)"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/60 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-              title="إسناد مادة لهذا الصف الدراسي"
+              @click="openCreateDrawer(Number(group.id))"
+              class="text-bx-primary font-bold hover:underline cursor-pointer inline-flex items-center gap-1 text-[11px] mt-1"
             >
-              <Plus class="w-3.5 h-3.5" />
-              <span>إسناد مادة</span>
+              <Plus class="w-3 h-3" />
+              <span>إسناد أول مادة الآن</span>
             </button>
           </div>
+        </template>
 
-          <!-- Table with Dynamic Columns matching THIS class's exact semesters directly above the subjects -->
-          <div class="rounded-b-2xl overflow-x-auto">
-            <table class="w-full text-start border-collapse text-[11px]">
-              <thead>
-                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted text-[11px]">
-                  <th class="py-2.5 px-3.5 font-bold text-start w-24 border-e border-[#B4AED8]/50 dark:border-white/10">الرمز</th>
-                  <th class="py-2.5 px-3.5 font-bold text-start min-w-[190px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5">
-                      <BookOpenCheck class="w-3 h-3 text-bx-primary" />
-                      <span>المادة الدراسية</span>
-                    </div>
-                  </th>
-                  <!-- Dynamic headers for THIS class's terms only -->
-                  <th
-                    v-for="t in (grp.terms || [])"
-                    :key="t.id"
-                    class="py-2.5 px-3 font-bold text-center min-w-[140px] border-e border-[#B4AED8]/50 dark:border-white/10"
-                  >
-                    <div class="flex items-center justify-center gap-1.5 text-bx-title font-bold text-[11px]">
-                      <CalendarDays class="w-3 h-3 text-bx-primary" />
-                      <span>{{ t.term_name }}</span>
-                    </div>
-                  </th>
-                  <th class="py-2.5 px-3 font-bold text-center w-32 last:border-e-0">إجراءات</th>
-                </tr>
-              </thead>
+        <!-- Code cell -->
+        <template #cell-code="{ row }">
+          <span class="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-bx-title/80">
+            {{ row.code }}
+          </span>
+        </template>
 
-              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
-                <!-- Empty subjects for this class -->
-                <tr v-if="!grp.subjects || grp.subjects.length === 0" class="hover:bg-[var(--bx-row-hover)]/20 transition-colors">
-                  <td :colspan="3 + (grp.terms?.length || 0)" class="py-6 px-3.5 text-center text-bx-muted text-[11px]">
-                    <div class="flex flex-col items-center justify-center gap-2">
-                      <AlertCircle class="w-7 h-7 text-bx-muted opacity-40" />
-                      <span>لا توجد مواد مسندة لهذا الصف بعد.</span>
-                      <button
-                        @click="openCreateDrawer(grp.class_id)"
-                        class="text-bx-primary font-bold hover:underline cursor-pointer inline-flex items-center gap-1 text-[11px] mt-1"
-                      >
-                        <Plus class="w-3 h-3" />
-                        <span>إسناد أول مادة الآن</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+        <!-- Name cell -->
+        <template #cell-name="{ row }">
+          <span class="font-black text-xs text-bx-title block leading-tight">
+            {{ row.name }}
+          </span>
+        </template>
 
-                <!-- Subject Rows for this Class -->
-                <tr
-                  v-for="row in (grp.subjects || [])"
-                  :key="row.subject_id"
-                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150"
-                >
-                  <!-- Code (الرمز) -->
-                  <td class="py-2 px-3.5 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span class="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-purple-500/[0.06] dark:bg-white/[0.05] border border-[#B4AED8]/50 dark:border-white/10 text-bx-title/80">
-                      {{ row.code }}
-                    </span>
-                  </td>
+        <!-- Generic cell for semester columns -->
+        <template #cell="{ row, column, group }">
+          <template v-if="column.key.startsWith('term_')">
+            <div
+              v-if="getTermAssignment(row, column.key, group.terms)"
+              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border border-emerald-500/30 dark:border-emerald-400/40 bg-emerald-500/[0.05] dark:bg-emerald-950/30 shadow-2xs"
+            >
+              <span class="text-[11px] font-black text-emerald-600 dark:text-emerald-400" title="درجة النجاح">
+                {{ getTermAssignment(row, column.key, group.terms).passing_score }}
+              </span>
+              <span class="text-bx-muted opacity-40 text-[9px] font-bold">/</span>
+              <span class="text-[11px] font-black text-bx-title" title="الدرجة العظمى">
+                {{ getTermAssignment(row, column.key, group.terms).max_score }}
+              </span>
+              <span
+                v-if="getTermAssignment(row, column.key, group.terms).is_closed === 1"
+                class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"
+                title="مغلقة للأرشفة"
+              ></span>
+            </div>
+            <span v-else class="text-slate-400 dark:text-slate-500 font-bold text-xs">—</span>
+          </template>
+        </template>
 
-                  <!-- Subject (Clean without icon) -->
-                  <td class="py-2 px-3.5 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span class="font-black text-xs text-bx-title block leading-tight">
-                      {{ row.name }}
-                    </span>
-                  </td>
+        <!-- Actions cell -->
+        <template #cell-actions="{ row }">
+          <div class="flex items-center justify-center gap-1.5">
+            <!-- View Details Button -->
+            <button
+              @click="openDetails(row)"
+              class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+              title="عرض تفاصيل درجات المادة لكافة الفصول"
+            >
+              <Eye class="w-3.5 h-3.5" />
+            </button>
 
-                  <!-- Term Columns: Showing scores for each semester belonging to THIS class -->
-                  <td
-                    v-for="t in grp.terms"
-                    :key="t.id"
-                    class="py-2 px-3 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10"
-                  >
-                    <!-- If assigned to this semester -->
-                    <div
-                      v-if="row.assignments[t.term_name]"
-                      class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border border-emerald-500/30 dark:border-emerald-400/40 bg-emerald-500/[0.05] dark:bg-emerald-950/30 shadow-2xs"
-                    >
-                      <span class="text-[11px] font-black text-emerald-600 dark:text-emerald-400" title="درجة النجاح">
-                        {{ row.assignments[t.term_name].passing_score }}
-                      </span>
-                      <span class="text-bx-muted opacity-40 text-[9px] font-bold">/</span>
-                      <span class="text-[11px] font-black text-bx-title" title="الدرجة العظمى">
-                        {{ row.assignments[t.term_name].max_score }}
-                      </span>
-                      <span
-                        v-if="row.assignments[t.term_name].is_closed === 1"
-                        class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"
-                        title="مغلقة للأرشفة"
-                      ></span>
-                    </div>
+            <!-- Quick Edit Button -->
+            <button
+              @click="openEditDrawer(row)"
+              title="تعديل درجات المادة لكافة الفصول"
+              class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+            >
+              <Edit2 class="w-3.5 h-3.5" />
+            </button>
 
-                    <!-- If not assigned to this semester -->
-                    <span v-else class="text-slate-400 dark:text-slate-500 font-bold text-xs">—</span>
-                  </td>
-
-                  <!-- Actions (Uniform circular buttons with high contrast in dark mode) -->
-                  <td class="py-2 px-3 text-center whitespace-nowrap last:border-e-0">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <!-- View Details Button -->
-                      <button
-                        @click="openDetails(row)"
-                        class="w-7 h-7 rounded-full border border-[#B4AED8] bg-white text-slate-700 hover:text-bx-primary hover:border-bx-primary hover:bg-bx-primary/10 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/40 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                        title="عرض تفاصيل درجات المادة لكافة الفصول"
-                      >
-                        <Eye class="w-3.5 h-3.5" />
-                      </button>
-
-                      <!-- Quick Edit Button (Multi-Term Editor) -->
-                      <button
-                        @click="openEditDrawer(row)"
-                        title="تعديل درجات المادة لكافة الفصول"
-                        class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                      >
-                        <Edit2 class="w-3.5 h-3.5" />
-                      </button>
-
-                      <!-- Quick Delete Button -->
-                      <button
-                        @click="confirmDelete(row)"
-                        title="إزالة المادة من منهج هذا الصف"
-                        class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                      >
-                        <Trash2 class="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <!-- Quick Delete Button -->
+            <button
+              @click="confirmDelete(row)"
+              title="إزالة المادة من منهج هذا الصف"
+              class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+            >
+              <Trash2 class="w-3.5 h-3.5" />
+            </button>
           </div>
-        </div>
-      </div>
+        </template>
+      </TaqniyaGroupedTable>
 
       <!-- Table Footer: Records Info (Non-paginated full catalogue) -->
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 text-xs font-bold text-bx-muted">

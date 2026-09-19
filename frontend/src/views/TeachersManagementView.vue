@@ -70,12 +70,13 @@ const isUpdatingStatus = ref(false);
 
 // Table Columns Specification (SSoT compliant)
 const columns: TableColumn[] = [
-  { key: 'index', label: '#', align: 'center', width: '60px' },
-  { key: 'user_code', label: 'الرمز', align: 'start', width: '120px' },
-  { key: 'full_name', label: 'المعلم والبيانات المهنية', align: 'start' },
+  { key: 'index', label: '#', align: 'center', width: '50px' },
+  { key: 'user_code', label: 'الرمز', align: 'start', width: '130px' },
+  { key: 'full_name', label: 'اسم المعلم', align: 'start' },
+  { key: 'phone', label: 'رقم الهاتف', align: 'start', width: '140px' },
   { key: 'specialization', label: 'التخصص العلمي', align: 'start', width: '160px' },
   { key: 'hire_date', label: 'تاريخ المباشرة', align: 'start', width: '140px' },
-  { key: 'is_active', label: 'الحالة', align: 'center', width: '120px' },
+  { key: 'is_active', label: 'الحالة', align: 'center', width: '110px' },
   { key: 'actions', label: 'إجراءات', align: 'center', width: '160px' },
 ];
 
@@ -403,14 +404,17 @@ onMounted(() => {
 
           <!-- Teacher Profile Info Cell -->
           <template #cell-full_name="{ item }">
-            <div>
-              <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight hover:text-bx-primary transition-colors">
-                {{ item.full_name }}
-              </span>
-              <span v-if="item.phone" class="font-mono text-[11px] text-bx-muted block mt-0.5" dir="ltr">
-                {{ item.phone }}
-              </span>
-            </div>
+            <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight hover:text-bx-primary transition-colors">
+              {{ item.full_name }}
+            </span>
+          </template>
+
+          <!-- Phone Number Cell -->
+          <template #cell-phone="{ item }">
+            <span v-if="item.phone" class="font-mono text-xs font-bold text-bx-title" dir="ltr">
+              {{ item.phone }}
+            </span>
+            <span v-else class="text-slate-400 dark:text-slate-500 font-bold text-xs">—</span>
           </template>
 
           <!-- Specialization Cell -->

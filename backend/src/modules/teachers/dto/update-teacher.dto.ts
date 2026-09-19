@@ -7,6 +7,11 @@ export class UpdateTeacherDto {
   full_name?: string;
 
   @IsOptional()
+  @IsString({ message: 'رمز المعلم يجب أن يكون نصاً.' })
+  @MaxLength(30, { message: 'رمز المعلم يجب ألا يتجاوز 30 حرفاً.' })
+  user_code?: string;
+
+  @IsOptional()
   @IsString({ message: 'رقم الهاتف يجب أن يكون نصاً.' })
   @MaxLength(20, { message: 'رقم الهاتف يجب ألا يتجاوز 20 حرفاً.' })
   phone?: string;

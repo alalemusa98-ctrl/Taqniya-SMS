@@ -179,23 +179,40 @@ export class TeachersService {
 
     // Atomic transaction: sequence generation, User creation, Teacher creation
     const { newTeacher, newUser } = await this.prisma.$transaction(async (tx) => {
-      // Find highest existing TCH-XXXX code
-      const latestUsers = await tx.user.findMany({
-        where: {
-          user_code: { startsWith: 'TCH-' },
-        },
-        select: { user_code: true },
-      });
+      let userCode = dto.user_code?.trim();
 
-      let nextNumber = 2001;
-      for (const u of latestUsers) {
-        const num = parseInt(u.user_code.replace('TCH-', ''), 10);
-        if (!isNaN(num) && num >= nextNumber) {
-          nextNumber = num + 1;
+      if (userCode) {
+        if (!userCode.startsWith('TCH-')) {
+          userCode = `TCH-${userCode}`;
         }
-      }
+        const existing = await tx.user.findUnique({
+          where: { user_code: userCode },
+        });
+        if (existing) {
+          throw new ConflictException({
+            success: false,
+            message: `رمز المعلم (${userCode}) مسجل مسبقاً لمستخدم آخر.`,
+          });
+        }
+      } else {
+        // Find highest existing TCH-XXXX code
+        const latestUsers = await tx.user.findMany({
+          where: {
+            user_code: { startsWith: 'TCH-' },
+          },
+          select: { user_code: true },
+        });
 
-      const userCode = `TCH-${nextNumber}`;
+        let nextNumber = 2001;
+        for (const u of latestUsers) {
+          const num = parseInt(u.user_code.replace('TCH-', ''), 10);
+          if (!isNaN(num) && num >= nextNumber) {
+            nextNumber = num + 1;
+          }
+        }
+
+        userCode = `TCH-${nextNumber}`;
+      }
 
       const user = await tx.user.create({
         data: {
@@ -290,7 +307,28 @@ export class TeachersService {
       }
     }
 
+    let updatedUserCode: string | undefined;
+    if (dto.user_code) {
+      let code = dto.user_code.trim();
+      if (!code.startsWith('TCH-')) {
+        code = `TCH-${code}`;
+      }
+      if (code !== teacher.user.user_code) {
+        const existingUser = await this.prisma.user.findUnique({
+          where: { user_code: code },
+        });
+        if (existingUser && existingUser.id !== teacher.user_id) {
+          throw new ConflictException({
+            success: false,
+            message: `رمز المعلم (${code}) مسجل مسبقاً لمستخدم آخر.`,
+          });
+        }
+        updatedUserCode = code;
+      }
+    }
+
     const oldValues = {
+      user_code: teacher.user.user_code,
       full_name: teacher.full_name,
       phone: teacher.phone,
       specialization: teacher.specialization,
@@ -321,15 +359,21 @@ export class TeachersService {
         },
       });
 
-      if (hashedPassword) {
+      if (hashedPassword || updatedUserCode) {
+        const userData: any = {};
+        if (hashedPassword) userData.password = hashedPassword;
+        if (updatedUserCode) userData.user_code = updatedUserCode;
+
         await tx.user.update({
           where: { id: teacher.user_id },
-          data: { password: hashedPassword },
+          data: userData,
         });
 
-        await tx.personalAccessToken.deleteMany({
-          where: { user_id: teacher.user_id },
-        });
+        if (hashedPassword) {
+          await tx.personalAccessToken.deleteMany({
+            where: { user_id: teacher.user_id },
+          });
+        }
       }
 
       return updatedTeacher;
