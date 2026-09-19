@@ -25,10 +25,12 @@
 | الإجراء بالواجهة (UI Action) | نقطة الاتصال في `routes.md` | المكون التفاعلي بالواجهة (UI Component) | رمز النجاح | مرجع العقد في `routes.md` |
 | :--- | :--- | :--- | :-: | :--- |
 | **استعراض وتصفية كشف التسكين** | `GET /api/v1/student-enrollments` | بطاقات الصفوف وتبويبات الشعب (`Class Cards & Section Tabs`) | `200 OK` | [في routes.md](./routes.md) |
-| **استعراض سجل الطالب التاريخي** | `GET /api/v1/students/:student_id/enrollments` | لوحة السجل التسكيني للطالب (`Progression History Drawer`) | `200 OK` | [في routes.md](./routes.md) |
-| **تسكين وتعديل تسجيل طالب** | `POST` & `PUT /api/v1/student-enrollments` | اللوحة الجانبية المنبثقة (`Slide-over Drawer`) | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
-| **التسكين والتوزيع الجماعي** | `POST /api/v1/student-enrollments/bulk-enroll` | نافذة التسكين الجماعي المنبثقة (`Bulk Enroll Modal`) | `200 OK` | [في routes.md](./routes.md) |
-| **إلغاء وتجريد تسكين طالب** | `DELETE /api/v1/student-enrollments/:id` | نافذة التأكيد المركزية (`Confirmation Modal`) | `200 OK` | [في routes.md](./routes.md) |
+| **إحصائيات المسكنين حسب الصفوف** | `GET /api/v1/student-enrollments/class-counts` | شارات العدادات ببطاقات الصفوف (`Class Badge Counters`) | `200 OK` | [في routes.md](./routes.md) |
+| **استعراض سجل الطالب التاريخي** | `GET /api/v1/students/:student_id/enrollments` | لوحة السجل التسكيني للطالب (`EnrollmentHistoryDrawer`) | `200 OK` | [في routes.md](./routes.md) |
+| **تسكين وتعديل تسجيل طالب** | `POST` & `PUT /api/v1/student-enrollments` | اللوحة الجانبية المنبثقة (`EnrollmentFormDrawer`) | `201 Created` / `200 OK` | [في routes.md](./routes.md) |
+| **التسكين والتوزيع الجماعي** | `POST /api/v1/student-enrollments/bulk-enroll` | اللوحة الجانبية للتسكين الجماعي (`EnrollmentBulkDrawer`) | `200 OK` | [في routes.md](./routes.md) |
+| **النقل الجماعي بين الشعب** | `PUT /api/v1/student-enrollments/:id` (متعدد) | نافذة النقل الجماعي المشتركة (`EnrollmentBatchTransferModal`) | `200 OK` | [في routes.md](./routes.md) |
+| **إلغاء وتجريد تسكين طالب** | `DELETE /api/v1/student-enrollments/:id` | نافذة التأكيد المركزية المشتركة (`EnrollmentDeleteModal`) | `200 OK` | [في routes.md](./routes.md) |
 
 ---
 
@@ -85,3 +87,24 @@
 * **معالجة الاستجابات (Response Handlers — طبق `routes.md`):**
   - **نجاح الإلغاء (`200 OK`):** إغلاق النافذة، إظهار Toast أخضر بنص `message` في `routes.md`، وتحديث القائمة.
   - **منع الإلغاء لوجود درجات (`409 Conflict`):** إبقاء النافذة مفتوحة وإظهار Toast أحمر بالرسالة الموثقة في `routes.md` ("لا يمكن إلغاء التسكين لارتباط الطالب بدرجات أو واجبات أو امتحانات مرصودة بالسجل الأكاديمي").
+
+---
+
+## 2. البنية المعمارية للمكونات المستخرجة (Component Architecture & Modularity)
+
+وفقاً لإرشادات إطار العمل ومتطلبات تقليل حجم الصفحات وتعزيز إعادة الاستخدام ومطابقة `frontend_capabilities.yaml`، تم تفكيك وإعادة هيكلة الواجهة المعقدة إلى حزمة مكونات فرعية متخصصة تحت المسار `src/components/student-enrollments/`:
+
+1. **`EnrollmentFormDrawer.vue`**:
+   - لوحة جانبية منبثقة لإدارة استمارة التسكين الفردي (إنشاء وتعديل) مع القوائم المنسدلة التابعة والحسابات اللحظية.
+2. **`EnrollmentBulkDrawer.vue`**:
+   - لوحة جانبية متخصصة في التوزيع والتسكين الجماعي للطلاب غير المسكنين، تدعم التحديد المتعدد عبر مربعات الاختيار وخوارزمية التوزيع الذكي.
+3. **`EnrollmentHistoryDrawer.vue`**:
+   - لوحة جانبية لعرض الأرشيف الأكاديمي والتدرج الدراسي التراكمي للطالب عبر الأعوام السابقة بالاعتماد على الصحائف المؤرشفة.
+4. **`EnrollmentBatchTransferModal.vue`**:
+   - نافذة منبثقة لنقل مجموعة طلاب دفعة واحدة من شعبة إلى أخرى بالاعتماد على المكون المشترك المعتمد `TaqniyaModal.vue`.
+5. **`EnrollmentDeleteModal.vue`**:
+   - نافذة حوارية لتأكيد إلغاء التسكين مبنية باستخدام `TaqniyaModal.vue` بدلاً من طبقات الـ HTML المكررة محلياً.
+6. **التحميل الكسول والتقسيم الصفحي (Lazy Loading & Pagination):**
+   - استيراد كافة المكونات المنبثقة عبر `defineAsyncComponent` لتسريع زمن التحميل الأولي.
+   - دمج مكون التقسيم المعياري `TaqniyaPagination.vue` لكل شعبة لتنظيم كشوفات الطلاب الطويلة وفق معيار `pagination_incremental: required`.
+

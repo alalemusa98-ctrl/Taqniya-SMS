@@ -253,6 +253,32 @@ export class StudentEnrollmentsService {
       if (!custody) {
         throw new ForbiddenException('ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.');
       }
+    } else if (currentUser.role_type === RoleType.teacher) {
+      const teacher = await this.prisma.teacher.findUnique({
+        where: { user_id: BigInt(currentUser.id), deleted_at: null },
+      });
+      if (!teacher) {
+        throw new ForbiddenException('ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.');
+      }
+      const taughtStudent = await this.prisma.studentEnrollment.findFirst({
+        where: {
+          student_id: BigInt(studentId),
+          deleted_at: null,
+          class_section: {
+            teaching_assignments: {
+              some: {
+                teacher_id: teacher.id,
+                deleted_at: null,
+              },
+            },
+          },
+        },
+      });
+      if (!taughtStudent) {
+        throw new ForbiddenException('ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.');
+      }
+    } else if (currentUser.role_type !== RoleType.admin) {
+      throw new ForbiddenException('ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.');
     }
 
     // Verify student exists

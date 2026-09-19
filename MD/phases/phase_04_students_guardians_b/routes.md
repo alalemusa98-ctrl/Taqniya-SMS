@@ -1,6 +1,6 @@
 # 🗺️ مواصفات المسارات ونقاط الاتصال — المرحلة 04-B (Network SSoT)
 
-> **الهدف:** توثيق المسارات الـ 5 كاملة لإدارة تسكين وتسجيل الطلاب بالفصول والشعب وتوليد أرقام الجلوس وحالات التسكين الأكاديمية مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، مع دمج وتوحيد مواصفات الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح والرشاقة ومنع التكرار، وتزويد مسار جلب القوائم باستجابة هرمية مجمعة بالصفوف والشعب (`classes -> sections -> students`) تلغي التكرار وتدعم البحث والتصفية المتكاملة.  
+> **الهدف:** توثيق المسارات الـ 7 كاملة لإدارة تسكين وتسجيل الطلاب بالفصول والشعب وتوليد أرقام الجلوس وحالات التسكين الأكاديمية مع الاستجابات الصريحة لجميع حالات الـ HTTP Status Codes والـ Payload المطابق لـ [`MD/database.md`](../../database.md)، مع دمج وتوحيد مواصفات الإنشاء والتعديل (`POST & PUT`) لتوفير الوضوح والرشاقة ومنع التكرار، وتزويد مسار جلب القوائم باستجابة هرمية مجمعة بالصفوف والشعب (`classes -> sections -> students`) تلغي التكرار وتدعم البحث والتصفية المتكاملة.  
 > 
 > ⚠️ **إرشادات وتنبيهات حوكمية إجبارية (System Governance Directives):**  
 > 1. **قواعد العمل العامة (Business Rules SSoT):** يلزم قراءة واعتماد **ملف القواعد العامة بالمنظومة [`MD/business_rules.md`](../../business_rules.md)** والالتزام التام بكافة القيود ومصفوفة الصلاحيات والحوكمة المذكورة فيه قبل التكوييد والبناء.  
@@ -22,20 +22,21 @@
   Accept-Language: ar
   ```
 
-### 📋 مصفوفة المسارات الـ 5 الموحدة (Master Route Matrix):
+### 📋 مصفوفة المسارات الـ 7 المعتمدة (Master Route Matrix):
 
 | # | الكيان | HTTP Method | Endpoint | الصلاحية المطلوبة | الغرض والوظيفة |
 | :-: | :--- | :--- | :--- | :--- | :--- |
 | **1** | `student_enrollments` | `GET` | `/api/v1/student-enrollments` | `admin` / `teacher` | استعراض وبحث كشف تسكين الطلاب مجمعاً بالصفوف والشعب |
-| **2** | `student_enrollments` | `GET` | `/api/v1/students/:student_id/enrollments` | `admin` / `student (own)` / `parent (own)` | استعراض السجل والأرشيف التسكيني التاريخي لطالب محدد |
-| **3** | `student_enrollments` | `POST` | `/api/v1/student-enrollments` | `admin` | تسكين وتسجيل طالب في صف وشعبة (مع فحص منع التكرار السنوي) |
-| **4** | `student_enrollments` | `PUT` | `/api/v1/student-enrollments/:id` | `admin` | تعديل بيانات التسكين (نقل الشعبة، تحديث رقم الجلوس، أو الحالة) |
-| **5** | `student_enrollments` | `POST` | `/api/v1/student-enrollments/bulk-enroll` | `admin` | التسكين والتوزيع الجماعي لمجموعة طلاب دفعة واحدة في شعبة |
-| **6** | `student_enrollments` | `DELETE` | `/api/v1/student-enrollments/:id` | `admin` | إلغاء وتجريد تسكين طالب مع فحص الحماية المرجعية (RESTRICT) |
+| **2** | `student_enrollments` | `GET` | `/api/v1/student-enrollments/class-counts` | `admin` / `teacher` | جلب إحصائيات سريعة لأعداد الطلاب المسكنين مجمعة حسب الصفوف الدراسية |
+| **3** | `student_enrollments` | `GET` | `/api/v1/students/:student_id/enrollments` | `admin` / `teacher (scoped)` / `student (own)` / `parent (own)` | استعراض السجل والأرشيف التسكيني التاريخي لطالب محدد |
+| **4** | `student_enrollments` | `POST` | `/api/v1/student-enrollments` | `admin` | تسكين وتسجيل طالب في صف وشعبة (مع فحص منع التكرار السنوي) |
+| **5** | `student_enrollments` | `PUT` | `/api/v1/student-enrollments/:id` | `admin` | تعديل بيانات التسكين (نقل الشعبة، تحديث رقم الجلوس، أو الحالة) |
+| **6** | `student_enrollments` | `POST` | `/api/v1/student-enrollments/bulk-enroll` | `admin` | التسكين والتوزيع الجماعي لمجموعة طلاب دفعة واحدة في شعبة |
+| **7** | `student_enrollments` | `DELETE` | `/api/v1/student-enrollments/:id` | `admin` | إلغاء وتجريد تسكين طالب مع فحص الحماية المرجعية (RESTRICT) |
 
 ### 🔒 1.1 نمط الاستجابات العامة للأخطاء المشتركة (Global Standard Error Responses)
 
-> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 5** بالمرحلة:
+> **قاعدة حوكمية:** هياكل الـ JSON التالية تمثل المعيار العام الموحد للأخطاء المشتركة، وتنطبق تلقائياً على **كافة مسارات الـ API الـ 7** بالمرحلة:
 
 ```json
 // 401 Unauthorized (غياب أو تلف التوكن)
@@ -401,3 +402,36 @@
 ```
 
 > 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
+
+---
+
+### 1.6 `GET /api/v1/student-enrollments/class-counts` — إحصائيات سريعة لأعداد الطلاب المسكنين حسب الصفوف
+
+> **الوصف الوظيفي:** استرجاع إحصائيات سريعة وخفيفة لأعداد الطلاب المسكنين مجمعة حسب المعرف الفريد للصف الدراسي (`class_id`) مع قائمة بمعرفات الطلاب المسكنين (`enrolled_student_ids`) لدعم شارات العد وتغذية خوارزمية التوزيع والحسابات اللحظية بالواجهة دون تحميل بيانات الطلاب كاملة.
+
+- **Query Parameters:**
+  - `academic_year_id` (optional, bigint): تحديد العام الدراسي المطلوب (افتراضياً العام الدراسي النشط).
+- **Example Request URL:** `/api/v1/student-enrollments/class-counts?academic_year_id=1`
+
+#### استجابات هذا الرابط (Responses):
+
+##### ✅ `200 OK`:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "class_id": 5,
+      "count": 42
+    },
+    {
+      "class_id": 6,
+      "count": 38
+    }
+  ],
+  "enrolled_student_ids": [101, 102, 103, 104]
+}
+```
+
+> 🔒 *أخطاء المصادقة والصلاحيات والخادم (`401`, `403`, `500`) تخضع للمعيار العام الموحد في [القسم 1.1](#-11-نمط-الاستجابات-العامة-للأخطاء-المشتركة-global-standard-error-responses).*
+

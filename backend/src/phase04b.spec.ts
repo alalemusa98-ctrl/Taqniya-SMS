@@ -11,6 +11,11 @@ import {
 } from '@nestjs/common';
 import { RoleType, Gender, EnrollmentStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { Reflector } from '@nestjs/core';
+import { StudentEnrollmentsController } from './modules/student-enrollments/student-enrollments.controller.js';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
+import { RolesGuard } from './common/guards/roles.guard.js';
+import { ROLES_KEY } from './common/decorators/roles.decorator.js';
 
 describe('Phase 04-B: Student Enrollments Registry (TDD Verification)', () => {
   let moduleRef: TestingModule;
@@ -19,6 +24,9 @@ describe('Phase 04-B: Student Enrollments Registry (TDD Verification)', () => {
 
   const testAdminId = 1;
   let testTeacherUserId: number;
+  let testTeacherId: number;
+  let testSubjectId: number;
+  let testTeachingAssignmentId: number;
   let testStudent1UserId: number;
   let testStudent2UserId: number;
 
@@ -65,7 +73,7 @@ describe('Phase 04-B: Student Enrollments Registry (TDD Verification)', () => {
       },
     });
 
-    // 2. Create Teacher User
+    // 2. Create Teacher User & Teacher Profile
     const teacherUser = await prisma.user.create({
       data: {
         user_code: `TCH-${uniqueSuffix}`,
@@ -75,6 +83,21 @@ describe('Phase 04-B: Student Enrollments Registry (TDD Verification)', () => {
       },
     });
     testTeacherUserId = Number(teacherUser.id);
+    const teacherRecord = await prisma.teacher.create({
+      data: {
+        user_id: teacherUser.id,
+        full_name: `أستاذ أحمد-${uniqueSuffix}`,
+      },
+    });
+    testTeacherId = Number(teacherRecord.id);
+
+    const subject = await prisma.subject.create({
+      data: {
+        name: `رياضيات-${uniqueSuffix}`,
+        code: `MATH-${uniqueSuffix}`,
+      },
+    });
+    testSubjectId = Number(subject.id);
 
     // 3. Setup Academic Year
     const year = await prisma.academicYear.create({
@@ -208,6 +231,21 @@ describe('Phase 04-B: Student Enrollments Registry (TDD Verification)', () => {
         },
       },
     });
+    if (testTeachingAssignmentId) {
+      await prisma.teachingAssignment.deleteMany({
+        where: { id: BigInt(testTeachingAssignmentId) },
+      });
+    }
+    if (testTeacherId) {
+      await prisma.teacher.deleteMany({
+        where: { id: BigInt(testTeacherId) },
+      });
+    }
+    if (testSubjectId) {
+      await prisma.subject.deleteMany({
+        where: { id: BigInt(testSubjectId) },
+      });
+    }
     await prisma.user.deleteMany({
       where: {
         id: {
@@ -469,9 +507,38 @@ describe('Phase 04-B: Student Enrollments Registry (TDD Verification)', () => {
   });
 
   // --------------------------------------------------------------------------
-  // STEP 2: SECURITY, RBAC & AUDIT TESTS (TC-RBAC-01 -> TC-RBAC-03, TC-AUDIT-01)
+  // STEP 2: SECURITY, RBAC & AUDIT TESTS (TC-AUTH-01/02, TC-RBAC-01 -> TC-RBAC-05, TC-AUDIT-01)
   // --------------------------------------------------------------------------
   describe('Step 2: Security, RBAC & Audit Verification', () => {
+    it('TC-AUTH-01 & TC-AUTH-02: StudentEnrollmentsController must be guarded by JwtAuthGuard and RolesGuard', () => {
+      const guards = Reflect.getMetadata('__guards__', StudentEnrollmentsController);
+      expect(guards).toBeDefined();
+      expect(guards).toContain(JwtAuthGuard);
+      expect(guards).toContain(RolesGuard);
+    });
+
+    it('TC-RBAC-01: Mutating routes must be restricted strictly to admin role only', () => {
+      const reflector = moduleRef.get(Reflector);
+
+      const createRoles = reflector.get(ROLES_KEY, StudentEnrollmentsController.prototype.create);
+      expect(createRoles).toEqual([RoleType.admin]);
+
+      const updateRoles = reflector.get(ROLES_KEY, StudentEnrollmentsController.prototype.update);
+      expect(updateRoles).toEqual([RoleType.admin]);
+
+      const bulkEnrollRoles = reflector.get(ROLES_KEY, StudentEnrollmentsController.prototype.bulkEnroll);
+      expect(bulkEnrollRoles).toEqual([RoleType.admin]);
+
+      const deleteRoles = reflector.get(ROLES_KEY, StudentEnrollmentsController.prototype.delete);
+      expect(deleteRoles).toEqual([RoleType.admin]);
+
+      const findAllRoles = reflector.get(ROLES_KEY, StudentEnrollmentsController.prototype.findAll);
+      expect(findAllRoles).toEqual([RoleType.admin, RoleType.teacher]);
+
+      const classCountsRoles = reflector.get(ROLES_KEY, StudentEnrollmentsController.prototype.getClassCounts);
+      expect(classCountsRoles).toEqual([RoleType.admin, RoleType.teacher]);
+    });
+
     it('TC-RBAC-02: Student should be forbidden from accessing another student historical progression archive', async () => {
       const student1User = {
         id: testStudent1UserId,
@@ -493,6 +560,40 @@ describe('Phase 04-B: Student Enrollments Registry (TDD Verification)', () => {
       const result = await enrollmentsService.getStudentEnrollments(testStudent1Id, student1User);
       expect(result.success).toBe(true);
       expect(Array.isArray(result.data)).toBe(true);
+    });
+
+    it('TC-RBAC-04: Teacher with no teaching assignment in student section should be forbidden from accessing enrollments', async () => {
+      const teacherUser = {
+        id: testTeacherUserId,
+        role_type: RoleType.teacher,
+      };
+
+      await expect(
+        enrollmentsService.getStudentEnrollments(testStudent1Id, teacherUser),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('TC-RBAC-05: Teacher with an active teaching assignment in student section should successfully access enrollments', async () => {
+      // Assign teacher to the class_section where Student 1 is currently enrolled (testClass5SectionBId)
+      const assignment = await prisma.teachingAssignment.create({
+        data: {
+          academic_year_id: BigInt(testYearId),
+          class_section_id: BigInt(testClass5SectionBId),
+          subject_id: BigInt(testSubjectId),
+          teacher_id: BigInt(testTeacherId),
+        },
+      });
+      testTeachingAssignmentId = Number(assignment.id);
+
+      const teacherUser = {
+        id: testTeacherUserId,
+        role_type: RoleType.teacher,
+      };
+
+      const result = await enrollmentsService.getStudentEnrollments(testStudent1Id, teacherUser);
+      expect(result.success).toBe(true);
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(result.data.length).toBeGreaterThanOrEqual(1);
     });
 
     it('TC-AUDIT-01: Actions must be recorded in audit_logs with action names and metadata', async () => {
