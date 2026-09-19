@@ -659,7 +659,10 @@ export class QuizzesService {
         where: { user_id: BigInt(currentUser.id) },
       });
       const isCreator = existing.created_by_user_id === BigInt(currentUser.id);
-      const isAssigned = teacher && existing.teaching_assignment.teacher_id === teacher.id;
+      const isAssigned =
+        teacher &&
+        existing.teaching_assignment &&
+        existing.teaching_assignment.teacher_id === teacher.id;
 
       if (!isCreator && !isAssigned) {
         throw new ForbiddenException({
@@ -811,7 +814,10 @@ export class QuizzesService {
         where: { user_id: BigInt(currentUser.id) },
       });
       const isCreator = existing.created_by_user_id === BigInt(currentUser.id);
-      const isAssigned = teacher && existing.teaching_assignment.teacher_id === teacher.id;
+      const isAssigned =
+        teacher &&
+        existing.teaching_assignment &&
+        existing.teaching_assignment.teacher_id === teacher.id;
 
       if (!isCreator && !isAssigned) {
         throw new ForbiddenException({

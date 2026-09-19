@@ -266,6 +266,7 @@ export class AssignmentsService {
     const classMap = new Map<number, any>();
 
     for (const a of assignments) {
+      if (!a.class_section || !a.teaching_assignment) continue;
       const classId = Number(a.class_section.class.id);
       const className = a.class_section.class.name;
       const gradeLevel = a.class_section.class.grade_level;
@@ -424,21 +425,21 @@ export class AssignmentsService {
       data: {
         id: Number(assignment.id),
         academic_year_id: Number(assignment.academic_year_id),
-        academic_year_name: assignment.academic_year.name,
+        academic_year_name: assignment.academic_year?.name || '',
         academic_term_id: Number(assignment.academic_term_id),
-        academic_term_name: assignment.academic_term.name,
-        class_id: Number(assignment.class_section.class.id),
-        class_name: assignment.class_section.class.name,
+        academic_term_name: assignment.academic_term?.name || '',
+        class_id: Number(assignment.class_section?.class.id || 0),
+        class_name: assignment.class_section?.class.name || '',
         class_section_id: Number(assignment.class_section_id),
-        section_name: assignment.class_section.section.name,
+        section_name: assignment.class_section?.section.name || '',
         teaching_assignment_id: Number(assignment.teaching_assignment_id),
-        subject_id: Number(assignment.teaching_assignment.subject.id),
-        subject_name: assignment.teaching_assignment.subject.name,
-        teacher_id: Number(assignment.teaching_assignment.teacher.id),
-        teacher_name: assignment.teaching_assignment.teacher.full_name,
+        subject_id: Number(assignment.teaching_assignment?.subject.id || 0),
+        subject_name: assignment.teaching_assignment?.subject.name || '',
+        teacher_id: Number(assignment.teaching_assignment?.teacher.id || 0),
+        teacher_name: assignment.teaching_assignment?.teacher.full_name || '',
         created_by_user_id: Number(assignment.created_by_user_id),
-        creator_name: assignment.creator.user_code,
-        creator_role: assignment.creator.role_type,
+        creator_name: assignment.creator?.user_code || '',
+        creator_role: assignment.creator?.role_type,
         title: assignment.title,
         description: assignment.description,
         assigned_date: assignment.assigned_date.toISOString().slice(0, 10),
@@ -593,8 +594,8 @@ export class AssignmentsService {
           academic_term_id: Number(created.academic_term_id),
           class_section_id: Number(created.class_section_id),
           teaching_assignment_id: Number(created.teaching_assignment_id),
-          subject_name: created.teaching_assignment.subject.name,
-          teacher_name: created.teaching_assignment.teacher.full_name,
+          subject_name: created.teaching_assignment?.subject.name || '',
+          teacher_name: created.teaching_assignment?.teacher.full_name || '',
           title: created.title,
           description: created.description,
           assigned_date: created.assigned_date.toISOString().slice(0, 10),
@@ -642,7 +643,9 @@ export class AssignmentsService {
       });
       const isCreator = assignment.created_by_user_id === BigInt(currentUser.id);
       const isAssigned =
-        teacher && assignment.teaching_assignment.teacher_id === teacher.id;
+        teacher &&
+        assignment.teaching_assignment &&
+        assignment.teaching_assignment.teacher_id === teacher.id;
 
       if (!isCreator && !isAssigned) {
         throw new ForbiddenException(
@@ -752,8 +755,8 @@ export class AssignmentsService {
           academic_term_id: Number(updated.academic_term_id),
           class_section_id: Number(updated.class_section_id),
           teaching_assignment_id: Number(updated.teaching_assignment_id),
-          subject_name: updated.teaching_assignment.subject.name,
-          teacher_name: updated.teaching_assignment.teacher.full_name,
+          subject_name: updated.teaching_assignment?.subject.name || '',
+          teacher_name: updated.teaching_assignment?.teacher.full_name || '',
           title: updated.title,
           description: updated.description,
           assigned_date: updated.assigned_date.toISOString().slice(0, 10),
@@ -801,7 +804,9 @@ export class AssignmentsService {
       });
       const isCreator = assignment.created_by_user_id === BigInt(currentUser.id);
       const isAssigned =
-        teacher && assignment.teaching_assignment.teacher_id === teacher.id;
+        teacher &&
+        assignment.teaching_assignment &&
+        assignment.teaching_assignment.teacher_id === teacher.id;
 
       if (!isCreator && !isAssigned) {
         throw new ForbiddenException(
