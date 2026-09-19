@@ -11,17 +11,12 @@ import {
   Coffee,
   BookOpen,
   RotateCcw,
-  Calendar,
   AlertTriangle,
-  ChevronRight,
-  ChevronLeft,
-  Sparkles,
-  Save,
-  Hash,
   Zap,
   TrendingUp,
   CheckCircle2,
   Star,
+  Save,
 } from 'lucide-vue-next';
 import {
   periodSlotsApi,
@@ -33,6 +28,11 @@ import {
 import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
+import TaqniyaTable, { type TableColumn } from '../components/ui/TaqniyaTable.vue';
+import TaqniyaPagination from '../components/ui/TaqniyaPagination.vue';
+import TaqniyaModal from '../components/ui/TaqniyaModal.vue';
+import PeriodSlotsTimeline from '../components/period-slots/PeriodSlotsTimeline.vue';
+import PeriodSlotDrawerForm from '../components/period-slots/PeriodSlotDrawerForm.vue';
 
 // 1. Component Lazy Loading (frontend_capabilities.yaml)
 const TaqniyaDrawer = defineAsyncComponent(() => import('../components/ui/TaqniyaDrawer.vue'));
@@ -83,6 +83,63 @@ const showDeleteModal = ref(false);
 const slotToDelete = ref<PeriodSlot | null>(null);
 const isDeleting = ref(false);
 
+// Columns Configuration for TaqniyaTable
+const columns: TableColumn[] = [
+  {
+    key: 'slot_number',
+    label: '# الرقم',
+    align: 'start',
+    width: '75px',
+    headerClass: "font-['Alexandria',sans-serif] border-e border-bx-divider",
+    cellClass: 'border-e border-bx-divider',
+  },
+  {
+    key: 'name',
+    label: 'مسمى الحصة / الفترة',
+    align: 'start',
+    headerClass: 'border-e border-bx-divider',
+    cellClass: 'border-e border-bx-divider',
+  },
+  {
+    key: 'start_time',
+    label: 'وقت البداية',
+    align: 'start',
+    width: '110px',
+    headerClass: 'border-e border-bx-divider',
+    cellClass: 'border-e border-bx-divider text-start',
+  },
+  {
+    key: 'end_time',
+    label: 'وقت النهاية',
+    align: 'start',
+    width: '110px',
+    headerClass: 'border-e border-bx-divider',
+    cellClass: 'border-e border-bx-divider text-start',
+  },
+  {
+    key: 'duration',
+    label: 'المدة المحسوبة',
+    align: 'start',
+    width: '110px',
+    headerClass: 'border-e border-bx-divider',
+    cellClass: 'border-e border-bx-divider',
+  },
+  {
+    key: 'is_break',
+    label: 'نوع الفترة',
+    align: 'center',
+    width: '130px',
+    headerClass: 'border-e border-bx-divider',
+    cellClass: 'border-e border-bx-divider',
+  },
+  {
+    key: 'actions',
+    label: 'الإجراءات',
+    align: 'center',
+    width: '110px',
+  },
+];
+
 // Helper: Calculate Duration in Minutes
 function calculateDuration(start: string, end: string): string {
   if (!start || !end) return '';
@@ -94,32 +151,38 @@ function calculateDuration(start: string, end: string): string {
   return diff > 0 ? `${diff} دقيقة` : '-';
 }
 
-// 5. Async Data Fetching & Request Deduplication
+// 5. Async Data Fetching & SWR Client Caching
 async function fetchSlots() {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
-  loading.value = true;
+  const isBreakParam =
+    filterType.value === 'break' ? 1 : filterType.value === 'class' ? 0 : undefined;
+
+  const queryParams = {
+    search: search.value.trim() || undefined,
+    is_break: isBreakParam,
+    sort_by: sortBy.value,
+    sort_order: sortOrder.value,
+    page: currentPage.value,
+    per_page: meta.value.per_page,
+  };
+
+  // Check client SWR cache first
+  const cached = periodSlotsApi.getCachedPeriodSlots(queryParams);
+  if (cached) {
+    slots.value = cached.data;
+    meta.value = cached.meta;
+  } else {
+    loading.value = true;
+  }
+
   errorMsg.value = null;
 
   try {
-    const isBreakParam =
-      filterType.value === 'break' ? 1 : filterType.value === 'class' ? 0 : undefined;
-
-    const res = await periodSlotsApi.getPeriodSlots(
-      {
-        search: search.value.trim() || undefined,
-        is_break: isBreakParam,
-        sort_by: sortBy.value,
-        sort_order: sortOrder.value,
-        page: currentPage.value,
-        per_page: meta.value.per_page,
-      },
-      activeAbortController.signal,
-    );
-
+    const res = await periodSlotsApi.getPeriodSlots(queryParams, activeAbortController.signal);
     if (res.data && res.data.success) {
       slots.value = res.data.data;
       meta.value = res.data.meta;
@@ -143,6 +206,11 @@ function onSearchInput() {
     currentPage.value = 1;
     fetchSlots();
   }, 350);
+}
+
+function onPageChange(page: number) {
+  currentPage.value = page;
+  fetchSlots();
 }
 
 // Drawer Open Handlers
@@ -289,7 +357,7 @@ async function handleDelete() {
   } catch (err: any) {
     const msg =
       err?.response?.data?.message ||
-      'لا يمكن حذف فترة الحصة لارتباطها بحصص مجدولة في الجداول الأسبوعية.';
+      'لا يمكن حذف فترة الحصة لارتباطها بحصص مجدولة في الجداول الأسبوعية (Foreign Key Restrict).';
     toast.error(msg);
   } finally {
     isDeleting.value = false;
@@ -319,11 +387,6 @@ const stats = computed(() => {
   const durationText = hours > 0 ? `${hours} س و ${mins} د` : `${mins} دقيقة`;
 
   return { total, classCount, breakCount, classPercentage, breakPercentage, durationText };
-});
-
-// Chronological timeline slots
-const sortedTimelineSlots = computed(() => {
-  return [...slots.value].sort((a, b) => a.slot_number - b.slot_number);
 });
 
 onMounted(() => {
@@ -411,7 +474,6 @@ watch([filterType, sortBy, sortOrder], () => {
 
         <!-- 2. مؤشرات الأداء والبطاقات (8. KPI & Metrics - Exact Framework Section 8 Standard) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-6">
-          <!-- Card 1: Zap Icon with Trending Badge (Section 8 Standard) -->
           <TaqniyaKpiCard
             title="إجمالي فترات اليوم"
             :value="stats.total"
@@ -423,7 +485,6 @@ watch([filterType, sortBy, sortOrder], () => {
             :progress="100"
           />
 
-          <!-- Card 2: CheckCircle2 Icon with Emerald Border (Section 8 Standard) -->
           <TaqniyaKpiCard
             title="الحصص التعليمية"
             :value="`${stats.classCount} حصص`"
@@ -433,7 +494,6 @@ watch([filterType, sortBy, sortOrder], () => {
             :progress="stats.classPercentage"
           />
 
-          <!-- Card 3: Clock Icon with Amber Border (Section 8 Standard) -->
           <TaqniyaKpiCard
             title="فترات الاستراحة"
             :value="`${stats.breakCount} استراحة`"
@@ -443,7 +503,6 @@ watch([filterType, sortBy, sortOrder], () => {
             :progress="stats.breakPercentage"
           />
 
-          <!-- Card 4: Star Icon with Quality/Duration (Section 8 Standard) -->
           <TaqniyaKpiCard
             title="إجمالي زمن اليوم المدرسي"
             :value="stats.durationText"
@@ -454,78 +513,13 @@ watch([filterType, sortBy, sortOrder], () => {
           />
         </div>
 
-        <!-- 3. Visual Daily Timeline (المخطط الزمني التفاعلي) -->
-        <div v-if="sortedTimelineSlots.length > 0" class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-bx-border mb-6 space-y-3 shadow-2xs">
-          <div class="flex items-center justify-between gap-2 border-b border-bx-divider pb-2.5">
-            <div class="flex items-center gap-2 text-xs font-bold text-bx-title">
-              <Calendar class="w-4 h-4 text-bx-primary shrink-0" />
-              <span>المخطط الزمني لليوم المدرسي</span>
-            </div>
-            <div class="flex items-center gap-2 text-[11px] text-bx-primary font-bold">
-              <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
-              <span>{{ sortedTimelineSlots.length }} فترات مجدولة بتسلسل اليوم</span>
-            </div>
-          </div>
+        <!-- 3. Visual Daily Timeline (Feature Component: PeriodSlotsTimeline) -->
+        <PeriodSlotsTimeline :slots="slots" />
 
-          <div class="relative overflow-x-auto pb-1">
-            <div class="flex items-stretch gap-3 min-w-max py-1">
-              <div
-                v-for="slot in sortedTimelineSlots"
-                :key="slot.id"
-                class="flex flex-col justify-between p-3.5 rounded-2xl border transition-all duration-200 min-w-[170px]"
-                :class="[
-                  slot.is_break === 1
-                    ? 'bg-amber-500/[0.06] dark:bg-amber-500/[0.08] border-amber-300/80 dark:border-amber-400/40 text-amber-900 dark:text-amber-200'
-                    : 'bg-purple-500/[0.04] dark:bg-purple-500/[0.08] border-purple-300/70 dark:border-purple-400/30 text-bx-title',
-                ]"
-              >
-                <div class="flex items-center justify-between gap-2 mb-2">
-                  <span
-                    class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold font-mono"
-                    :class="[
-                      slot.is_break === 1
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-bx-primary text-white',
-                    ]"
-                  >
-                    {{ slot.slot_number }}
-                  </span>
-                  <span
-                    class="text-[10px] px-2 py-0.5 rounded-full font-bold"
-                    :class="[
-                      slot.is_break === 1
-                        ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200'
-                        : 'bg-purple-100 dark:bg-purple-900/50 text-bx-primary dark:text-purple-300',
-                    ]"
-                  >
-                    {{ slot.is_break === 1 ? 'فسحة / استراحة' : 'حصة دراسية' }}
-                  </span>
-                </div>
-
-                <div class="font-black text-xs text-bx-title font-display mb-2 truncate" :title="slot.name">
-                  {{ slot.name }}
-                </div>
-
-                <div class="flex items-center justify-between text-[11px] text-bx-muted font-mono pt-2 border-t border-bx-divider">
-                  <span>{{ slot.start_time.substring(0, 5) }}</span>
-                  <span class="text-[10px] text-bx-muted/60">←</span>
-                  <span>{{ slot.end_time.substring(0, 5) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. Table & UI States (With Crisp Dividers Matching Students/Teachers Views) -->
-        <div class="rounded-2xl border border-bx-border overflow-hidden bg-bx-surface shadow-xs">
-          <!-- Loading State -->
-          <div v-if="loading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
-            <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
-            <span class="text-xs font-bold">جاري تحميل فترات الحصص اليومية...</span>
-          </div>
-
-          <!-- Error State -->
-          <div v-else-if="errorMsg" class="py-14 text-center space-y-3 p-8">
+        <!-- 4. Shared Table Component: TaqniyaTable -->
+        <div class="space-y-3">
+          <!-- Error State Display when server fetch fails -->
+          <div v-if="errorMsg" class="py-14 text-center space-y-3 p-8 rounded-2xl border border-bx-border bg-bx-surface">
             <div class="w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/40 text-red-500 flex items-center justify-center mx-auto">
               <AlertCircle class="w-6 h-6" />
             </div>
@@ -540,189 +534,112 @@ watch([filterType, sortBy, sortOrder], () => {
             </button>
           </div>
 
-          <!-- Empty State -->
-          <div v-else-if="slots.length === 0" class="py-14 text-center space-y-3 p-8">
-            <div class="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-950/40 text-bx-primary flex items-center justify-center mx-auto">
-              <Clock class="w-6 h-6" />
-            </div>
-            <h3 class="text-sm font-bold text-bx-title">لا توجد فترات حصص مسجلة</h3>
-            <p class="text-xs text-bx-muted max-w-sm mx-auto">
-              لم يتم تعريف فترات وتوقيتات الحصص اليومية بعد، ابدأ بضبط فترات اليوم المدرسي.
-            </p>
-            <button
-              @click="openCreateDrawer"
-              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-bx-primary text-white text-xs font-bold shadow-sm hover:bg-bx-primary-hover transition-all cursor-pointer mt-2"
-            >
-              <Plus class="w-3.5 h-3.5" />
-              <span>+ إضافة أول فترة حصة</span>
-            </button>
-          </div>
+          <!-- TaqniyaTable Instance -->
+          <TaqniyaTable
+            v-else
+            :columns="columns"
+            :items="slots"
+            :is-loading="loading"
+            empty-title="لا توجد فترات حصص مسجلة"
+            empty-subtitle="لم يتم تعريف فترات وتوقيتات الحصص اليومية بعد، ابدأ بضبط فترات اليوم المدرسي."
+            :empty-icon="Clock"
+            loading-text="جاري تحميل فترات الحصص اليومية..."
+          >
+            <!-- Slot Number Cell -->
+            <template #cell-slot_number="{ item }">
+              <span
+                class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold font-mono"
+                :class="[
+                  item.is_break === 1
+                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                    : 'bg-purple-100 text-bx-primary dark:bg-purple-900/40 dark:text-purple-300',
+                ]"
+              >
+                {{ item.slot_number }}
+              </span>
+            </template>
 
-          <!-- Success State: Table with Crisp Column Dividers and Standard Taqniya Tokens -->
-          <div v-else class="overflow-x-auto">
-            <table class="w-full text-start border-collapse">
-              <thead>
-                <tr class="bg-bx-table-header border-b border-bx-border text-bx-muted text-xs">
-                  <th class="py-3 px-4 font-bold text-start w-16 font-['Alexandria',sans-serif] border-e border-bx-divider"># الرقم</th>
-                  <th class="py-3 px-4 font-bold text-start border-e border-bx-divider">
-                    <div class="flex items-center gap-1.5">
-                      <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>مسمى الحصة / الفترة</span>
-                    </div>
-                  </th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-bx-divider">
-                    <div class="flex items-center gap-1.5">
-                      <Clock class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>وقت البداية</span>
-                    </div>
-                  </th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-bx-divider">
-                    <div class="flex items-center gap-1.5">
-                      <Clock class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>وقت النهاية</span>
-                    </div>
-                  </th>
-                  <th class="py-3 px-4 font-bold text-start min-w-[110px] border-e border-bx-divider">
-                    <div class="flex items-center gap-1.5">
-                      <Sparkles class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>المدة المحسوبة</span>
-                    </div>
-                  </th>
-                  <th class="py-3 px-4 font-bold text-center min-w-[130px] border-e border-bx-divider">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <Coffee class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>نوع الفترة</span>
-                    </div>
-                  </th>
-                  <th class="py-3 px-4 font-bold text-center w-28 last:border-e-0">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-bx-divider text-xs font-medium text-bx-title">
-                <tr
-                  v-for="slot in slots"
-                  :key="slot.id"
-                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
-                >
-                  <!-- Slot Number -->
-                  <td class="py-3 px-4 font-mono font-bold whitespace-nowrap border-e border-bx-divider">
-                    <span
-                      class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold font-mono"
-                      :class="[
-                        slot.is_break === 1
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-                          : 'bg-purple-100 text-bx-primary dark:bg-purple-900/40 dark:text-purple-300',
-                      ]"
-                    >
-                      {{ slot.slot_number }}
-                    </span>
-                  </td>
+            <!-- Name Cell -->
+            <template #cell-name="{ item }">
+              <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight group-hover:text-bx-primary transition-colors">
+                {{ item.name }}
+              </span>
+            </template>
 
-                  <!-- Name -->
-                  <td class="py-3 px-4 whitespace-nowrap border-e border-bx-divider">
-                    <span class="font-black text-xs sm:text-sm text-bx-title block leading-tight group-hover:text-bx-primary transition-colors">
-                      {{ slot.name }}
-                    </span>
-                  </td>
+            <!-- Start Time Cell -->
+            <template #cell-start_time="{ item }">
+              <span class="font-mono font-bold text-bx-muted whitespace-nowrap">
+                {{ item.start_time.substring(0, 5) }}
+              </span>
+            </template>
 
-                  <!-- Start Time -->
-                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-bx-divider text-start">
-                    {{ slot.start_time.substring(0, 5) }}
-                  </td>
+            <!-- End Time Cell -->
+            <template #cell-end_time="{ item }">
+              <span class="font-mono font-bold text-bx-muted whitespace-nowrap">
+                {{ item.end_time.substring(0, 5) }}
+              </span>
+            </template>
 
-                  <!-- End Time -->
-                  <td class="py-3 px-4 font-mono font-bold text-bx-muted whitespace-nowrap border-e border-bx-divider text-start">
-                    {{ slot.end_time.substring(0, 5) }}
-                  </td>
+            <!-- Duration Cell -->
+            <template #cell-duration="{ item }">
+              <span class="px-2.5 py-0.5 rounded-full bg-purple-500/[0.06] dark:bg-white/[0.05] border border-bx-border text-[11px] font-mono font-bold whitespace-nowrap">
+                {{ calculateDuration(item.start_time, item.end_time) }}
+              </span>
+            </template>
 
-                  <!-- Duration -->
-                  <td class="py-3 px-4 font-mono font-bold text-bx-title whitespace-nowrap border-e border-bx-divider">
-                    <span class="px-2.5 py-0.5 rounded-full bg-purple-500/[0.06] dark:bg-white/[0.05] border border-bx-border text-[11px]">
-                      {{ calculateDuration(slot.start_time, slot.end_time) }}
-                    </span>
-                  </td>
+            <!-- Type / Break Cell -->
+            <template #cell-is_break="{ item }">
+              <span
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap"
+                :class="[
+                  item.is_break === 1
+                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 dark:bg-amber-950/30'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 dark:bg-emerald-950/30',
+                ]"
+              >
+                <Coffee v-if="item.is_break === 1" class="w-3 h-3" />
+                <BookOpen v-else class="w-3 h-3" />
+                <span>{{ item.is_break === 1 ? 'فسحة / استراحة' : 'حصة دراسية' }}</span>
+              </span>
+            </template>
 
-                  <!-- Type -->
-                  <td class="py-3 px-4 text-center whitespace-nowrap border-e border-bx-divider">
-                    <span
-                      class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border"
-                      :class="[
-                        slot.is_break === 1
-                          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 dark:bg-amber-950/30'
-                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 dark:bg-emerald-950/30',
-                      ]"
-                    >
-                      <Coffee v-if="slot.is_break === 1" class="w-3 h-3" />
-                      <BookOpen v-else class="w-3 h-3" />
-                      <span>{{ slot.is_break === 1 ? 'فسحة / استراحة' : 'حصة دراسية' }}</span>
-                    </span>
-                  </td>
-
-                  <!-- Actions: Uniform Circular Icon Buttons Matching Taqniya Standard -->
-                  <td class="py-3 px-4 text-center whitespace-nowrap last:border-e-0">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <!-- Edit Button -->
-                      <button
-                        @click="openEditDrawer(slot)"
-                        class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                        title="تعديل فترة الحصة"
-                      >
-                        <Edit2 class="w-3.5 h-3.5" />
-                      </button>
-
-                      <!-- Delete Button -->
-                      <button
-                        @click="confirmDelete(slot)"
-                        class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                        title="حذف فترة الحصة"
-                      >
-                        <Trash2 class="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- Pagination Footer (Matching Students/Teachers Reference) -->
-            <div
-              v-if="meta.last_page > 1"
-              class="p-4 border-t border-bx-border bg-bx-table-header flex items-center justify-between gap-4"
-            >
-              <div class="text-xs text-bx-muted">
-                الصفحة <span class="font-bold text-bx-title">{{ meta.current_page }}</span> من <span class="font-bold text-bx-title">{{ meta.last_page }}</span> (إجمالي <span class="font-mono font-bold">{{ meta.total }}</span> فترة)
-              </div>
-
-              <div class="flex items-center gap-1.5">
+            <!-- Action Buttons Cell -->
+            <template #cell-actions="{ item }">
+              <div class="flex items-center justify-center gap-1.5">
+                <!-- Edit Button -->
                 <button
-                  :disabled="currentPage <= 1"
-                  @click="currentPage--; fetchSlots();"
-                  class="p-1.5 rounded-lg border border-bx-border hover:bg-bx-pill disabled:opacity-40 transition-colors cursor-pointer"
+                  @click="openEditDrawer(item)"
+                  class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-bx-primary hover:bg-bx-primary hover:text-white dark:border-purple-400/60 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                  title="تعديل فترة الحصة"
                 >
-                  <ChevronRight class="w-4 h-4" />
+                  <Edit2 class="w-3.5 h-3.5" />
                 </button>
+
+                <!-- Delete Button -->
                 <button
-                  v-for="p in meta.last_page"
-                  :key="p"
-                  @click="currentPage = p; fetchSlots();"
-                  class="w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                  :class="p === currentPage ? 'bg-bx-primary text-white shadow-sm' : 'hover:bg-bx-pill text-bx-muted'"
+                  @click="confirmDelete(item)"
+                  class="w-7 h-7 rounded-full border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:border-rose-400 dark:bg-rose-950/80 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                  title="حذف فترة الحصة"
                 >
-                  {{ p }}
-                </button>
-                <button
-                  :disabled="currentPage >= meta.last_page"
-                  @click="currentPage++; fetchSlots();"
-                  class="p-1.5 rounded-lg border border-bx-border hover:bg-bx-pill disabled:opacity-40 transition-colors cursor-pointer"
-                >
-                  <ChevronLeft class="w-4 h-4" />
+                  <Trash2 class="w-3.5 h-3.5" />
                 </button>
               </div>
-            </div>
-          </div>
+            </template>
+          </TaqniyaTable>
+
+          <!-- 5. Shared Pagination Component: TaqniyaPagination -->
+          <TaqniyaPagination
+            :current-page="currentPage"
+            :total-pages="meta.last_page"
+            :total="meta.total"
+            :is-loading="loading"
+            item-name="فترة"
+            @page-change="onPageChange"
+          />
         </div>
       </div>
 
-      <!-- 5. Slide-Over Drawer (TaqniyaDrawer Standard with Header Icon, Subtitle, and Fixed Footer Slot) -->
+      <!-- 6. Slide-Over Drawer with Feature Component Form -->
       <TaqniyaDrawer
         :is-open="showDrawer"
         :title="drawerMode === 'create' ? 'إضافة فترة حصة يومية' : 'تعديل فترة الحصة اليومية'"
@@ -731,153 +648,15 @@ watch([filterType, sortBy, sortOrder], () => {
         max-width="max-w-[540px]"
         @close="showDrawer = false"
       >
-        <form id="slotForm" @submit.prevent="handleSubmit" class="space-y-5">
-          <!-- Error Alert inside Drawer -->
-          <div
-            v-if="formErrorMessage"
-            class="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-2"
-          >
-            <AlertCircle class="w-4 h-4 shrink-0" />
-            <span>{{ formErrorMessage }}</span>
-          </div>
-
-          <!-- Section 1: Basic Period Info Card -->
-          <div class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-4 shadow-xs">
-            <div class="flex items-center gap-2 border-b border-bx-divider pb-2.5">
-              <BookOpen class="w-4 h-4 text-bx-primary shrink-0" />
-              <h4 class="text-xs font-black text-bx-title">البيانات الأساسية للحصة</h4>
-            </div>
-
-            <!-- Name -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-bold text-bx-title block">
-                مسمى الحصة / الفترة <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="formData.name"
-                type="text"
-                required
-                maxlength="50"
-                placeholder="مثال: الحصة الأولى، الفسحة الكبرى..."
-                class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-medium"
-                :class="[formErrors.name ? 'border-red-400 bg-red-50/20' : '']"
-              />
-              <p v-if="formErrors.name" class="text-[11px] text-red-500 font-medium">
-                {{ formErrors.name }}
-              </p>
-            </div>
-
-            <!-- Slot Number -->
-            <div class="space-y-1.5">
-              <div class="flex items-center gap-1.5 text-bx-title">
-                <Hash class="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                <label class="text-xs font-bold">الرقم التسلسلي في اليوم <span class="text-red-500">*</span></label>
-              </div>
-              <input
-                v-model.number="formData.slot_number"
-                type="number"
-                min="1"
-                max="255"
-                required
-                placeholder="1, 2, 3..."
-                class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all font-mono font-medium"
-                :class="[formErrors.slot_number ? 'border-red-400 bg-red-50/20' : '']"
-              />
-              <p v-if="formErrors.slot_number" class="text-[11px] text-red-500 font-medium">
-                {{ formErrors.slot_number }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Section 2: Times & Duration Card -->
-          <div class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-4 shadow-xs">
-            <div class="flex items-center gap-2 border-b border-bx-divider pb-2.5">
-              <Clock class="w-4 h-4 text-amber-500 shrink-0" />
-              <h4 class="text-xs font-black text-bx-title">توقيت البداية والنهاية</h4>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <!-- Start Time -->
-              <div class="space-y-1.5">
-                <label class="text-xs font-bold text-bx-title block">
-                  وقت البداية <span class="text-red-500">*</span>
-                </label>
-                <input
-                  v-model="formData.start_time"
-                  type="time"
-                  required
-                  class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono font-medium text-center"
-                  :class="[formErrors.start_time ? 'border-red-400 bg-red-50/20' : '']"
-                />
-                <p v-if="formErrors.start_time" class="text-[11px] text-red-500 font-medium">
-                  {{ formErrors.start_time }}
-                </p>
-              </div>
-
-              <!-- End Time -->
-              <div class="space-y-1.5">
-                <label class="text-xs font-bold text-bx-title block">
-                  وقت النهاية <span class="text-red-500">*</span>
-                </label>
-                <input
-                  v-model="formData.end_time"
-                  type="time"
-                  required
-                  class="w-full px-5 py-2.5 rounded-full border border-bx-border bg-transparent text-xs text-bx-title focus:outline-none focus:border-bx-primary transition-all font-mono font-medium text-center"
-                  :class="[formErrors.end_time ? 'border-red-400 bg-red-50/20' : '']"
-                />
-                <p v-if="formErrors.end_time" class="text-[11px] text-red-500 font-medium">
-                  {{ formErrors.end_time }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Duration Notice -->
-            <div
-              v-if="formData.start_time && formData.end_time && formData.start_time < formData.end_time"
-              class="p-3 rounded-2xl bg-purple-500/[0.04] dark:bg-white/[0.02] border border-bx-border text-xs text-bx-title flex items-center justify-between"
-            >
-              <span class="text-bx-muted font-bold">المدة المحسوبة تلقائياً:</span>
-              <span class="font-black font-mono text-bx-primary">{{ calculateDuration(formData.start_time, formData.end_time) }}</span>
-            </div>
-          </div>
-
-          <!-- Section 3: Period Classification Card -->
-          <div class="p-4 rounded-2xl border border-bx-border bg-bx-surface space-y-3.5 shadow-xs">
-            <div class="flex items-center gap-2 border-b border-bx-divider pb-2.5">
-              <Coffee class="w-4 h-4 text-purple-500 shrink-0" />
-              <h4 class="text-xs font-black text-bx-title">تصنيف الفترة</h4>
-            </div>
-
-            <div class="space-y-2">
-              <label class="text-xs font-bold text-bx-title block">نوع الفترة التعليمية <span class="text-red-500">*</span></label>
-              <div class="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  @click="formData.is_break = false"
-                  class="py-2.5 px-3 rounded-full border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
-                  :class="!formData.is_break ? 'border-bx-primary bg-bx-primary/10 text-bx-primary shadow-xs' : 'border-bx-border text-bx-muted hover:text-bx-title'"
-                >
-                  <BookOpen class="w-3.5 h-3.5" />
-                  <span>حصة دراسية</span>
-                </button>
-                <button
-                  type="button"
-                  @click="formData.is_break = true"
-                  class="py-2.5 px-3 rounded-full border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
-                  :class="formData.is_break ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-xs' : 'border-bx-border text-bx-muted hover:text-bx-title'"
-                >
-                  <Coffee class="w-3.5 h-3.5" />
-                  <span>فسحة / استراحة</span>
-                </button>
-              </div>
-            </div>
-
-            <p class="text-[11px] text-bx-muted leading-relaxed">
-              💡 ملحوظة: فترات الاستراحة تُستثنى آلياً من إمكانية تسكين المواد والمناهج الدراسية عليها داخل الجدول الأسبوعي.
-            </p>
-          </div>
-        </form>
+        <PeriodSlotDrawerForm
+          :mode="drawerMode"
+          :form-data="formData"
+          :form-errors="formErrors"
+          :form-error-message="formErrorMessage"
+          :is-submitting="isSubmitting"
+          @submit="handleSubmit"
+          @cancel="showDrawer = false"
+        />
 
         <!-- Fixed Footer Template for TaqniyaDrawer -->
         <template #footer>
@@ -901,56 +680,49 @@ watch([filterType, sortBy, sortOrder], () => {
         </template>
       </TaqniyaDrawer>
 
-      <!-- 6. Confirmation Modal (حذف فترة حصة - Using Teleport) -->
-      <Teleport to="body">
-        <div
-          v-if="showDeleteModal && slotToDelete"
-          class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-          dir="rtl"
-        >
-          <!-- Backdrop with click to close -->
-          <div
-            @click="showDeleteModal = false"
-            class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity cursor-pointer"
-          ></div>
-
-          <!-- Dialog Box -->
-          <div class="relative bg-bx-surface rounded-3xl p-6 sm:p-7 border border-bx-border max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div class="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 flex items-center justify-center text-red-600 mx-auto">
-              <AlertTriangle class="w-6 h-6" />
-            </div>
-
-            <div class="text-center">
-              <h3 class="text-base font-black font-display text-bx-title">تأكيد حذف فترة الحصة</h3>
-              <p class="text-xs text-bx-muted mt-1.5 leading-relaxed">
-                هل أنت متأكد من رغبتك في حذف فترة:
-                <span class="font-bold text-bx-title">"{{ slotToDelete.name }}"</span>؟
-              </p>
-              <p class="text-[11px] text-amber-700 dark:text-amber-300 mt-3 bg-amber-500/[0.08] p-3 rounded-2xl border border-amber-300/50 dark:border-amber-400/20 leading-normal">
-                ⚠️ تنبيه أمان: سيتم حظر الحذف تلقائياً برمز 409 Conflict في حال ارتباط هذه الفترة بأي حصص مجدولة في الجداول الأسبوعية.
-              </p>
-            </div>
-
-            <div class="flex items-center gap-3 pt-2">
-              <button
-                :disabled="isDeleting"
-                @click="handleDelete"
-                class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-              >
-                <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
-                <span>نعم، حذف الفترة</span>
-              </button>
-              <button
-                :disabled="isDeleting"
-                @click="showDeleteModal = false"
-                class="flex-1 px-5 py-2.5 rounded-full border border-bx-border text-bx-muted hover:text-bx-title text-xs font-bold transition-all cursor-pointer"
-              >
-                إلغاء
-              </button>
-            </div>
+      <!-- 7. Shared Confirmation Modal: TaqniyaModal -->
+      <TaqniyaModal
+        :is-open="showDeleteModal && !!slotToDelete"
+        title="تأكيد حذف فترة الحصة"
+        max-width="md"
+        @close="showDeleteModal = false"
+      >
+        <template #icon>
+          <div class="w-10 h-10 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 flex items-center justify-center text-red-600">
+            <AlertTriangle class="w-5 h-5" />
           </div>
+        </template>
+
+        <div class="space-y-3 text-center sm:text-start" dir="rtl">
+          <p class="text-xs text-bx-muted leading-relaxed">
+            هل أنت متأكد من رغبتك في حذف فترة:
+            <span class="font-bold text-bx-title">"{{ slotToDelete?.name }}"</span>؟
+          </p>
+          <p class="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-500/[0.08] p-3 rounded-2xl border border-amber-300/50 dark:border-amber-400/20 leading-normal">
+            ⚠️ تنبيه أمان: سيتم حظر الحذف تلقائياً برمز 409 Conflict في حال ارتباط هذه الفترة بأي حصص مجدولة في الجداول الأسبوعية.
+          </p>
         </div>
-      </Teleport>
+
+        <template #footer>
+          <div class="flex items-center gap-3" dir="rtl">
+            <button
+              :disabled="isDeleting"
+              @click="handleDelete"
+              class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+            >
+              <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
+              <span>نعم، حذف الفترة</span>
+            </button>
+            <button
+              :disabled="isDeleting"
+              @click="showDeleteModal = false"
+              class="flex-1 px-5 py-2.5 rounded-full border border-bx-border text-bx-muted hover:text-bx-title text-xs font-bold transition-all cursor-pointer"
+            >
+              إلغاء
+            </button>
+          </div>
+        </template>
+      </TaqniyaModal>
     </div>
   </TaqniyaErrorBoundary>
 </template>

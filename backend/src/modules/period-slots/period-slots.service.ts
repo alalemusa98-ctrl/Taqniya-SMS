@@ -146,7 +146,6 @@ export class PeriodSlotsService {
     const duplicate = await this.prisma.periodSlot.findFirst({
       where: {
         slot_number: Number(dto.slot_number),
-        deleted_at: null,
       },
     });
 
@@ -159,41 +158,51 @@ export class PeriodSlotsService {
 
     const isBreakValue = dto.is_break !== undefined ? Number(dto.is_break) : 0;
 
-    const newSlot = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.periodSlot.create({
-        data: {
-          name: dto.name.trim(),
-          slot_number: Number(dto.slot_number),
-          start_time: this.timeToDate(normalizedStart),
-          end_time: this.timeToDate(normalizedEnd),
-          is_break: isBreakValue,
-        },
+    try {
+      const newSlot = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.periodSlot.create({
+          data: {
+            name: dto.name.trim(),
+            slot_number: Number(dto.slot_number),
+            start_time: this.timeToDate(normalizedStart),
+            end_time: this.timeToDate(normalizedEnd),
+            is_break: isBreakValue,
+          },
+        });
+
+        await this.auditService.log({
+          userId: BigInt(adminUserId),
+          action: 'create',
+          entityType: 'period_slots',
+          entityId: created.id,
+          newValues: {
+            name: created.name,
+            slot_number: created.slot_number,
+            start_time: normalizedStart,
+            end_time: normalizedEnd,
+            is_break: created.is_break,
+          },
+          ipAddress,
+          userAgent,
+        });
+
+        return created;
       });
 
-      await this.auditService.log({
-        userId: BigInt(adminUserId),
-        action: 'create',
-        entityType: 'period_slots',
-        entityId: created.id,
-        newValues: {
-          name: created.name,
-          slot_number: created.slot_number,
-          start_time: normalizedStart,
-          end_time: normalizedEnd,
-          is_break: created.is_break,
-        },
-        ipAddress,
-        userAgent,
-      });
-
-      return created;
-    });
-
-    return {
-      success: true,
-      message: 'تم إنشاء فترة الحصة اليومية بنجاح.',
-      data: this.serializeSlot(newSlot),
-    };
+      return {
+        success: true,
+        message: 'تم إنشاء فترة الحصة اليومية بنجاح.',
+        data: this.serializeSlot(newSlot),
+      };
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException({
+          success: false,
+          message: 'الرقم التسلسلي للحصة مسجل مسبقاً (uq_period_slots_number).',
+        });
+      }
+      throw err;
+    }
   }
 
   /**
@@ -242,7 +251,6 @@ export class PeriodSlotsService {
       const duplicate = await this.prisma.periodSlot.findFirst({
         where: {
           slot_number: Number(dto.slot_number),
-          deleted_at: null,
           id: { not: BigInt(id) },
         },
       });
@@ -262,43 +270,53 @@ export class PeriodSlotsService {
     if (dto.end_time !== undefined) updateData.end_time = this.timeToDate(targetEnd);
     if (dto.is_break !== undefined) updateData.is_break = Number(dto.is_break);
 
-    const updatedSlot = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.periodSlot.update({
-        where: { id: BigInt(id) },
-        data: updateData,
+    try {
+      const updatedSlot = await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.periodSlot.update({
+          where: { id: BigInt(id) },
+          data: updateData,
+        });
+
+        await this.auditService.log({
+          userId: BigInt(adminUserId),
+          action: 'update',
+          entityType: 'period_slots',
+          entityId: updated.id,
+          oldValues: {
+            name: existing.name,
+            slot_number: existing.slot_number,
+            start_time: currentStart,
+            end_time: currentEnd,
+            is_break: existing.is_break,
+          },
+          newValues: {
+            name: updated.name,
+            slot_number: updated.slot_number,
+            start_time: targetStart,
+            end_time: targetEnd,
+            is_break: updated.is_break,
+          },
+          ipAddress,
+          userAgent,
+        });
+
+        return updated;
       });
 
-      await this.auditService.log({
-        userId: BigInt(adminUserId),
-        action: 'update',
-        entityType: 'period_slots',
-        entityId: updated.id,
-        oldValues: {
-          name: existing.name,
-          slot_number: existing.slot_number,
-          start_time: currentStart,
-          end_time: currentEnd,
-          is_break: existing.is_break,
-        },
-        newValues: {
-          name: updated.name,
-          slot_number: updated.slot_number,
-          start_time: targetStart,
-          end_time: targetEnd,
-          is_break: updated.is_break,
-        },
-        ipAddress,
-        userAgent,
-      });
-
-      return updated;
-    });
-
-    return {
-      success: true,
-      message: 'تم تحديث فترة الحصة اليومية بنجاح.',
-      data: this.serializeSlot(updatedSlot),
-    };
+      return {
+        success: true,
+        message: 'تم تحديث فترة الحصة اليومية بنجاح.',
+        data: this.serializeSlot(updatedSlot),
+      };
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException({
+          success: false,
+          message: 'الرقم التسلسلي للحصة مسجل مسبقاً (uq_period_slots_number).',
+        });
+      }
+      throw err;
+    }
   }
 
   /**

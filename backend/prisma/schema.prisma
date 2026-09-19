@@ -478,6 +478,7 @@ model PeriodSlot {
   timetable_slots TimetableSlot[]
 
   @@index([start_time, end_time], map: "idx_period_slots_times")
+  @@index([deleted_at], map: "idx_period_slots_deleted_at")
   @@map("period_slots")
 }
 

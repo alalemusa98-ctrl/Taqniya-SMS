@@ -55,16 +55,45 @@ export interface PeriodSlotDetailResponse {
   data: PeriodSlot;
 }
 
+// SWR Cache for Period Slots (client_caching_swr)
+const swrCache = new Map<string, { timestamp: number; data: PeriodSlotsResponse }>();
+const CACHE_TTL_MS = 60000;
+
 export const periodSlotsApi = {
-  getPeriodSlots: (params?: GetPeriodSlotsParams, signal?: AbortSignal) =>
-    deduplicatedGet<PeriodSlotsResponse>('/period-slots', { params, signal }),
+  getPeriodSlots: async (params?: GetPeriodSlotsParams, signal?: AbortSignal) => {
+    const res = await deduplicatedGet<PeriodSlotsResponse>('/period-slots', { params, signal });
+    if (res.data && res.data.success) {
+      const key = JSON.stringify(params || {});
+      swrCache.set(key, { timestamp: Date.now(), data: res.data });
+    }
+    return res;
+  },
 
-  createPeriodSlot: (payload: CreatePeriodSlotPayload) =>
-    apiClient.post<PeriodSlotDetailResponse>('/period-slots', payload),
+  getCachedPeriodSlots: (params?: GetPeriodSlotsParams): PeriodSlotsResponse | null => {
+    const key = JSON.stringify(params || {});
+    const cached = swrCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+    return null;
+  },
 
-  updatePeriodSlot: (id: number, payload: UpdatePeriodSlotPayload) =>
-    apiClient.put<PeriodSlotDetailResponse>(`/period-slots/${id}`, payload),
+  clearCache: () => {
+    swrCache.clear();
+  },
 
-  deletePeriodSlot: (id: number) =>
-    apiClient.delete<{ success: boolean; message: string }>(`/period-slots/${id}`),
+  createPeriodSlot: async (payload: CreatePeriodSlotPayload) => {
+    swrCache.clear();
+    return apiClient.post<PeriodSlotDetailResponse>('/period-slots', payload);
+  },
+
+  updatePeriodSlot: async (id: number, payload: UpdatePeriodSlotPayload) => {
+    swrCache.clear();
+    return apiClient.put<PeriodSlotDetailResponse>(`/period-slots/${id}`, payload);
+  },
+
+  deletePeriodSlot: async (id: number) => {
+    swrCache.clear();
+    return apiClient.delete<{ success: boolean; message: string }>(`/period-slots/${id}`);
+  },
 };

@@ -8,11 +8,14 @@ import {
   Param,
   Query,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
   Req,
   ParseIntPipe,
   HttpCode,
   HttpStatus,
   ForbiddenException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { PeriodSlotsService } from './period-slots.service.js';
 import { CreatePeriodSlotDto } from './dto/create-period-slot.dto.js';
@@ -27,6 +30,26 @@ import type { Request } from 'express';
 
 @Controller('api/v1/period-slots')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+    exceptionFactory: (validationErrors = []) => {
+      const errors: Record<string, string[]> = {};
+      for (const err of validationErrors) {
+        if (err.constraints) {
+          errors[err.property] = Object.values(err.constraints);
+        }
+      }
+      return new UnprocessableEntityException({
+        success: false,
+        message: 'بيانات فترة الحصة غير صالحة.',
+        errors,
+      });
+    },
+  }),
+)
 export class PeriodSlotsController {
   constructor(private readonly periodSlotsService: PeriodSlotsService) {}
 

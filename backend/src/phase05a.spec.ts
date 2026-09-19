@@ -12,6 +12,10 @@ import {
 } from '@nestjs/common';
 import { RoleType, DayOfWeek } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
+import { RolesGuard } from './common/guards/roles.guard.js';
+import { ROLES_KEY } from './common/decorators/roles.decorator.js';
+import { Reflector } from '@nestjs/core';
 
 describe('Phase 05-A: Daily Period Slots Registry (TDD Verification)', () => {
   let moduleRef: TestingModule;
@@ -390,6 +394,26 @@ describe('Phase 05-A: Daily Period Slots Registry (TDD Verification)', () => {
   // ============================================================================
   // 2. RBAC & Security Tests
   // ============================================================================
+
+  it('TC-AUTH-01: PeriodSlotsController must be guarded by JwtAuthGuard and RolesGuard', () => {
+    const guards = Reflect.getMetadata('__guards__', PeriodSlotsController);
+    expect(guards).toBeDefined();
+    expect(guards).toContain(JwtAuthGuard);
+    expect(guards).toContain(RolesGuard);
+
+    const reflector = moduleRef.get(Reflector);
+    const readRoles = reflector.get(ROLES_KEY, PeriodSlotsController.prototype.findAll);
+    expect(readRoles).toEqual([RoleType.admin, RoleType.teacher, RoleType.student, RoleType.parent]);
+
+    const createRoles = reflector.get(ROLES_KEY, PeriodSlotsController.prototype.create);
+    expect(createRoles).toEqual([RoleType.admin]);
+
+    const updateRoles = reflector.get(ROLES_KEY, PeriodSlotsController.prototype.update);
+    expect(updateRoles).toEqual([RoleType.admin]);
+
+    const deleteRoles = reflector.get(ROLES_KEY, PeriodSlotsController.prototype.remove);
+    expect(deleteRoles).toEqual([RoleType.admin]);
+  });
 
   it('TC-RBAC-01: Non-admin users are prevented from creating/updating/deleting period slots', async () => {
     const teacherUser = { id: testTeacherUserId, role_type: RoleType.teacher };
