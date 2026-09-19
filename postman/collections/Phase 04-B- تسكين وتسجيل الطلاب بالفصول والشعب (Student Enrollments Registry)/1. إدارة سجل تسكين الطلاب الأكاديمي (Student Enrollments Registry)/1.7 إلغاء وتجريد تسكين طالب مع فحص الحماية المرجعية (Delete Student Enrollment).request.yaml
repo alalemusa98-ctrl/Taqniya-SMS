@@ -1,0 +1,78 @@
+$kind: http-request
+name: 1.7 إلغاء وتجريد تسكين طالب مع فحص الحماية المرجعية (Delete Student Enrollment)
+description: |-
+  إلغاء سجل تسكين الطالب وتجريده من الشعبة مع فحص الحماية المرجعية الصارمة (RESTRICT) لحظر الحذف في حال وجود درجات أو امتحانات مرصودة بالسجل الأكاديمي وفق routes.md.
+url: "{{baseUrl}}/student-enrollments/{{enrollmentId}}"
+method: DELETE
+headers:
+  Accept: application/json
+pathVariables:
+  - key: enrollmentId
+    value: "{{enrollmentId}}"
+    description: المعرف الرقمي الفريد لسجل التسكين المراد إلغاؤه
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم إلغاء سجل التسكين بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم إلغاء سجل التسكين وتجريد الطالب بنجاح."
+  - name: 409 Conflict - حظر الحماية المرجعية لوجود درجات مرصودة
+    status: Conflict
+    code: 409
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "لا يمكن إلغاء التسكين لارتباط الطالب بدرجات أو واجبات أو امتحانات مرصودة بالسجل الأكاديمي (Foreign Key Restrict)."
+  - name: 404 Not Found - سجل التسكين غير موجود
+    status: Not Found
+    code: 404
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "سجل التسكين غير موجود."
+  - name: 401 Unauthorized - غير مصرح بالوصول
+    status: Unauthorized
+    code: 401
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
+  - name: 403 Forbidden - صلاحيات غير كافية
+    status: Forbidden
+    code: 403
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 OK or 409 Conflict (Foreign Key Restrict)", function () {
+          pm.expect([200, 409]).to.include(pm.response.code);
+      });
+
+      var jsonData = pm.response.json();
+      if (pm.response.code === 200) {
+          pm.test("Enrollment deleted successfully", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.message).to.include("تم إلغاء سجل التسكين");
+          });
+      } else if (pm.response.code === 409) {
+          pm.test("Enrollment delete blocked by RESTRICT constraint", function () {
+              pm.expect(jsonData.success).to.eql(false);
+              pm.expect(jsonData.message).to.include("Foreign Key Restrict");
+          });
+      }
+    language: text/javascript
+order: 1700

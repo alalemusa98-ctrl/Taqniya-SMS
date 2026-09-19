@@ -1,0 +1,115 @@
+$kind: http-request
+name: 1.1 استعراض وبحث كشف تسكين الطلاب (List Enrollments Matrix)
+description: |-
+  استرجاع مصفوفة تسكين الطلاب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (classes -> sections -> students) مع دعم التصفية والبحث النصي وفق routes.md.
+url: "{{baseUrl}}/student-enrollments?search=&academic_year_id=&class_id=&class_section_id=&status="
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: البحث النصي باسم الطالب أو الكود الموحد STU-XXXX أو رقم الجلوس
+  - key: academic_year_id
+    value: ""
+    disabled: true
+    description: تصفية بحسب العام الدراسي (افتراضياً العام الدراسي النشط)
+  - key: class_id
+    value: ""
+    disabled: true
+    description: تصفية لجلب شعب وطلاب صف دراسي محدد (مثال 5)
+  - key: class_section_id
+    value: ""
+    disabled: true
+    description: تصفية لجلب طلاب شعبة دراسية محددة فقط
+  - key: status
+    value: ""
+    disabled: true
+    description: "تصفية بحسب الحالة الأكاديمية: enrolled, passed, second_round, failed, graduated"
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم جلب مصفوفة تسكين الطلاب بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم جلب مصفوفة تسكين الطلاب بالصفوف والشعب بنجاح."
+      data:
+        academic_year_id: 1
+        academic_year_name: "2025/2026"
+        classes:
+          - class_id: 5
+            class_name: "الصف الخامس"
+            grade_level: 5
+            sections:
+              - class_section_id: 5
+                section_name: "شعبة أ"
+                enrolled_count: 2
+                students:
+                  - enrollment_id: 1
+                    student_id: 1
+                    student_code: "STU-3001"
+                    student_name: "محمد علي الفيتوري"
+                    seating_number: "SEAT-5001"
+                    status: "enrolled"
+                    created_at: "2026-08-29T10:00:00Z"
+                  - enrollment_id: 2
+                    student_id: 2
+                    student_code: "STU-3002"
+                    student_name: "فاطمة أحمد سالم"
+                    seating_number: "SEAT-5002"
+                    status: "enrolled"
+                    created_at: "2026-08-29T10:05:00Z"
+  - name: 401 Unauthorized - غير مصرح بالوصول
+    status: Unauthorized
+    code: 401
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
+  - name: 403 Forbidden - صلاحيات غير كافية
+    status: Forbidden
+    code: 403
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - جلب كشف التسكين بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      if (pm.response.code === 200) {
+          var jsonData = pm.response.json();
+          pm.test("Response contains hierarchical classes and sections", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data).to.be.an('object');
+              pm.expect(jsonData.data.classes).to.be.an('array');
+          });
+
+          // Save first enrollment ID if available for subsequent tests
+          if (jsonData.data.classes.length > 0) {
+              var firstClass = jsonData.data.classes[0];
+              if (firstClass.sections && firstClass.sections.length > 0) {
+                  var firstSection = firstClass.sections[0];
+                  if (firstSection.students && firstSection.students.length > 0) {
+                      var firstStudent = firstSection.students[0];
+                      pm.environment.set("enrollmentId", String(firstStudent.enrollment_id));
+                      pm.environment.set("studentId", String(firstStudent.student_id));
+                      console.log("✅ تم حفظ enrollmentId:", firstStudent.enrollment_id);
+                  }
+              }
+          }
+      }
+    language: text/javascript
+order: 1100

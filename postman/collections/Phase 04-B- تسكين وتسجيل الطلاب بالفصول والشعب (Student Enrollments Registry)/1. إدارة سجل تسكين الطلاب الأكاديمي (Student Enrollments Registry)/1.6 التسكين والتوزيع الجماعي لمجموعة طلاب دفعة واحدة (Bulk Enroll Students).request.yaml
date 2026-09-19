@@ -1,0 +1,84 @@
+$kind: http-request
+name: 1.6 التسكين والتوزيع الجماعي لمجموعة طلاب دفعة واحدة (Bulk Enroll Students)
+description: |-
+  تسكين وتوزيع دفعة من الطلاب دفعة واحدة في شعبة دراسية مخصصة بالحدث الذري (Database Transaction) وفق routes.md.
+url: "{{baseUrl}}/student-enrollments/bulk-enroll"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: text
+  content: |-
+    {
+      "academic_year_id": {{yearId}},
+      "class_section_id": 5,
+      "student_ids": [101, 102, 103, 104, 105]
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم التسكين الجماعي بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      message: "تم التسكين الجماعي لـ 5 طلاب بنجاح بالحدث الذري."
+      data:
+        enrolled_count: 5
+        class_id: 5
+        class_name: "الصف الخامس"
+        class_section_id: 5
+        academic_year_id: 1
+  - name: 409 Conflict - تعارض في التسكين الجماعي لطالب مسكن مسبقاً
+    status: Conflict
+    code: 409
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "تعارض في التسكين الجماعي: أحد الطلاب المحددين مسكن مسبقاً بالعام الدراسي الحالي."
+  - name: 422 Unprocessable Entity - قائمة غير صالحة
+    status: Unprocessable Entity
+    code: 422
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "قائمة الطلاب غير صالحة أو فارغة."
+  - name: 401 Unauthorized - غير مصرح بالوصول
+    status: Unauthorized
+    code: 401
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
+  - name: 403 Forbidden - صلاحيات غير كافية
+    status: Forbidden
+    code: 403
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 OK or 409 Conflict (Duplicate)", function () {
+          pm.expect([200, 409]).to.include(pm.response.code);
+      });
+
+      if (pm.response.code === 200) {
+          var jsonData = pm.response.json();
+          pm.test("Bulk enrollment executed atomically", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data.enrolled_count).to.be.a('number');
+          });
+      }
+    language: text/javascript
+order: 1600

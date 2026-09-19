@@ -193,6 +193,24 @@
       "value": "",
       "type": "default",
       "enabled": true
+    },
+    {
+      "key": "enrollmentId",
+      "value": "1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "createdEnrollmentId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "classSectionId",
+      "value": "5",
+      "type": "default",
+      "enabled": true
     }
   ]
 }

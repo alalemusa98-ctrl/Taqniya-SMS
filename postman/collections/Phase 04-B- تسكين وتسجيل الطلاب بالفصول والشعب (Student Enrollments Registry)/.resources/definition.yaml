@@ -1,0 +1,14 @@
+$kind: collection
+name: "Phase 04-B: تسكين وتسجيل الطلاب بالفصول والشعب (Student Enrollments Registry)"
+description: |-
+  توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 04-B (7 مسارات معتمدة) لإدارة تسكين وتسجيل الطلاب وتوزيعهم بالفصول والشعب وتوليد أرقام الجلوس وحالات التسكين الأكاديمية وحساب الإحصائيات، وفق العقد المعماري الرسمي `MD/phases/phase_04_students_guardians_b/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).
+
+  المجموعات المشمولة:
+  0. المصادقة وإعداد الجلسة (Authentication & Setup)
+  1. إدارة سجل تسكين الطلاب الأكاديمي (Student Enrollments Registry)
+auth:
+  - id: 9b2d4f8e-1234-4a5b-9c7d-8e9f0a1b2c3d
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{authToken}}"

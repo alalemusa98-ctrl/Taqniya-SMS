@@ -1,0 +1,476 @@
+{
+  "info": {
+    "name": "Phase 04-B: تسكين وتسجيل الطلاب بالفصول والشعب (Student Enrollments Registry)",
+    "description": "توثيق واختبارات شاملة ومكتملة لجميع مسارات المرحلة 04-B (7 مسارات معتمدة) وفق العقد المعماري الرسمي `MD/phases/phase_04_students_guardians_b/routes.md` وقواعد إطار عمل تقنية (Taqniya Framework).\n\nالمجموعات المشمولة:\n0. المصادقة وإعداد الجلسة (Authentication & Setup)\n1. إدارة سجل تسكين الطلاب الأكاديمي (Student Enrollments Registry)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. المصادقة وإعداد الجلسة (Authentication & Setup)",
+      "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة authToken لاختبارات المرحلة 04-B.",
+      "item": [
+        {
+          "name": "تسجيل الدخول كمدير النظام (Login as Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "تسجيل دخول مدير النظام والحصول على التوكن وحفظه في متغير البيئة `authToken` لتمريره في جميع مسارات المرحلة 04-B.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"{{adminUserCode}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - تم تسجيل الدخول بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Login response contains valid bearer token\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.token).to.be.a('string');",
+                  "    });",
+                  "    ",
+                  "    if (jsonData.data && jsonData.data.token) {",
+                  "        pm.environment.set(\"authToken\", jsonData.data.token);",
+                  "        console.log(\"✅ تم حفظ authToken بنجاح لاختبارات المرحلة 04-B.\");",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. إدارة سجل تسكين الطلاب الأكاديمي (Student Enrollments Registry)",
+      "description": "مسارات استعراض وبحث وتصفية مصفوفة تسكين الطلاب، وإحصائيات أعداد المسكنين بالصفوف، والسجل التسكيني التاريخي للطالب، والتسكين الفردي، ونقل الشعب وتعديل أرقام الجلوس، والتسكين الجماعي، وإلغاء التسكين وفق routes.md.",
+      "item": [
+        {
+          "name": "1.1 استعراض وبحث كشف تسكين الطلاب (List Enrollments Matrix)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student-enrollments?search=&academic_year_id=&class_id=&class_section_id=&status=",
+              "host": ["{{baseUrl}}"],
+              "path": ["student-enrollments"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "البحث النصي باسم الطالب أو الكود الموحد STU-XXXX أو رقم الجلوس"
+                },
+                {
+                  "key": "academic_year_id",
+                  "value": "",
+                  "disabled": true,
+                  "description": "تصفية بحسب العام الدراسي (افتراضياً العام الدراسي النشط)"
+                },
+                {
+                  "key": "class_id",
+                  "value": "",
+                  "disabled": true,
+                  "description": "تصفية لجلب شعب وطلاب صف دراسي محدد (مثال 5)"
+                },
+                {
+                  "key": "class_section_id",
+                  "value": "",
+                  "disabled": true,
+                  "description": "تصفية لجلب طلاب شعبة دراسية محددة فقط"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": "تصفية بحسب الحالة الأكاديمية: enrolled, passed, second_round, failed, graduated"
+                }
+              ]
+            },
+            "description": "استرجاع مصفوفة تسكين الطلاب بالعام الدراسي مجمعة هرمياً لكل صف وشعبة (classes -> sections -> students) مع دعم التصفية والبحث النصي وفق routes.md."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - جلب كشف التسكين بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response contains hierarchical classes and sections\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data).to.be.an('object');",
+                  "        pm.expect(jsonData.data.classes).to.be.an('array');",
+                  "    });",
+                  "",
+                  "    if (jsonData.data.classes.length > 0) {",
+                  "        var firstClass = jsonData.data.classes[0];",
+                  "        if (firstClass.sections && firstClass.sections.length > 0) {",
+                  "            var firstSection = firstClass.sections[0];",
+                  "            if (firstSection.students && firstSection.students.length > 0) {",
+                  "                var firstStudent = firstSection.students[0];",
+                  "                pm.environment.set(\"enrollmentId\", String(firstStudent.enrollment_id));",
+                  "                pm.environment.set(\"studentId\", String(firstStudent.student_id));",
+                  "                console.log(\"✅ تم حفظ enrollmentId:\", firstStudent.enrollment_id);",
+                  "            }",
+                  "        }",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 إحصائيات سريعة لأعداد الطلاب المسكنين حسب الصفوف (Get Class Counts)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student-enrollments/class-counts?academic_year_id=",
+              "host": ["{{baseUrl}}"],
+              "path": ["student-enrollments", "class-counts"],
+              "query": [
+                {
+                  "key": "academic_year_id",
+                  "value": "",
+                  "disabled": true,
+                  "description": "تحديد العام الدراسي المطلوب (افتراضياً العام الدراسي النشط)"
+                }
+              ]
+            },
+            "description": "استرجاع إحصائيات خفيفة وسريعة لأعداد الطلاب المسكنين مجمعة حسب الصف الدراسي لدعم شارات العدادات بالواجهة وفق routes.md."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - جلب الإحصائيات بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response data contains class counts array\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data).to.be.an('array');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 استعراض السجل والأرشيف التسكيني التاريخي لطالب محدد (Get Student Progression History)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/students/{{studentId}}/enrollments",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{studentId}}", "enrollments"]
+            },
+            "description": "استرجاع السجل التاريخي لتسكين طالب محدد عبر كافة الأعوام وتتبع تدرجه الأكاديمي وحالات النجاح والرسوب استناداً إلى الصحائف المؤرشفة والتسكين الجاري وفق routes.md."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 - جلب السجل التسكيني بنجاح\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Response data is progression history array\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data).to.be.an('array');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.4 تسكين وتسجيل طالب في صف وشعبة (Create Student Enrollment)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student-enrollments",
+              "host": ["{{baseUrl}}"],
+              "path": ["student-enrollments"]
+            },
+            "description": "تسكين طالب في صف وشعبة بالعام الدراسي النشط وتوليد رقم الجلوس مع التحقق الذري من قيد منع تكرار التسكين السنوي (uq_student_year_enrollment) وفق routes.md.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"student_id\": {{studentId}},\n  \"class_section_id\": 5,\n  \"seating_number\": \"SEAT-5003\",\n  \"status\": \"enrolled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 Created or 409 Conflict (Duplicate)\", function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Created enrollment contains valid id and student info\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.id).to.be.a('number');",
+                  "        pm.expect(jsonData.data.status).to.eql('enrolled');",
+                  "    });",
+                  "",
+                  "    pm.environment.set(\"createdEnrollmentId\", String(jsonData.data.id));",
+                  "    pm.environment.set(\"enrollmentId\", String(jsonData.data.id));",
+                  "    console.log(\"✅ تم حفظ createdEnrollmentId:\", jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.5 تعديل بيانات التسكين ونقل الشعبة ورقم الجلوس (Update Student Enrollment)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["student-enrollments", "{{enrollmentId}}"]
+            },
+            "description": "تعديل بيانات تسجيل الطالب ونقله لشعبة أخرى بنفس الصف، أو تحديث رقم الجلوس أو تعديل الحالة الأكاديمية وفق routes.md.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"class_section_id\": 6,\n  \"seating_number\": \"SEAT-5003-B\",\n  \"status\": \"enrolled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Enrollment updated successfully\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.seating_number).to.eql(\"SEAT-5003-B\");",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.6 التسكين والتوزيع الجماعي لمجموعة طلاب دفعة واحدة (Bulk Enroll Students)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student-enrollments/bulk-enroll",
+              "host": ["{{baseUrl}}"],
+              "path": ["student-enrollments", "bulk-enroll"]
+            },
+            "description": "تسكين وتوزيع دفعة من الطلاب دفعة واحدة في شعبة دراسية مخصصة بالحدث الذري (Database Transaction) وفق routes.md.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": {{yearId}},\n  \"class_section_id\": 5,\n  \"student_ids\": [101, 102, 103, 104, 105]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK or 409 Conflict (Duplicate)\", function () {",
+                  "    pm.expect([200, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test(\"Bulk enrollment executed atomically\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.data.enrolled_count).to.be.a('number');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.7 إلغاء وتجريد تسكين طالب مع فحص الحماية المرجعية (Delete Student Enrollment)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student-enrollments/{{enrollmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["student-enrollments", "{{enrollmentId}}"]
+            },
+            "description": "إلغاء سجل تسكين الطالب وتجريده من الشعبة مع فحص الحماية المرجعية الصارمة (RESTRICT) لحظر الحذف في حال وجود درجات أو امتحانات مرصودة بالسجل الأكاديمي وفق routes.md."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK or 409 Conflict (Foreign Key Restrict)\", function () {",
+                  "    pm.expect([200, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Enrollment deleted successfully\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(true);",
+                  "        pm.expect(jsonData.message).to.include(\"تم إلغاء سجل التسكين\");",
+                  "    });",
+                  "} else if (pm.response.code === 409) {",
+                  "    pm.test(\"Enrollment delete blocked by RESTRICT constraint\", function () {",
+                  "        pm.expect(jsonData.success).to.eql(false);",
+                  "        pm.expect(jsonData.message).to.include(\"Foreign Key Restrict\");",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  }
+}

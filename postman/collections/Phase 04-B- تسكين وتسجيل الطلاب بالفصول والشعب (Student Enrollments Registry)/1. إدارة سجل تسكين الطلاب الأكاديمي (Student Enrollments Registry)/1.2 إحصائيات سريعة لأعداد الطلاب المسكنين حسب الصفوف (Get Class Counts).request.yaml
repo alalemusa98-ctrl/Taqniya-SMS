@@ -1,0 +1,67 @@
+$kind: http-request
+name: 1.2 إحصائيات سريعة لأعداد الطلاب المسكنين حسب الصفوف (Get Class Counts)
+description: |-
+  استرجاع إحصائيات خفيفة وسريعة لأعداد الطلاب المسكنين مجمعة حسب الصف الدراسي لدعم شارات العدادات بالواجهة وفق routes.md.
+url: "{{baseUrl}}/student-enrollments/class-counts?academic_year_id="
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: academic_year_id
+    value: ""
+    disabled: true
+    description: تحديد العام الدراسي المطلوب (افتراضياً العام الدراسي النشط)
+auth:
+  type: bearer
+  credentials:
+    token: "{{authToken}}"
+responses:
+  - name: 200 OK - تم جلب إحصائيات الصفوف بنجاح
+    status: OK
+    code: 200
+    headers:
+      Content-Type: application/json
+    body:
+      success: true
+      data:
+        - class_id: 5
+          count: 42
+        - class_id: 6
+          count: 38
+      enrolled_student_ids:
+        - 101
+        - 102
+        - 103
+        - 104
+  - name: 401 Unauthorized - غير مصرح بالوصول
+    status: Unauthorized
+    code: 401
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "غير مصرح بالوصول. التوكن غير صالح أو منتهي الصلاحية."
+  - name: 403 Forbidden - صلاحيات غير كافية
+    status: Forbidden
+    code: 403
+    headers:
+      Content-Type: application/json
+    body:
+      success: false
+      message: "ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200 - جلب الإحصائيات بنجاح", function () {
+          pm.response.to.have.status(200);
+      });
+
+      if (pm.response.code === 200) {
+          var jsonData = pm.response.json();
+          pm.test("Response data contains class counts array", function () {
+              pm.expect(jsonData.success).to.eql(true);
+              pm.expect(jsonData.data).to.be.an('array');
+          });
+      }
+    language: text/javascript
+order: 1200
