@@ -143,15 +143,19 @@ const activeAcademicYear = computed(() => {
   return academicYears.value.find((y) => y.id === selectedYearId.value) || academicYears.value[0];
 });
 
-// 1. Term Filter Options (Dynamic based on selected class)
+// 1. Term Filter Options (Dynamic based on selected class with active term indicator)
 const termOptions = computed<TaqniyaSelectOption[]>(() => {
   if (selectedClassFilter.value === 'all') {
     return [
       { value: 'all', label: 'جميع الفصول الدراسية' },
-      ...academicTerms.value.map((t) => ({
-        value: t.id,
-        label: t.name,
-      })),
+      ...academicTerms.value.map((t) => {
+        const isActive = Number(t.is_active) === 1 || t.is_active === true || t.status === 'active';
+        return {
+          value: t.id,
+          label: isActive ? `${t.name} (نشط)` : t.name,
+          description: isActive ? 'الفصل النشط حالياً' : undefined,
+        };
+      }),
     ];
   }
   const classId = Number(selectedClassFilter.value);
@@ -162,19 +166,27 @@ const termOptions = computed<TaqniyaSelectOption[]>(() => {
   if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
     return [
       { value: 'all', label: 'كافة الفصول للصف المختار' },
-      ...classGroup.terms.map((t: any) => ({
-        value: t.academic_term_id,
-        label: t.term_name || `الفصل الدراسي ${t.academic_term_id}`,
-        description: Number(t.is_active) === 1 || t.is_active === true ? 'الفصل النشط حالياً' : undefined,
-      })),
+      ...classGroup.terms.map((t: any) => {
+        const isActive = Number(t.is_active) === 1 || t.is_active === true || t.status === 'active';
+        const baseName = t.term_name || `الفصل الدراسي ${t.academic_term_id}`;
+        return {
+          value: t.academic_term_id,
+          label: isActive ? `${baseName} (نشط)` : baseName,
+          description: isActive ? 'الفصل النشط حالياً للصف' : undefined,
+        };
+      }),
     ];
   }
   return [
     { value: 'all', label: 'جميع الفصول الدراسية' },
-    ...academicTerms.value.map((t) => ({
-      value: t.id,
-      label: t.name,
-    })),
+    ...academicTerms.value.map((t) => {
+      const isActive = Number(t.is_active) === 1 || t.is_active === true || t.status === 'active';
+      return {
+        value: t.id,
+        label: isActive ? `${t.name} (نشط)` : t.name,
+        description: isActive ? 'الفصل النشط حالياً' : undefined,
+      };
+    }),
   ];
 });
 
@@ -258,14 +270,23 @@ watch(selectedClassFilter, (newClassVal) => {
       : (allClassAcademicTerms.value as any)?.classes || [];
     const classGroup = termsList.find((g: any) => Number(g.class_id) === classId);
     if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
-      const activeTerm = classGroup.terms.find((t: any) => Number(t.is_active) === 1 || t.is_active === true);
+      const activeTerm = classGroup.terms.find(
+        (t: any) => Number(t.is_active) === 1 || t.is_active === true || t.status === 'active',
+      );
       if (activeTerm && activeTerm.academic_term_id) {
         selectedTermFilter.value = Number(activeTerm.academic_term_id);
       } else {
-        selectedTermFilter.value = 'all';
+        selectedTermFilter.value = Number(classGroup.terms[0].academic_term_id);
       }
     } else {
-      selectedTermFilter.value = 'all';
+      const globalActive = academicTerms.value.find(
+        (t: any) => Number(t.is_active) === 1 || t.is_active === true || t.status === 'active',
+      );
+      if (globalActive) {
+        selectedTermFilter.value = Number(globalActive.id);
+      } else {
+        selectedTermFilter.value = 'all';
+      }
     }
   } else {
     selectedTermFilter.value = 'all';
@@ -1146,6 +1167,7 @@ onMounted(() => {
         :mode="formDrawerMode"
         :item-to-edit="itemToEdit"
         :academic-year-id="selectedYearId"
+        :academic-year-name="currentYearName"
         :academic-term-id="selectedTermId"
         :teachers="allTeachers"
         :class-academic-terms="allClassAcademicTerms"
