@@ -1,4 +1,5 @@
-import { apiClient } from './client';
+import type { AxiosRequestConfig } from 'axios';
+import { apiClient, swrGet, deduplicatedGet, invalidateSwrCache } from './client';
 
 export interface QuizAttachment {
   file_name: string;
@@ -125,61 +126,107 @@ export interface ApiResponse<T = any> {
 export const quizzesApi = {
   /**
    * 1.1 GET /api/v1/quizzes
+   * Uses SWR caching and deduplication to satisfy frontend_capabilities.yaml
    */
-  async getQuizzes(params?: GetQuizzesParams): Promise<ApiResponse<QuizHierarchyData>> {
-    const res = await apiClient.get<ApiResponse<QuizHierarchyData>>('/quizzes', { params });
+  async getQuizzes(
+    params?: GetQuizzesParams,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<QuizHierarchyData>> {
+    const res = await swrGet<ApiResponse<QuizHierarchyData>>('/quizzes', {
+      params,
+      ...config,
+    });
     return res.data;
   },
-  async getAll(params?: GetQuizzesParams): Promise<ApiResponse<QuizHierarchyData>> {
-    const res = await apiClient.get<ApiResponse<QuizHierarchyData>>('/quizzes', { params });
+  async getAll(
+    params?: GetQuizzesParams,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<QuizHierarchyData>> {
+    const res = await swrGet<ApiResponse<QuizHierarchyData>>('/quizzes', {
+      params,
+      ...config,
+    });
     return res.data;
   },
 
   /**
    * 1.2 GET /api/v1/quizzes/:id
+   * Uses request deduplication and supports cancellation signal
    */
-  async getQuizById(id: number): Promise<ApiResponse<QuizDetailData>> {
-    const res = await apiClient.get<ApiResponse<QuizDetailData>>(`/quizzes/${id}`);
+  async getQuizById(
+    id: number,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<QuizDetailData>> {
+    const res = await deduplicatedGet<ApiResponse<QuizDetailData>>(`/quizzes/${id}`, config);
     return res.data;
   },
-  async getById(id: number): Promise<ApiResponse<QuizDetailData>> {
-    const res = await apiClient.get<ApiResponse<QuizDetailData>>(`/quizzes/${id}`);
+  async getById(
+    id: number,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<QuizDetailData>> {
+    const res = await deduplicatedGet<ApiResponse<QuizDetailData>>(`/quizzes/${id}`, config);
     return res.data;
   },
 
   /**
    * 1.3 POST /api/v1/quizzes
    */
-  async createQuiz(payload: CreateQuizPayload): Promise<ApiResponse<any>> {
-    const res = await apiClient.post<ApiResponse<any>>('/quizzes', payload);
+  async createQuiz(
+    payload: CreateQuizPayload,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<any>> {
+    const res = await apiClient.post<ApiResponse<any>>('/quizzes', payload, config);
+    invalidateSwrCache('/quizzes');
     return res.data;
   },
-  async create(payload: CreateQuizPayload): Promise<ApiResponse<any>> {
-    const res = await apiClient.post<ApiResponse<any>>('/quizzes', payload);
+  async create(
+    payload: CreateQuizPayload,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<any>> {
+    const res = await apiClient.post<ApiResponse<any>>('/quizzes', payload, config);
+    invalidateSwrCache('/quizzes');
     return res.data;
   },
 
   /**
    * 1.4 PUT /api/v1/quizzes/:id
    */
-  async updateQuiz(id: number, payload: UpdateQuizPayload): Promise<ApiResponse<any>> {
-    const res = await apiClient.put<ApiResponse<any>>(`/quizzes/${id}`, payload);
+  async updateQuiz(
+    id: number,
+    payload: UpdateQuizPayload,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<any>> {
+    const res = await apiClient.put<ApiResponse<any>>(`/quizzes/${id}`, payload, config);
+    invalidateSwrCache('/quizzes');
     return res.data;
   },
-  async update(id: number, payload: UpdateQuizPayload): Promise<ApiResponse<any>> {
-    const res = await apiClient.put<ApiResponse<any>>(`/quizzes/${id}`, payload);
+  async update(
+    id: number,
+    payload: UpdateQuizPayload,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<any>> {
+    const res = await apiClient.put<ApiResponse<any>>(`/quizzes/${id}`, payload, config);
+    invalidateSwrCache('/quizzes');
     return res.data;
   },
 
   /**
    * 1.5 DELETE /api/v1/quizzes/:id
    */
-  async deleteQuiz(id: number): Promise<ApiResponse<any>> {
-    const res = await apiClient.delete<ApiResponse<any>>(`/quizzes/${id}`);
+  async deleteQuiz(
+    id: number,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<any>> {
+    const res = await apiClient.delete<ApiResponse<any>>(`/quizzes/${id}`, config);
+    invalidateSwrCache('/quizzes');
     return res.data;
   },
-  async delete(id: number): Promise<ApiResponse<any>> {
-    const res = await apiClient.delete<ApiResponse<any>>(`/quizzes/${id}`);
+  async delete(
+    id: number,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<any>> {
+    const res = await apiClient.delete<ApiResponse<any>>(`/quizzes/${id}`, config);
+    invalidateSwrCache('/quizzes');
     return res.data;
   },
 };

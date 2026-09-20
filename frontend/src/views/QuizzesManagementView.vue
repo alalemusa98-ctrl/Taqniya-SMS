@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue';
 import {
   Plus,
   Calendar,
@@ -15,8 +15,8 @@ import {
   Eye,
   Edit2,
   Paperclip,
-  FileText,
-  BookOpen,
+  LayoutGrid,
+  List,
 } from 'lucide-vue-next';
 import {
   quizzesApi,
@@ -33,9 +33,15 @@ import { useToast } from '../composables/useToast';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
-import QuizDetailDrawer from '../components/quizzes/QuizDetailDrawer.vue';
-import QuizDrawerForm from '../components/quizzes/QuizDrawerForm.vue';
+import TaqniyaPagination from '../components/ui/TaqniyaPagination.vue';
+import TaqniyaModal from '../components/ui/TaqniyaModal.vue';
+import TaqniyaTable, { type TableColumn } from '../components/ui/TaqniyaTable.vue';
+import QuizCard from '../components/quizzes/QuizCard.vue';
 import QuizEmptyState from '../components/quizzes/QuizEmptyState.vue';
+
+// Lazy-load heavier slide-over drawer components (satisfies component_lazy_loading: required)
+const QuizDetailDrawer = defineAsyncComponent(() => import('../components/quizzes/QuizDetailDrawer.vue'));
+const QuizDrawerForm = defineAsyncComponent(() => import('../components/quizzes/QuizDrawerForm.vue'));
 
 const authStore = useAuthStore();
 const toast = useToast();
@@ -78,6 +84,12 @@ const availableTeachingAssignments = ref<AssignmentItem[]>([]);
 const searchQuery = ref('');
 const selectedClassFilter = ref<number | string>('all');
 const selectedTermFilter = ref<number | string>('all');
+const selectedTermId = computed<number | null>(() => {
+  if (selectedTermFilter.value && selectedTermFilter.value !== 'all') {
+    return Number(selectedTermFilter.value);
+  }
+  return academicTerms.value[0]?.id || null;
+});
 const selectedSectionFilter = ref<number | string>('all');
 const selectedTeacherFilter = ref<number | string>('all');
 const selectedSubjectFilter = ref<number | string>('all');
@@ -106,6 +118,25 @@ const detailLoading = ref(false);
 const showDeleteModal = ref(false);
 const itemToDelete = ref<QuizItem | null>(null);
 const isDeleting = ref(false);
+
+// View Mode: 'grid' (Hierarchical Quizzes Grid using QuizCard per frontend.md SSoT) or 'table' (using TaqniyaTable)
+const viewMode = ref<'grid' | 'table'>('grid');
+
+// AbortController for Request Cancellation & Debounce
+let activeAbortController: AbortController | null = null;
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Table Columns configuration for TaqniyaTable
+const tableColumns: TableColumn[] = [
+  { key: 'index', label: '#', width: '50px', align: 'center' },
+  { key: 'subject_teacher', label: 'المادة والمعلم' },
+  { key: 'title', label: 'عنوان الاختبار / التطبيق' },
+  { key: 'class_section', label: 'الصف والشعبة' },
+  { key: 'quiz_date', label: 'تاريخ إجراء الاختبار' },
+  { key: 'attachments', label: 'المرفقات', width: '110px', align: 'center' },
+  { key: 'status', label: 'الحالة', width: '130px', align: 'center' },
+  { key: 'actions', label: 'الإجراءات', width: '140px', align: 'center' },
+];
 
 // Active Academic Year object
 const activeAcademicYear = computed(() => {
@@ -440,8 +471,13 @@ const loadInitialData = async () => {
   fetchQuizzes(1);
 };
 
-// Fetch Quizzes List
+// Fetch Quizzes List with AbortController (satisfies request_cancellation & client_caching_swr)
 const fetchQuizzes = async (page = 1) => {
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+
   loading.value = true;
   try {
     const params: any = {
@@ -465,7 +501,7 @@ const fetchQuizzes = async (page = 1) => {
     }
     if (appliedQuizDate.value) params.quiz_date = appliedQuizDate.value;
 
-    const res = await quizzesApi.getAll(params);
+    const res = await quizzesApi.getAll(params, { signal: activeAbortController.signal });
     if (res.data) {
       classesData.value = res.data.classes || [];
       if (res.meta) {
@@ -473,12 +509,33 @@ const fetchQuizzes = async (page = 1) => {
       }
     }
   } catch (err: any) {
+    if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') {
+      return;
+    }
     const msg = err.response?.data?.message || 'فشل جلب قائمة الاختبارات والتطبيقات';
     toast.error(msg);
   } finally {
     loading.value = false;
   }
 };
+
+// Automatic debounced search (satisfies debouncing_throttling: required)
+watch(searchQuery, (newVal) => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    appliedSearchQuery.value = newVal;
+    fetchQuizzes(1);
+  }, 400);
+});
+
+onUnmounted(() => {
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+  }
+});
 
 // Apply Filters Action
 const applyFilters = () => {
@@ -808,7 +865,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Filter Action Toolbar -->
+          <!-- Filter Action Toolbar & View Mode Toggle -->
           <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <button
@@ -832,9 +889,35 @@ onMounted(() => {
               </button>
             </div>
 
-            <div v-if="hasActiveFilters" class="flex items-center gap-2 text-[11px] text-bx-primary font-bold">
-              <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
-              <span>يتم تطبيق فلاتر مخصصة</span>
+            <!-- View Mode Switcher: Grid (Hierarchical SSoT) vs Table -->
+            <div class="flex items-center gap-2">
+              <div v-if="hasActiveFilters" class="hidden sm:flex items-center gap-2 text-[11px] text-bx-primary font-bold ml-2">
+                <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
+                <span>فلاتر مخصصة</span>
+              </div>
+
+              <div class="flex items-center gap-1 p-1 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-purple-500/[0.04]">
+                <button
+                  type="button"
+                  @click="viewMode = 'grid'"
+                  :class="viewMode === 'grid' ? 'bg-bx-primary text-white shadow-xs' : 'text-bx-muted hover:text-bx-title'"
+                  class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer"
+                  title="عرض المصفوفة الهرمية (كروت الاختبارات)"
+                >
+                  <LayoutGrid class="w-3.5 h-3.5" />
+                  <span>المصفوفة الهرمية</span>
+                </button>
+                <button
+                  type="button"
+                  @click="viewMode = 'table'"
+                  :class="viewMode === 'table' ? 'bg-bx-primary text-white shadow-xs' : 'text-bx-muted hover:text-bx-title'"
+                  class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer"
+                  title="عرض الجدول المعتمد"
+                >
+                  <List class="w-3.5 h-3.5" />
+                  <span>الجدول المنظم</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -852,212 +935,198 @@ onMounted(() => {
           @create="handleOpenCreate"
         />
 
-        <!-- 6. Unified Datatable Content: Enclosed in a Bordered Card -->
-        <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
-          <div class="overflow-x-auto">
-            <table class="w-full text-start border-collapse text-xs">
-              <!-- Table Header with Distinct Background and Crisp Dividers -->
-              <thead>
-                <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
-                  <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
-                  
-                  <!-- 1. Subject & Teacher combined -->
-                  <th class="py-3 px-4 font-bold text-start min-w-[190px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5">
-                      <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>المادة والمعلم</span>
-                    </div>
-                  </th>
+        <!-- 6. Quizzes Content: Hierarchical Grid (SSoT Preferred) or Table View -->
+        <div v-else class="space-y-6">
+          <!-- Mode A: Hierarchical Quizzes Grid using QuizCard (frontend.md SSoT Compliance) -->
+          <div v-if="viewMode === 'grid'" class="space-y-6">
+            <div
+              v-for="cls in classesData"
+              :key="cls.class_id"
+              class="rounded-3xl border border-[#B4AED8]/70 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-5 sm:p-6 shadow-xs space-y-5"
+            >
+              <!-- Class Header -->
+              <div class="flex items-center justify-between border-b border-[#B4AED8]/40 dark:border-white/[0.06] pb-3.5">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-2xl bg-purple-500/10 text-bx-primary flex items-center justify-center border border-purple-500/20">
+                    <School class="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 class="text-sm sm:text-base font-black text-bx-title font-display">{{ cls.class_name }}</h3>
+                    <p class="text-[11px] text-bx-muted font-medium">المستوى الدراسي: {{ cls.grade_level }}</p>
+                  </div>
+                </div>
+                <span class="text-xs font-bold text-bx-primary bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20">
+                  {{ cls.sections.reduce((acc, s) => acc + s.quizzes.length, 0) }} اختبار مجدول
+                </span>
+              </div>
 
-                  <!-- 2. Quiz Title -->
-                  <th class="py-3 px-4 font-bold text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5">
-                      <FileText class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>عنوان الاختبار / التطبيق</span>
-                    </div>
-                  </th>
-
-                  <!-- 3. Class & Section -->
-                  <th class="py-3 px-4 font-bold text-start min-w-[150px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5">
-                      <School class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>الصف والشعبة</span>
-                    </div>
-                  </th>
-
-                  <!-- 4. Quiz Date -->
-                  <th class="py-3 px-4 font-bold text-start min-w-[160px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5">
-                      <Calendar class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>تاريخ إجراء الاختبار</span>
-                    </div>
-                  </th>
-
-                  <!-- 5. Attachments -->
-                  <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
-                      <span>المرفقات</span>
-                    </div>
-                  </th>
-
-                  <!-- 6. Status -->
-                  <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">الحالة</th>
-                  
-                  <!-- 7. Actions -->
-                  <th class="py-3 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
-                </tr>
-              </thead>
-
-              <!-- Table Body with Crisp Dividers -->
-              <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
-                <tr
-                  v-for="(row, idx) in allQuizzesRows"
-                  :key="row.id"
-                  class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
+              <!-- Sections Container -->
+              <div class="space-y-5">
+                <div
+                  v-for="section in cls.sections"
+                  :key="section.class_section_id"
+                  class="rounded-2xl border border-[#B4AED8]/40 dark:border-white/[0.06] bg-purple-500/[0.015] p-4 space-y-3.5"
                 >
-                  <!-- Sequence Counter # -->
-                  <td class="py-3.5 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
-                    {{ ((Number(paginationMeta.current_page) || 1) - 1) * (Number(paginationMeta.per_page) || 15) + idx + 1 }}
-                  </td>
-
-                  <!-- 1. Subject & Teacher (Combined) -->
-                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="space-y-1">
-                      <div>
-                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
-                          {{ row.subject_name }}
-                        </span>
-                      </div>
-                      <div class="text-xs text-bx-title font-medium">
-                        {{ row.teacher_name }}
-                      </div>
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2.5 h-2.5 rounded-full bg-bx-primary"></span>
+                      <span class="font-bold text-xs text-bx-title">{{ section.section_name }}</span>
                     </div>
-                  </td>
-
-                  <!-- 2. Quiz Title -->
-                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span
-                      class="font-black text-xs sm:text-sm text-bx-title block leading-snug group-hover:text-bx-primary transition-colors cursor-pointer"
-                      @click="handleOpenView(row.raw)"
-                    >
-                      {{ row.title }}
+                    <span class="text-[11px] text-bx-muted font-medium font-mono">
+                      {{ section.quizzes.length }} اختبارات
                     </span>
-                  </td>
+                  </div>
 
-                  <!-- 3. Class & Section -->
-                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="font-bold text-xs text-bx-title">
-                      <span>{{ row.class_name }}</span>
-                      <span class="text-bx-muted mx-1">•</span>
-                      <span class="text-bx-primary">{{ row.section_name }}</span>
-                    </div>
-                  </td>
-
-                  <!-- 4. Quiz Date -->
-                  <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-bx-title">
-                      <Calendar class="w-3.5 h-3.5 text-bx-primary shrink-0" />
-                      <span>{{ row.quiz_date.slice(0, 10) }}</span>
-                    </div>
-                  </td>
-
-                  <!-- 5. Attachments Count Badge -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span
-                      v-if="row.attachments_count > 0"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
-                    >
-                      <Paperclip class="w-3.5 h-3.5" />
-                      <span>{{ row.attachments_count }} مرفقات</span>
-                    </span>
-                    <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
-                  </td>
-
-                  <!-- 6. Status Badge -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                    <span
-                      class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
-                      :class="
-                        row.countdownInfo?.isPast || row.status === 'completed'
-                          ? 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20'
-                          : row.countdownInfo?.isUrgent
-                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
-                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                      "
-                    >
-                      {{ row.countdownInfo?.label || (row.status === 'upcoming' ? 'قادم ومجدول' : 'منجز ومكتمل') }}
-                    </span>
-                  </td>
-
-                  <!-- 7. Action Buttons Toolbar -->
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap last:border-e-0">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <!-- View Button -->
-                      <button
-                        type="button"
-                        @click="handleOpenView(row.raw)"
-                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-                        title="معاينة التفاصيل والمرفقات"
-                      >
-                        <Eye class="w-3.5 h-3.5" />
-                      </button>
-
-                      <!-- Edit Button (Teachers / Admins) -->
-                      <button
-                        v-if="canManage"
-                        type="button"
-                        @click="handleOpenEdit(row.raw)"
-                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-                        title="تعديل بيانات الاختبار"
-                      >
-                        <Edit2 class="w-3.5 h-3.5" />
-                      </button>
-
-                      <!-- Delete Button (Teachers / Admins) -->
-                      <button
-                        v-if="canManage"
-                        type="button"
-                        @click="handleOpenDelete(row.raw)"
-                        class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-                        title="حذف الاختبار الدوري"
-                      >
-                        <Trash2 class="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  <!-- Quizzes Cards Grid using QuizCard Component -->
+                  <div v-if="section.quizzes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    <QuizCard
+                      v-for="quiz in section.quizzes"
+                      :key="quiz.id"
+                      :quiz="quiz"
+                      :can-manage="canManage"
+                      @view="handleOpenView"
+                      @edit="handleOpenEdit"
+                      @delete="handleOpenDelete"
+                    />
+                  </div>
+                  <div v-else class="text-center py-6 text-bx-muted text-xs">
+                    لا توجد اختبارات مجدولة لهذه الشعبة بحسب محددات البحث.
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <!-- 7. Pagination Footer -->
-        <div
-          v-if="paginationMeta.total > 0 && paginationMeta.last_page > 1"
-          class="flex items-center justify-between pt-6 mt-6 border-t border-[#B4AED8]/60 dark:border-white/10 text-xs"
-        >
-          <span class="text-bx-muted">
-            عرض الصفحة {{ paginationMeta.current_page }} من {{ paginationMeta.last_page }} (إجمالي {{ paginationMeta.total }} اختبار)
-          </span>
+          <!-- Mode B: Unified TaqniyaTable Presentation -->
+          <div v-else>
+            <TaqniyaTable
+              :columns="tableColumns"
+              :items="allQuizzesRows"
+              :is-loading="loading"
+              row-key="id"
+            >
+              <!-- 0. Sequence Index Slot -->
+              <template #cell-index="{ index }">
+                <span class="font-bold text-bx-muted text-xs font-['Alexandria',sans-serif]">
+                  {{ ((Number(paginationMeta.current_page) || 1) - 1) * (Number(paginationMeta.per_page) || 15) + index + 1 }}
+                </span>
+              </template>
 
-          <div class="flex items-center gap-1.5">
-            <button
-              type="button"
-              :disabled="paginationMeta.current_page <= 1"
-              @click="fetchQuizzes(paginationMeta.current_page - 1)"
-              class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title disabled:opacity-40 hover:bg-[var(--bx-row-hover)] transition-colors cursor-pointer"
-            >
-              السابق
-            </button>
-            <button
-              type="button"
-              :disabled="paginationMeta.current_page >= paginationMeta.last_page"
-              @click="fetchQuizzes(paginationMeta.current_page + 1)"
-              class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title disabled:opacity-40 hover:bg-[var(--bx-row-hover)] transition-colors cursor-pointer"
-            >
-              التالي
-            </button>
+              <!-- 1. Subject & Teacher Slot -->
+              <template #cell-subject_teacher="{ item }">
+                <div class="space-y-1">
+                  <div>
+                    <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
+                      {{ item.subject_name }}
+                    </span>
+                  </div>
+                  <div class="text-xs text-bx-title font-medium">
+                    {{ item.teacher_name }}
+                  </div>
+                </div>
+              </template>
+
+              <!-- 2. Quiz Title Slot -->
+              <template #cell-title="{ item }">
+                <span
+                  class="font-black text-xs sm:text-sm text-bx-title block leading-snug hover:text-bx-primary transition-colors cursor-pointer"
+                  @click="handleOpenView(item.raw)"
+                >
+                  {{ item.title }}
+                </span>
+              </template>
+
+              <!-- 3. Class & Section Slot -->
+              <template #cell-class_section="{ item }">
+                <div class="font-bold text-xs text-bx-title">
+                  <span>{{ item.class_name }}</span>
+                  <span class="text-bx-muted mx-1">•</span>
+                  <span class="text-bx-primary">{{ item.section_name }}</span>
+                </div>
+              </template>
+
+              <!-- 4. Quiz Date Slot -->
+              <template #cell-quiz_date="{ item }">
+                <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-bx-title">
+                  <Calendar class="w-3.5 h-3.5 text-bx-primary shrink-0" />
+                  <span>{{ item.quiz_date.slice(0, 10) }}</span>
+                </div>
+              </template>
+
+              <!-- 5. Attachments Slot -->
+              <template #cell-attachments="{ item }">
+                <span
+                  v-if="item.attachments_count > 0"
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
+                >
+                  <Paperclip class="w-3.5 h-3.5" />
+                  <span>{{ item.attachments_count }} مرفقات</span>
+                </span>
+                <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
+              </template>
+
+              <!-- 6. Status Slot -->
+              <template #cell-status="{ item }">
+                <span
+                  class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
+                  :class="
+                    item.countdownInfo?.isPast || item.status === 'completed'
+                      ? 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20'
+                      : item.countdownInfo?.isUrgent
+                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
+                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                  "
+                >
+                  {{ item.countdownInfo?.label || (item.status === 'upcoming' ? 'قادم ومجدول' : 'منجز ومكتمل') }}
+                </span>
+              </template>
+
+              <!-- 7. Actions Slot -->
+              <template #cell-actions="{ item }">
+                <div class="flex items-center justify-center gap-1.5">
+                  <button
+                    type="button"
+                    @click="handleOpenView(item.raw)"
+                    class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                    title="معاينة التفاصيل والمرفقات"
+                  >
+                    <Eye class="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    v-if="canManage"
+                    type="button"
+                    @click="handleOpenEdit(item.raw)"
+                    class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                    title="تعديل بيانات الاختبار"
+                  >
+                    <Edit2 class="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    v-if="canManage"
+                    type="button"
+                    @click="handleOpenDelete(item.raw)"
+                    class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                    title="حذف الاختبار الدوري"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </template>
+            </TaqniyaTable>
+          </div>
+
+          <!-- 7. Standardized TaqniyaPagination Component -->
+          <div class="pt-2">
+            <TaqniyaPagination
+              :current-page="paginationMeta.current_page"
+              :total-pages="paginationMeta.last_page"
+              :total="paginationMeta.total"
+              :is-loading="loading"
+              item-name="اختبار"
+              @page-change="fetchQuizzes"
+            />
           </div>
         </div>
       </div>
@@ -1084,56 +1153,46 @@ onMounted(() => {
         @submit="handleFormSubmit"
       />
 
-      <!-- Delete Confirmation Modal (Matching Project Modal Standard) -->
-      <Teleport to="body">
-        <div
-          v-if="showDeleteModal"
-          class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          dir="rtl"
-        >
-          <div
-            class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-            @click="showDeleteModal = false"
-          />
-
-          <div class="relative z-10 w-full max-w-sm bg-[var(--bx-surface-solid)] rounded-3xl p-6 shadow-2xl border border-[#B4AED8] dark:border-white/[0.08] space-y-4 text-center">
-            <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto border border-rose-500/20">
-              <Trash2 class="w-6 h-6" />
-            </div>
-
-            <div class="space-y-1">
-              <h3 class="text-base font-black text-bx-title font-display">
-                حذف الاختبار الدوري
-              </h3>
-              <p class="text-xs text-bx-muted">
-                هل أنت متأكد من رغبتك في حذف وإلغاء هذا الاختبار؟ سيتم إلغاؤه من سجلات الطلاب وأولياء الأمور.
-              </p>
-            </div>
-
-            <div class="flex items-center justify-center gap-2.5 pt-2">
-              <button
-                type="button"
-                @click="showDeleteModal = false"
-                class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-              >
-                إلغاء
-              </button>
-              <button
-                type="button"
-                @click="confirmDelete"
-                :disabled="isDeleting"
-                class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm disabled:opacity-50"
-              >
-                <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
-                <Trash2 v-else class="w-3.5 h-3.5" />
-                <span>نعم، حذف الاختبار</span>
-              </button>
-            </div>
+      <!-- Standardized TaqniyaModal Confirmation Component -->
+      <TaqniyaModal
+        :is-open="showDeleteModal"
+        max-width="sm"
+        title="حذف الاختبار الدوري"
+        subtitle="تأكيد إلغاء وحذف الاختبار من كشوفات الطلاب والمدرسة"
+        @close="showDeleteModal = false"
+      >
+        <template #icon>
+          <div class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20">
+            <Trash2 class="w-5 h-5" />
           </div>
-        </div>
-      </Teleport>
+        </template>
+
+        <p class="text-xs text-bx-muted leading-relaxed">
+          هل أنت متأكد من رغبتك في حذف وإلغاء هذا الاختبار؟ سيتم إلغاؤه من سجلات وجداول الطلاب وأولياء الأمور نهائياً مع توثيق العملية في سجل التدقيق.
+        </p>
+
+        <template #footer>
+          <div class="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              @click="showDeleteModal = false"
+              class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              @click="confirmDelete"
+              :disabled="isDeleting"
+              class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm disabled:opacity-50"
+            >
+              <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
+              <Trash2 v-else class="w-3.5 h-3.5" />
+              <span>نعم، حذف الاختبار</span>
+            </button>
+          </div>
+        </template>
+      </TaqniyaModal>
     </div>
   </TaqniyaErrorBoundary>
 </template>

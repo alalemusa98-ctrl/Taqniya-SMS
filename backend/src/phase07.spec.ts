@@ -525,6 +525,7 @@ describe('Phase 07: Quizzes & Monthly Tests (TDD Verification)', () => {
     expect(res.data.title).toBe('تطبيق شهري 1 - الجبر والمعادلات');
     expect(res.data.subject_name).toContain('Math-QZ');
     expect(res.data.teacher_name).toContain(`Teacher 1 ${uniqueSuffix}`);
+    expect(res.data.created_by_name).toContain(`Teacher 1 ${uniqueSuffix}`);
     expect(res.data.attachments).toHaveLength(1);
     expect(res.data.attachments[0].file_name).toBe('algebra_review.pdf');
   });

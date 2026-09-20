@@ -434,7 +434,11 @@ export class QuizzesService {
             subject: true,
           },
         },
-        creator: true,
+        creator: {
+          include: {
+            teacher_profile: true,
+          },
+        },
       },
     });
 
@@ -465,7 +469,7 @@ export class QuizzesService {
         teacher_id: quiz.teaching_assignment?.teacher ? Number(quiz.teaching_assignment.teacher.id) : 0,
         teacher_name: quiz.teaching_assignment?.teacher?.full_name || '',
         created_by_user_id: Number(quiz.created_by_user_id),
-        created_by_name: quiz.creator?.user_code || '',
+        created_by_name: quiz.creator?.teacher_profile?.full_name || quiz.creator?.user_code || '',
         title: quiz.title,
         description: quiz.description || null,
         attachments,
