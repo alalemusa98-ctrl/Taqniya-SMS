@@ -15,6 +15,8 @@ import {
   Eye,
   Edit2,
   Paperclip,
+  BookOpen,
+  FileText,
   LayoutGrid,
   List,
 } from 'lucide-vue-next';
@@ -35,7 +37,6 @@ import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
 import TaqniyaPagination from '../components/ui/TaqniyaPagination.vue';
 import TaqniyaModal from '../components/ui/TaqniyaModal.vue';
-import TaqniyaTable, { type TableColumn } from '../components/ui/TaqniyaTable.vue';
 import QuizCard from '../components/quizzes/QuizCard.vue';
 import QuizEmptyState from '../components/quizzes/QuizEmptyState.vue';
 
@@ -125,18 +126,6 @@ const viewMode = ref<'grid' | 'table'>('grid');
 // AbortController for Request Cancellation & Debounce
 let activeAbortController: AbortController | null = null;
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-// Table Columns configuration for TaqniyaTable
-const tableColumns: TableColumn[] = [
-  { key: 'index', label: '#', width: '50px', align: 'center' },
-  { key: 'subject_teacher', label: 'المادة والمعلم' },
-  { key: 'title', label: 'عنوان الاختبار / التطبيق' },
-  { key: 'class_section', label: 'الصف والشعبة' },
-  { key: 'quiz_date', label: 'تاريخ إجراء الاختبار' },
-  { key: 'attachments', label: 'المرفقات', width: '110px', align: 'center' },
-  { key: 'status', label: 'الحالة', width: '130px', align: 'center' },
-  { key: 'actions', label: 'الإجراءات', width: '140px', align: 'center' },
-];
 
 // Active Academic Year object
 const activeAcademicYear = computed(() => {
@@ -1018,124 +1007,181 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Mode B: Unified TaqniyaTable Presentation -->
-          <div v-else>
-            <TaqniyaTable
-              :columns="tableColumns"
-              :items="allQuizzesRows"
-              :is-loading="loading"
-              row-key="id"
-            >
-              <!-- 0. Sequence Index Slot -->
-              <template #cell-index="{ index }">
-                <span class="font-bold text-bx-muted text-xs font-['Alexandria',sans-serif]">
-                  {{ ((Number(paginationMeta.current_page) || 1) - 1) * (Number(paginationMeta.per_page) || 15) + index + 1 }}
-                </span>
-              </template>
+          <!-- Mode B: Unified Datatable Content: Exact Reference Structure from Homework -->
+          <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
+            <div class="overflow-x-auto">
+              <table class="w-full text-start border-collapse text-xs">
+                <!-- Table Header with Distinct Background and Crisp Dividers -->
+                <thead>
+                  <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
+                    <th class="py-3 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
+                    
+                    <!-- 1. Subject & Teacher combined -->
+                    <th class="py-3 px-4 font-bold text-start min-w-[190px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>المادة والمعلم</span>
+                      </div>
+                    </th>
 
-              <!-- 1. Subject & Teacher Slot -->
-              <template #cell-subject_teacher="{ item }">
-                <div class="space-y-1">
-                  <div>
-                    <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
-                      {{ item.subject_name }}
-                    </span>
-                  </div>
-                  <div class="text-xs text-bx-title font-medium">
-                    {{ item.teacher_name }}
-                  </div>
-                </div>
-              </template>
+                    <!-- 2. Quiz Title -->
+                    <th class="py-3 px-4 font-bold text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <FileText class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>عنوان الاختبار / التطبيق</span>
+                      </div>
+                    </th>
 
-              <!-- 2. Quiz Title Slot -->
-              <template #cell-title="{ item }">
-                <span
-                  class="font-black text-xs sm:text-sm text-bx-title block leading-snug hover:text-bx-primary transition-colors cursor-pointer"
-                  @click="handleOpenView(item.raw)"
-                >
-                  {{ item.title }}
-                </span>
-              </template>
+                    <!-- 3. Class & Section -->
+                    <th class="py-3 px-4 font-bold text-start min-w-[150px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <School class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>الصف والشعبة</span>
+                      </div>
+                    </th>
 
-              <!-- 3. Class & Section Slot -->
-              <template #cell-class_section="{ item }">
-                <div class="font-bold text-xs text-bx-title">
-                  <span>{{ item.class_name }}</span>
-                  <span class="text-bx-muted mx-1">•</span>
-                  <span class="text-bx-primary">{{ item.section_name }}</span>
-                </div>
-              </template>
+                    <!-- 4. Quiz Date -->
+                    <th class="py-3 px-4 font-bold text-start min-w-[160px] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5">
+                        <Calendar class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>تاريخ إجراء الاختبار</span>
+                      </div>
+                    </th>
 
-              <!-- 4. Quiz Date Slot -->
-              <template #cell-quiz_date="{ item }">
-                <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-bx-title">
-                  <Calendar class="w-3.5 h-3.5 text-bx-primary shrink-0" />
-                  <span>{{ item.quiz_date.slice(0, 10) }}</span>
-                </div>
-              </template>
+                    <!-- 5. Attachments Count Badge -->
+                    <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center justify-center gap-1.5">
+                        <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
+                        <span>المرفقات</span>
+                      </div>
+                    </th>
 
-              <!-- 5. Attachments Slot -->
-              <template #cell-attachments="{ item }">
-                <span
-                  v-if="item.attachments_count > 0"
-                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
-                >
-                  <Paperclip class="w-3.5 h-3.5" />
-                  <span>{{ item.attachments_count }} مرفقات</span>
-                </span>
-                <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
-              </template>
+                    <!-- 6. Status Badge -->
+                    <th class="py-3 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">الحالة</th>
 
-              <!-- 6. Status Slot -->
-              <template #cell-status="{ item }">
-                <span
-                  class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
-                  :class="
-                    item.countdownInfo?.isPast || item.status === 'completed'
-                      ? 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20'
-                      : item.countdownInfo?.isUrgent
-                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
-                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                  "
-                >
-                  {{ item.countdownInfo?.label || (item.status === 'upcoming' ? 'قادم ومجدول' : 'منجز ومكتمل') }}
-                </span>
-              </template>
+                    <!-- 7. Actions Toolbar -->
+                    <th class="py-3 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
+                  </tr>
+                </thead>
 
-              <!-- 7. Actions Slot -->
-              <template #cell-actions="{ item }">
-                <div class="flex items-center justify-center gap-1.5">
-                  <button
-                    type="button"
-                    @click="handleOpenView(item.raw)"
-                    class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-                    title="معاينة التفاصيل والمرفقات"
+                <!-- Table Body with Crisp Dividers -->
+                <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
+                  <tr
+                    v-for="(row, idx) in allQuizzesRows"
+                    :key="row.id"
+                    class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
                   >
-                    <Eye class="w-3.5 h-3.5" />
-                  </button>
+                    <!-- Sequence Counter # -->
+                    <td class="py-3.5 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
+                      {{ ((Number(paginationMeta.current_page) || 1) - 1) * (Number(paginationMeta.per_page) || 15) + idx + 1 }}
+                    </td>
 
-                  <button
-                    v-if="canManage"
-                    type="button"
-                    @click="handleOpenEdit(item.raw)"
-                    class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-                    title="تعديل بيانات الاختبار"
-                  >
-                    <Edit2 class="w-3.5 h-3.5" />
-                  </button>
+                    <!-- 1. Subject & Teacher (Combined) -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="space-y-1">
+                        <div>
+                          <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs">
+                            {{ row.subject_name }}
+                          </span>
+                        </div>
+                        <div class="text-xs text-bx-title font-medium">
+                          {{ row.teacher_name }}
+                        </div>
+                      </div>
+                    </td>
 
-                  <button
-                    v-if="canManage"
-                    type="button"
-                    @click="handleOpenDelete(item.raw)"
-                    class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-                    title="حذف الاختبار الدوري"
-                  >
-                    <Trash2 class="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </template>
-            </TaqniyaTable>
+                    <!-- 2. Quiz Title -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <span
+                        class="font-black text-xs sm:text-sm text-bx-title block leading-snug group-hover:text-bx-primary transition-colors cursor-pointer"
+                        @click="handleOpenView(row.raw)"
+                      >
+                        {{ row.title }}
+                      </span>
+                    </td>
+
+                    <!-- 3. Class & Section -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="font-bold text-xs text-bx-title">
+                        <span>{{ row.class_name }}</span>
+                        <span class="text-bx-muted mx-1">•</span>
+                        <span class="text-bx-primary">{{ row.section_name }}</span>
+                      </div>
+                    </td>
+
+                    <!-- 4. Quiz Date -->
+                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-bx-title">
+                        <Calendar class="w-3.5 h-3.5 text-bx-primary shrink-0" />
+                        <span>{{ row.quiz_date.slice(0, 10) }}</span>
+                      </div>
+                    </td>
+
+                    <!-- 5. Attachments Count Badge -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <span
+                        v-if="row.attachments_count > 0"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
+                      >
+                        <Paperclip class="w-3.5 h-3.5" />
+                        <span>{{ row.attachments_count }} مرفقات</span>
+                      </span>
+                      <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
+                    </td>
+
+                    <!-- 6. Status Badge with Countdown -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
+                      <span
+                        class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
+                        :class="
+                          row.countdownInfo?.isPast || row.status === 'completed'
+                            ? 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20'
+                            : row.countdownInfo?.isUrgent
+                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        "
+                      >
+                        {{ row.countdownInfo?.label || (row.status === 'upcoming' ? 'قادم ومجدول' : 'منجز ومكتمل') }}
+                      </span>
+                    </td>
+
+                    <!-- 7. Actions Toolbar -->
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap last:border-e-0">
+                      <div class="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          @click="handleOpenView(row.raw)"
+                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                          title="معاينة التفاصيل والمرفقات"
+                        >
+                          <Eye class="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          v-if="canManage"
+                          type="button"
+                          @click="handleOpenEdit(row.raw)"
+                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                          title="تعديل بيانات الاختبار"
+                        >
+                          <Edit2 class="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          v-if="canManage"
+                          type="button"
+                          @click="handleOpenDelete(row.raw)"
+                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                          title="حذف الاختبار الدوري"
+                        >
+                          <Trash2 class="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <!-- 7. Standardized TaqniyaPagination Component -->
