@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue';
 import {
   Calendar,
   Clock,
@@ -12,18 +12,11 @@ import {
   Eye,
   Pen,
   Trash2,
-  FileText,
-  FileSpreadsheet,
-  Image as ImageIcon,
-  Presentation,
   Paperclip,
   Printer,
   School,
   BookOpen,
   Layers,
-  Download,
-  AlertCircle,
-  ExternalLink,
   RotateCcw,
   CheckCircle2,
   Loader2,
@@ -43,12 +36,16 @@ import {
 } from '../api/academic.api';
 import { useAuthStore } from '../stores/auth.store';
 import { useToast } from '../composables/useToast';
+import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
-import TaqniyaDrawer from '../components/ui/TaqniyaDrawer.vue';
-import AcademicDetailHeroCard from '../components/ui/AcademicDetailHeroCard.vue';
-import OfficialExamDrawerForm from '../components/official-exams/OfficialExamDrawerForm.vue';
-import OfficialExamDetailDrawer from '../components/official-exams/OfficialExamDetailDrawer.vue';
+import TaqniyaTable, { type TableColumn } from '../components/ui/TaqniyaTable.vue';
+import TaqniyaPagination from '../components/ui/TaqniyaPagination.vue';
+import TaqniyaModal from '../components/ui/TaqniyaModal.vue';
+
+// Lazy-load heavier slide-over drawer components (satisfies component_lazy_loading: required)
+const OfficialExamDrawerForm = defineAsyncComponent(() => import('../components/official-exams/OfficialExamDrawerForm.vue'));
+const OfficialExamDetailDrawer = defineAsyncComponent(() => import('../components/official-exams/OfficialExamDetailDrawer.vue'));
 
 const authStore = useAuthStore();
 const toast = useToast();
@@ -94,7 +91,6 @@ const totalRecords = ref<number>(0);
 
 // Data States
 const loading = ref<boolean>(false);
-const examsList = ref<OfficialExam[]>([]);
 const hierarchicalClasses = ref<ClassExamGroup[]>([]);
 const classBoardData = ref<{
   class_id: number;
@@ -116,6 +112,21 @@ const activeAcademicYear = computed(() => {
   return academicYears.value.find((y) => y.id === selectedYearId.value) || academicYears.value[0];
 });
 
+// Table Columns Configuration for TaqniyaTable
+const tableColumns: TableColumn[] = [
+  { key: 'index', label: '#', width: '50px', align: 'center' },
+  { key: 'subject_exam', label: 'المادة المقررة ونوع الامتحان' },
+  { key: 'class', label: 'الصف الدراسي المستهدف' },
+  { key: 'exam_date', label: 'تاريخ الامتحان' },
+  { key: 'attachments', label: 'المرفقات', width: '120px', align: 'center' },
+  { key: 'status', label: 'الحالة', width: '140px', align: 'center' },
+  { key: 'actions', label: 'الإجراءات', width: '140px', align: 'center' },
+];
+
+// AbortController for Request Cancellation & Debounce
+let activeAbortController: AbortController | null = null;
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 // Drawer & Modal States
 const isDrawerOpen = ref<boolean>(false);
 const drawerMode = ref<'create' | 'edit'>('create');
@@ -131,6 +142,15 @@ const isDeleteModalOpen = ref<boolean>(false);
 const itemToDelete = ref<OfficialExam | null>(null);
 const isDeleting = ref<boolean>(false);
 
+// Active Academic Term computed
+const selectedTermId = computed<number | null>(() => {
+  if (selectedTermFilter.value && selectedTermFilter.value !== 'all') {
+    return Number(selectedTermFilter.value);
+  }
+  const activeTerm = academicTerms.value.find((t: any) => Number(t.is_active) === 1 || t.is_active === true);
+  return activeTerm?.id || academicTerms.value[0]?.id || null;
+});
+
 function getErrorMessage(err: any, fallback: string): string {
   const msg = err?.response?.data?.message;
   if (typeof msg === 'string' && msg.trim() && msg !== 'Internal server error') {
@@ -139,16 +159,19 @@ function getErrorMessage(err: any, fallback: string): string {
   return fallback;
 }
 
-// 1. Term Filter Options (Dynamic based on selected class)
+// 1. Term Filter Options (Dynamic based on selected class with active indicators)
 const termOptions = computed<TaqniyaSelectOption[]>(() => {
   if (selectedClassFilter.value === 'all') {
     return [
       { value: 'all', label: 'جميع الفصول الدراسية' },
-      ...academicTerms.value.map((t: AcademicTermItem) => ({
-        value: t.id,
-        label: t.name,
-        subtext: `فصل رقم ${t.term_number}`,
-      })),
+      ...academicTerms.value.map((t: any) => {
+        const isActive = Number(t.is_active) === 1 || t.is_active === true;
+        return {
+          value: t.id,
+          label: isActive ? `${t.name} (نشط)` : t.name,
+          subtext: isActive ? 'الفصل النشط حالياً' : `فصل رقم ${t.term_number}`,
+        };
+      }),
     ];
   }
   const classId = Number(selectedClassFilter.value);
@@ -159,20 +182,27 @@ const termOptions = computed<TaqniyaSelectOption[]>(() => {
   if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
     return [
       { value: 'all', label: 'كافة الفصول للصف المختار' },
-      ...classGroup.terms.map((t: any) => ({
-        value: t.academic_term_id,
-        label: t.term_name || `الفصل الدراسي ${t.academic_term_id}`,
-        subtext: Number(t.is_active) === 1 || t.is_active === true ? 'الفصل النشط حالياً' : undefined,
-      })),
+      ...classGroup.terms.map((t: any) => {
+        const isActive = Number(t.is_active) === 1 || t.is_active === true;
+        const baseName = t.term_name || `الفصل الدراسي ${t.academic_term_id}`;
+        return {
+          value: t.academic_term_id,
+          label: isActive ? `${baseName} (نشط)` : baseName,
+          subtext: isActive ? 'الفصل النشط حالياً للصف' : undefined,
+        };
+      }),
     ];
   }
   return [
     { value: 'all', label: 'جميع الفصول الدراسية' },
-    ...academicTerms.value.map((t: AcademicTermItem) => ({
-      value: t.id,
-      label: t.name,
-      subtext: `فصل رقم ${t.term_number}`,
-    })),
+    ...academicTerms.value.map((t: any) => {
+      const isActive = Number(t.is_active) === 1 || t.is_active === true;
+      return {
+        value: t.id,
+        label: isActive ? `${t.name} (نشط)` : t.name,
+        subtext: isActive ? 'الفصل النشط حالياً' : `فصل رقم ${t.term_number}`,
+      };
+    }),
   ];
 });
 
@@ -422,6 +452,13 @@ async function loadInitialContext() {
 
 async function fetchOfficialExams(page = 1) {
   if (!isInitialized.value) return;
+
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+  const requestConfig = { signal: activeAbortController.signal };
+
   currentPage.value = page;
   loading.value = true;
   try {
@@ -430,6 +467,7 @@ async function fetchOfficialExams(page = 1) {
       const res = await officialExamsApi.getByClass(
         Number(appliedClassFilter.value),
         appliedTermFilter.value !== 'all' ? Number(appliedTermFilter.value) : undefined,
+        requestConfig,
       );
       classBoardData.value = res.data.data;
     } else if (isTeacher.value) {
@@ -438,6 +476,7 @@ async function fetchOfficialExams(page = 1) {
       const res = await officialExamsApi.getByTeacher(
         teacherId,
         appliedTermFilter.value !== 'all' ? Number(appliedTermFilter.value) : undefined,
+        requestConfig,
       );
       teacherExams.value = res.data.data.exams;
     } else {
@@ -456,7 +495,7 @@ async function fetchOfficialExams(page = 1) {
       if (appliedExamDate.value) params.exam_date = appliedExamDate.value;
       if (appliedSearchKeyword.value.trim()) params.search = appliedSearchKeyword.value.trim();
 
-      const res = await officialExamsApi.getAll(params);
+      const res = await officialExamsApi.getAll(params, requestConfig);
 
       hierarchicalClasses.value = res.data.data.classes || [];
       totalRecords.value = res.data.meta?.total || 0;
@@ -467,20 +506,37 @@ async function fetchOfficialExams(page = 1) {
           const boardRes = await officialExamsApi.getByClass(
             Number(appliedClassFilter.value),
             appliedTermFilter.value !== 'all' ? Number(appliedTermFilter.value) : undefined,
+            requestConfig,
           );
           classBoardData.value = boardRes.data.data;
-        } catch (boardErr) {
+        } catch (boardErr: any) {
+          if (boardErr.name === 'CanceledError' || boardErr.name === 'AbortError' || boardErr.code === 'ERR_CANCELED') return;
           console.warn('Could not fetch auxiliary class board data:', boardErr);
         }
       }
     }
   } catch (err: any) {
+    if (err.name === 'CanceledError' || err.name === 'AbortError' || err.code === 'ERR_CANCELED') {
+      return; // Request was canceled by user action, ignore cleanly
+    }
     console.error('Failed to fetch official exams:', err);
     toast.error(getErrorMessage(err, 'تعذر جلب جدول الامتحانات الرسمية.'));
   } finally {
     loading.value = false;
   }
 }
+
+// Automatic debounced search keyword watcher
+watch(searchKeyword, (newVal) => {
+  if (!isInitialized.value) return;
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+  }
+  searchDebounceTimer = setTimeout(() => {
+    appliedSearchKeyword.value = newVal.trim();
+    fetchOfficialExams(1);
+  }, 400);
+});
 
 // Watch when Class Filter changes to reset subject filter & auto-select active term for that class
 watch(selectedClassFilter, (newClassVal) => {
@@ -630,26 +686,18 @@ function getExamTypeBadge(type: string) {
   }
 }
 
-function getFileIcon(type?: string) {
-  if (!type) return FileText;
-  if (type.includes('pdf')) return FileText;
-  if (type.includes('image')) return ImageIcon;
-  if (type.includes('sheet') || type.includes('excel')) return FileSpreadsheet;
-  if (type.includes('presentation') || type.includes('powerpoint')) return Presentation;
-  return FileText;
-}
-
-function formatBytes(bytes?: number) {
-  if (!bytes) return '';
-  const k = 1024;
-  const sizes = ['بايت', 'ك.ب', 'م.ب', 'ج.ب'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
 onMounted(async () => {
   await loadInitialContext();
   await fetchOfficialExams();
+});
+
+onUnmounted(() => {
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+  }
 });
 </script>
 
@@ -944,195 +992,129 @@ onMounted(async () => {
             </button>
           </div>
 
-          <!-- Unified Datatable Content: Enclosed in a Bordered Card -->
-          <div v-else class="rounded-2xl border border-[#B4AED8] dark:border-white/[0.12] overflow-hidden bg-[var(--bx-surface-solid)] shadow-xs">
-            <div class="overflow-x-auto">
-              <table class="w-full text-start border-collapse text-xs font-sans">
-                <!-- Table Header with Distinct Background and Crisp Dividers -->
-                <thead>
-                  <tr class="bg-[var(--bx-table-header)] border-b border-[#B4AED8]/60 dark:border-white/15 text-bx-muted">
-                    <th class="py-3.5 px-4 font-bold text-start w-12 font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">#</th>
-                    
-                    <!-- 1. Subject & Exam Type -->
-                    <th class="py-3.5 px-4 font-bold text-start min-w-[200px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                      <div class="flex items-center gap-1.5">
-                        <BookOpen class="w-3.5 h-3.5 text-bx-primary" />
-                        <span>المادة المقررة ونوع الامتحان</span>
-                      </div>
-                    </th>
+          <!-- Unified Datatable Content: TaqniyaTable & TaqniyaPagination -->
+          <div v-else class="space-y-4">
+            <TaqniyaTable
+              :columns="tableColumns"
+              :items="flatExamRows"
+              :is-loading="loading"
+              row-key="id"
+            >
+              <!-- 0. Sequence Index Slot -->
+              <template #cell-index="{ index }">
+                <span class="font-bold text-bx-muted text-xs font-['Alexandria',sans-serif]">
+                  {{ (currentPage - 1) * perPage + index + 1 }}
+                </span>
+              </template>
 
-                    <!-- 2. Target Class -->
-                    <th class="py-3.5 px-4 font-bold text-start min-w-[150px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                      <div class="flex items-center gap-1.5">
-                        <School class="w-3.5 h-3.5 text-bx-primary" />
-                        <span>الصف الدراسي المستهدف</span>
-                      </div>
-                    </th>
-
-                    <!-- 3. Exam Date & Day -->
-                    <th class="py-3.5 px-4 font-bold text-start min-w-[170px] border-e border-[#B4AED8]/50 dark:border-white/10">
-                      <div class="flex items-center gap-1.5">
-                        <Calendar class="w-3.5 h-3.5 text-bx-primary" />
-                        <span>تاريخ الامتحان</span>
-                      </div>
-                    </th>
-
-                    <!-- 4. Attachments Count Badge -->
-                    <th class="py-3.5 px-4 font-bold text-center w-28 border-e border-[#B4AED8]/50 dark:border-white/10">
-                      <div class="flex items-center justify-center gap-1.5">
-                        <Paperclip class="w-3.5 h-3.5 text-bx-primary" />
-                        <span>المرفقات</span>
-                      </div>
-                    </th>
-
-                    <!-- 5. Status Badge -->
-                    <th class="py-3.5 px-4 font-bold text-center w-32 border-e border-[#B4AED8]/50 dark:border-white/10">الحالة</th>
-
-                    <!-- 6. Actions Toolbar -->
-                    <th class="py-3.5 px-4 font-bold text-center w-36 last:border-e-0">الإجراءات</th>
-                  </tr>
-                </thead>
-
-                <!-- Table Body with Crisp Dividers -->
-                <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10">
-                  <tr
-                    v-for="(row, idx) in flatExamRows"
-                    :key="row.id"
-                    class="hover:bg-purple-500/[0.03] dark:hover:bg-white/[0.02] transition-colors duration-150 group"
+              <!-- 1. Subject & Exam Type -->
+              <template #cell-subject_exam="{ item }">
+                <div class="space-y-1">
+                  <span
+                    class="font-black text-xs sm:text-sm text-bx-title block leading-snug hover:text-bx-primary transition-colors cursor-pointer"
+                    @click="openDetailsDrawer(item)"
                   >
-                    <!-- Sequence Counter # -->
-                    <td class="py-3.5 px-4 font-bold text-bx-muted text-xs whitespace-nowrap font-['Alexandria',sans-serif] border-e border-[#B4AED8]/50 dark:border-white/10">
-                      {{ (currentPage - 1) * perPage + idx + 1 }}
-                    </td>
+                    {{ item.subject_name }}
+                  </span>
+                  <span
+                    class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border shadow-2xs"
+                    :class="getExamTypeBadge(item.exam_type).class"
+                  >
+                    {{ item.exam_type_ar }}
+                  </span>
+                </div>
+              </template>
 
-                    <!-- 1. Subject & Exam Type -->
-                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                      <div class="space-y-1">
-                        <span
-                          class="font-black text-xs sm:text-sm text-bx-title block leading-snug group-hover:text-bx-primary transition-colors cursor-pointer"
-                          @click="openDetailsDrawer(row)"
-                        >
-                          {{ row.subject_name }}
-                        </span>
-                        <span
-                          class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border shadow-2xs"
-                          :class="getExamTypeBadge(row.exam_type).class"
-                        >
-                          {{ row.exam_type_ar }}
-                        </span>
-                      </div>
-                    </td>
+              <!-- 2. Target Class -->
+              <template #cell-class="{ item }">
+                <div class="font-bold text-xs text-bx-title">
+                  <span>{{ item.class_name }}</span>
+                  <span v-if="item.grade_level" class="text-bx-muted mx-1 text-[11px] block font-normal">المستوى: {{ item.grade_level }}</span>
+                </div>
+              </template>
 
-                    <!-- 2. Target Class -->
-                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                      <div class="font-bold text-xs text-bx-title">
-                        <span>{{ row.class_name }}</span>
-                        <span v-if="row.grade_level" class="text-bx-muted mx-1 text-[11px] block font-normal">المستوى: {{ row.grade_level }}</span>
-                      </div>
-                    </td>
+              <!-- 3. Exam Date & Day -->
+              <template #cell-exam_date="{ item }">
+                <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-bx-title">
+                  <Calendar class="w-3.5 h-3.5 text-bx-primary shrink-0" />
+                  <span>{{ item.exam_date }}</span>
+                </div>
+              </template>
 
-                    <!-- 3. Exam Date & Day -->
-                    <td class="py-3.5 px-4 whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                      <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-bx-title">
-                        <Calendar class="w-3.5 h-3.5 text-bx-primary shrink-0" />
-                        <span>{{ row.exam_date }}</span>
-                      </div>
-                    </td>
+              <!-- 4. Attachments Count Badge -->
+              <template #cell-attachments="{ item }">
+                <span
+                  v-if="item.attachments_count && item.attachments_count > 0"
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
+                >
+                  <Paperclip class="w-3.5 h-3.5" />
+                  <span>{{ item.attachments_count }} ملفات</span>
+                </span>
+                <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
+              </template>
 
-                    <!-- 4. Attachments Count Badge -->
-                    <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                      <span
-                        v-if="row.attachments_count && row.attachments_count > 0"
-                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-2xs"
-                      >
-                        <Paperclip class="w-3.5 h-3.5" />
-                        <span>{{ row.attachments_count }} ملفات</span>
-                      </span>
-                      <span v-else class="text-bx-muted text-xs font-medium">بدون مرفقات</span>
-                    </td>
+              <!-- 5. Status Badge with Countdown -->
+              <template #cell-status="{ item }">
+                <span
+                  class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
+                  :class="
+                    item.countdownInfo?.isPast || item.status === 'completed'
+                      ? 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20'
+                      : item.countdownInfo?.isUrgent
+                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
+                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                  "
+                >
+                  {{ item.countdownInfo?.label || (item.status === 'upcoming' ? 'قادم ومجدول' : 'منجز ومكتمل') }}
+                </span>
+              </template>
 
-                    <!-- 5. Status Badge with Countdown -->
-                    <td class="py-3.5 px-4 text-center whitespace-nowrap border-e border-[#B4AED8]/50 dark:border-white/10">
-                      <span
-                        class="inline-block px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs"
-                        :class="
-                          row.countdownInfo?.isPast || row.status === 'completed'
-                            ? 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20'
-                            : row.countdownInfo?.isUrgent
-                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse'
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                        "
-                      >
-                        {{ row.countdownInfo?.label || (row.status === 'upcoming' ? 'قادم ومجدول' : 'منجز ومكتمل') }}
-                      </span>
-                    </td>
+              <!-- 6. Action Buttons Toolbar -->
+              <template #cell-actions="{ item }">
+                <div class="flex items-center justify-center gap-1.5">
+                  <!-- View Details Button -->
+                  <button
+                    type="button"
+                    @click="openDetailsDrawer(item)"
+                    class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                    title="معاينة التفاصيل الكاملة والمرفقات والقاعة"
+                  >
+                    <Eye class="w-3.5 h-3.5" />
+                  </button>
 
-                    <!-- 6. Action Buttons Toolbar -->
-                    <td class="py-3.5 px-4 text-center whitespace-nowrap last:border-e-0">
-                      <div class="flex items-center justify-center gap-1.5">
-                        <!-- View Details Button (Fetches full record with notes & attachments) -->
-                        <button
-                          type="button"
-                          @click="openDetailsDrawer(row)"
-                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-                          title="معاينة التفاصيل الكاملة والمرفقات والقاعة"
-                        >
-                          <Eye class="w-3.5 h-3.5" />
-                        </button>
+                  <!-- Edit Button -->
+                  <button
+                    type="button"
+                    @click="openEditDrawer(item)"
+                    class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
+                    title="تعديل موعد وبيانات الامتحان"
+                  >
+                    <Pen class="w-3.5 h-3.5" />
+                  </button>
 
-                        <!-- Edit Button -->
-                        <button
-                          type="button"
-                          @click="openEditDrawer(row)"
-                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-bx-primary text-bx-muted hover:text-bx-primary hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
-                          title="تعديل موعد وبيانات الامتحان"
-                        >
-                          <Pen class="w-3.5 h-3.5" />
-                        </button>
+                  <!-- Delete Button -->
+                  <button
+                    type="button"
+                    @click="openDeleteModal(item)"
+                    class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                    title="إلغاء وحذف موعد الامتحان"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </template>
+            </TaqniyaTable>
 
-                        <!-- Delete Button -->
-                        <button
-                          type="button"
-                          @click="openDeleteModal(row)"
-                          class="p-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] hover:border-rose-500 text-bx-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-                          title="إلغاء وحذف موعد الامتحان"
-                        >
-                          <Trash2 class="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Pagination Footer -->
-          <div
-            v-if="totalRecords > 0 && Math.ceil(totalRecords / perPage) > 1"
-            class="flex items-center justify-between pt-4 border-t border-[#B4AED8]/60 dark:border-white/10 text-xs"
-          >
-            <span class="text-bx-muted font-bold">
-              عرض الصفحة {{ currentPage }} من {{ Math.ceil(totalRecords / perPage) }} (إجمالي {{ totalRecords }} موعد امتحان)
-            </span>
-
-            <div class="flex items-center gap-1.5">
-              <button
-                type="button"
-                :disabled="currentPage <= 1"
-                @click="currentPage--; fetchOfficialExams()"
-                class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
-                :disabled="currentPage >= Math.ceil(totalRecords / perPage)"
-                @click="currentPage++; fetchOfficialExams()"
-                class="px-4 py-1.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-title disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                التالي
-              </button>
+            <!-- Standardized TaqniyaPagination Component -->
+            <div class="pt-2">
+              <TaqniyaPagination
+                :current-page="currentPage"
+                :total-pages="Math.ceil(totalRecords / perPage) || 1"
+                :total="totalRecords"
+                :is-loading="loading"
+                item-name="امتحان"
+                @page-change="fetchOfficialExams"
+              />
             </div>
           </div>
         </div>
@@ -1214,7 +1196,7 @@ onMounted(async () => {
                   <span>{{ group.exam_type_ar }}</span>
                 </span>
                 <span class="text-[11px] font-bold text-bx-muted">
-                  إجمالي المواد: {{ group.exams?.length || group.subjects?.length || 0 }} مادة
+                  إجمالي المواد: {{ group.exams?.length || (group as any).subjects?.length || 0 }} مادة
                 </span>
               </div>
 
@@ -1232,7 +1214,7 @@ onMounted(async () => {
                   </thead>
                   <tbody class="divide-y divide-[#B4AED8]/60 dark:divide-white/10 text-bx-title">
                     <tr
-                      v-for="(exam, idx) in (group.exams || group.subjects || [])"
+                      v-for="(exam, idx) in (group.exams || (group as any).subjects || [])"
                       :key="exam.id"
                       class="hover:bg-purple-500/[0.02] transition-colors"
                     >
@@ -1364,33 +1346,32 @@ onMounted(async () => {
         @submit="handleFormSubmit"
       />
 
-      <!-- Delete Confirmation Modal (Admin) -->
-      <div
-        v-if="isDeleteModalOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in font-sans"
-        dir="rtl"
+      <!-- Standardized TaqniyaModal Delete Confirmation (Admin) -->
+      <TaqniyaModal
+        :is-open="isDeleteModalOpen"
+        max-width="sm"
+        title="تأكيد إلغاء وحذف موعد الامتحان"
+        subtitle="استبعاد موعد الامتحان من الجداول والروزنامة المعتمدة"
+        @close="isDeleteModalOpen = false"
       >
-        <div class="w-full max-w-md p-6 rounded-3xl bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] shadow-2xl space-y-4">
-          <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center mx-auto border border-rose-500/20">
-            <Trash2 class="w-6 h-6" />
+        <template #icon>
+          <div class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20">
+            <Trash2 class="w-5 h-5" />
           </div>
+        </template>
 
-          <div class="text-center space-y-1">
-            <h3 class="text-base font-bold font-display text-bx-title">
-              تأكيد إلغاء وحذف موعد الامتحان
-            </h3>
-            <p class="text-xs text-bx-muted">
-              هل أنت متأكد من رغبتك في شطب موعد امتحان
-              <span class="font-bold text-bx-title">{{ itemToDelete?.subject_name }}</span>
-              للصف {{ itemToDelete?.class_name }}؟ سيتم استبعاد السجل من الجداول المعتمدة.
-            </p>
-          </div>
+        <p class="text-xs text-bx-muted leading-relaxed">
+          هل أنت متأكد من رغبتك في شطب موعد امتحان
+          <span class="font-bold text-bx-title">{{ itemToDelete?.subject_name }}</span>
+          للصف {{ itemToDelete?.class_name }}؟ سيتم استبعاد السجل من الجداول المعتمدة نهائياً مع توثيق العملية.
+        </p>
 
-          <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#B4AED8]/40 dark:border-white/[0.06]">
+        <template #footer>
+          <div class="flex items-center justify-end gap-2.5">
             <button
               type="button"
               @click="isDeleteModalOpen = false"
-              class="px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-bx-muted text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              class="px-5 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:bg-[var(--bx-row-hover)] transition-all cursor-pointer"
             >
               إلغاء
             </button>
@@ -1398,13 +1379,15 @@ onMounted(async () => {
               type="button"
               :disabled="isDeleting"
               @click="confirmDelete"
-              class="px-6 py-2.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition disabled:opacity-50"
+              class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm disabled:opacity-50"
             >
-              {{ isDeleting ? 'جاري الحذف...' : 'نعم، احذف الامتحان' }}
+              <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
+              <Trash2 v-else class="w-3.5 h-3.5" />
+              <span>{{ isDeleting ? 'جاري الحذف...' : 'نعم، احذف الامتحان' }}</span>
             </button>
           </div>
-        </div>
-      </div>
+        </template>
+      </TaqniyaModal>
     </div>
   </TaqniyaErrorBoundary>
 </template>

@@ -17,7 +17,6 @@ import {
   ZoomOut,
   RotateCw,
   X,
-  GraduationCap,
   Sparkles,
 } from 'lucide-vue-next';
 import type { OfficialExam, ExamAttachment } from '../../api/official-exams.api';
@@ -222,9 +221,9 @@ onUnmounted(() => {
         <!-- 1. Hero Header Card Component -->
         <AcademicDetailHeroCard
           type="exam"
-          :title="`${exam.exam_type_ar || 'امتحان رسمي'} — ${exam.subject_name}`"
-          :subject-name="exam.subject_name"
-          :class-name="exam.class_name"
+          :title="`${exam.exam_type_ar || 'امتحان رسمي'} — ${exam.subject_name || ''}`"
+          :subject-name="exam.subject_name || ''"
+          :class-name="exam.class_name || ''"
           teacher-name="إدارة المدرسة والكنترول"
           :record-id="exam.id"
           :target-date="exam.exam_date"

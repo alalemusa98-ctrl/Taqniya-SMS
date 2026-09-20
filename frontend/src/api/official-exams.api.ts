@@ -1,4 +1,5 @@
-import { apiClient } from './client';
+import { apiClient, swrGet, deduplicatedGet, invalidateSwrCache } from './client';
+import type { AxiosRequestConfig } from 'axios';
 
 export interface ExamAttachment {
   file_name: string;
@@ -105,21 +106,24 @@ export interface ApiResponse<T = any> {
 }
 
 export const officialExamsApi = {
-  // 1.1 List school-wide official exams (Admin)
-  getAll(params?: QueryOfficialExamsParams) {
-    return apiClient.get<ApiResponse<OfficialExamsListResponse>>('/official-exams', {
+  // 1.1 List school-wide official exams (Admin) with SWR & cancellation
+  async getAll(params?: QueryOfficialExamsParams, config?: AxiosRequestConfig) {
+    const res = await swrGet<ApiResponse<OfficialExamsListResponse>>('/official-exams', {
       params,
+      ...config,
     });
+    return res;
   },
 
-  // 1.2 Get details by ID (All roles)
-  getById(id: number) {
-    return apiClient.get<ApiResponse<OfficialExam>>(`/official-exams/${id}`);
+  // 1.2 Get details by ID (All roles) with deduplicatedGet & cancellation
+  async getById(id: number, config?: AxiosRequestConfig) {
+    const res = await deduplicatedGet<ApiResponse<OfficialExam>>(`/official-exams/${id}`, config);
+    return res;
   },
 
-  // 1.3 Get class timetable schedule (Student / Parent)
-  getByClass(classId: number, termId?: number) {
-    return apiClient.get<ApiResponse<{
+  // 1.3 Get class timetable schedule (Student / Parent) with SWR
+  async getByClass(classId: number, termId?: number, config?: AxiosRequestConfig) {
+    const res = await swrGet<ApiResponse<{
       class_id: number;
       class_name: string;
       grade_level: number;
@@ -128,34 +132,50 @@ export const officialExamsApi = {
       exam_types: ExamTypeGroup[];
     }>>(`/classes/${classId}/official-exams`, {
       params: termId ? { academic_term_id: termId } : undefined,
+      ...config,
     });
+    return res;
   },
 
-  // 1.4 Get teacher assigned subjects schedule (Teacher)
-  getByTeacher(teacherId: number, termId?: number) {
-    return apiClient.get<ApiResponse<{
+  // 1.4 Get teacher assigned subjects schedule (Teacher) with SWR
+  async getByTeacher(teacherId: number, termId?: number, config?: AxiosRequestConfig) {
+    const res = await swrGet<ApiResponse<{
       teacher_id: number;
       teacher_name: string;
       exams: OfficialExam[];
     }>>(`/teachers/${teacherId}/official-exams`, {
       params: termId ? { academic_term_id: termId } : undefined,
+      ...config,
     });
+    return res;
   },
 
-  // 1.5 Create official exam (Admin)
-  create(payload: CreateOfficialExamPayload) {
-    return apiClient.post<ApiResponse<OfficialExam>>('/official-exams', payload);
+  // 1.5 Create official exam (Admin) with cache invalidation
+  async create(payload: CreateOfficialExamPayload) {
+    const res = await apiClient.post<ApiResponse<OfficialExam>>('/official-exams', payload);
+    invalidateSwrCache('/official-exams');
+    invalidateSwrCache('/classes');
+    invalidateSwrCache('/teachers');
+    return res;
   },
 
-  // 1.6 Update official exam (Admin)
-  update(id: number, payload: UpdateOfficialExamPayload) {
-    return apiClient.put<ApiResponse<OfficialExam>>(`/official-exams/${id}`, payload);
+  // 1.6 Update official exam (Admin) with cache invalidation
+  async update(id: number, payload: UpdateOfficialExamPayload) {
+    const res = await apiClient.put<ApiResponse<OfficialExam>>(`/official-exams/${id}`, payload);
+    invalidateSwrCache('/official-exams');
+    invalidateSwrCache('/classes');
+    invalidateSwrCache('/teachers');
+    return res;
   },
 
-  // 1.7 Delete official exam (Admin)
-  delete(id: number) {
-    return apiClient.delete<ApiResponse<{ success: boolean; message: string }>>(
+  // 1.7 Delete official exam (Admin) with cache invalidation
+  async delete(id: number) {
+    const res = await apiClient.delete<ApiResponse<{ success: boolean; message: string }>>(
       `/official-exams/${id}`,
     );
+    invalidateSwrCache('/official-exams');
+    invalidateSwrCache('/classes');
+    invalidateSwrCache('/teachers');
+    return res;
   },
 };

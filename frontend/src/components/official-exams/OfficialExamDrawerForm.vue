@@ -232,9 +232,9 @@ const classSubjectOptions = computed<TaqniyaSelectOption[]>(() => {
 
 // 3. Exam Type Options
 const examTypeOptions: TaqniyaSelectOption[] = [
-  { value: 'midterm', label: 'امتحان نصفي (Midterm)', description: 'امتحان منتصف الفصل الدراسي' },
-  { value: 'final', label: 'امتحان نهائي (Final)', description: 'الامتحان النهائي المعتمد للفصل' },
-  { value: 'second_round', label: 'امتحان دور ثانٍ (Second Round)', description: 'امتحان الإعادة والدور الثاني' },
+  { value: 'midterm', label: 'امتحان نصفي (Midterm)', subtext: 'امتحان منتصف الفصل الدراسي' },
+  { value: 'final', label: 'امتحان نهائي (Final)', subtext: 'الامتحان النهائي المعتمد للفصل' },
+  { value: 'second_round', label: 'امتحان دور ثانٍ (Second Round)', subtext: 'امتحان الإعادة والدور الثاني' },
 ];
 
 // Format file size

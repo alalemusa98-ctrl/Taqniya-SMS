@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import {
   Calendar,
+  Clock,
   Loader2,
   BarChart3,
   School,
