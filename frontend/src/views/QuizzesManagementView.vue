@@ -120,8 +120,8 @@ const showDeleteModal = ref(false);
 const itemToDelete = ref<QuizItem | null>(null);
 const isDeleting = ref(false);
 
-// View Mode: 'grid' (Hierarchical Quizzes Grid using QuizCard per frontend.md SSoT) or 'table' (using TaqniyaTable)
-const viewMode = ref<'grid' | 'table'>('grid');
+// View Mode: 'table' (Unified Reference Datatable matching Homework) or 'grid' (Hierarchical Quizzes Grid)
+const viewMode = ref<'grid' | 'table'>('table');
 
 // AbortController for Request Cancellation & Debounce
 let activeAbortController: AbortController | null = null;
