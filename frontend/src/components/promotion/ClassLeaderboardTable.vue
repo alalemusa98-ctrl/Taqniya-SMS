@@ -66,6 +66,24 @@
         </span>
       </template>
 
+      <!-- Transcript Type Column -->
+      <template #cell-transcript_type="{ item }">
+        <div class="flex flex-col items-center gap-0.5">
+          <span
+            v-if="item.transcript_type === 'annual'"
+            class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20"
+          >
+            صحيفة سنوية مجمعة
+          </span>
+          <span
+            v-else
+            class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20"
+          >
+            {{ item.term_name || item.transcript_type_ar || 'صحيفة فصلية' }}
+          </span>
+        </div>
+      </template>
+
       <!-- Total Score Column -->
       <template #cell-total_score="{ item }">
         <div class="font-mono text-xs font-bold text-bx-title">
@@ -147,12 +165,13 @@ defineEmits<{
 const searchTerm = ref('');
 
 const columns: TableColumn[] = [
-  { key: 'rank', label: 'الترتيب', align: 'center', width: '80px' },
-  { key: 'student_code', label: 'كود الطالب', align: 'start', width: '110px' },
+  { key: 'rank', label: 'الترتيب', align: 'center', width: '70px' },
+  { key: 'student_code', label: 'كود الطالب', align: 'start', width: '100px' },
   { key: 'student_name', label: 'اسم الطالب الرباعي', align: 'start' },
-  { key: 'section_name', label: 'الشعبة', align: 'center', width: '100px' },
-  { key: 'total_score', label: 'المجموع الكلي', align: 'center', width: '120px' },
-  { key: 'percentage', label: 'النسبة المئوية', align: 'start', width: '180px' },
+  { key: 'section_name', label: 'الشعبة', align: 'center', width: '90px' },
+  { key: 'transcript_type', label: 'نوع الصحيفة', align: 'center', width: '150px' },
+  { key: 'total_score', label: 'المجموع الكلي', align: 'center', width: '110px' },
+  { key: 'percentage', label: 'النسبة المئوية', align: 'start', width: '160px' },
   { key: 'final_status', label: 'القرار النهائي', align: 'center', width: '130px' },
   { key: 'actions', label: 'الإجراءات', align: 'center', width: '90px' },
 ];

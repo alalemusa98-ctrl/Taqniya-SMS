@@ -1,13 +1,19 @@
 <template>
   <TaqniyaDrawer
     :is-open="isOpen"
-    title="كشف الدرجات والنتائج الأكاديمية الرسمي"
-    :subtitle="transcript ? `${transcript.student_name} • ${transcript.class_name} (${transcript.section_name}) • ${transcript.academic_year_name}` : ''"
+    :title="drawerTitle"
+    :subtitle="drawerSubtitle"
     :icon="GraduationCap"
-    max-width="max-w-[860px]"
+    max-width="max-w-[920px]"
     @close="emit('close')"
   >
-    <div v-if="transcript" class="space-y-6 text-bx-text font-sans" dir="rtl">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted" dir="rtl">
+      <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
+      <span class="text-xs font-bold">جاري تحميل وتدقيق بيانات الكشف الأكاديمي الرسمي...</span>
+    </div>
+
+    <div v-else-if="activeTranscript" class="space-y-6 text-bx-text font-sans" dir="rtl">
       <!-- Printable Sheet Wrapper -->
       <div
         id="official-transcript-document"
@@ -20,17 +26,31 @@
               منظومة تقنية لإدارة المدارس والتعليم الأساسي
             </h2>
             <p class="text-xs text-bx-muted font-medium print:text-gray-600">
-              إدارة القياس والتقويم الأكاديمي وشؤون الطلاب
+              إدارة القياس والتقويم الأكاديمي وشؤون الطلاب — السجل الأكاديمي الرسمي
             </p>
           </div>
 
           <div class="flex flex-col items-end gap-1.5 shrink-0">
-            <span class="px-3 py-1 rounded-xl bg-bx-primary/10 text-bx-primary border border-bx-primary/20 text-xs font-black print:border-black print:text-black">
-              كشف درجات رسمي ومُعتمد
+            <!-- Dynamic Transcript Type Badge -->
+            <span
+              v-if="isAnnualTranscript"
+              class="px-3 py-1 rounded-xl text-xs font-black border flex items-center gap-1.5 print:border-black print:text-black"
+              :class="isAnnualComplete ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'"
+            >
+              <Award class="w-3.5 h-3.5" />
+              <span>{{ isAnnualComplete ? 'صحيفة سنوية نهائية معتمدة' : 'صحيفة سنوية (قيد استكمال الفصول)' }}</span>
             </span>
+            <span
+              v-else
+              class="px-3 py-1 rounded-xl bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/30 text-xs font-black print:border-black print:text-black flex items-center gap-1.5"
+            >
+              <Calendar class="w-3.5 h-3.5" />
+              <span>صحيفة فصلية: {{ activeTranscript.term_name || activeTranscript.transcript_type_ar || 'الفصل الدراسي' }}</span>
+            </span>
+
             <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 print:text-gray-600">
               <Lock class="w-3 h-3" />
-              <span>سجل مؤرشف ومُجمد</span>
+              <span>سجل رسمي محفوظ ومُجمد</span>
             </span>
           </div>
         </div>
@@ -39,42 +59,145 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-black/[0.02] dark:bg-white/[0.02] p-4 rounded-2xl border border-[#B4AED8]/30 dark:border-white/[0.04] text-xs">
           <div>
             <span class="text-[10px] font-bold text-bx-muted block">اسم الطالب الرباعي:</span>
-            <span class="font-black text-bx-title print:text-black">{{ transcript.student_name }}</span>
+            <span class="font-black text-bx-title print:text-black">{{ activeTranscript.student_name }}</span>
           </div>
           <div>
             <span class="text-[10px] font-bold text-bx-muted block">كود الطالب:</span>
-            <span class="font-bold font-mono text-bx-title print:text-black">{{ transcript.student_code }}</span>
+            <span class="font-bold font-mono text-bx-title print:text-black">{{ activeTranscript.student_code }}</span>
           </div>
           <div>
             <span class="text-[10px] font-bold text-bx-muted block">الرقم الوطني / الهوية:</span>
-            <span class="font-bold font-mono text-bx-title print:text-black">{{ transcript.national_id || '—' }}</span>
+            <span class="font-bold font-mono text-bx-title print:text-black">{{ activeTranscript.national_id || '—' }}</span>
           </div>
           <div>
             <span class="text-[10px] font-bold text-bx-muted block">الصف والشعبة:</span>
-            <span class="font-bold text-bx-title print:text-black">{{ transcript.class_name }} - {{ transcript.section_name }}</span>
+            <span class="font-bold text-bx-title print:text-black">{{ activeTranscript.class_name }} - {{ activeTranscript.section_name }}</span>
           </div>
           <div>
             <span class="text-[10px] font-bold text-bx-muted block">العام الدراسي:</span>
-            <span class="font-bold text-bx-title print:text-black">{{ transcript.academic_year_name }}</span>
+            <span class="font-bold text-bx-title print:text-black">{{ activeTranscript.academic_year_name }}</span>
           </div>
           <div>
-            <span class="text-[10px] font-bold text-bx-muted block">نوع الصحيفة:</span>
-            <span class="font-bold text-bx-primary print:text-black">
-              {{ transcript.transcript_type_ar || (transcript.transcript_type === 'annual' ? 'صحيفة سنوية مجمعة' : 'صحيفة فصلية') }}
+            <span class="text-[10px] font-bold text-bx-muted block">نوع الوثيقة:</span>
+            <span class="font-bold print:text-black" :class="isAnnualTranscript ? 'text-purple-600 dark:text-purple-400' : 'text-sky-600 dark:text-sky-400'">
+              {{ isAnnualTranscript ? 'صحيفة مجمعة لنهاية العام' : `كشف درجات فصلية (${activeTranscript.term_name || 'الفصل الدراسي'})` }}
             </span>
           </div>
         </div>
 
-        <!-- Multi-Term Structured Grading Table -->
-        <div class="space-y-2">
+        <!-- WARNING BANNER: If Annual Transcript but not all terms are completed -->
+        <div
+          v-if="isAnnualTranscript && !isAnnualComplete"
+          class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 space-y-2 animate-in fade-in"
+        >
+          <div class="flex items-center gap-2 font-black text-xs text-amber-800 dark:text-amber-300">
+            <AlertTriangle class="w-4 h-4 text-amber-600 shrink-0" />
+            <span>تنبيه إداري: لم يكتمل رصد درجات كافة الفصول المقررة لهذا الصف</span>
+          </div>
+          <p class="text-xs leading-relaxed font-medium">
+            الصف الدراسي <strong>({{ activeTranscript.class_name }})</strong> يحتوي على
+            <strong>{{ termCompletionInfo?.total_required_terms || 2 }}</strong> فصول دراسية، بينما تم رصد
+            <strong>{{ termCompletionInfo?.graded_terms_count || 1 }}</strong> فصل دراسي فقط حتى الآن.
+            <span v-if="termCompletionInfo?.missing_terms && termCompletionInfo.missing_terms.length > 0" class="block mt-1 font-bold">
+              الفصول المتبقية قيد الرصد: {{ termCompletionInfo.missing_terms.join('، ') }}.
+            </span>
+            <span class="block text-[11px] text-amber-700 dark:text-amber-300 mt-1">
+              ⚠️ لا تعتبر هذه الصحيفة نهائية أو صالحة لاعتماد الترحيل والترفيع السنوي إلا بعد رصد وتجميد كافة الفصول المقررة.
+            </span>
+          </p>
+        </div>
+
+        <!-- MODE 1: TERM TRANSCRIPT TABLE (الصحيفة الفصلية) -->
+        <div v-if="!isAnnualTranscript" class="space-y-3">
           <div class="flex items-center justify-between">
             <h4 class="text-xs font-black text-bx-title flex items-center gap-1.5 print:text-black">
               <BookOpen class="w-4 h-4 text-bx-primary" />
-              <span>جدول رصد درجات المواد والفصول الدراسية:</span>
+              <span>جدول رصد درجات المواد الدراسية — {{ activeTranscript.term_name || 'الفصل الدراسي' }}:</span>
             </h4>
-            <span v-if="isLoadingTranscripts" class="text-[10px] text-bx-muted flex items-center gap-1">
-              <Loader2 class="w-3 h-3 animate-spin" />
-              <span>جاري تحميل بيانات الفصول...</span>
+            <span class="text-[11px] font-bold text-bx-muted">
+              عدد المواد المرصودة: {{ termSubjectsList.length }} مادة
+            </span>
+          </div>
+
+          <div class="overflow-x-auto rounded-2xl border border-[#B4AED8]/50 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] print:border-black">
+            <table class="w-full text-right text-xs border-collapse">
+              <thead>
+                <tr class="bg-black/[0.03] dark:bg-white/[0.03] text-bx-muted font-bold border-b border-[#B4AED8]/40 dark:border-white/[0.08] print:bg-gray-100 print:text-black">
+                  <th class="py-3 px-3 text-center w-12 border-l border-[#B4AED8]/30 dark:border-white/[0.06]">#</th>
+                  <th class="py-3 px-4 border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[160px]">المادة الدراسية</th>
+                  <th class="py-3 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[100px]">أعمال السنة</th>
+                  <th class="py-3 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[100px]">الامتحان النهائي</th>
+                  <th class="py-3 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[90px]">مجموع الفصل</th>
+                  <th class="py-3 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[90px]">النهاية الكبرى</th>
+                  <th class="py-3 px-3 text-center min-w-[90px]">النتيجة</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#B4AED8]/30 dark:divide-white/[0.04]">
+                <tr
+                  v-for="(subj, sIdx) in termSubjectsList"
+                  :key="sIdx"
+                  class="hover:bg-bx-primary/5 transition-colors print:hover:bg-transparent"
+                >
+                  <td class="py-2.5 px-3 text-center font-mono text-bx-muted border-l border-[#B4AED8]/20 dark:border-white/[0.04]">{{ sIdx + 1 }}</td>
+                  <td class="py-2.5 px-4 font-bold text-bx-title border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-black">
+                    {{ subj.subject_name }}
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-mono border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-title print:text-black">
+                    <span class="font-bold">{{ subj.coursework_score !== undefined ? subj.coursework_score : '—' }}</span>
+                    <span v-if="subj.max_coursework_score" class="text-[10px] text-bx-muted"> / {{ subj.max_coursework_score }}</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-mono border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-title print:text-black">
+                    <span class="font-bold">{{ subj.exam_score !== undefined ? subj.exam_score : '—' }}</span>
+                    <span v-if="subj.max_exam_score" class="text-[10px] text-bx-muted"> / {{ subj.max_exam_score }}</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-black font-mono text-bx-title border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-black">
+                    {{ subj.total_score }}
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-mono text-bx-muted border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-gray-600">
+                    {{ subj.max_score }}
+                  </td>
+                  <td class="py-2.5 px-3 text-center">
+                    <span
+                      class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                      :class="subj.is_passed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'"
+                    >
+                      {{ subj.is_passed ? 'ناجح' : 'راسب' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+              <!-- Term Table Footer -->
+              <tfoot>
+                <tr class="bg-black/[0.03] dark:bg-white/[0.03] font-bold text-xs border-t-2 border-[#B4AED8] dark:border-white/[0.12] print:bg-gray-100 print:text-black">
+                  <td colspan="4" class="py-3 px-4 text-left font-black text-bx-title print:text-black">
+                    مجموع درجات الفصل والنسبة المئوية:
+                  </td>
+                  <td class="py-3 px-3 text-center font-mono font-black text-bx-title text-sm print:text-black">
+                    {{ activeTranscript.total_score }}
+                  </td>
+                  <td class="py-3 px-3 text-center font-mono text-bx-muted print:text-gray-600">
+                    {{ activeTranscript.max_possible_score || termCalculatedMax }}
+                  </td>
+                  <td class="py-3 px-3 text-center">
+                    <span class="font-black font-mono text-sky-600 dark:text-sky-400 text-sm print:text-black">
+                      {{ activeTranscript.percentage }}%
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- MODE 2: ANNUAL MULTI-TERM TRANSCRIPT TABLE (الصحيفة السنوية المجمعة) -->
+        <div v-else class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-black text-bx-title flex items-center gap-1.5 print:text-black">
+              <BookOpen class="w-4 h-4 text-purple-600" />
+              <span>جدول رصد درجات المواد عبر الفصول الدراسية للسنة كاملة:</span>
+            </h4>
+            <span class="text-[11px] font-bold text-bx-muted">
+              {{ renderedAnnualTerms.length }} فصول دراسية
             </span>
           </div>
 
@@ -84,37 +207,37 @@
                 <!-- Top Header Row -->
                 <tr class="bg-black/[0.03] dark:bg-white/[0.03] text-bx-muted font-bold border-b border-[#B4AED8]/40 dark:border-white/[0.08] print:bg-gray-100 print:text-black">
                   <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center w-10">#</th>
-                  <th rowspan="2" class="py-3 px-4 border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[140px]">المادة الدراسية</th>
+                  <th rowspan="2" class="py-3 px-4 border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[150px]">المادة الدراسية</th>
 
-                  <!-- Dynamic Term Columns (colspan 2 each) -->
+                  <!-- Dynamic Term Headers -->
                   <th
-                    v-for="term in renderedTerms"
+                    v-for="term in renderedAnnualTerms"
                     :key="term.id"
                     colspan="2"
-                    class="py-2.5 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] font-black text-bx-title bg-bx-primary/5 print:bg-gray-100 print:text-black"
+                    class="py-2.5 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] font-black text-bx-title bg-purple-500/5 print:bg-gray-100 print:text-black"
                   >
                     {{ term.name }}
                   </th>
 
-                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center">المجموع</th>
-                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center">النهاية الكبرى</th>
-                  <th rowspan="2" class="py-3 px-3 text-center">الحالة</th>
+                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center min-w-[80px]">المعدل السنوي</th>
+                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center min-w-[80px]">النهاية الكبرى</th>
+                  <th rowspan="2" class="py-3 px-3 text-center min-w-[80px]">النتيجة</th>
                 </tr>
 
-                <!-- Sub-Headers Row (Coursework & Exam for each Term) -->
+                <!-- Sub-Headers for each Term (Coursework & Exam) -->
                 <tr class="bg-black/[0.02] dark:bg-white/[0.02] text-bx-muted font-semibold text-[11px] border-b border-[#B4AED8]/40 dark:border-white/[0.08] print:bg-gray-50 print:text-black">
-                  <template v-for="term in renderedTerms" :key="`sub-${term.id}`">
+                  <template v-for="term in renderedAnnualTerms" :key="`sub-${term.id}`">
                     <th class="py-2 px-2 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06]">أعمال السنة</th>
-                    <th class="py-2 px-2 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06]">الامتحان النهائي</th>
+                    <th class="py-2 px-2 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06]">الامتحان</th>
                   </template>
                 </tr>
               </thead>
 
               <tbody class="divide-y divide-[#B4AED8]/30 dark:divide-white/[0.04]">
                 <tr
-                  v-for="(subj, sIdx) in processedSubjects"
+                  v-for="(subj, sIdx) in annualProcessedSubjects"
                   :key="subj.subject_name"
-                  class="hover:bg-bx-primary/5 transition-colors print:hover:bg-transparent"
+                  class="hover:bg-purple-500/5 transition-colors print:hover:bg-transparent"
                 >
                   <td class="py-2.5 px-3 text-center font-mono text-bx-muted border-l border-[#B4AED8]/20 dark:border-white/[0.04]">{{ sIdx + 1 }}</td>
                   <td class="py-2.5 px-4 font-bold text-bx-title border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-black">
@@ -122,12 +245,18 @@
                   </td>
 
                   <!-- Term Scores -->
-                  <template v-for="term in renderedTerms" :key="`val-${term.id}`">
+                  <template v-for="term in renderedAnnualTerms" :key="`val-${term.id}`">
                     <td class="py-2 px-2 text-center font-mono border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-title print:text-black">
-                      {{ subj.terms[term.id]?.coursework_score !== undefined ? subj.terms[term.id]?.coursework_score : '—' }}
+                      <span v-if="subj.terms[term.id] && subj.terms[term.id].coursework_score !== undefined">
+                        {{ subj.terms[term.id].coursework_score }}
+                      </span>
+                      <span v-else class="text-amber-500 text-[10px]">—</span>
                     </td>
                     <td class="py-2 px-2 text-center font-mono border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-title print:text-black">
-                      {{ subj.terms[term.id]?.exam_score !== undefined ? subj.terms[term.id]?.exam_score : '—' }}
+                      <span v-if="subj.terms[term.id] && subj.terms[term.id].exam_score !== undefined">
+                        {{ subj.terms[term.id].exam_score }}
+                      </span>
+                      <span v-else class="text-amber-500 text-[10px]">—</span>
                     </td>
                   </template>
 
@@ -141,7 +270,7 @@
                   <td class="py-2.5 px-3 text-center">
                     <span
                       class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
-                      :class="subj.is_passed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'"
+                      :class="subj.is_passed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'"
                     >
                       {{ subj.is_passed ? 'ناجح' : 'راسب' }}
                     </span>
@@ -149,21 +278,21 @@
                 </tr>
               </tbody>
 
-              <!-- Table Summary Footer -->
+              <!-- Annual Footer -->
               <tfoot>
                 <tr class="bg-black/[0.03] dark:bg-white/[0.03] font-bold text-xs border-t-2 border-[#B4AED8] dark:border-white/[0.12] print:bg-gray-100 print:text-black">
-                  <td :colspan="2 + (renderedTerms.length * 2)" class="py-3 px-4 text-left font-black text-bx-title print:text-black">
-                    المجموع الكلي والنسبة المئوية العامة:
+                  <td :colspan="2 + (renderedAnnualTerms.length * 2)" class="py-3 px-4 text-left font-black text-bx-title print:text-black">
+                    المجموع السنوي العام والنسبة المئوية:
                   </td>
                   <td class="py-3 px-3 text-center font-mono font-black text-bx-title text-sm print:text-black">
-                    {{ transcript.total_score }}
+                    {{ activeTranscript.total_score }}
                   </td>
                   <td class="py-3 px-3 text-center font-mono text-bx-muted print:text-gray-600">
-                    {{ transcript.max_possible_score || totalMaxAllSubjects }}
+                    {{ activeTranscript.max_possible_score || annualCalculatedMax }}
                   </td>
                   <td class="py-3 px-3 text-center">
-                    <span class="font-black font-mono text-bx-primary text-sm print:text-black">
-                      {{ transcript.percentage }}%
+                    <span class="font-black font-mono text-purple-600 dark:text-purple-400 text-sm print:text-black">
+                      {{ activeTranscript.percentage }}%
                     </span>
                   </td>
                 </tr>
@@ -172,19 +301,21 @@
           </div>
         </div>
 
-        <!-- Final Academic Decision Banner -->
+        <!-- Academic Decision Banner -->
         <div
           class="p-4 rounded-2xl border flex items-center justify-between gap-4"
           :class="decisionBannerClass"
         >
           <div class="space-y-0.5">
-            <span class="text-[11px] font-bold opacity-80 block">القرار النهائي للجنة الامتحانات والتقويم:</span>
+            <span class="text-[11px] font-bold opacity-80 block">
+              {{ isAnnualTranscript ? 'القرار السنوي النهائي للجنة الامتحانات والتقويم:' : 'الحالة الأكاديمية للفصل الدراسي:' }}
+            </span>
             <span class="text-sm sm:text-base font-black">{{ decisionArabicText }}</span>
           </div>
 
-          <div v-if="transcript.calculated_rank || transcript.rank" class="text-left shrink-0">
+          <div v-if="activeTranscript.calculated_rank || activeTranscript.rank" class="text-left shrink-0">
             <span class="text-[10px] font-bold opacity-80 block">الترتيب العام:</span>
-            <span class="text-sm sm:text-base font-black font-mono">المركز {{ transcript.calculated_rank || transcript.rank }}</span>
+            <span class="text-sm sm:text-base font-black font-mono">المركز {{ activeTranscript.calculated_rank || activeTranscript.rank }}</span>
           </div>
         </div>
 
@@ -209,8 +340,8 @@
 
         <!-- Sheet Timestamp Footer -->
         <div class="flex items-center justify-between text-[10px] text-bx-muted pt-2 border-t border-[#B4AED8]/20 dark:border-white/[0.04]">
-          <span>تاريخ التجميد والإصدار: {{ formatDate(transcript.created_at) }}</span>
-          <span class="font-mono">TRN-{{ transcript.id }}</span>
+          <span>تاريخ التجميد والإصدار: {{ formatDate(activeTranscript.created_at) }}</span>
+          <span class="font-mono">TRN-{{ activeTranscript.id }}</span>
         </div>
       </div>
 
@@ -239,9 +370,22 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { GraduationCap, BookOpen, Lock, Printer, Loader2 } from 'lucide-vue-next';
+import {
+  GraduationCap,
+  BookOpen,
+  Lock,
+  Printer,
+  Loader2,
+  AlertTriangle,
+  Award,
+  Calendar,
+} from 'lucide-vue-next';
 import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
-import { promotionApi, type StudentTranscript } from '../../api/promotion.api';
+import {
+  promotionApi,
+  type StudentTranscript,
+  type TermCompletionInfo,
+} from '../../api/promotion.api';
 
 interface Props {
   isOpen: boolean;
@@ -254,15 +398,118 @@ const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
-const studentAllTranscripts = ref<StudentTranscript[]>([]);
-const isLoadingTranscripts = ref(false);
+const isLoading = ref(false);
+const detailedTranscript = ref<StudentTranscript | null>(null);
 
-interface TermColumn {
+const activeTranscript = computed<StudentTranscript | null>(() => {
+  return detailedTranscript.value || props.transcript;
+});
+
+const isAnnualTranscript = computed(() => {
+  return activeTranscript.value?.transcript_type === 'annual';
+});
+
+const termCompletionInfo = computed<TermCompletionInfo | undefined>(() => {
+  return activeTranscript.value?.term_completion;
+});
+
+const isAnnualComplete = computed(() => {
+  if (!isAnnualTranscript.value) return true;
+  if (termCompletionInfo.value) {
+    return termCompletionInfo.value.is_annual_complete;
+  }
+  return true;
+});
+
+const drawerTitle = computed(() => {
+  if (!activeTranscript.value) return 'كشف الدرجات والنتائج الأكاديمية';
+  if (isAnnualTranscript.value) {
+    return 'الصحيفة السنوية المجمعة وكشف النتائج النهائي';
+  }
+  return `كشف درجات الفصل الدراسي (${activeTranscript.value.term_name || activeTranscript.value.transcript_type_ar || 'الفصل الدراسي'})`;
+});
+
+const drawerSubtitle = computed(() => {
+  if (!activeTranscript.value) return '';
+  return `${activeTranscript.value.student_name} • ${activeTranscript.value.class_name} (${activeTranscript.value.section_name}) • ${activeTranscript.value.academic_year_name}`;
+});
+
+// Watch open state and load full transcript details
+watch(
+  () => [props.isOpen, props.transcript?.id],
+  async () => {
+    if (!props.isOpen || !props.transcript?.id) {
+      detailedTranscript.value = null;
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      const res = await promotionApi.getTranscriptById(props.transcript.id);
+      if (res.success && res.data) {
+        detailedTranscript.value = res.data;
+      } else {
+        detailedTranscript.value = props.transcript;
+      }
+    } catch (err) {
+      console.error('Failed to load full transcript details:', err);
+      detailedTranscript.value = props.transcript;
+    } finally {
+      isLoading.value = false;
+    }
+  },
+  { immediate: true },
+);
+
+// Term subjects list (for Term Transcript View)
+interface ProcessedTermSubject {
+  subject_name: string;
+  coursework_score?: number;
+  max_coursework_score?: number;
+  exam_score?: number;
+  max_exam_score?: number;
+  total_score: number;
+  max_score: number;
+  is_passed: boolean;
+}
+
+const termSubjectsList = computed<ProcessedTermSubject[]>(() => {
+  if (!activeTranscript.value) return [];
+  const rawData = activeTranscript.value.transcript_data;
+  const subjects: any[] = rawData?.subjects || rawData?.subject_scores || [];
+
+  return subjects.map((s, idx) => {
+    const name = s.subject_name || `المادة ${idx + 1}`;
+    const maxScore = Number(s.max_score) || 100;
+    const cScore = s.coursework_score !== undefined ? Number(s.coursework_score) : undefined;
+    const eScore = s.exam_score !== undefined ? Number(s.exam_score) : undefined;
+    const tScore = Number(s.total_score) !== undefined ? Number(s.total_score) : ((cScore || 0) + (eScore || 0));
+    const passingScore = Number(s.passing_score) || maxScore * 0.5;
+
+    return {
+      subject_name: name,
+      coursework_score: cScore,
+      max_coursework_score: s.max_coursework_score || Number((maxScore * 0.4).toFixed(0)),
+      exam_score: eScore,
+      max_exam_score: s.max_exam_score || Number((maxScore * 0.6).toFixed(0)),
+      total_score: tScore,
+      max_score: maxScore,
+      is_passed: s.status ? s.status === 'passed' : tScore >= passingScore,
+    };
+  });
+});
+
+const termCalculatedMax = computed(() => {
+  return termSubjectsList.value.reduce((sum, s) => sum + s.max_score, 0);
+});
+
+// Annual Terms & Subjects (for Annual Multi-term View)
+interface AnnualTermColumn {
   id: string | number;
   name: string;
 }
 
-interface ProcessedSubjectItem {
+interface ProcessedAnnualSubjectItem {
   subject_name: string;
   terms: Record<string | number, { coursework_score?: number; exam_score?: number; total_score?: number }>;
   total_score: number;
@@ -270,86 +517,43 @@ interface ProcessedSubjectItem {
   is_passed: boolean;
 }
 
-// Fetch all transcripts for this student when drawer opens to support multi-term display
-watch(
-  () => [props.isOpen, props.transcript?.student_id],
-  async () => {
-    if (!props.isOpen || !props.transcript?.student_id) {
-      studentAllTranscripts.value = [];
-      return;
-    }
-
-    isLoadingTranscripts.value = true;
-    try {
-      const res = await promotionApi.getStudentTranscripts(props.transcript.student_id);
-      if (res.success && Array.isArray(res.data)) {
-        // Filter by the same academic year
-        studentAllTranscripts.value = res.data.filter(
-          (t) => t.academic_year_name === props.transcript?.academic_year_name,
-        );
-      }
-    } catch {
-      studentAllTranscripts.value = [];
-    } finally {
-      isLoadingTranscripts.value = false;
-    }
-  },
-  { immediate: true },
-);
-
-// Determine the terms to render as broad super-columns
-const renderedTerms = computed<TermColumn[]>(() => {
-  // If we have multiple term transcripts for this student in this academic year
-  const termTranscripts = studentAllTranscripts.value.filter((t) => t.transcript_type === 'term');
-  if (termTranscripts.length > 1) {
-    return termTranscripts.map((t, idx) => ({
-      id: t.academic_term_id || t.id || `term_${idx + 1}`,
-      name: t.transcript_type_ar || t.transcript_data?.term_name || `الفصل الدراسي ${idx + 1}`,
+const renderedAnnualTerms = computed<AnnualTermColumn[]>(() => {
+  if (termCompletionInfo.value?.required_terms && termCompletionInfo.value.required_terms.length > 0) {
+    return termCompletionInfo.value.required_terms.map((t) => ({
+      id: t.id,
+      name: t.name,
     }));
   }
 
-  // If transcript itself has terms array in transcript_data
-  const rawData = props.transcript?.transcript_data;
-  if (rawData?.terms && Array.isArray(rawData.terms) && rawData.terms.length > 0) {
-    return rawData.terms.map((t: any, idx: number) => ({
-      id: t.id || `term_${idx + 1}`,
-      name: t.term_name || t.name || `الفصل الدراسي ${idx + 1}`,
+  const studentTerms = activeTranscript.value?.student_term_transcripts;
+  if (studentTerms && studentTerms.length > 0) {
+    return studentTerms.map((st, idx) => ({
+      id: st.class_academic_term_id || st.id || `term_${idx + 1}`,
+      name: st.term_name || `الفصل ${idx + 1}`,
     }));
   }
-
-  // Single term fallback
-  const termName =
-    props.transcript?.transcript_type_ar ||
-    rawData?.term_name ||
-    (props.transcript?.transcript_type === 'annual' ? 'الفصل الدراسي الأول' : 'الفصل الدراسي');
 
   return [
-    {
-      id: 'primary_term',
-      name: termName,
-    },
+    { id: 1, name: 'الفصل الدراسي الأول' },
+    { id: 2, name: 'الفصل الدراسي الثاني' },
   ];
 });
 
-// Process all subjects across terms
-const processedSubjects = computed<ProcessedSubjectItem[]>(() => {
-  if (!props.transcript) return [];
+const annualProcessedSubjects = computed<ProcessedAnnualSubjectItem[]>(() => {
+  if (!activeTranscript.value) return [];
 
-  const rawData = props.transcript.transcript_data;
-  const directSubjects: any[] = rawData?.subjects || rawData?.subject_scores || [];
+  const studentTerms = activeTranscript.value.student_term_transcripts || [];
 
-  const termTranscripts = studentAllTranscripts.value.filter((t) => t.transcript_type === 'term');
+  // If student has multiple term transcripts, merge across them
+  if (studentTerms.length > 0) {
+    const subjectMap = new Map<string, ProcessedAnnualSubjectItem>();
 
-  // If we have multiple term transcripts, merge subjects across terms
-  if (termTranscripts.length > 1) {
-    const subjectMap = new Map<string, ProcessedSubjectItem>();
+    for (const st of studentTerms) {
+      const termId = st.class_academic_term_id || st.id;
+      const subjects: any[] = st.transcript_data?.subjects || st.transcript_data?.subject_scores || [];
 
-    for (const tt of termTranscripts) {
-      const termId = tt.academic_term_id || tt.id;
-      const ttSubjects: any[] = tt.transcript_data?.subjects || tt.transcript_data?.subject_scores || [];
-
-      for (const s of ttSubjects) {
-        const name = s.subject_name;
+      for (const s of subjects) {
+        const name = s.subject_name || 'مادة';
         if (!subjectMap.has(name)) {
           subjectMap.set(name, {
             subject_name: name,
@@ -361,9 +565,9 @@ const processedSubjects = computed<ProcessedSubjectItem[]>(() => {
         }
 
         const item = subjectMap.get(name)!;
-        const cScore = Number(s.coursework_score) || 0;
-        const eScore = Number(s.exam_score) || 0;
-        const tScore = Number(s.total_score) || (cScore + eScore);
+        const cScore = s.coursework_score !== undefined ? Number(s.coursework_score) : undefined;
+        const eScore = s.exam_score !== undefined ? Number(s.exam_score) : undefined;
+        const tScore = Number(s.total_score) || ((cScore || 0) + (eScore || 0));
 
         item.terms[termId] = {
           coursework_score: cScore,
@@ -373,13 +577,16 @@ const processedSubjects = computed<ProcessedSubjectItem[]>(() => {
       }
     }
 
-    // Calculate aggregated total score and passing status
     return Array.from(subjectMap.values()).map((item) => {
       let sum = 0;
+      let count = 0;
       for (const tVal of Object.values(item.terms)) {
-        sum += tVal.total_score || 0;
+        if (tVal.total_score !== undefined) {
+          sum += tVal.total_score;
+          count += 1;
+        }
       }
-      const finalScore = Number((sum / termTranscripts.length).toFixed(1));
+      const finalScore = count > 0 ? Number((sum / count).toFixed(1)) : 0;
       const passingScore = item.max_score * 0.5;
 
       return {
@@ -390,19 +597,24 @@ const processedSubjects = computed<ProcessedSubjectItem[]>(() => {
     });
   }
 
-  // Single Term or direct subjects
-  return directSubjects.map((s) => {
-    const termId = renderedTerms.value[0]?.id || 'primary_term';
+  // Fallback: direct subjects from transcript_data
+  const rawData = activeTranscript.value.transcript_data;
+  const directSubjects: any[] = rawData?.subjects || rawData?.subject_scores || [];
+
+  return directSubjects.map((s, idx) => {
+    const name = s.subject_name || `المادة ${idx + 1}`;
+    const maxScore = Number(s.max_score) || 100;
     const cScore = s.coursework_score !== undefined ? Number(s.coursework_score) : undefined;
     const eScore = s.exam_score !== undefined ? Number(s.exam_score) : undefined;
     const tScore = Number(s.total_score) || ((cScore || 0) + (eScore || 0));
-    const maxScore = Number(s.max_score) || 100;
     const passingScore = Number(s.passing_score) || maxScore * 0.5;
 
+    const firstTermId = renderedAnnualTerms.value[0]?.id || 1;
+
     return {
-      subject_name: s.subject_name,
+      subject_name: name,
       terms: {
-        [termId]: {
+        [firstTermId]: {
           coursework_score: cScore,
           exam_score: eScore,
           total_score: tScore,
@@ -415,28 +627,36 @@ const processedSubjects = computed<ProcessedSubjectItem[]>(() => {
   });
 });
 
-const totalMaxAllSubjects = computed(() => {
-  return processedSubjects.value.reduce((sum, s) => sum + s.max_score, 0);
+const annualCalculatedMax = computed(() => {
+  return annualProcessedSubjects.value.reduce((sum, s) => sum + s.max_score, 0);
 });
 
 const decisionArabicText = computed(() => {
-  const status = props.transcript?.final_status;
+  if (isAnnualTranscript.value && !isAnnualComplete.value) {
+    return 'قيد استكمال الفصول الدراسية (لا يوجد قرار ترفيع سنوي حتى اكتمال رصد كافة الفصول)';
+  }
+
+  const status = activeTranscript.value?.final_status;
   switch (status) {
     case 'passed':
-      return 'ناجح ومرحل إلى الصف التالي';
+      return isAnnualTranscript.value ? 'ناجح ومرحل إلى الصف التالي' : 'ناجح في الفصل الدراسي';
     case 'second_round':
       return 'له حق دخول امتحانات الدور الثاني';
     case 'failed':
-      return 'باقٍ للإعادة في نفس الصف الدراسي';
+      return isAnnualTranscript.value ? 'باقٍ للإعادة في نفس الصف الدراسي' : 'راسب في الفصل الدراسي';
     case 'graduated':
-      return 'ناجح ومتخرج رسمياً من المرحلة';
+      return 'ناجح ومتخرج رسمياً من المرحلة التعليمية';
     default:
       return status || '—';
   }
 });
 
 const decisionBannerClass = computed(() => {
-  const status = props.transcript?.final_status;
+  if (isAnnualTranscript.value && !isAnnualComplete.value) {
+    return 'bg-amber-500/10 text-amber-800 dark:text-amber-200 border-amber-500/30';
+  }
+
+  const status = activeTranscript.value?.final_status;
   switch (status) {
     case 'passed':
     case 'graduated':

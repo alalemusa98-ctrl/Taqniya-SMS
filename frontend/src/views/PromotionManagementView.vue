@@ -572,9 +572,16 @@ const onClassFilterChange = (val: any) => {
 };
 
 const onTranscriptTypeChange = (val: any) => {
-  if (val !== 'term') {
+  if (val === 'all' || !val) {
+    filters.value.transcript_type = undefined;
     filters.value.class_academic_term_id = undefined;
     selectedTermModel.value = 'all';
+  } else {
+    filters.value.transcript_type = val;
+    if (val !== 'term') {
+      filters.value.class_academic_term_id = undefined;
+      selectedTermModel.value = 'all';
+    }
   }
   filters.value.page = 1;
   fetchTranscripts();
@@ -669,9 +676,17 @@ const handlePageChange = (page: number) => {
   fetchTranscripts();
 };
 
-const handleViewTranscriptDetail = (transcript: StudentTranscript) => {
+const handleViewTranscriptDetail = async (transcript: StudentTranscript) => {
   selectedTranscript.value = transcript;
   isDetailDrawerOpen.value = true;
+  try {
+    const res = await promotionApi.getTranscriptById(transcript.id);
+    if (res.success && res.data) {
+      selectedTranscript.value = res.data;
+    }
+  } catch (err) {
+    console.error('Failed to fetch full transcript details:', err);
+  }
 };
 
 const handleViewBatchDetail = (batch: PromotionBatch) => {

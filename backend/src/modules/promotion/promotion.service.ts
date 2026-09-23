@@ -80,7 +80,18 @@ export class PromotionService {
     }
 
     if (query.class_academic_term_id) {
-      where.class_academic_term_id = BigInt(query.class_academic_term_id);
+      where.OR = [
+        { class_academic_term_id: BigInt(query.class_academic_term_id) },
+        {
+          class_academic_term: {
+            academic_term_id: BigInt(query.class_academic_term_id),
+          },
+        },
+      ];
+    } else if (query.academic_term_id) {
+      where.class_academic_term = {
+        academic_term_id: BigInt(query.academic_term_id),
+      };
     }
 
     if (query.final_status) {
@@ -117,6 +128,11 @@ export class PromotionService {
           student: {
             include: {
               user: true,
+            },
+          },
+          class_academic_term: {
+            include: {
+              academic_term: true,
             },
           },
         },
@@ -179,14 +195,25 @@ export class PromotionService {
       student_id: Number(t.student_id),
       student_name: t.student?.full_name || '',
       student_code: t.student?.user?.user_code || '',
+      national_id: t.student?.national_id || '',
+      transcript_type: t.transcript_type,
+      transcript_type_ar: this.getTranscriptTypeArabic(t.transcript_type),
+      academic_year_name: t.academic_year_name,
       class_name: t.class_name,
       section_name: t.section_name,
       grade_level: t.grade_level,
+      class_academic_term_id: t.class_academic_term_id ? Number(t.class_academic_term_id) : undefined,
+      term_name:
+        t.class_academic_term?.academic_term?.name ||
+        (t.transcript_data as any)?.term_name ||
+        (t.transcript_type === TranscriptType.annual ? 'الصحيفة السنوية' : 'الفصل الدراسي'),
       total_score: Number(t.total_score),
+      max_possible_score: (t.transcript_data as any)?.max_possible_score,
       percentage: Number(t.percentage),
       final_status: t.final_status,
       final_status_ar: this.getStatusArabic(t.final_status),
       rank: t.rank || (skip + idx + 1),
+      transcript_data: t.transcript_data,
       created_at: t.created_at,
     }));
 
@@ -245,6 +272,11 @@ export class PromotionService {
             user: true,
           },
         },
+        class_academic_term: {
+          include: {
+            academic_term: true,
+          },
+        },
       },
     });
 
@@ -273,6 +305,68 @@ export class PromotionService {
       }
     }
 
+    // Query class terms count and student's term transcripts to evaluate term completion
+    let totalRequiredTerms = 0;
+    let requiredTermsList: { id: number; academic_term_id: number; name: string }[] = [];
+    const cls = await this.prisma.class.findFirst({
+      where: { name: transcript.class_name, deleted_at: null },
+      include: {
+        class_academic_terms: {
+          where: { deleted_at: null },
+          include: { academic_term: true },
+        },
+      },
+    });
+
+    if (cls && cls.class_academic_terms) {
+      totalRequiredTerms = cls.class_academic_terms.length;
+      requiredTermsList = cls.class_academic_terms.map((cat) => ({
+        id: Number(cat.id),
+        academic_term_id: Number(cat.academic_term_id),
+        name: cat.academic_term?.name || `فصل ${cat.id}`,
+      }));
+    }
+
+    const studentTermTranscripts = await this.prisma.studentTranscript.findMany({
+      where: {
+        student_id: transcript.student_id,
+        academic_year_name: transcript.academic_year_name,
+        transcript_type: TranscriptType.term,
+        deleted_at: null,
+      },
+      include: {
+        class_academic_term: {
+          include: {
+            academic_term: true,
+          },
+        },
+      },
+      orderBy: { created_at: 'asc' },
+    });
+
+    const gradedTermIds = new Set(
+      studentTermTranscripts
+        .map((st) => (st.class_academic_term_id ? Number(st.class_academic_term_id) : null))
+        .filter(Boolean),
+    );
+
+    const missingTerms = requiredTermsList
+      .filter((rt) => !gradedTermIds.has(rt.id))
+      .map((rt) => rt.name);
+
+    const isAnnualComplete =
+      totalRequiredTerms > 0
+        ? studentTermTranscripts.length >= totalRequiredTerms
+        : true;
+
+    const termCompletion = {
+      total_required_terms: totalRequiredTerms,
+      graded_terms_count: studentTermTranscripts.length,
+      is_annual_complete: isAnnualComplete,
+      missing_terms: missingTerms,
+      required_terms: requiredTermsList,
+    };
+
     return {
       success: true,
       message: 'تم جلب لقطة الصحيفة المدرسية بنجاح.',
@@ -281,17 +375,37 @@ export class PromotionService {
         student_id: Number(transcript.student_id),
         student_name: transcript.student?.full_name || '',
         student_code: transcript.student?.user?.user_code || '',
+        national_id: transcript.student?.national_id || '',
         transcript_type: transcript.transcript_type,
         transcript_type_ar: this.getTranscriptTypeArabic(transcript.transcript_type),
         academic_year_name: transcript.academic_year_name,
         class_name: transcript.class_name,
         section_name: transcript.section_name,
         grade_level: transcript.grade_level,
+        class_academic_term_id: transcript.class_academic_term_id ? Number(transcript.class_academic_term_id) : undefined,
+        term_name:
+          transcript.class_academic_term?.academic_term?.name ||
+          (transcript.transcript_data as any)?.term_name ||
+          (transcript.transcript_type === TranscriptType.annual ? 'الصحيفة السنوية المجمعة' : 'الفصل الدراسي'),
         total_score: Number(transcript.total_score),
+        max_possible_score: (transcript.transcript_data as any)?.max_possible_score,
         percentage: Number(transcript.percentage),
         final_status: transcript.final_status,
         rank: transcript.rank,
         transcript_data: transcript.transcript_data,
+        term_completion: termCompletion,
+        student_term_transcripts: studentTermTranscripts.map((st) => ({
+          id: Number(st.id),
+          class_academic_term_id: st.class_academic_term_id ? Number(st.class_academic_term_id) : undefined,
+          term_name:
+            st.class_academic_term?.academic_term?.name ||
+            (st.transcript_data as any)?.term_name ||
+            'فصل دراسي',
+          total_score: Number(st.total_score),
+          percentage: Number(st.percentage),
+          final_status: st.final_status,
+          transcript_data: st.transcript_data,
+        })),
         created_at: transcript.created_at,
       },
     };
@@ -1201,6 +1315,13 @@ export class PromotionService {
       throw new UnprocessableEntityException('لا يوجد طلاب مسكنين في هذه الشعبة لتوليد الصحيفة السنوية.');
     }
 
+    const requiredClassTermsCount = await this.prisma.classAcademicTerm.count({
+      where: {
+        class_id: classSection.class_id,
+        deleted_at: null,
+      },
+    });
+
     let generatedCount = 0;
 
     await this.prisma.$transaction(async (tx) => {
@@ -1217,7 +1338,11 @@ export class PromotionService {
           },
         });
 
+        // Business Rule: Student must have completed all terms required for this class
         if (termTranscripts.length === 0) continue;
+        if (requiredClassTermsCount > 0 && termTranscripts.length < requiredClassTermsCount) {
+          continue;
+        }
 
         // Aggregate subject marks across terms
         const subjectMap = new Map<string, {

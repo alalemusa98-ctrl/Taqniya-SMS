@@ -9,6 +9,14 @@ export interface SubjectScoreDetail {
   grade_label?: string;
 }
 
+export interface TermCompletionInfo {
+  total_required_terms: number;
+  graded_terms_count: number;
+  is_annual_complete: boolean;
+  missing_terms: string[];
+  required_terms?: Array<{ id: number; academic_term_id: number; name: string }>;
+}
+
 export interface StudentTranscript {
   id: number;
   student_id: number;
@@ -23,6 +31,8 @@ export interface StudentTranscript {
   grade_level?: number;
   academic_term_id?: number;
   academic_term_name?: string;
+  class_academic_term_id?: number;
+  term_name?: string;
   academic_year_name: string;
   transcript_type: 'annual' | 'term';
   transcript_type_ar?: string;
@@ -33,6 +43,16 @@ export interface StudentTranscript {
   final_status_ar?: string;
   rank?: number;
   calculated_rank?: number;
+  term_completion?: TermCompletionInfo;
+  student_term_transcripts?: Array<{
+    id: number;
+    class_academic_term_id?: number;
+    term_name: string;
+    total_score: number;
+    percentage: number;
+    final_status: string;
+    transcript_data?: any;
+  }>;
   transcript_data?: {
     term_name?: string;
     student_id?: number;
