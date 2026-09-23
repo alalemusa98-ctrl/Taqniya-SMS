@@ -2,7 +2,7 @@
   <TaqniyaModal
     :is-open="isOpen"
     :title="'إدخال وتعديل درجات وتجميد الكشف رسمياً'"
-    size="lg"
+    maxWidth="2xl"
     @close="$emit('close')"
   >
     <div class="grade-entry-modal-content">

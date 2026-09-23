@@ -1,123 +1,130 @@
 <template>
   <TaqniyaErrorBoundary>
-    <div class="promotion-management-view" dir="rtl">
-      <!-- Spatial View Header -->
-      <header class="spatial-page-header">
-        <div class="header-left">
-          <div class="icon-wrap">
-            <GraduationCap class="header-icon" />
+    <div class="space-y-8 p-6 sm:p-8 max-w-[1600px] mx-auto min-h-screen text-bx-text font-sans" dir="rtl">
+      <!-- Page Header -->
+      <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#B4AED8] dark:border-white/[0.08]">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center border border-bx-primary/20 shadow-xs">
+            <GraduationCap class="w-8 h-8" />
           </div>
           <div>
-            <h1 class="page-title">الترحيل الأكاديمي وكشوفات النتائج والأرشيف</h1>
-            <p class="page-subtitle">
-              إدارة كشوفات الدرجات المعتمدة، لوحة الشرف، المحاكاة الذكية، والترحيل السنوي المتوازن مع الحفاظ على تسكين الشعب
+            <h1 class="text-2xl sm:text-3xl font-black text-bx-title font-display tracking-tight">
+              الترحيل الأكاديمي وكشوفات النتائج والأرشيف
+            </h1>
+            <p class="text-xs sm:text-sm text-bx-muted mt-1 font-medium">
+              إدارة كشوفات الدرجات الرسمية، لوحة الشرف، المحاكاة الذكية، والترحيل السنوي المتوازن مع الحفاظ على تسكين الشعب
             </p>
           </div>
         </div>
 
-        <div class="header-actions">
+        <div class="flex items-center gap-3 shrink-0">
           <button
             type="button"
-            class="btn-spatial-primary"
+            class="px-5 py-2.5 rounded-2xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
             @click="openPromotionModal"
           >
-            <Sparkles class="btn-icon" />
+            <Sparkles class="w-4 h-4" />
             <span>تنفيذ الترحيل السنوي وتوزيع الفصول</span>
           </button>
         </div>
       </header>
 
-      <!-- Executive KPI Cards -->
-      <section class="kpis-section">
-        <div class="kpi-card glassmorphic">
-          <div class="kpi-icon-wrap bg-indigo">
-            <Layers class="kpi-icon" />
-          </div>
-          <div class="kpi-content">
-            <span class="kpi-title">إجمالي الكشوفات المسجلة</span>
-            <span class="kpi-number">{{ totalTranscriptsCount }}</span>
-            <span class="kpi-subtext">سجلات مؤرشفة ومجمدة</span>
-          </div>
-        </div>
+      <!-- KPI Overview Cards using TaqniyaKpiCard -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <TaqniyaKpiCard
+          :icon="Layers"
+          title="إجمالي الكشوفات المسجلة"
+          :value="totalTranscriptsCount"
+          subtext="سجلات مؤرشفة ومجمدة"
+          color="purple"
+        />
 
-        <div class="kpi-card glassmorphic">
-          <div class="kpi-icon-wrap bg-emerald">
-            <CheckCircle2 class="kpi-icon" />
-          </div>
-          <div class="kpi-content">
-            <span class="kpi-title">نسبة النجاح العامة</span>
-            <span class="kpi-number">{{ overallPassRate }}%</span>
-            <span class="kpi-subtext">على مستوى المدرسة</span>
-          </div>
-        </div>
+        <TaqniyaKpiCard
+          :icon="CheckCircle2"
+          title="نسبة النجاح العامة"
+          :value="`${overallPassRate}%`"
+          subtext="على مستوى المدرسة"
+          color="emerald"
+        />
 
-        <div class="kpi-card glassmorphic">
-          <div class="kpi-icon-wrap bg-amber">
-            <RotateCcw class="kpi-icon" />
-          </div>
-          <div class="kpi-content">
-            <span class="kpi-title">دفعات الترحيل المعتمدة</span>
-            <span class="kpi-number">{{ promotionBatches.length }}</span>
-            <span class="kpi-subtext">عمليات ترحيل سنوية مكتملة</span>
-          </div>
-        </div>
+        <TaqniyaKpiCard
+          :icon="RotateCcw"
+          title="دفعات الترحيل المعتمدة"
+          :value="promotionBatches.length"
+          subtext="عمليات ترحيل سنوية مكتملة"
+          color="amber"
+        />
       </section>
 
       <!-- Navigation Tabs -->
-      <nav class="tabs-nav-bar">
+      <nav class="flex items-center gap-2 border-b border-[#B4AED8] dark:border-white/[0.08] pb-1">
         <button
           type="button"
-          class="tab-btn"
-          :class="{ active: activeTab === 'transcripts' }"
+          class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center gap-2"
+          :class="activeTab === 'transcripts' ? 'bg-bx-primary text-white shadow-xs' : 'text-bx-muted hover:text-bx-title hover:bg-black/5 dark:hover:bg-white/5'"
           @click="activeTab = 'transcripts'"
         >
-          <span>📑 كشوفات الدرجات ولوحة الشرف</span>
+          <BookOpen class="w-4 h-4" />
+          <span>كشوفات الدرجات ولوحة الشرف</span>
         </button>
         <button
           type="button"
-          class="tab-btn"
-          :class="{ active: activeTab === 'batches' }"
+          class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center gap-2"
+          :class="activeTab === 'batches' ? 'bg-bx-primary text-white shadow-xs' : 'text-bx-muted hover:text-bx-title hover:bg-black/5 dark:hover:bg-white/5'"
           @click="activeTab = 'batches'"
         >
-          <span>📜 سجل دفعات الترحيل المؤرشفة</span>
+          <History class="w-4 h-4" />
+          <span>سجل دفعات الترحيل المؤرشفة</span>
         </button>
       </nav>
 
       <!-- TAB 1: Transcripts & Leaderboard -->
-      <section v-if="activeTab === 'transcripts'" class="tab-content">
-        <!-- Filters Bar -->
-        <div class="filters-panel glassmorphic">
-          <div class="filter-controls">
-            <div class="filter-item">
-              <label class="filter-label">العام الدراسي:</label>
-              <select v-model="filters.academic_year_name" class="spatial-input" @change="fetchTranscripts">
-                <option value="">جميع الأعوام</option>
-                <option v-for="y in academicYearsList" :key="y.id" :value="y.name">{{ y.name }}</option>
-              </select>
+      <section v-if="activeTab === 'transcripts'" class="space-y-6">
+        <!-- Filters Panel using TaqniyaSelect -->
+        <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-6 shadow-xs space-y-4">
+          <div class="flex items-center gap-2 font-bold text-sm text-bx-title">
+            <Filter class="w-4 h-4 text-bx-primary" />
+            <span>تصفية وفلترة الكشوفات الأكاديمية</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-bx-muted">العام الدراسي:</label>
+              <TaqniyaSelect
+                v-model="filters.academic_year_name"
+                :options="yearFilterOptions"
+                placeholder="جميع الأعوام الدراسية"
+                :full-width="true"
+                @update:model-value="fetchTranscripts"
+              />
             </div>
 
-            <div class="filter-item">
-              <label class="filter-label">الصف الدراسي:</label>
-              <select v-model="filters.class_id" class="spatial-input" @change="fetchTranscripts">
-                <option :value="undefined">جميع الصفوف</option>
-                <option v-for="c in classesList" :key="c.id" :value="c.id">{{ c.name }}</option>
-              </select>
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-bx-muted">الصف الدراسي:</label>
+              <TaqniyaSelect
+                v-model="selectedClassIdModel"
+                :options="classFilterOptions"
+                placeholder="كافة الصفوف الدراسية"
+                :full-width="true"
+                @update:model-value="onClassFilterChange"
+              />
             </div>
 
-            <div class="filter-item">
-              <label class="filter-label">الحالة النهائية:</label>
-              <select v-model="filters.final_status" class="spatial-input" @change="fetchTranscripts">
-                <option value="">الكل</option>
-                <option value="passed">ناجح</option>
-                <option value="second_round">دور ثان</option>
-                <option value="retained">باق للإعادة</option>
-              </select>
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-bx-muted">الحالة النهائية للطالب:</label>
+              <TaqniyaSelect
+                v-model="filters.final_status"
+                :options="statusFilterOptions"
+                placeholder="كافة الحالات الأكاديمية"
+                :full-width="true"
+                @update:model-value="fetchTranscripts"
+              />
             </div>
           </div>
         </div>
 
         <!-- Executive Class Cards Grid -->
-        <div v-if="executiveClassSummaries.length > 0" class="classes-cards-grid">
+        <div v-if="executiveClassSummaries.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <ExecutiveClassCard
             v-for="cSum in executiveClassSummaries"
             :key="cSum.class_id"
@@ -128,19 +135,19 @@
         </div>
 
         <!-- Leaderboard Table -->
-        <div v-if="isLoadingTranscripts" class="loading-state">
-          <Loader2 class="spinner" />
-          <span>جاري تحميل كشوفات الدرجات الأكاديمية...</span>
+        <div v-if="isLoadingTranscripts" class="flex flex-col items-center justify-center p-12 text-bx-muted gap-3">
+          <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
+          <span class="text-sm font-semibold">جاري تحميل كشوفات الدرجات الأكاديمية...</span>
         </div>
-        <div v-else>
+        <div v-else class="space-y-4">
           <ClassLeaderboardTable
             :transcripts="transcripts"
             @view-detail="handleViewTranscriptDetail"
             @freeze="handleOpenGradeEntry"
           />
 
-          <!-- Pagination -->
-          <div v-if="meta.total_pages > 1" class="pagination-wrap">
+          <!-- Pagination using TaqniyaPagination -->
+          <div v-if="meta.total_pages > 1" class="flex justify-center pt-4">
             <TaqniyaPagination
               :current-page="meta.current_page"
               :total-pages="meta.total_pages"
@@ -151,50 +158,52 @@
       </section>
 
       <!-- TAB 2: Promotion Batches History -->
-      <section v-if="activeTab === 'batches'" class="tab-content">
-        <div class="glassmorphic batches-table-card">
-          <div class="batches-card-header">
-            <h3 class="card-title">سجل عمليات الترحيل الأكاديمي الجماعي (Promotion Batches SSoT)</h3>
-            <span class="card-subtitle">كافة العمليات مؤرخة وموثقة بسجلات التدقيق الأمني Audit Logs</span>
+      <section v-if="activeTab === 'batches'" class="space-y-6">
+        <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+          <div class="border-b border-[#B4AED8] dark:border-white/[0.08] pb-4">
+            <h3 class="text-lg font-bold text-bx-title font-display">سجل عمليات الترحيل الأكاديمي الجماعي (Promotion Batches SSoT)</h3>
+            <p class="text-xs text-bx-muted mt-1 font-medium">كافة العمليات مؤرخة وموثقة بسجلات التدقيق الأمني Audit Logs</p>
           </div>
 
-          <div v-if="isLoadingBatches" class="loading-state">
-            <Loader2 class="spinner" />
-            <span>جاري تحميل سجل الدفعات...</span>
+          <div v-if="isLoadingBatches" class="flex flex-col items-center justify-center p-12 text-bx-muted gap-3">
+            <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
+            <span class="text-sm font-semibold">جاري تحميل سجل الدفعات...</span>
           </div>
-          <div v-else-if="promotionBatches.length === 0" class="empty-state">
+          <div v-else-if="promotionBatches.length === 0" class="text-center py-12 text-bx-muted text-sm">
             <span>لا توجد دفعات ترحيل منفذة حتى الآن.</span>
           </div>
-          <div v-else class="table-responsive">
-            <table class="spatial-table">
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-right text-xs sm:text-sm border-collapse">
               <thead>
-                <tr>
-                  <th>معرف الدفعة</th>
-                  <th>من عام دراسي</th>
-                  <th>إلى عام دراسي</th>
-                  <th>إجمالي الطلاب</th>
-                  <th>المنقولون</th>
-                  <th>الدور الثاني</th>
-                  <th>الباقون للإعادة</th>
-                  <th>نسبة النجاح العامة</th>
-                  <th>تاريخ التنفيذ</th>
-                  <th>ملاحظات</th>
+                <tr class="border-b border-[#B4AED8] dark:border-white/[0.08] text-bx-muted font-bold">
+                  <th class="py-3 px-4">معرف الدفعة</th>
+                  <th class="py-3 px-4">من عام دراسي</th>
+                  <th class="py-3 px-4">إلى عام دراسي</th>
+                  <th class="py-3 px-4">إجمالي الطلاب</th>
+                  <th class="py-3 px-4">المنقولون</th>
+                  <th class="py-3 px-4">الدور الثاني</th>
+                  <th class="py-3 px-4">الباقون للإعادة</th>
+                  <th class="py-3 px-4">نسبة النجاح العامة</th>
+                  <th class="py-3 px-4">تاريخ التنفيذ</th>
+                  <th class="py-3 px-4">ملاحظات</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr v-for="b in promotionBatches" :key="b.id">
-                  <td><code>BAT-{{ b.id }}</code></td>
-                  <td class="font-semibold">{{ b.from_academic_year?.name || b.from_academic_year_id }}</td>
-                  <td class="font-semibold text-primary">{{ b.to_academic_year?.name || b.to_academic_year_id }}</td>
-                  <td class="font-bold">{{ b.total_students }}</td>
-                  <td class="text-success font-semibold">{{ b.total_promoted }}</td>
-                  <td class="text-warning font-semibold">{{ b.total_second_round }}</td>
-                  <td class="text-danger font-semibold">{{ b.total_retained }}</td>
-                  <td>
-                    <span class="rate-badge">{{ b.overall_passing_rate }}%</span>
+              <tbody class="divide-y divide-[#B4AED8]/40 dark:divide-white/[0.04]">
+                <tr v-for="b in promotionBatches" :key="b.id" class="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                  <td class="py-3 px-4 font-mono font-bold text-bx-primary">BAT-{{ b.id }}</td>
+                  <td class="py-3 px-4 font-bold text-bx-title">{{ b.from_academic_year?.name || b.from_academic_year_id }}</td>
+                  <td class="py-3 px-4 font-bold text-bx-primary">{{ b.to_academic_year?.name || b.to_academic_year_id }}</td>
+                  <td class="py-3 px-4 font-black">{{ b.total_students }}</td>
+                  <td class="py-3 px-4 text-emerald-600 font-bold">{{ b.total_promoted }}</td>
+                  <td class="py-3 px-4 text-amber-600 font-bold">{{ b.total_second_round }}</td>
+                  <td class="py-3 px-4 text-rose-600 font-bold">{{ b.total_retained }}</td>
+                  <td class="py-3 px-4">
+                    <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                      {{ b.overall_passing_rate }}%
+                    </span>
                   </td>
-                  <td class="text-muted">{{ formatDate(b.created_at) }}</td>
-                  <td class="text-sm">{{ b.execution_notes || '—' }}</td>
+                  <td class="py-3 px-4 text-bx-muted text-xs">{{ formatDate(b.created_at) }}</td>
+                  <td class="py-3 px-4 text-xs text-bx-muted max-w-[200px] truncate">{{ b.execution_notes || '—' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -241,9 +250,14 @@ import {
   Layers,
   CheckCircle2,
   RotateCcw,
+  BookOpen,
+  History,
+  Filter,
   Loader2,
 } from 'lucide-vue-next';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
+import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
+import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
 import TaqniyaPagination from '../components/ui/TaqniyaPagination.vue';
 import ExecutiveClassCard from '../components/promotion/ExecutiveClassCard.vue';
 import ClassLeaderboardTable from '../components/promotion/ClassLeaderboardTable.vue';
@@ -293,10 +307,12 @@ const isExecutingPromotion = ref(false);
 const filters = ref<QueryTranscriptsDto>({
   page: 1,
   per_page: 20,
-  academic_year_name: '',
+  academic_year_name: undefined,
   class_id: undefined,
-  final_status: '',
+  final_status: undefined,
 });
+
+const selectedClassIdModel = ref<string | number>('all');
 
 const meta = ref({
   current_page: 1,
@@ -304,6 +320,32 @@ const meta = ref({
   total: 0,
   total_pages: 1,
 });
+
+// Dropdown Options
+const yearFilterOptions = computed<TaqniyaSelectOption[]>(() => [
+  { label: 'جميع الأعوام الدراسية', value: 'all' },
+  ...academicYearsList.value.map((y) => ({
+    label: `${y.name} ${y.is_active ? '(النشط)' : ''}`,
+    value: y.name,
+    subtext: y.is_active ? 'العام الأكاديمي النشط حالياً' : undefined,
+  })),
+]);
+
+const classFilterOptions = computed<TaqniyaSelectOption[]>(() => [
+  { label: 'كافة الصفوف الدراسية', value: 'all' },
+  ...classesList.value.map((c) => ({
+    label: `${c.name} (المستوى ${c.grade_level})`,
+    value: c.id,
+    subtext: `المستوى الدراسي ${c.grade_level}`,
+  })),
+]);
+
+const statusFilterOptions: TaqniyaSelectOption[] = [
+  { label: 'كافة الحالات الأكاديمية', value: 'all' },
+  { label: 'ناجح ومنقول (Passed)', value: 'passed' },
+  { label: 'دور ثانٍ (Second Round)', value: 'second_round' },
+  { label: 'باقٍ للإعادة (Retained)', value: 'retained' },
+];
 
 // Computed Metrics
 const totalTranscriptsCount = computed(() => meta.value.total);
@@ -337,17 +379,47 @@ const fetchAcademicLookups = async () => {
   }
 };
 
+const onClassFilterChange = (val: any) => {
+  if (val === 'all' || !val) {
+    filters.value.class_id = undefined;
+  } else {
+    filters.value.class_id = Number(val);
+  }
+  fetchTranscripts();
+};
+
 const fetchTranscripts = async () => {
   isLoadingTranscripts.value = true;
   try {
-    const res = await promotionApi.getTranscripts(filters.value);
+    const queryParams: QueryTranscriptsDto = {
+      page: filters.value.page,
+      per_page: filters.value.per_page,
+      academic_year_name: filters.value.academic_year_name === 'all' ? undefined : filters.value.academic_year_name,
+      class_id: filters.value.class_id,
+      final_status: filters.value.final_status === 'all' ? undefined : filters.value.final_status,
+    };
+
+    const res = await promotionApi.getTranscripts(queryParams);
     if (res.success) {
-      transcripts.value = res.data;
-      executiveClassSummaries.value = res.meta?.class_summaries || [];
+      if (Array.isArray(res.data)) {
+        transcripts.value = res.data;
+      } else if (res.data && Array.isArray(res.data.transcripts)) {
+        transcripts.value = res.data.transcripts;
+        if (Array.isArray(res.data.classes_summary)) {
+          executiveClassSummaries.value = res.data.classes_summary;
+        }
+      } else {
+        transcripts.value = [];
+      }
+
+      if (res.meta?.class_summaries && Array.isArray(res.meta.class_summaries) && res.meta.class_summaries.length > 0) {
+        executiveClassSummaries.value = res.meta.class_summaries;
+      }
+
       meta.value = {
         current_page: res.meta?.current_page || 1,
         per_page: res.meta?.per_page || 20,
-        total: res.meta?.total || 0,
+        total: res.meta?.total !== undefined ? res.meta.total : transcripts.value.length,
         total_pages: res.meta?.total_pages || 1,
       };
     }
@@ -375,8 +447,10 @@ const fetchPromotionBatches = async () => {
 const handleSelectClassCard = (cSum: ExecutiveClassSummary) => {
   if (filters.value.class_id === cSum.class_id) {
     filters.value.class_id = undefined;
+    selectedClassIdModel.value = 'all';
   } else {
     filters.value.class_id = cSum.class_id;
+    selectedClassIdModel.value = cSum.class_id;
   }
   fetchTranscripts();
 };
@@ -462,336 +536,3 @@ const formatDate = (dateStr?: string) => {
   });
 };
 </script>
-
-<style scoped>
-.promotion-management-view {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  max-width: 1440px;
-  margin: 0 auto;
-}
-
-.spatial-page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.icon-wrap {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #4f46e5, #818cf8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
-}
-
-.header-icon {
-  width: 28px;
-  height: 28px;
-}
-
-.page-title {
-  font-size: 1.45rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-}
-
-.page-subtitle {
-  font-size: 0.85rem;
-  color: #64748b;
-  margin: 0.2rem 0 0 0;
-}
-
-.btn-spatial-primary {
-  background: linear-gradient(135deg, #4f46e5, #4338ca);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 0.75rem 1.4rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
-}
-
-.btn-spatial-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
-}
-
-.btn-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.kpis-section {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.25rem;
-}
-
-.glassmorphic {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  border-radius: 16px;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-}
-
-.kpi-card {
-  padding: 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.kpi-icon-wrap {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.bg-indigo {
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
-}
-
-.bg-emerald {
-  background: linear-gradient(135deg, #10b981, #059669);
-}
-
-.bg-amber {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.kpi-icon {
-  width: 26px;
-  height: 26px;
-}
-
-.kpi-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.kpi-title {
-  font-size: 0.8rem;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.kpi-number {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1.2;
-}
-
-.kpi-subtext {
-  font-size: 0.75rem;
-  color: #94a3b8;
-}
-
-.tabs-nav-bar {
-  display: flex;
-  gap: 0.75rem;
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 0.25rem;
-}
-
-.tab-btn {
-  background: none;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #64748b;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.tab-btn:hover {
-  color: #4f46e5;
-  background: rgba(238, 242, 255, 0.6);
-}
-
-.tab-btn.active {
-  color: #4f46e5;
-  background: #eef2ff;
-  border-bottom: 2px solid #4f46e5;
-}
-
-.tab-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.filters-panel {
-  padding: 1rem 1.25rem;
-}
-
-.filter-controls {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
-.filter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.filter-label {
-  font-size: 0.8rem;
-  color: #475569;
-  font-weight: 600;
-}
-
-.spatial-input {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.85rem;
-  outline: none;
-  transition: border 0.2s ease;
-}
-
-.spatial-input:focus {
-  border-color: #6366f1;
-}
-
-.classes-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.25rem;
-}
-
-.loading-state,
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 3rem;
-  color: #64748b;
-}
-
-.spinner {
-  width: 32px;
-  height: 32px;
-  animation: spin 1s linear infinite;
-  color: #4f46e5;
-}
-
-@keyframes spin {
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.pagination-wrap {
-  display: flex;
-  justify-content: center;
-  margin-top: 1rem;
-}
-
-.batches-table-card {
-  padding: 1.5rem;
-}
-
-.batches-card-header {
-  margin-bottom: 1.25rem;
-}
-
-.card-title {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-}
-
-.card-subtitle {
-  font-size: 0.8rem;
-  color: #64748b;
-}
-
-.spatial-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: right;
-  font-size: 0.85rem;
-}
-
-.spatial-table th {
-  background: #f8fafc;
-  color: #475569;
-  font-weight: 600;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.spatial-table td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.rate-badge {
-  background: #ecfdf5;
-  color: #047857;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-weight: 700;
-}
-
-.text-primary {
-  color: #4f46e5;
-}
-
-.text-success {
-  color: #059669;
-}
-
-.text-warning {
-  color: #d97706;
-}
-
-.text-danger {
-  color: #dc2626;
-}
-
-.text-muted {
-  color: #94a3b8;
-}
-
-@media (max-width: 900px) {
-  .kpis-section {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

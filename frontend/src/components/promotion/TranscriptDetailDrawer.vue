@@ -2,7 +2,7 @@
   <TaqniyaDrawer
     :is-open="isOpen"
     :title="'كشف الدرجات والنتائج الأكاديمية الرسمي'"
-    size="lg"
+    maxWidth="max-w-[750px]"
     @close="$emit('close')"
   >
     <div v-if="transcript" class="transcript-drawer-body">

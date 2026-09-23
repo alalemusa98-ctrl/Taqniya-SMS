@@ -145,7 +145,13 @@ export const promotionApi = {
    * 1.1 GET /api/v1/transcripts
    */
   async getTranscripts(params: QueryTranscriptsDto = {}) {
-    const res = await apiClient.get('/transcripts', { params });
+    const cleanParams: Record<string, any> = {};
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== '' && value !== 'all') {
+        cleanParams[key] = value;
+      }
+    }
+    const res = await apiClient.get('/transcripts', { params: cleanParams });
     return res.data;
   },
 

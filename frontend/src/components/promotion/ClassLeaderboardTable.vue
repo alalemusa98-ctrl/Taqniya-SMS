@@ -57,8 +57,8 @@
             <!-- Student Name -->
             <td class="td-name font-semibold">
               <div class="student-profile-cell">
-                <div class="student-avatar">{{ t.student_name.slice(0, 1) }}</div>
-                <span>{{ t.student_name }}</span>
+                <div class="student-avatar">{{ (t.student_name || t.student_code || 'ط').charAt(0) }}</div>
+                <span>{{ t.student_name || t.student_code || '—' }}</span>
               </div>
             </td>
 
@@ -127,10 +127,12 @@ import { ref, computed } from 'vue';
 import type { StudentTranscript } from '../../api/promotion.api';
 
 interface Props {
-  transcripts: StudentTranscript[];
+  transcripts?: StudentTranscript[];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  transcripts: () => [],
+});
 
 defineEmits<{
   (e: 'view-detail', transcript: StudentTranscript): void;
@@ -140,14 +142,15 @@ defineEmits<{
 const searchTerm = ref('');
 
 const filteredTranscripts = computed(() => {
+  const list = Array.isArray(props.transcripts) ? props.transcripts : [];
   if (!searchTerm.value.trim()) {
-    return props.transcripts;
+    return list;
   }
   const q = searchTerm.value.trim().toLowerCase();
-  return props.transcripts.filter(
+  return list.filter(
     (t) =>
-      t.student_name.toLowerCase().includes(q) ||
-      t.student_code.toLowerCase().includes(q) ||
+      (t.student_name && t.student_name.toLowerCase().includes(q)) ||
+      (t.student_code && t.student_code.toLowerCase().includes(q)) ||
       (t.national_id && t.national_id.includes(q))
   );
 });
