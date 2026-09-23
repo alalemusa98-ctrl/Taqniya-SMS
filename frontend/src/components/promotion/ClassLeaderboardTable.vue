@@ -1,137 +1,142 @@
 <template>
-  <div class="class-leaderboard-container">
-    <div class="leaderboard-header">
-      <div class="title-wrap">
-        <h3 class="section-title">لوحة شرف وترتيب الطلاب (Class Leaderboard)</h3>
-        <span class="subtitle">ترتيب الطلاب تنازلياً حسب النسبة والمعدل العام</span>
+  <div class="space-y-4" dir="rtl">
+    <!-- Section Header Banner -->
+    <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-xs flex items-center justify-between flex-wrap gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold border border-amber-500/20 shadow-xs">
+          <Trophy class="w-5 h-5" />
+        </div>
+        <div>
+          <h3 class="text-base font-black text-bx-title font-display">لوحة شرف وترتيب الطلاب (Class Leaderboard)</h3>
+          <p class="text-xs text-bx-muted mt-0.5 font-medium">ترتيب الطلاب تنازلياً حسب النسبة والمعدل العام</p>
+        </div>
       </div>
-      <div class="filter-wrap">
+
+      <!-- Quick Search Filter -->
+      <div class="relative min-w-[240px]">
         <input
           v-model="searchTerm"
           type="text"
-          placeholder="بحث بالاسم أو الرقم الوطني..."
-          class="spatial-search-input"
+          placeholder="بحث سريع بالاسم أو الرمز..."
+          class="w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl px-4 py-2 pr-9 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all"
         />
+        <Search class="w-4 h-4 text-bx-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
       </div>
     </div>
 
-    <div class="table-responsive">
-      <table class="spatial-leaderboard-table">
-        <thead>
-          <tr>
-            <th class="th-rank">الترتيب</th>
-            <th>كود الطالب</th>
-            <th>اسم الطالب الرباعي</th>
-            <th>الشعبة</th>
-            <th>المجموع الكلي</th>
-            <th>النسبة المئوية</th>
-            <th>الحالة النهائية</th>
-            <th class="th-actions">الإجراءات</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="filteredTranscripts.length === 0">
-            <td colspan="8" class="empty-row">لا توجد بيانات كشوفات مطابقة للبحث أو الشعبة المحددة.</td>
-          </tr>
-          <tr
-            v-for="(t, idx) in filteredTranscripts"
-            :key="t.id"
-            class="leaderboard-row"
-            :class="getRankRowClass(t.calculated_rank || (idx + 1))"
+    <!-- TaqniyaTable Component -->
+    <TaqniyaTable
+      :columns="columns"
+      :items="filteredTranscripts"
+      :is-loading="isLoading"
+      row-key="id"
+      empty-title="لا توجد بيانات كشوفات مطابقة للبحث أو الفلتر المحدد"
+      empty-subtitle="جرب تعديل محددات البحث أو اختيار صف دراسي آخر."
+      :empty-icon="Trophy"
+    >
+      <!-- Rank Column -->
+      <template #cell-rank="{ item, index }">
+        <div class="inline-flex items-center justify-center min-w-[36px] px-2 py-1 rounded-lg text-xs font-black" :class="getRankBadgeClass(item.calculated_rank || item.rank || (index + 1))">
+          <span v-if="(item.calculated_rank || item.rank || (index + 1)) === 1">🥇 1</span>
+          <span v-else-if="(item.calculated_rank || item.rank || (index + 1)) === 2">🥈 2</span>
+          <span v-else-if="(item.calculated_rank || item.rank || (index + 1)) === 3">🥉 3</span>
+          <span v-else>{{ item.calculated_rank || item.rank || (index + 1) }}</span>
+        </div>
+      </template>
+
+      <!-- Student Code Column -->
+      <template #cell-student_code="{ item }">
+        <span class="font-mono text-xs font-bold text-bx-primary">{{ item.student_code || '—' }}</span>
+      </template>
+
+      <!-- Student Name Column -->
+      <template #cell-student_name="{ item }">
+        <div class="flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded-full bg-bx-primary/10 text-bx-primary flex items-center justify-center text-xs font-bold shrink-0">
+            {{ (item.student_name || item.student_code || 'ط').charAt(0) }}
+          </div>
+          <span class="font-bold text-bx-title text-xs">{{ item.student_name || item.student_code || '—' }}</span>
+        </div>
+      </template>
+
+      <!-- Section Column -->
+      <template #cell-section_name="{ item }">
+        <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-bx-surface-2 text-bx-muted border border-bx-border">
+          {{ item.section_name || '—' }}
+        </span>
+      </template>
+
+      <!-- Total Score Column -->
+      <template #cell-total_score="{ item }">
+        <div class="font-mono text-xs font-bold text-bx-title">
+          <span>{{ item.total_score }}</span>
+          <span v-if="item.max_possible_score" class="text-[10px] text-bx-muted font-normal mr-1">/ {{ item.max_possible_score }}</span>
+        </div>
+      </template>
+
+      <!-- Percentage Column -->
+      <template #cell-percentage="{ item }">
+        <div class="flex items-center gap-2 min-w-[120px]">
+          <div class="flex-1 h-2 bg-bx-surface-2 rounded-full overflow-hidden border border-bx-border/50">
+            <div
+              class="h-full rounded-full transition-all duration-300"
+              :class="getPercentageFillClass(item.percentage)"
+              :style="{ width: `${Math.min(100, Math.max(0, item.percentage))}%` }"
+            ></div>
+          </div>
+          <span class="font-mono text-xs font-black text-bx-title w-12 text-left">{{ item.percentage }}%</span>
+        </div>
+      </template>
+
+      <!-- Final Status Column -->
+      <template #cell-final_status="{ item }">
+        <span
+          class="inline-block px-2.5 py-1 rounded-full text-[11px] font-bold"
+          :class="getStatusPillClass(item.final_status)"
+        >
+          {{ item.final_status_ar || getStatusText(item.final_status) }}
+        </span>
+      </template>
+
+      <!-- Actions Column -->
+      <template #cell-actions="{ item }">
+        <div class="flex items-center gap-1.5 justify-center">
+          <button
+            type="button"
+            class="p-1.5 rounded-lg border border-bx-border hover:border-bx-primary text-bx-muted hover:text-bx-primary transition-colors cursor-pointer"
+            title="عرض كشف الدرجات التفصيلي"
+            @click="$emit('view-detail', item)"
           >
-            <!-- Rank Column -->
-            <td class="td-rank">
-              <div class="rank-badge" :class="getRankBadgeClass(t.calculated_rank || (idx + 1))">
-                <span v-if="(t.calculated_rank || (idx + 1)) === 1">🥇 1</span>
-                <span v-else-if="(t.calculated_rank || (idx + 1)) === 2">🥈 2</span>
-                <span v-else-if="(t.calculated_rank || (idx + 1)) === 3">🥉 3</span>
-                <span v-else>{{ t.calculated_rank || (idx + 1) }}</span>
-              </div>
-            </td>
-
-            <!-- Student Code -->
-            <td class="td-code">
-              <code>{{ t.student_code }}</code>
-            </td>
-
-            <!-- Student Name -->
-            <td class="td-name font-semibold">
-              <div class="student-profile-cell">
-                <div class="student-avatar">{{ (t.student_name || t.student_code || 'ط').charAt(0) }}</div>
-                <span>{{ t.student_name || t.student_code || '—' }}</span>
-              </div>
-            </td>
-
-            <!-- Section -->
-            <td>
-              <span class="section-tag">{{ t.section_name }}</span>
-            </td>
-
-            <!-- Total Score -->
-            <td class="td-score">
-              <span class="score-val">{{ t.total_score }}</span>
-              <span class="score-max">/ {{ t.max_possible_score }}</span>
-            </td>
-
-            <!-- Percentage Meter -->
-            <td class="td-percentage">
-              <div class="percentage-meter-wrap">
-                <div class="meter-bar">
-                  <div
-                    class="meter-fill"
-                    :class="getPercentageFillClass(t.percentage)"
-                    :style="{ width: `${Math.min(100, Math.max(0, t.percentage))}%` }"
-                  ></div>
-                </div>
-                <span class="percentage-text">{{ t.percentage }}%</span>
-              </div>
-            </td>
-
-            <!-- Final Status -->
-            <td>
-              <span class="status-pill" :class="getStatusPillClass(t.final_status)">
-                {{ getStatusText(t.final_status) }}
-              </span>
-            </td>
-
-            <!-- Actions -->
-            <td class="td-actions">
-              <div class="action-buttons">
-                <button
-                  type="button"
-                  class="btn-icon"
-                  title="عرض كشف الدرجات التفصيلي"
-                  @click="$emit('view-detail', t)"
-                >
-                  📄
-                </button>
-                <button
-                  type="button"
-                  class="btn-icon btn-freeze"
-                  title="تجميد وتثبيت السجل"
-                  @click="$emit('freeze', t)"
-                >
-                  🔒
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            <Eye class="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            class="p-1.5 rounded-lg border border-bx-border hover:border-amber-500 text-bx-muted hover:text-amber-600 transition-colors cursor-pointer"
+            title="تجميد وتثبيت السجل الأكاديمي"
+            @click="$emit('freeze', item)"
+          >
+            <Lock class="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </template>
+    </TaqniyaTable>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { Trophy, Search, Eye, Lock } from 'lucide-vue-next';
+import TaqniyaTable, { type TableColumn } from '../ui/TaqniyaTable.vue';
 import type { StudentTranscript } from '../../api/promotion.api';
 
 interface Props {
   transcripts?: StudentTranscript[];
+  isLoading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   transcripts: () => [],
+  isLoading: false,
 });
 
 defineEmits<{
@@ -140,6 +145,17 @@ defineEmits<{
 }>();
 
 const searchTerm = ref('');
+
+const columns: TableColumn[] = [
+  { key: 'rank', label: 'الترتيب', align: 'center', width: '80px' },
+  { key: 'student_code', label: 'كود الطالب', align: 'start', width: '110px' },
+  { key: 'student_name', label: 'اسم الطالب الرباعي', align: 'start' },
+  { key: 'section_name', label: 'الشعبة', align: 'center', width: '100px' },
+  { key: 'total_score', label: 'المجموع الكلي', align: 'center', width: '120px' },
+  { key: 'percentage', label: 'النسبة المئوية', align: 'start', width: '180px' },
+  { key: 'final_status', label: 'القرار النهائي', align: 'center', width: '130px' },
+  { key: 'actions', label: 'الإجراءات', align: 'center', width: '90px' },
+];
 
 const filteredTranscripts = computed(() => {
   const list = Array.isArray(props.transcripts) ? props.transcripts : [];
@@ -155,40 +171,33 @@ const filteredTranscripts = computed(() => {
   );
 });
 
-const getRankRowClass = (rank: number) => {
-  if (rank === 1) return 'row-gold';
-  if (rank === 2) return 'row-silver';
-  if (rank === 3) return 'row-bronze';
-  return '';
-};
-
 const getRankBadgeClass = (rank: number) => {
-  if (rank === 1) return 'badge-gold';
-  if (rank === 2) return 'badge-silver';
-  if (rank === 3) return 'badge-bronze';
-  return 'badge-standard';
+  if (rank === 1) return 'bg-amber-500/15 text-amber-700 border border-amber-500/30';
+  if (rank === 2) return 'bg-slate-300/30 text-slate-700 border border-slate-400/30';
+  if (rank === 3) return 'bg-orange-500/15 text-orange-700 border border-orange-500/30';
+  return 'bg-bx-surface-2 text-bx-muted border border-bx-border';
 };
 
 const getPercentageFillClass = (percentage: number) => {
-  if (percentage >= 85) return 'fill-excellent';
-  if (percentage >= 65) return 'fill-good';
-  if (percentage >= 50) return 'fill-pass';
-  return 'fill-fail';
+  if (percentage >= 85) return 'bg-emerald-500';
+  if (percentage >= 65) return 'bg-blue-500';
+  if (percentage >= 50) return 'bg-amber-500';
+  return 'bg-rose-500';
 };
 
 const getStatusPillClass = (status: string) => {
   switch (status) {
     case 'passed':
-      return 'pill-passed';
+      return 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
     case 'second_round':
-      return 'pill-second-round';
+      return 'bg-amber-500/10 text-amber-600 border border-amber-500/20';
     case 'retained':
     case 'failed':
-      return 'pill-retained';
+      return 'bg-rose-500/10 text-rose-600 border border-rose-500/20';
     case 'graduated':
-      return 'pill-graduated';
+      return 'bg-purple-500/10 text-purple-600 border border-purple-500/20';
     default:
-      return 'pill-default';
+      return 'bg-bx-surface-2 text-bx-muted border border-bx-border';
   }
 };
 
@@ -208,282 +217,3 @@ const getStatusText = (status: string) => {
   }
 };
 </script>
-
-<style scoped>
-.class-leaderboard-container {
-  background: var(--spatial-bg-surface, rgba(255, 255, 255, 0.9));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--spatial-border-color, rgba(226, 232, 240, 0.8));
-  border-radius: var(--spatial-radius-lg, 16px);
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-}
-
-.leaderboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.title-wrap .section-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--color-gray-900, #0f172a);
-  margin: 0;
-}
-
-.title-wrap .subtitle {
-  font-size: 0.8rem;
-  color: var(--color-gray-500, #64748b);
-}
-
-.spatial-search-input {
-  background: rgba(248, 250, 252, 0.8);
-  border: 1px solid var(--color-gray-300, #cbd5e1);
-  border-radius: 8px;
-  padding: 0.5rem 0.85rem;
-  font-size: 0.85rem;
-  min-width: 260px;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.spatial-search-input:focus {
-  border-color: var(--color-primary-500, #6366f1);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-.table-responsive {
-  overflow-x: auto;
-}
-
-.spatial-leaderboard-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 0.4rem;
-  text-align: right;
-}
-
-.spatial-leaderboard-table th {
-  padding: 0.75rem 1rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-gray-500, #64748b);
-  border-bottom: 1px solid var(--color-gray-200, #e2e8f0);
-}
-
-.spatial-leaderboard-table td {
-  padding: 0.85rem 1rem;
-  font-size: 0.85rem;
-  color: var(--color-gray-800, #1e293b);
-  background: rgba(255, 255, 255, 0.7);
-  border-top: 1px solid rgba(226, 232, 240, 0.5);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-}
-
-.spatial-leaderboard-table tr td:first-child {
-  border-right: 1px solid rgba(226, 232, 240, 0.5);
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-}
-
-.spatial-leaderboard-table tr td:last-child {
-  border-left: 1px solid rgba(226, 232, 240, 0.5);
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
-}
-
-.leaderboard-row:hover td {
-  background: var(--spatial-bg-hover, rgba(241, 245, 249, 0.9));
-}
-
-.row-gold td {
-  background: rgba(254, 243, 199, 0.35);
-}
-
-.row-silver td {
-  background: rgba(241, 245, 249, 0.5);
-}
-
-.row-bronze td {
-  background: rgba(255, 237, 213, 0.35);
-}
-
-.rank-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 0.8rem;
-  min-width: 36px;
-}
-
-.badge-gold {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #92400e;
-  border: 1px solid #f59e0b;
-}
-
-.badge-silver {
-  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-  color: #475569;
-  border: 1px solid #94a3b8;
-}
-
-.badge-bronze {
-  background: linear-gradient(135deg, #ffedd5, #fed7aa);
-  color: #9a3412;
-  border: 1px solid #f97316;
-}
-
-.badge-standard {
-  background: rgba(241, 245, 249, 0.8);
-  color: #64748b;
-}
-
-.student-profile-cell {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.student-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.section-tag {
-  background: rgba(241, 245, 249, 0.9);
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  color: #475569;
-  font-weight: 600;
-}
-
-.score-val {
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.score-max {
-  font-size: 0.75rem;
-  color: #94a3b8;
-}
-
-.percentage-meter-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.meter-bar {
-  flex: 1;
-  height: 6px;
-  background: #e2e8f0;
-  border-radius: 999px;
-  overflow: hidden;
-  min-width: 60px;
-}
-
-.meter-fill {
-  height: 100%;
-  border-radius: 999px;
-}
-
-.fill-excellent {
-  background: linear-gradient(90deg, #10b981, #059669);
-}
-
-.fill-good {
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
-}
-
-.fill-pass {
-  background: linear-gradient(90deg, #f59e0b, #d97706);
-}
-
-.fill-fail {
-  background: linear-gradient(90deg, #ef4444, #dc2626);
-}
-
-.percentage-text {
-  font-size: 0.8rem;
-  font-weight: 700;
-  min-width: 45px;
-}
-
-.status-pill {
-  display: inline-block;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.pill-passed {
-  background: rgba(16, 185, 129, 0.12);
-  color: #047857;
-}
-
-.pill-second-round {
-  background: rgba(245, 158, 11, 0.12);
-  color: #b45309;
-}
-
-.pill-retained {
-  background: rgba(239, 68, 68, 0.12);
-  color: #b91c1c;
-}
-
-.pill-graduated {
-  background: rgba(99, 102, 241, 0.12);
-  color: #4f46e5;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.35rem;
-}
-
-.btn-icon {
-  background: none;
-  border: 1px solid var(--color-gray-200, #e2e8f0);
-  border-radius: 6px;
-  padding: 0.35rem 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.9rem;
-}
-
-.btn-icon:hover {
-  background: white;
-  border-color: var(--color-primary-500, #6366f1);
-  transform: translateY(-1px);
-}
-
-.btn-freeze:hover {
-  border-color: #f59e0b;
-  background: #fffbeb;
-}
-
-.empty-row {
-  text-align: center;
-  padding: 2rem !important;
-  color: #94a3b8;
-}
-</style>

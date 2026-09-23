@@ -159,14 +159,11 @@
           />
         </div>
 
-        <!-- Leaderboard Table -->
-        <div v-if="isLoadingTranscripts" class="flex flex-col items-center justify-center p-12 text-bx-muted gap-3">
-          <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
-          <span class="text-sm font-semibold">جاري تحميل كشوفات الدرجات الأكاديمية...</span>
-        </div>
-        <div v-else class="space-y-4">
+        <!-- Leaderboard Table using TaqniyaTable -->
+        <div class="space-y-4">
           <ClassLeaderboardTable
             :transcripts="transcripts"
+            :is-loading="isLoadingTranscripts"
             @view-detail="handleViewTranscriptDetail"
             @freeze="handleOpenGradeEntry"
           />
@@ -306,7 +303,6 @@ import {
   BookOpen,
   History,
   Filter,
-  Loader2,
   Search,
   Eye,
 } from 'lucide-vue-next';
