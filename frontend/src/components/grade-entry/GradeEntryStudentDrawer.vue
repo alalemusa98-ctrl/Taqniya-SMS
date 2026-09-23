@@ -383,11 +383,12 @@ const handleSubmit = () => {
     class_name: props.sectionInfo?.class_name || '',
     section_name: props.sectionInfo?.section_name || '',
     grade_level: Number(props.sectionInfo?.grade_level) || 1,
-    transcript_type: props.classAcademicTermId ? 'term' : 'annual',
+    transcript_type: 'term',
     total_score: totalScore.value,
     percentage: percentage.value,
     final_status: decisionStatus.value,
     transcript_data: transcriptData,
+    allow_update: true,
   };
 
   emit('save', payload);

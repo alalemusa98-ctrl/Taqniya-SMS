@@ -4,6 +4,7 @@ import {
   ConflictException,
   UnprocessableEntityException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -195,7 +196,7 @@ export class PromotionService {
       student_id: Number(t.student_id),
       student_name: t.student?.full_name || '',
       student_code: t.student?.user?.user_code || '',
-      national_id: t.student?.national_id || '',
+      national_id: (t.student as any)?.national_id || (t.transcript_data as any)?.national_id || '',
       transcript_type: t.transcript_type,
       transcript_type_ar: this.getTranscriptTypeArabic(t.transcript_type),
       academic_year_name: t.academic_year_name,
@@ -375,7 +376,7 @@ export class PromotionService {
         student_id: Number(transcript.student_id),
         student_name: transcript.student?.full_name || '',
         student_code: transcript.student?.user?.user_code || '',
-        national_id: transcript.student?.national_id || '',
+        national_id: (transcript.student as any)?.national_id || (transcript.transcript_data as any)?.national_id || '',
         transcript_type: transcript.transcript_type,
         transcript_type_ar: this.getTranscriptTypeArabic(transcript.transcript_type),
         academic_year_name: transcript.academic_year_name,
@@ -502,32 +503,122 @@ export class PromotionService {
       throw new NotFoundException('الطالب المحدد غير موجود.');
     }
 
+    // Resolve class_academic_term_id if it's a term transcript
+    let resolvedClassTermId: bigint | null = null;
+    if (dto.transcript_type === TranscriptType.term) {
+      if (!dto.class_academic_term_id) {
+        throw new BadRequestException('معرف الفترة الدراسية مطلوب للصحائف الفصلية.');
+      }
+
+      // Try finding ClassAcademicTerm by ID directly
+      let cat = await this.prisma.classAcademicTerm.findUnique({
+        where: { id: BigInt(dto.class_academic_term_id) },
+      });
+
+      // If not found by primary key ID, check if caller passed academic_term_id
+      if (!cat) {
+        const studentEnrollment = await this.prisma.studentEnrollment.findFirst({
+          where: {
+            student_id: BigInt(dto.student_id),
+            deleted_at: null,
+            ...(dto.class_name ? { class_section: { class: { name: dto.class_name } } } : {}),
+          },
+          include: { class_section: true },
+        });
+
+        const classId = studentEnrollment?.class_section?.class_id;
+        if (classId) {
+          cat = await this.prisma.classAcademicTerm.findFirst({
+            where: {
+              class_id: classId,
+              academic_term_id: BigInt(dto.class_academic_term_id),
+              deleted_at: null,
+            },
+          });
+        }
+      }
+
+      resolvedClassTermId = cat ? cat.id : BigInt(dto.class_academic_term_id);
+    }
+
     // Invariant: Check unique transcript constraint
+    const transcriptWhere: any = {
+      student_id: BigInt(dto.student_id),
+      academic_year_name: dto.academic_year_name,
+      transcript_type: dto.transcript_type,
+      deleted_at: null,
+    };
+
+    if (dto.transcript_type === TranscriptType.term) {
+      transcriptWhere.class_academic_term_id = resolvedClassTermId;
+    }
+
     const existing = await this.prisma.studentTranscript.findFirst({
-      where: {
-        student_id: BigInt(dto.student_id),
-        academic_year_name: dto.academic_year_name,
-        transcript_type: dto.transcript_type,
-        class_academic_term_id: dto.class_academic_term_id
-          ? BigInt(dto.class_academic_term_id)
-          : null,
-        deleted_at: null,
-      },
+      where: transcriptWhere,
     });
 
     if (existing) {
-      throw new ConflictException(
-        'تم إصدار وتجميد صحيفة معتمدة مسبقاً لهذا الطالب بنفس النوع والفترة (uq_student_transcript_term).',
-      );
+      if (!dto.allow_update) {
+        throw new ConflictException(
+          'تم إصدار وتجميد صحيفة معتمدة مسبقاً لهذا الطالب بنفس النوع والفترة (uq_student_transcript_term).',
+        );
+      }
+
+      // Update existing transcript in-place
+      const updated = await this.prisma.studentTranscript.update({
+        where: { id: existing.id },
+        data: {
+          class_name: dto.class_name,
+          section_name: dto.section_name,
+          grade_level: dto.grade_level,
+          total_score: dto.total_score,
+          percentage: dto.percentage,
+          final_status: dto.final_status,
+          rank: dto.rank !== undefined ? dto.rank : existing.rank,
+          transcript_data: dto.transcript_data,
+        },
+      });
+
+      // Audit Logging for update
+      await this.auditService.log({
+        userId: BigInt(adminUserId),
+        action: 'update',
+        entityType: 'student_transcripts',
+        entityId: updated.id,
+        oldValues: {
+          total_score: Number(existing.total_score),
+          percentage: Number(existing.percentage),
+          final_status: existing.final_status,
+        },
+        newValues: {
+          total_score: dto.total_score,
+          percentage: dto.percentage,
+          final_status: dto.final_status,
+        },
+        ipAddress,
+        userAgent,
+      });
+
+      return {
+        success: true,
+        message: 'تم تحديث واعتماد درجات الصحيفة المدرسية بنجاح.',
+        data: {
+          id: Number(updated.id),
+          student_id: Number(updated.student_id),
+          transcript_type: updated.transcript_type,
+          academic_year_name: updated.academic_year_name,
+          final_status: updated.final_status,
+          created_at: updated.created_at,
+          updated_at: updated.updated_at,
+        },
+      };
     }
 
     const created = await this.prisma.studentTranscript.create({
       data: {
         student_id: BigInt(dto.student_id),
         transcript_type: dto.transcript_type,
-        class_academic_term_id: dto.class_academic_term_id
-          ? BigInt(dto.class_academic_term_id)
-          : null,
+        class_academic_term_id: resolvedClassTermId,
         academic_year_name: dto.academic_year_name,
         class_name: dto.class_name,
         section_name: dto.section_name,
@@ -1068,9 +1159,14 @@ export class PromotionService {
           };
 
           if (query.class_academic_term_id) {
-            transcriptWhere.class_academic_term_id = BigInt(
-              query.class_academic_term_id,
-            );
+            transcriptWhere.OR = [
+              { class_academic_term_id: BigInt(query.class_academic_term_id) },
+              {
+                class_academic_term: {
+                  academic_term_id: BigInt(query.class_academic_term_id),
+                },
+              },
+            ];
           }
 
           const transcripts = await this.prisma.studentTranscript.findMany({
@@ -1174,7 +1270,14 @@ export class PromotionService {
       deleted_at: null,
     };
     if (query.class_academic_term_id) {
-      subjectWhere.class_academic_term_id = BigInt(query.class_academic_term_id);
+      subjectWhere.OR = [
+        { class_academic_term_id: BigInt(query.class_academic_term_id) },
+        {
+          class_academic_term: {
+            academic_term_id: BigInt(query.class_academic_term_id),
+          },
+        },
+      ];
     }
 
     const classSubjects = await this.prisma.classSubject.findMany({
@@ -1209,9 +1312,14 @@ export class PromotionService {
         deleted_at: null,
       };
       if (query.class_academic_term_id) {
-        transcriptWhere.class_academic_term_id = BigInt(
-          query.class_academic_term_id,
-        );
+        transcriptWhere.OR = [
+          { class_academic_term_id: BigInt(query.class_academic_term_id) },
+          {
+            class_academic_term: {
+              academic_term_id: BigInt(query.class_academic_term_id),
+            },
+          },
+        ];
       }
 
       transcripts = await this.prisma.studentTranscript.findMany({

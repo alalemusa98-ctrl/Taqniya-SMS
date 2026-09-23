@@ -462,25 +462,54 @@ const classFilterOptions = computed<TaqniyaSelectOption[]>(() => [
 const termFilterOptions = computed<TaqniyaSelectOption[]>(() => {
   return [
     { label: 'جميع الفصول الدراسية', value: 'all' },
-    ...academicTermsList.value.map((t: any) => {
-      const isActive = Number(t.is_active) === 1 || t.is_active === true;
-      return {
-        value: t.id,
-        label: isActive ? `${t.name} (الفصل النشط)` : t.name,
-        subtext: isActive ? 'الفصل النشط حالياً' : `فصل رقم ${t.term_number || t.id}`,
-      };
-    }),
+    ...academicTermsList.value.map((t: any) => ({
+      value: t.id,
+      label: t.name,
+      subtext: `فصل دراسي رقم ${t.term_number || t.id}`,
+    })),
   ];
 });
 
+const resolvedClassAcademicTerm = computed(() => {
+  if (!selectedSection.value) return null;
+  const classId = Number(selectedSection.value.class_id);
+
+  // Find class entry in allClassAcademicTerms
+  const classItem = allClassAcademicTerms.value.find(
+    (c: any) => Number(c.class_id || c.id) === classId,
+  );
+  const terms: any[] = classItem?.terms || [];
+
+  // If a specific academic_term is selected in selectedTermModel:
+  if (selectedTermModel.value !== 'all' && selectedTermModel.value) {
+    const termId = Number(selectedTermModel.value);
+    const match = terms.find(
+      (t: any) => Number(t.academic_term_id) === termId || Number(t.id) === termId,
+    );
+    if (match) return match;
+  }
+
+  // If 'all' or not found, try to find the active or first class academic term for this class
+  const activeClassTerm = terms.find((t: any) => Number(t.is_active) === 1);
+  return activeClassTerm || terms[0] || null;
+});
+
 const selectedTermId = computed<number | undefined>(() => {
-  if (selectedTermModel.value === 'all' || !selectedTermModel.value) return undefined;
-  return Number(selectedTermModel.value);
+  if (resolvedClassAcademicTerm.value) {
+    return Number(resolvedClassAcademicTerm.value.id);
+  }
+  if (selectedTermModel.value !== 'all' && selectedTermModel.value) {
+    return Number(selectedTermModel.value);
+  }
+  return undefined;
 });
 
 const currentTermName = computed(() => {
-  const term = academicTermsList.value.find((t) => t.id === selectedTermId.value);
-  return term?.name || 'الفصل الدراسي';
+  if (resolvedClassAcademicTerm.value?.term_name) {
+    return resolvedClassAcademicTerm.value.term_name;
+  }
+  const term = academicTermsList.value.find((t) => t.id === Number(selectedTermModel.value));
+  return term?.name || 'الفصل الدراسي الأول';
 });
 
 // Filtered Sections by selected class & search
@@ -577,7 +606,7 @@ const fetchAcademicLookups = async () => {
       selectedYearName.value = activeYear.name;
     }
 
-    const activeTerm = academicTermsList.value.find((t: any) => Number(t.is_active) === 1 || t.is_active === true);
+    const activeTerm = academicTermsList.value.find((t: any) => Number(t.is_active) === 1 || t.is_active === true) || academicTermsList.value[0];
     if (activeTerm && selectedTermModel.value === 'all') {
       selectedTermModel.value = activeTerm.id;
     }

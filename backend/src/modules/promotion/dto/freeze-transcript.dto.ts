@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsOptional,
   IsObject,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TranscriptType, EnrollmentStatus } from '@prisma/client';
@@ -65,4 +66,8 @@ export class FreezeTranscriptDto {
   @IsNotEmpty({ message: 'بيانات درجات المواد مطلوبة ويجب أن تكون مصفوفة صالحة.' })
   @IsObject({ message: 'بيانات درجات المواد مطلوبة ويجب أن تكون كائناً أو مصفوفة صالحة.' })
   transcript_data: any;
+
+  @IsOptional()
+  @IsBoolean({ message: 'حقل السماح بالتحديث يجب أن يكون قيمة منطقية (boolean).' })
+  allow_update?: boolean;
 }

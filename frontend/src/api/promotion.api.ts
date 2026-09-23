@@ -173,6 +173,7 @@ export interface FreezeTranscriptDto {
   final_status: 'passed' | 'second_round' | 'failed' | 'graduated';
   rank?: number;
   transcript_data: Record<string, any>;
+  allow_update?: boolean;
 }
 
 export interface ExecutePromotionDto {

@@ -453,6 +453,50 @@ describe('Phase 09: Promotion & Transcripts Archiving (TDD Verification)', () =>
       expect(result.data.student_id).toBe(testStudent1Id);
       expect(result.data.transcripts.length).toBeGreaterThanOrEqual(1);
     });
+
+    it('TC-TRN-06-UPD: Should successfully update existing transcript when allow_update is true (no duplicates)', async () => {
+      const updateDto = {
+        student_id: testStudent1Id,
+        transcript_type: TranscriptType.annual,
+        academic_year_name: `2024/2025-${uniqueSuffix}`,
+        class_name: `الصف الخامس ${uniqueSuffix}`,
+        section_name: `شعبة أ ${uniqueSuffix}`,
+        grade_level: 5,
+        total_score: 490.0,
+        percentage: 98.0,
+        final_status: EnrollmentStatus.passed,
+        rank: 1,
+        transcript_data: { subjects: [{ subject_id: 1, total_score: 100 }] },
+        allow_update: true,
+      };
+
+      const result = await promotionService.freezeTranscript(
+        updateDto,
+        testAdminId,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.data.id).toBe(createdTranscript1Id);
+      expect(result.data.updated_at).toBeDefined();
+
+      // Verify no duplicate record was created
+      const count = await prisma.studentTranscript.count({
+        where: {
+          student_id: BigInt(testStudent1Id),
+          academic_year_name: `2024/2025-${uniqueSuffix}`,
+          transcript_type: TranscriptType.annual,
+          deleted_at: null,
+        },
+      });
+      expect(count).toBe(1);
+
+      // Verify record values were updated
+      const updatedRecord = await prisma.studentTranscript.findUnique({
+        where: { id: BigInt(createdTranscript1Id) },
+      });
+      expect(Number(updatedRecord?.total_score)).toBe(490.0);
+      expect(Number(updatedRecord?.percentage)).toBe(98.0);
+    });
   });
 
   describe('2. Batch Promotion & Low Enrollment Warning Operations', () => {
