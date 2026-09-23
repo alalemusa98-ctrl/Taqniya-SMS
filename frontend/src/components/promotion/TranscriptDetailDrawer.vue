@@ -46,7 +46,7 @@
           </div>
           <div class="meta-item">
             <span class="meta-label">نوع الكشف / الفصل:</span>
-            <span class="meta-val">{{ transcript.academic_term_name || (transcript.transcript_type === 'final_year' ? 'نهاية العام الدراسي' : 'فصلي') }}</span>
+            <span class="meta-val">{{ transcript.transcript_type_ar || transcript.academic_term_name || (transcript.transcript_type === 'annual' ? 'نهاية العام الدراسي' : 'فصلي') }}</span>
           </div>
         </div>
 
@@ -199,13 +199,15 @@ const getGradePillClass = (grade?: string) => {
 const getFinalDecisionClass = (status: string) => {
   if (status === 'passed') return 'decision-passed';
   if (status === 'second_round') return 'decision-second-round';
+  if (status === 'graduated') return 'decision-passed';
   return 'decision-retained';
 };
 
 const getFinalStatusArabic = (status: string) => {
   if (status === 'passed') return 'ناجح وينقل إلى الصف التالي';
   if (status === 'second_round') return 'له حق دخول امتحانات الدور الثاني';
-  if (status === 'retained') return 'باق للإعادة في نفس الصف الدراسي';
+  if (status === 'retained' || status === 'failed') return 'باق للإعادة في نفس الصف الدراسي';
+  if (status === 'graduated') return 'متخرج';
   return status;
 };
 

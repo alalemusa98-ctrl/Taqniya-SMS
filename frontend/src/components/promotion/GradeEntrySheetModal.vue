@@ -192,7 +192,7 @@ const calculatedPercentage = computed(() => {
   return Number(((calculatedTotal.value / calculatedMaxTotal.value) * 100).toFixed(2));
 });
 
-const calculatedFinalStatus = computed<'passed' | 'second_round' | 'retained'>(() => {
+const calculatedFinalStatus = computed<'passed' | 'second_round' | 'failed' | 'graduated'>(() => {
   const p = calculatedPercentage.value;
   // Check if any subject is failed below 50%
   const failedSubjects = subjectsList.value.filter(
@@ -201,17 +201,19 @@ const calculatedFinalStatus = computed<'passed' | 'second_round' | 'retained'>((
 
   if (failedSubjects.length === 0 && p >= 50) return 'passed';
   if (failedSubjects.length <= 2) return 'second_round';
-  return 'retained';
+  return 'failed';
 });
 
 const calculatedStatusText = computed(() => {
   switch (calculatedFinalStatus.value) {
     case 'passed':
-      return 'ناجح ومنقول';
+      return 'ناجح ومرحل';
     case 'second_round':
       return 'دور ثان';
-    case 'retained':
+    case 'failed':
       return 'راسب / باق للإعادة';
+    case 'graduated':
+      return 'متخرج';
   }
 });
 
@@ -221,8 +223,10 @@ const statusBadgeClass = computed(() => {
       return 'badge-passed';
     case 'second_round':
       return 'badge-second-round';
-    case 'retained':
+    case 'failed':
       return 'badge-retained';
+    case 'graduated':
+      return 'badge-passed';
   }
 });
 
@@ -253,7 +257,7 @@ const handleFreezeSubmit = () => {
     student_id: props.studentData.student_id,
     academic_term_id: props.studentData.academic_term_id || undefined,
     academic_year_name: props.studentData.academic_year_name || '2024-2025',
-    transcript_type: props.studentData.transcript_type || 'final_year',
+    transcript_type: props.studentData.transcript_type || 'annual',
     total_score: calculatedTotal.value,
     max_possible_score: calculatedMaxTotal.value,
     percentage: calculatedPercentage.value,

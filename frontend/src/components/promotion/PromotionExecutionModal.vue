@@ -1,49 +1,41 @@
 <template>
   <TaqniyaModal
     :is-open="isOpen"
-    title="معاينة وتنفيذ الترحيل الأكاديمي الجماعي وتوزيع الفصول"
-    subtitle="محاكاة ذكية للترحيل السنوي، احتساب الشواغر، ورصد تنبيهات انخفاض الكثافة"
-    maxWidth="2xl"
-    @close="$emit('close')"
+    title="محرك الترحيل الأكاديمي السنوي وتوزيع الفصول"
+    subtitle="محاكاة ونقل الطلاب للمستوى الأكاديمي التالي مع الحفاظ على تسكين الشعب الدراسية"
+    size="lg"
+    @close="emit('close')"
   >
-    <template #icon>
-      <div class="w-10 h-10 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-bold border border-bx-primary/20 shadow-xs">
-        <Sparkles class="w-5 h-5" />
-      </div>
-    </template>
-
-    <div class="space-y-6 text-bx-text font-sans">
-      <!-- Year Selection Grid using TaqniyaSelect -->
+    <div class="space-y-6" dir="rtl">
+      <!-- Year Selection Form -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="space-y-1.5">
-          <label class="text-xs font-bold text-bx-muted">العام الدراسي الحالي (المُرحّل منه):</label>
+          <label class="text-xs font-bold text-bx-title">من العام الدراسي (السنة الحالية المنتهية):</label>
           <TaqniyaSelect
             v-model="fromYearId"
             :options="yearOptions"
-            placeholder="اختر العام الدراسي الحالي..."
+            placeholder="اختر العام الدراسي الحالي"
             :full-width="true"
-            :disabled="isPreviewLoading || isExecuting"
           />
         </div>
 
         <div class="space-y-1.5">
-          <label class="text-xs font-bold text-bx-muted">العام الدراسي المستهدف (المُرحّل إليه):</label>
+          <label class="text-xs font-bold text-bx-title">إلى العام الدراسي (السنة المستهدفة الجديدة):</label>
           <TaqniyaSelect
             v-model="toYearId"
             :options="yearOptions"
-            placeholder="اختر العام الدراسي المستهدف..."
+            placeholder="اختر العام الدراسي الجديد"
             :full-width="true"
-            :disabled="isPreviewLoading || isExecuting"
           />
         </div>
       </div>
 
-      <!-- Preview Simulation Trigger -->
+      <!-- Preview Action Button -->
       <div class="flex justify-center">
         <button
           type="button"
-          class="w-full py-3 px-6 rounded-2xl bg-bx-primary/10 hover:bg-bx-primary/20 text-bx-primary border border-bx-primary/30 font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!canPreview || isPreviewLoading || isExecuting"
+          class="px-6 py-2.5 rounded-xl bg-bx-primary/10 hover:bg-bx-primary text-bx-primary hover:text-white font-bold text-xs border border-bx-primary/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="!canPreview || isPreviewLoading"
           @click="runPreview"
         >
           <Loader2 v-if="isPreviewLoading" class="w-4 h-4 animate-spin" />
@@ -56,32 +48,32 @@
       <div v-if="previewResult" class="bg-black/[0.02] dark:bg-white/[0.02] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-5 space-y-5 animate-in fade-in zoom-in-95 duration-200">
         <div class="flex items-center justify-between border-b border-[#B4AED8] dark:border-white/[0.08] pb-3">
           <span class="font-bold text-sm text-bx-title font-display">نتائج المحاكاة التقديرية</span>
-          <span class="text-xs text-bx-muted font-semibold">إجمالي الطلاب المسكنين: {{ previewResult.total_eligible_students }} طالب</span>
+          <span class="text-xs text-bx-muted font-semibold">إجمالي الطلاب المسكنين: {{ previewResult.summary?.total_students ?? 0 }} طالب</span>
         </div>
 
         <!-- Metric KPI Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div class="bg-[var(--bx-surface-solid)] border-s-4 border-s-emerald-500 border border-[#B4AED8]/50 dark:border-white/[0.06] rounded-2xl p-3.5 space-y-1">
             <span class="text-[11px] font-bold text-bx-muted block">المنقولون (Promoted)</span>
-            <span class="text-xl font-black text-emerald-600 font-mono">{{ previewResult.total_promoted }}</span>
+            <span class="text-xl font-black text-emerald-600 font-mono">{{ previewResult.summary?.to_be_promoted ?? 0 }}</span>
             <span class="text-[10px] text-bx-muted block leading-tight">للمستوى التالي مع الشعبة</span>
           </div>
 
           <div class="bg-[var(--bx-surface-solid)] border-s-4 border-s-amber-500 border border-[#B4AED8]/50 dark:border-white/[0.06] rounded-2xl p-3.5 space-y-1">
             <span class="text-[11px] font-bold text-bx-muted block">الدور الثاني</span>
-            <span class="text-xl font-black text-amber-600 font-mono">{{ previewResult.total_second_round }}</span>
+            <span class="text-xl font-black text-amber-600 font-mono">{{ previewResult.summary?.second_round ?? 0 }}</span>
             <span class="text-[10px] text-bx-muted block leading-tight">معلقون حتى الامتحان</span>
           </div>
 
           <div class="bg-[var(--bx-surface-solid)] border-s-4 border-s-rose-500 border border-[#B4AED8]/50 dark:border-white/[0.06] rounded-2xl p-3.5 space-y-1">
             <span class="text-[11px] font-bold text-bx-muted block">الباقون للإعادة</span>
-            <span class="text-xl font-black text-rose-600 font-mono">{{ previewResult.total_retained }}</span>
+            <span class="text-xl font-black text-rose-600 font-mono">{{ previewResult.summary?.retained ?? 0 }}</span>
             <span class="text-[10px] text-bx-muted block leading-tight">في نفس المستوى والشعبة</span>
           </div>
 
           <div class="bg-[var(--bx-surface-solid)] border-s-4 border-s-bx-primary border border-[#B4AED8]/50 dark:border-white/[0.06] rounded-2xl p-3.5 space-y-1">
             <span class="text-[11px] font-bold text-bx-muted block">الخريجون</span>
-            <span class="text-xl font-black text-bx-primary font-mono">{{ previewResult.total_graduated }}</span>
+            <span class="text-xl font-black text-bx-primary font-mono">{{ previewResult.summary?.graduated ?? 0 }}</span>
             <span class="text-[10px] text-bx-muted block leading-tight">أتموا المرحلة بنجاح</span>
           </div>
         </div>
@@ -98,36 +90,28 @@
           <ul class="space-y-1 text-xs pr-5 list-disc">
             <li v-for="(warn, wIdx) in previewResult.low_enrollment_warnings" :key="wIdx">
               <strong>{{ warn.class_name }} - {{ warn.section_name }}:</strong>
-              <span> العدد المتوقع هو {{ warn.projected_count }} طلاب فقط (الكثافة المقترحة: {{ warn.threshold_limit }}). يُوصى بمراجعة الشعبة لاحقاً.</span>
+              <span> {{ warn.warning_message || `العدد المتوقع هو ${warn.students_count ?? warn.projected_count} طلاب فقط.` }}</span>
             </li>
           </ul>
         </div>
 
-        <!-- Class Breakdown Table -->
-        <div class="space-y-2">
-          <h4 class="text-xs font-bold text-bx-muted">توزيع الفصول والنسب المتوقعة:</h4>
+        <!-- Promotion Mapping Examples Table -->
+        <div v-if="previewResult.promotion_mapping_examples && previewResult.promotion_mapping_examples.length > 0" class="space-y-2">
+          <h4 class="text-xs font-bold text-bx-muted">أمثلة توزيع وتسكين الشعب المستهدفة (Section Continuity):</h4>
           <div class="overflow-x-auto rounded-2xl border border-[#B4AED8]/50 dark:border-white/[0.06] bg-[var(--bx-surface-solid)]">
             <table class="w-full text-right text-xs border-collapse">
               <thead>
                 <tr class="bg-black/[0.02] dark:bg-white/[0.02] text-bx-muted font-bold border-b border-[#B4AED8]/40 dark:border-white/[0.06]">
-                  <th class="py-2.5 px-3">الصف الدراسي</th>
-                  <th class="py-2.5 px-3">إجمالي الطلاب</th>
-                  <th class="py-2.5 px-3">الناجحون</th>
-                  <th class="py-2.5 px-3">الباقون للإعادة</th>
-                  <th class="py-2.5 px-3">نسبة النجاح المتوقعة</th>
+                  <th class="py-2.5 px-3">الشعبة المصدر (العام الحالي)</th>
+                  <th class="py-2.5 px-3">الشعبة المستهدفة (العام الجديد)</th>
+                  <th class="py-2.5 px-3">عدد الطلاب المسكنين</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-[#B4AED8]/30 dark:divide-white/[0.04]">
-                <tr v-for="(cls, cIdx) in previewResult.class_breakdown" :key="cIdx">
-                  <td class="py-2 px-3 font-bold text-bx-title">{{ cls.class_name }}</td>
-                  <td class="py-2 px-3 font-mono">{{ cls.total }}</td>
-                  <td class="py-2 px-3 font-bold text-emerald-600 font-mono">{{ cls.promoted }}</td>
-                  <td class="py-2 px-3 font-bold text-rose-600 font-mono">{{ cls.retained }}</td>
-                  <td class="py-2 px-3">
-                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600">
-                      {{ cls.pass_rate }}%
-                    </span>
-                  </td>
+                <tr v-for="(mapEx, mIdx) in previewResult.promotion_mapping_examples" :key="mIdx">
+                  <td class="py-2 px-3 font-bold text-bx-title">{{ mapEx.source || '—' }}</td>
+                  <td class="py-2 px-3 font-bold text-bx-primary">{{ mapEx.target }}</td>
+                  <td class="py-2 px-3 font-bold text-emerald-600 font-mono">{{ mapEx.students_count }} طالب</td>
                 </tr>
               </tbody>
             </table>
@@ -140,41 +124,45 @@
           <textarea
             v-model="executionNotes"
             rows="2"
-            class="w-full p-3 rounded-2xl bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] text-xs text-bx-title outline-none focus:border-bx-primary transition-all resize-none"
-            placeholder="أدخل أي ملاحظات إدارية أو توثيقية خاصة بهذه الدفعة..."
+            placeholder="اكتب أية ملاحظات توثيقية إدارية خاصة بعملية الترحيل..."
+            class="w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl p-3 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary"
           ></textarea>
         </div>
 
-        <!-- Final Confirmation Checkbox -->
-        <div class="flex items-start gap-3 bg-amber-500/5 border border-amber-500/20 p-3.5 rounded-2xl">
-          <input id="confirm-promotion" v-model="isConfirmed" type="checkbox" class="mt-0.5 w-4 h-4 text-bx-primary rounded border-bx-border cursor-pointer" />
-          <label for="confirm-promotion" class="text-xs font-semibold text-amber-900 dark:text-amber-200 cursor-pointer leading-relaxed">
-            أقر بأنني قمت بمراجعة كافة النتائج أعلاه، وأوافق على اعتماد الترحيل النهائي وتسكين الطلاب في العام الدراسي الجديد.
+        <!-- Confirmation Checkbox -->
+        <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-3">
+          <input
+            id="confirm-promotion"
+            v-model="isConfirmed"
+            type="checkbox"
+            class="mt-1 w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+          />
+          <label for="confirm-promotion" class="text-xs text-rose-800 dark:text-rose-200 cursor-pointer leading-relaxed">
+            <strong>إقرار إداري ملزم:</strong> أقر بأنني راجعت نتائج المحاكاة بالكامل، وأتحمل مسؤولية ترحيل ونقل الطلاب المسكنين إلى العام الدراسي الجديد في معاملة ذرية غير قابلة للإلغاء المباشر.
           </label>
         </div>
       </div>
     </div>
 
-    <!-- Modal Footer -->
     <template #footer>
-      <div class="flex items-center justify-end gap-3 w-full">
+      <div class="flex items-center justify-between w-full">
         <button
           type="button"
-          class="px-4 py-2 rounded-xl text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
-          @click="$emit('close')"
+          class="px-4 py-2 text-xs font-bold rounded-xl bg-bx-surface-2 hover:bg-bx-surface-3 text-bx-title border border-bx-border transition-colors cursor-pointer"
+          @click="emit('close')"
         >
           إلغاء
         </button>
+
         <button
-          v-if="previewResult"
           type="button"
-          class="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!isConfirmed || isExecuting"
+          class="px-6 py-2.5 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="!previewResult || !isConfirmed || isExecuting"
           @click="handleExecute"
         >
           <Loader2 v-if="isExecuting" class="w-4 h-4 animate-spin" />
           <Sparkles v-else class="w-4 h-4" />
-          <span>{{ isExecuting ? 'جاري تنفيذ وتسكين الترحيل...' : 'تنفيذ الترحيل الأكاديمي النهائي والاعتماد' }}</span>
+          <span>{{ isExecuting ? 'جاري تنفيذ الترحيل...' : 'اعتماد وتنفيذ الترحيل السنوي الرسمي' }}</span>
         </button>
       </div>
     </template>

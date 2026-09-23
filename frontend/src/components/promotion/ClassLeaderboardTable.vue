@@ -183,7 +183,10 @@ const getStatusPillClass = (status: string) => {
     case 'second_round':
       return 'pill-second-round';
     case 'retained':
+    case 'failed':
       return 'pill-retained';
+    case 'graduated':
+      return 'pill-graduated';
     default:
       return 'pill-default';
   }
@@ -192,11 +195,14 @@ const getStatusPillClass = (status: string) => {
 const getStatusText = (status: string) => {
   switch (status) {
     case 'passed':
-      return 'ناجح ومنقول';
+      return 'ناجح ومرحل';
     case 'second_round':
       return 'دور ثان';
     case 'retained':
+    case 'failed':
       return 'باق للإعادة';
+    case 'graduated':
+      return 'متخرج';
     default:
       return status;
   }
@@ -442,6 +448,11 @@ const getStatusText = (status: string) => {
 .pill-retained {
   background: rgba(239, 68, 68, 0.12);
   color: #b91c1c;
+}
+
+.pill-graduated {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
 }
 
 .action-buttons {

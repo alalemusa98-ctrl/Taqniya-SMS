@@ -69,7 +69,7 @@ export class QueryTranscriptsDto {
   page?: number;
 
   @IsOptional()
-  @Transform(({ value }) => (value ? Number(value) : 20))
+  @Transform(({ value }) => (value ? Number(value) : 15))
   @IsNumber()
   per_page?: number;
 }

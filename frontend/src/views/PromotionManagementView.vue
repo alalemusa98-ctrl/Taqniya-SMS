@@ -82,18 +82,43 @@
       <section v-if="activeTab === 'transcripts'" class="space-y-6">
         <!-- Filters Panel using TaqniyaSelect -->
         <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-6 shadow-xs space-y-4">
-          <div class="flex items-center gap-2 font-bold text-sm text-bx-title">
-            <Filter class="w-4 h-4 text-bx-primary" />
-            <span>تصفية وفلترة الكشوفات الأكاديمية</span>
+          <div class="flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-2 font-bold text-sm text-bx-title">
+              <Filter class="w-4 h-4 text-bx-primary" />
+              <span>تصفية وفلترة الكشوفات الأكاديمية</span>
+            </div>
+
+            <!-- Search input with icon -->
+            <div class="relative min-w-[260px]">
+              <input
+                v-model="searchInput"
+                type="text"
+                placeholder="بحث باسم الطالب أو رمزه..."
+                class="w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl px-4 py-2 pr-9 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all"
+                @input="onSearchInput"
+              />
+              <Search class="w-4 h-4 text-bx-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="space-y-1.5">
               <label class="text-xs font-bold text-bx-muted">العام الدراسي:</label>
               <TaqniyaSelect
                 v-model="filters.academic_year_name"
                 :options="yearFilterOptions"
                 placeholder="جميع الأعوام الدراسية"
+                :full-width="true"
+                @update:model-value="fetchTranscripts"
+              />
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-bx-muted">نوع الصحيفة:</label>
+              <TaqniyaSelect
+                v-model="filters.transcript_type"
+                :options="transcriptTypeFilterOptions"
+                placeholder="جميع أنواع الصحائف"
                 :full-width="true"
                 @update:model-value="fetchTranscripts"
               />
@@ -127,9 +152,9 @@
         <div v-if="executiveClassSummaries.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <ExecutiveClassCard
             v-for="cSum in executiveClassSummaries"
-            :key="cSum.class_id"
+            :key="cSum.grade_level"
             :class-summary="cSum"
-            :is-selected="filters.class_id === cSum.class_id"
+            :is-selected="filters.grade_level === cSum.grade_level"
             @select="handleSelectClassCard"
           />
         </div>
@@ -147,75 +172,103 @@
           />
 
           <!-- Pagination using TaqniyaPagination -->
-          <div v-if="meta.total_pages > 1" class="flex justify-center pt-4">
+          <div v-if="totalPages > 1" class="flex justify-center pt-4">
             <TaqniyaPagination
               :current-page="meta.current_page"
-              :total-pages="meta.total_pages"
+              :total-pages="totalPages"
               @page-change="handlePageChange"
             />
           </div>
         </div>
       </section>
 
-      <!-- TAB 2: Promotion Batches History -->
+      <!-- TAB 2: Promotion Batches History using TaqniyaTable -->
       <section v-if="activeTab === 'batches'" class="space-y-6">
         <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
-          <div class="border-b border-[#B4AED8] dark:border-white/[0.08] pb-4">
-            <h3 class="text-lg font-bold text-bx-title font-display">سجل عمليات الترحيل الأكاديمي الجماعي (Promotion Batches SSoT)</h3>
-            <p class="text-xs text-bx-muted mt-1 font-medium">كافة العمليات مؤرخة وموثقة بسجلات التدقيق الأمني Audit Logs</p>
+          <div class="border-b border-[#B4AED8] dark:border-white/[0.08] pb-4 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 class="text-lg font-bold text-bx-title font-display">سجل عمليات الترحيل الأكاديمي الجماعي (Promotion Batches)</h3>
+              <p class="text-xs text-bx-muted mt-1 font-medium">كافة العمليات مؤرخة وموثقة بسجلات التدقيق الأمني Audit Logs</p>
+            </div>
+            <button
+              type="button"
+              class="px-4 py-2 text-xs font-bold rounded-xl bg-bx-surface-2 hover:bg-bx-surface-3 text-bx-title border border-bx-border transition-colors flex items-center gap-1.5 cursor-pointer"
+              @click="fetchPromotionBatches"
+            >
+              <RotateCcw class="w-3.5 h-3.5" />
+              <span>تحديث السجل</span>
+            </button>
           </div>
 
-          <div v-if="isLoadingBatches" class="flex flex-col items-center justify-center p-12 text-bx-muted gap-3">
-            <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
-            <span class="text-sm font-semibold">جاري تحميل سجل الدفعات...</span>
-          </div>
-          <div v-else-if="promotionBatches.length === 0" class="text-center py-12 text-bx-muted text-sm">
-            <span>لا توجد دفعات ترحيل منفذة حتى الآن.</span>
-          </div>
-          <div v-else class="overflow-x-auto">
-            <table class="w-full text-right text-xs sm:text-sm border-collapse">
-              <thead>
-                <tr class="border-b border-[#B4AED8] dark:border-white/[0.08] text-bx-muted font-bold">
-                  <th class="py-3 px-4">معرف الدفعة</th>
-                  <th class="py-3 px-4">من عام دراسي</th>
-                  <th class="py-3 px-4">إلى عام دراسي</th>
-                  <th class="py-3 px-4">إجمالي الطلاب</th>
-                  <th class="py-3 px-4">المنقولون</th>
-                  <th class="py-3 px-4">الدور الثاني</th>
-                  <th class="py-3 px-4">الباقون للإعادة</th>
-                  <th class="py-3 px-4">نسبة النجاح العامة</th>
-                  <th class="py-3 px-4">تاريخ التنفيذ</th>
-                  <th class="py-3 px-4">ملاحظات</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-[#B4AED8]/40 dark:divide-white/[0.04]">
-                <tr v-for="b in promotionBatches" :key="b.id" class="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
-                  <td class="py-3 px-4 font-mono font-bold text-bx-primary">BAT-{{ b.id }}</td>
-                  <td class="py-3 px-4 font-bold text-bx-title">{{ b.from_academic_year?.name || b.from_academic_year_id }}</td>
-                  <td class="py-3 px-4 font-bold text-bx-primary">{{ b.to_academic_year?.name || b.to_academic_year_id }}</td>
-                  <td class="py-3 px-4 font-black">{{ b.total_students }}</td>
-                  <td class="py-3 px-4 text-emerald-600 font-bold">{{ b.total_promoted }}</td>
-                  <td class="py-3 px-4 text-amber-600 font-bold">{{ b.total_second_round }}</td>
-                  <td class="py-3 px-4 text-rose-600 font-bold">{{ b.total_retained }}</td>
-                  <td class="py-3 px-4">
-                    <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                      {{ b.overall_passing_rate }}%
-                    </span>
-                  </td>
-                  <td class="py-3 px-4 text-bx-muted text-xs">{{ formatDate(b.created_at) }}</td>
-                  <td class="py-3 px-4 text-xs text-bx-muted max-w-[200px] truncate">{{ b.execution_notes || '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <TaqniyaTable
+            :columns="batchColumns"
+            :items="promotionBatches"
+            :is-loading="isLoadingBatches"
+            row-key="id"
+            empty-title="لا توجد دفعات ترحيل منفذة حتى الآن"
+            empty-subtitle="يمكنك إنشاء دفعة ترحيل جديدة بالضغط على زر تنفيذ الترحيل السنوي."
+          >
+            <!-- Custom Cell Templates -->
+            <template #cell-id="{ value }">
+              <span class="font-mono font-bold text-bx-primary">BAT-{{ value }}</span>
+            </template>
+
+            <template #cell-from_year="{ item }">
+              <span class="font-bold text-bx-title">{{ item.from_academic_year_name || item.from_academic_year?.name || item.from_academic_year_id }}</span>
+            </template>
+
+            <template #cell-to_year="{ item }">
+              <span class="font-bold text-bx-primary">{{ item.to_academic_year_name || item.to_academic_year?.name || item.to_academic_year_id }}</span>
+            </template>
+
+            <template #cell-total_promoted="{ value }">
+              <span class="font-bold text-emerald-600">{{ value }}</span>
+            </template>
+
+            <template #cell-total_second_round="{ value }">
+              <span class="font-bold text-amber-600">{{ value }}</span>
+            </template>
+
+            <template #cell-total_retained="{ value }">
+              <span class="font-bold text-rose-600">{{ value }}</span>
+            </template>
+
+            <template #cell-overall_passing_rate="{ value }">
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                {{ value }}%
+              </span>
+            </template>
+
+            <template #cell-created_at="{ value }">
+              <span class="text-xs text-bx-muted">{{ formatDate(value) }}</span>
+            </template>
+
+            <template #cell-actions="{ item }">
+              <button
+                type="button"
+                class="px-3 py-1.5 text-xs font-bold rounded-lg bg-bx-primary/10 hover:bg-bx-primary text-bx-primary hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+                @click="handleViewBatchDetail(item)"
+              >
+                <Eye class="w-3.5 h-3.5" />
+                <span>التفاصيل</span>
+              </button>
+            </template>
+          </TaqniyaTable>
         </div>
       </section>
 
-      <!-- Detail Drawer -->
+      <!-- Detail Drawer for Transcripts -->
       <TranscriptDetailDrawer
         :is-open="isDetailDrawerOpen"
         :transcript="selectedTranscript"
         @close="isDetailDrawerOpen = false"
+      />
+
+      <!-- Detail Drawer for Promotion Batches -->
+      <PromotionBatchDetailDrawer
+        :is-open="isBatchDetailDrawerOpen"
+        :batch="selectedBatch"
+        @close="isBatchDetailDrawerOpen = false"
       />
 
       <!-- Grade Entry & Freeze Modal -->
@@ -254,14 +307,18 @@ import {
   History,
   Filter,
   Loader2,
+  Search,
+  Eye,
 } from 'lucide-vue-next';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
+import TaqniyaTable, { type TableColumn } from '../components/ui/TaqniyaTable.vue';
 import TaqniyaPagination from '../components/ui/TaqniyaPagination.vue';
 import ExecutiveClassCard from '../components/promotion/ExecutiveClassCard.vue';
 import ClassLeaderboardTable from '../components/promotion/ClassLeaderboardTable.vue';
 import TranscriptDetailDrawer from '../components/promotion/TranscriptDetailDrawer.vue';
+import PromotionBatchDetailDrawer from '../components/promotion/PromotionBatchDetailDrawer.vue';
 import GradeEntrySheetModal from '../components/promotion/GradeEntrySheetModal.vue';
 import PromotionExecutionModal from '../components/promotion/PromotionExecutionModal.vue';
 
@@ -290,9 +347,11 @@ const academicYearsList = ref<AcademicYearItem[]>([]);
 const classesList = ref<AcademicClassItem[]>([]);
 const promotionSimulation = ref<PromotionSimulationResult | null>(null);
 
-// Selected Items & Modals
+// Selected Items & Drawers/Modals
 const selectedTranscript = ref<StudentTranscript | null>(null);
+const selectedBatch = ref<PromotionBatch | null>(null);
 const isDetailDrawerOpen = ref(false);
+const isBatchDetailDrawerOpen = ref(false);
 const isGradeModalOpen = ref(false);
 const isPromotionModalOpen = ref(false);
 
@@ -303,23 +362,47 @@ const isFreezing = ref(false);
 const isSimulating = ref(false);
 const isExecutingPromotion = ref(false);
 
+// Search input & debounce
+const searchInput = ref('');
+let searchDebounceTimer: any = null;
+
 // Filters & Pagination
 const filters = ref<QueryTranscriptsDto>({
   page: 1,
-  per_page: 20,
+  per_page: 15,
   academic_year_name: undefined,
+  grade_level: undefined,
   class_id: undefined,
+  transcript_type: undefined,
   final_status: undefined,
+  search: undefined,
 });
 
 const selectedClassIdModel = ref<string | number>('all');
 
 const meta = ref({
   current_page: 1,
-  per_page: 20,
+  per_page: 15,
   total: 0,
+  last_page: 1,
   total_pages: 1,
 });
+
+const totalPages = computed(() => meta.value.last_page || meta.value.total_pages || 1);
+
+// Table Columns for Batches
+const batchColumns: TableColumn[] = [
+  { key: 'id', label: 'معرف الدفعة', align: 'start' },
+  { key: 'from_year', label: 'من عام دراسي', align: 'start' },
+  { key: 'to_year', label: 'إلى عام دراسي', align: 'start' },
+  { key: 'total_students', label: 'إجمالي الطلاب', align: 'center' },
+  { key: 'total_promoted', label: 'المنقولون', align: 'center' },
+  { key: 'total_second_round', label: 'الدور الثاني', align: 'center' },
+  { key: 'total_retained', label: 'الباقون للإعادة', align: 'center' },
+  { key: 'overall_passing_rate', label: 'نسبة النجاح العامة', align: 'center' },
+  { key: 'created_at', label: 'تاريخ التنفيذ', align: 'start' },
+  { key: 'actions', label: 'الإجراءات', align: 'center' },
+];
 
 // Dropdown Options
 const yearFilterOptions = computed<TaqniyaSelectOption[]>(() => [
@@ -331,20 +414,27 @@ const yearFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   })),
 ]);
 
+const transcriptTypeFilterOptions: TaqniyaSelectOption[] = [
+  { label: 'جميع أنواع الصحائف', value: 'all' },
+  { label: 'صحيفة سنوية نهائية (Annual)', value: 'annual' },
+  { label: 'صحيفة فصلية (Term)', value: 'term' },
+];
+
 const classFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   { label: 'كافة الصفوف الدراسية', value: 'all' },
   ...classesList.value.map((c) => ({
     label: `${c.name} (المستوى ${c.grade_level})`,
-    value: c.id,
+    value: c.grade_level,
     subtext: `المستوى الدراسي ${c.grade_level}`,
   })),
 ]);
 
 const statusFilterOptions: TaqniyaSelectOption[] = [
   { label: 'كافة الحالات الأكاديمية', value: 'all' },
-  { label: 'ناجح ومنقول (Passed)', value: 'passed' },
+  { label: 'ناجح ومرحل (Passed)', value: 'passed' },
   { label: 'دور ثانٍ (Second Round)', value: 'second_round' },
-  { label: 'باقٍ للإعادة (Retained)', value: 'retained' },
+  { label: 'باقٍ للإعادة (Failed)', value: 'failed' },
+  { label: 'متخرج (Graduated)', value: 'graduated' },
 ];
 
 // Computed Metrics
@@ -356,6 +446,16 @@ const overallPassRate = computed(() => {
   const passed = executiveClassSummaries.value.reduce((s: number, c: ExecutiveClassSummary) => s + c.passed_count, 0);
   return total > 0 ? Number(((passed / total) * 100).toFixed(1)) : 0;
 });
+
+// Search input handler
+const onSearchInput = () => {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    filters.value.search = searchInput.value.trim() || undefined;
+    filters.value.page = 1;
+    fetchTranscripts();
+  }, 300);
+};
 
 // Lifecycle
 onMounted(async () => {
@@ -381,10 +481,12 @@ const fetchAcademicLookups = async () => {
 
 const onClassFilterChange = (val: any) => {
   if (val === 'all' || !val) {
+    filters.value.grade_level = undefined;
     filters.value.class_id = undefined;
   } else {
-    filters.value.class_id = Number(val);
+    filters.value.grade_level = Number(val);
   }
+  filters.value.page = 1;
   fetchTranscripts();
 };
 
@@ -395,8 +497,10 @@ const fetchTranscripts = async () => {
       page: filters.value.page,
       per_page: filters.value.per_page,
       academic_year_name: filters.value.academic_year_name === 'all' ? undefined : filters.value.academic_year_name,
-      class_id: filters.value.class_id,
+      grade_level: filters.value.grade_level,
+      transcript_type: filters.value.transcript_type === 'all' ? undefined : filters.value.transcript_type,
       final_status: filters.value.final_status === 'all' ? undefined : filters.value.final_status,
+      search: filters.value.search,
     };
 
     const res = await promotionApi.getTranscripts(queryParams);
@@ -418,9 +522,10 @@ const fetchTranscripts = async () => {
 
       meta.value = {
         current_page: res.meta?.current_page || 1,
-        per_page: res.meta?.per_page || 20,
+        per_page: res.meta?.per_page || 15,
         total: res.meta?.total !== undefined ? res.meta.total : transcripts.value.length,
-        total_pages: res.meta?.total_pages || 1,
+        last_page: res.meta?.last_page || 1,
+        total_pages: res.meta?.last_page || res.meta?.total_pages || 1,
       };
     }
   } catch (err: any) {
@@ -445,13 +550,14 @@ const fetchPromotionBatches = async () => {
 };
 
 const handleSelectClassCard = (cSum: ExecutiveClassSummary) => {
-  if (filters.value.class_id === cSum.class_id) {
-    filters.value.class_id = undefined;
+  if (filters.value.grade_level === cSum.grade_level) {
+    filters.value.grade_level = undefined;
     selectedClassIdModel.value = 'all';
   } else {
-    filters.value.class_id = cSum.class_id;
-    selectedClassIdModel.value = cSum.class_id;
+    filters.value.grade_level = cSum.grade_level;
+    selectedClassIdModel.value = cSum.grade_level;
   }
+  filters.value.page = 1;
   fetchTranscripts();
 };
 
@@ -463,6 +569,11 @@ const handlePageChange = (page: number) => {
 const handleViewTranscriptDetail = (transcript: StudentTranscript) => {
   selectedTranscript.value = transcript;
   isDetailDrawerOpen.value = true;
+};
+
+const handleViewBatchDetail = (batch: PromotionBatch) => {
+  selectedBatch.value = batch;
+  isBatchDetailDrawerOpen.value = true;
 };
 
 const handleOpenGradeEntry = (transcript: StudentTranscript) => {

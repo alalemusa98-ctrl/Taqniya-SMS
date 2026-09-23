@@ -6,7 +6,7 @@
         <span class="grade-level">المستوى {{ classSummary.grade_level }}</span>
       </div>
       <div class="pass-rate-pill" :class="passRateClass">
-        <span class="rate-value">{{ classSummary.passing_rate }}%</span>
+        <span class="rate-value">{{ passRate }}%</span>
         <span class="rate-label">نسبة النجاح</span>
       </div>
     </div>
@@ -17,7 +17,7 @@
         <div
           class="progress-bar-fill"
           :class="progressFillClass"
-          :style="{ width: `${Math.min(100, Math.max(0, classSummary.passing_rate))}%` }"
+          :style="{ width: `${Math.min(100, Math.max(0, passRate))}%` }"
         ></div>
       </div>
     </div>
@@ -38,11 +38,11 @@
       </div>
       <div class="metric-item retained">
         <span class="metric-label">باق للإعادة</span>
-        <span class="metric-value">{{ classSummary.retained_count }}</span>
+        <span class="metric-value">{{ failedCount }}</span>
       </div>
     </div>
 
-    <div v-if="classSummary.passing_rate < 50" class="low-pass-alert">
+    <div v-if="passRate < 50" class="low-pass-alert">
       <span class="alert-icon">⚠️</span>
       <span class="alert-text">تنبيه: نسبة النجاح منخفضة تتطلب مراجعة الأداء الأكاديمي</span>
     </div>
@@ -66,17 +66,25 @@ defineEmits<{
   (e: 'select', summary: ExecutiveClassSummary): void;
 }>();
 
+const passRate = computed(() => {
+  return props.classSummary.pass_rate_percentage ?? props.classSummary.passing_rate ?? 0;
+});
+
+const failedCount = computed(() => {
+  return props.classSummary.failed_count ?? props.classSummary.retained_count ?? 0;
+});
+
 const passRateClass = computed(() => {
-  const rate = props.classSummary.passing_rate;
-  if (rate >= 80) return 'rate-high';
-  if (rate >= 60) return 'rate-medium';
+  const rate = passRate.value;
+  if (rate >= 90) return 'rate-high';
+  if (rate >= 75) return 'rate-medium';
   return 'rate-low';
 });
 
 const progressFillClass = computed(() => {
-  const rate = props.classSummary.passing_rate;
-  if (rate >= 80) return 'fill-high';
-  if (rate >= 60) return 'fill-medium';
+  const rate = passRate.value;
+  if (rate >= 90) return 'fill-high';
+  if (rate >= 75) return 'fill-medium';
   return 'fill-low';
 });
 </script>

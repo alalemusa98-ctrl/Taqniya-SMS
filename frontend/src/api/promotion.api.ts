@@ -16,6 +16,7 @@ export interface StudentTranscript {
   student_code: string;
   national_id?: string;
   class_id?: number;
+  class_section_id?: number | null;
   class_name: string;
   section_id?: number;
   section_name: string;
@@ -23,13 +24,17 @@ export interface StudentTranscript {
   academic_term_id?: number;
   academic_term_name?: string;
   academic_year_name: string;
-  transcript_type: 'final_year' | 'term';
+  transcript_type: 'annual' | 'term';
+  transcript_type_ar?: string;
   total_score: number;
-  max_possible_score: number;
+  max_possible_score?: number;
   percentage: number;
-  final_status: 'passed' | 'second_round' | 'retained';
+  final_status: 'passed' | 'second_round' | 'failed' | 'graduated';
+  final_status_ar?: string;
+  rank?: number;
   calculated_rank?: number;
   transcript_data?: {
+    term_name?: string;
     student_id?: number;
     student_name?: string;
     student_code?: string;
@@ -49,24 +54,29 @@ export interface StudentTranscript {
 }
 
 export interface ExecutiveClassSummary {
-  class_id: number;
+  class_id?: number;
   class_name: string;
   grade_level: number;
   total_students: number;
   passed_count: number;
   second_round_count: number;
-  retained_count: number;
-  graduated_count: number;
-  passing_rate: number;
+  failed_count?: number;
+  retained_count?: number;
+  graduated_count?: number;
+  pass_rate_percentage: number;
+  passing_rate?: number;
 }
 
 export interface PromotionBatch {
   id: number;
   from_academic_year_id: number;
+  from_academic_year_name?: string;
   to_academic_year_id: number;
+  to_academic_year_name?: string;
   from_academic_year?: { id: number; name: string };
   to_academic_year?: { id: number; name: string };
-  executed_by_user_id: number;
+  executed_by_user_id?: number;
+  executed_by_name?: string;
   total_students: number;
   total_promoted: number;
   total_second_round: number;
@@ -87,26 +97,27 @@ export interface PromotionBatch {
 export interface LowEnrollmentWarning {
   class_name: string;
   section_name: string;
-  projected_count: number;
-  threshold_limit: number;
+  students_count?: number;
+  projected_count?: number;
+  threshold_limit?: number;
   warning_message: string;
 }
 
+export interface PromotionMappingExample {
+  source?: string;
+  target: string;
+  students_count: number;
+}
+
 export interface PromotionSimulationResult {
-  from_academic_year: { id: number; name: string };
-  to_academic_year: { id: number; name: string };
-  total_eligible_students: number;
-  total_promoted: number;
-  total_second_round: number;
-  total_retained: number;
-  total_graduated: number;
-  class_breakdown: Array<{
-    class_name: string;
-    total: number;
-    promoted: number;
+  summary: {
+    total_students: number;
+    to_be_promoted: number;
+    second_round: number;
     retained: number;
-    pass_rate: number;
-  }>;
+    graduated?: number;
+  };
+  promotion_mapping_examples: PromotionMappingExample[];
   low_enrollment_warnings: LowEnrollmentWarning[];
 }
 
@@ -114,23 +125,30 @@ export interface QueryTranscriptsDto {
   page?: number;
   per_page?: number;
   academic_year_name?: string;
+  grade_level?: number;
+  class_name?: string;
   class_id?: number;
+  class_section_id?: number;
   section_id?: number;
+  section_name?: string;
   academic_term_id?: number;
+  class_academic_term_id?: number;
   transcript_type?: string;
   final_status?: string;
   search?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface FreezeTranscriptDto {
   student_id: number;
   academic_term_id?: number;
   academic_year_name: string;
-  transcript_type: 'final_year' | 'term';
+  transcript_type: 'annual' | 'term';
   total_score: number;
-  max_possible_score: number;
+  max_possible_score?: number;
   percentage: number;
-  final_status: 'passed' | 'second_round' | 'retained';
+  final_status: 'passed' | 'second_round' | 'failed' | 'graduated';
   transcript_data: Record<string, any>;
 }
 

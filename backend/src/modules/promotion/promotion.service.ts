@@ -26,6 +26,17 @@ export class PromotionService {
       : 'صحيفة فصلية';
   }
 
+  private getStatusArabic(status: EnrollmentStatus): string {
+    const map: Record<EnrollmentStatus, string> = {
+      passed: 'ناجح ومرحل',
+      second_round: 'دور ثان',
+      failed: 'باقٍ للإعادة',
+      graduated: 'متخرج',
+      enrolled: 'مسجل',
+    };
+    return map[status] || status;
+  }
+
   /**
    * 1.1 GET /api/v1/transcripts
    * Browse and filter archived transcripts with executive class summaries & rankings
@@ -168,12 +179,14 @@ export class PromotionService {
       student_id: Number(t.student_id),
       student_name: t.student?.full_name || '',
       student_code: t.student?.user?.user_code || '',
+      class_section_id: t.class_section_id ? Number(t.class_section_id) : null,
       class_name: t.class_name,
       section_name: t.section_name,
       grade_level: t.grade_level,
       total_score: Number(t.total_score),
       percentage: Number(t.percentage),
       final_status: t.final_status,
+      final_status_ar: this.getStatusArabic(t.final_status),
       rank: t.rank || (skip + idx + 1),
       created_at: t.created_at,
     }));
@@ -185,7 +198,7 @@ export class PromotionService {
       message:
         total > 0
           ? 'تم جلب مصفوفة الصحائف المدرسية المؤرشفة بنجاح.'
-          : 'لا توجد صحائف مدرسية تطابق محددات البحث.',
+          : 'لا توجد صحائف مدرسية مؤرشفة تطابق محددات البحث.',
       data: {
         academic_year_name: yearName,
         transcript_type: query.transcript_type || TranscriptType.annual,
@@ -193,6 +206,19 @@ export class PromotionService {
           query.transcript_type || TranscriptType.annual,
         ),
         classes_summary: classesSummary,
+        selected_class: query.grade_level
+          ? {
+              grade_level: Number(query.grade_level),
+              class_name:
+                classesSummary.find(
+                  (c) => c.grade_level === Number(query.grade_level),
+                )?.class_name || '',
+              total_students:
+                classesSummary.find(
+                  (c) => c.grade_level === Number(query.grade_level),
+                )?.total_students || 0,
+            }
+          : null,
         transcripts: formattedTranscripts,
       },
       meta: {
@@ -224,7 +250,7 @@ export class PromotionService {
     });
 
     if (!transcript) {
-      throw new NotFoundException('سجل الصحيفة المدرسية غير موجود.');
+      throw new NotFoundException('الصحيفة المؤرشفة غير موجودة.');
     }
 
     // Role-based IDOR validation
@@ -250,7 +276,7 @@ export class PromotionService {
 
     return {
       success: true,
-      message: 'تم استرجاع تفاصيل لقطة الصحيفة المدرسية بنجاح.',
+      message: 'تم جلب لقطة الصحيفة المدرسية بنجاح.',
       data: {
         id: Number(transcript.id),
         student_id: Number(transcript.student_id),
@@ -324,11 +350,12 @@ export class PromotionService {
 
     return {
       success: true,
-      message: 'تم استرجاع السجل الأكاديمي التاريخي للصحائف بنجاح.',
+      message: 'تم جلب السجل التاريخي لصحائف الطالب بنجاح.',
       data: {
         student_id: Number(student.id),
         student_name: student.full_name,
         student_code: student.user?.user_code || '',
+        total_transcripts: transcripts.length,
         transcripts: transcripts.map((t) => ({
           id: Number(t.id),
           transcript_type: t.transcript_type,
@@ -460,7 +487,7 @@ export class PromotionService {
       from_academic_year_name: b.from_year?.name || '',
       to_academic_year_id: Number(b.to_academic_year_id),
       to_academic_year_name: b.to_year?.name || '',
-      executed_by_name: b.executor?.user_code || 'مدير النظام',
+      executed_by_name: b.executor?.user_code ? `مدير النظام (${b.executor.user_code})` : 'مدير النظام',
       total_students: b.total_students,
       total_promoted: b.total_promoted,
       total_second_round: b.total_second_round,
@@ -508,14 +535,14 @@ export class PromotionService {
 
     return {
       success: true,
-      message: 'تم استرجاع تفاصيل وإحصائيات دفعة الترحيل بنجاح.',
+      message: 'تم جلب تفاصيل دفعة الترحيل بنجاح.',
       data: {
         id: Number(batch.id),
         from_academic_year_id: Number(batch.from_academic_year_id),
         from_academic_year_name: batch.from_year?.name || '',
         to_academic_year_id: Number(batch.to_academic_year_id),
         to_academic_year_name: batch.to_year?.name || '',
-        executed_by_name: batch.executor?.user_code || 'مدير النظام',
+        executed_by_name: batch.executor?.user_code ? `مدير النظام (${batch.executor.user_code})` : 'مدير النظام',
         total_students: batch.total_students,
         total_promoted: batch.total_promoted,
         total_second_round: batch.total_second_round,
@@ -589,12 +616,13 @@ export class PromotionService {
     let graduated = 0;
 
     // Track simulated section counts in target year
-    const targetSectionStudents = new Map<string, { class_name: string; section_name: string; count: number }>();
+    const targetSectionStudents = new Map<string, { source_label: string; class_name: string; section_name: string; count: number }>();
 
     for (const e of enrollments) {
       const cls = e.class_section?.class;
       const sec = e.class_section?.section;
       const gradeLevel = cls?.grade_level || 1;
+      const sourceLabel = `${cls?.name || 'الصف ' + gradeLevel} - ${sec?.name || 'شعبة أ'}`;
 
       if (e.status === EnrollmentStatus.passed) {
         if (gradeLevel >= 12) {
@@ -605,7 +633,7 @@ export class PromotionService {
           const targetSecName = sec?.name || 'شعبة أ';
           const key = `${targetClassName} - ${targetSecName}`;
           if (!targetSectionStudents.has(key)) {
-            targetSectionStudents.set(key, { class_name: targetClassName, section_name: targetSecName, count: 0 });
+            targetSectionStudents.set(key, { source_label: sourceLabel, class_name: targetClassName, section_name: targetSecName, count: 0 });
           }
           targetSectionStudents.get(key)!.count += 1;
         }
@@ -617,7 +645,7 @@ export class PromotionService {
         const currentSecName = sec?.name || 'شعبة أ';
         const key = `${currentClassName} - ${currentSecName}`;
         if (!targetSectionStudents.has(key)) {
-          targetSectionStudents.set(key, { class_name: currentClassName, section_name: currentSecName, count: 0 });
+          targetSectionStudents.set(key, { source_label: sourceLabel, class_name: currentClassName, section_name: currentSecName, count: 0 });
         }
         targetSectionStudents.get(key)!.count += 1;
       }
@@ -629,6 +657,7 @@ export class PromotionService {
 
     for (const [key, val] of targetSectionStudents.entries()) {
       mappingExamples.push({
+        source: val.source_label,
         target: key,
         students_count: val.count,
       });
