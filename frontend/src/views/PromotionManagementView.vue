@@ -101,7 +101,11 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            :class="filters.transcript_type === 'term' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'"
+          >
+            <!-- 1. العام الدراسي -->
             <div class="space-y-1.5">
               <label class="text-xs font-bold text-bx-muted">العام الدراسي:</label>
               <TaqniyaSelect
@@ -113,17 +117,7 @@
               />
             </div>
 
-            <div class="space-y-1.5">
-              <label class="text-xs font-bold text-bx-muted">نوع الصحيفة:</label>
-              <TaqniyaSelect
-                v-model="filters.transcript_type"
-                :options="transcriptTypeFilterOptions"
-                placeholder="جميع أنواع الصحائف"
-                :full-width="true"
-                @update:model-value="fetchTranscripts"
-              />
-            </div>
-
+            <!-- 2. الصف الدراسي (يظهر قبل نوع الصحيفة) -->
             <div class="space-y-1.5">
               <label class="text-xs font-bold text-bx-muted">الصف الدراسي:</label>
               <TaqniyaSelect
@@ -135,6 +129,31 @@
               />
             </div>
 
+            <!-- 3. نوع الصحيفة -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-bx-muted">نوع الصحيفة:</label>
+              <TaqniyaSelect
+                v-model="filters.transcript_type"
+                :options="transcriptTypeFilterOptions"
+                placeholder="جميع أنواع الصحائف"
+                :full-width="true"
+                @update:model-value="onTranscriptTypeChange"
+              />
+            </div>
+
+            <!-- 4. الفصل الدراسي (يظهر فقط عند اختيار الصحيفة الفصلية) -->
+            <div v-if="filters.transcript_type === 'term'" class="space-y-1.5 animate-in fade-in zoom-in-95 duration-200">
+              <label class="text-xs font-bold text-bx-muted">الفصل الدراسي / الفترة:</label>
+              <TaqniyaSelect
+                v-model="selectedTermModel"
+                :options="termFilterOptions"
+                placeholder="كافة فترات وفصول الصف"
+                :full-width="true"
+                @update:model-value="onTermFilterChange"
+              />
+            </div>
+
+            <!-- 5. الحالة النهائية للطالب -->
             <div class="space-y-1.5">
               <label class="text-xs font-bold text-bx-muted">الحالة النهائية للطالب:</label>
               <TaqniyaSelect
@@ -328,7 +347,12 @@ import {
   type FreezeTranscriptDto,
   type ExecutePromotionDto,
 } from '../api/promotion.api';
-import { academicApi, type AcademicYearItem, type AcademicClassItem } from '../api/academic.api';
+import {
+  academicApi,
+  type AcademicYearItem,
+  type AcademicClassItem,
+  type AcademicTermItem,
+} from '../api/academic.api';
 import { useToast } from '../composables/useToast';
 
 const toast = useToast();
@@ -341,6 +365,8 @@ const executiveClassSummaries = ref<ExecutiveClassSummary[]>([]);
 const promotionBatches = ref<PromotionBatch[]>([]);
 const academicYearsList = ref<AcademicYearItem[]>([]);
 const classesList = ref<AcademicClassItem[]>([]);
+const academicTermsList = ref<AcademicTermItem[]>([]);
+const allClassAcademicTerms = ref<any[]>([]);
 const promotionSimulation = ref<PromotionSimulationResult | null>(null);
 
 // Selected Items & Drawers/Modals
@@ -369,12 +395,14 @@ const filters = ref<QueryTranscriptsDto>({
   academic_year_name: undefined,
   grade_level: undefined,
   class_id: undefined,
+  class_academic_term_id: undefined,
   transcript_type: undefined,
   final_status: undefined,
   search: undefined,
 });
 
 const selectedClassIdModel = ref<string | number>('all');
+const selectedTermModel = ref<string | number>('all');
 
 const meta = ref({
   current_page: 1,
@@ -410,12 +438,6 @@ const yearFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   })),
 ]);
 
-const transcriptTypeFilterOptions: TaqniyaSelectOption[] = [
-  { label: 'جميع أنواع الصحائف', value: 'all' },
-  { label: 'صحيفة سنوية نهائية (Annual)', value: 'annual' },
-  { label: 'صحيفة فصلية (Term)', value: 'term' },
-];
-
 const classFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   { label: 'كافة الصفوف الدراسية', value: 'all' },
   ...classesList.value.map((c) => ({
@@ -424,6 +446,62 @@ const classFilterOptions = computed<TaqniyaSelectOption[]>(() => [
     subtext: `المستوى الدراسي ${c.grade_level}`,
   })),
 ]);
+
+const transcriptTypeFilterOptions: TaqniyaSelectOption[] = [
+  { label: 'جميع أنواع الصحائف', value: 'all' },
+  { label: 'صحيفة سنوية نهائية (Annual)', value: 'annual' },
+  { label: 'صحيفة فصلية (Term)', value: 'term' },
+];
+
+const termFilterOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (!filters.value.grade_level || selectedClassIdModel.value === 'all') {
+    return [
+      { label: 'جميع الفصول الدراسية', value: 'all' },
+      ...academicTermsList.value.map((t: any) => {
+        const isActive = Number(t.is_active) === 1 || t.is_active === true;
+        return {
+          value: t.id,
+          label: isActive ? `${t.name} (الفصل النشط)` : t.name,
+          subtext: isActive ? 'الفصل النشط حالياً' : `فصل رقم ${t.term_number || t.id}`,
+        };
+      }),
+    ];
+  }
+
+  // Find class ID matching selected grade level
+  const selectedClass = classesList.value.find(
+    (c) => c.grade_level === Number(filters.value.grade_level) || c.id === Number(selectedClassIdModel.value)
+  );
+  const classId = selectedClass?.id;
+
+  const termsList = Array.isArray(allClassAcademicTerms.value)
+    ? allClassAcademicTerms.value
+    : (allClassAcademicTerms.value as any)?.classes || [];
+  const classGroup = termsList.find((g: any) => Number(g.class_id) === Number(classId));
+
+  if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
+    return [
+      { label: 'كافة الفصول للصف المختار', value: 'all' },
+      ...classGroup.terms.map((t: any) => {
+        const isActive = Number(t.is_active) === 1 || t.is_active === true;
+        const baseName = t.term_name || `الفصل الدراسي ${t.academic_term_id}`;
+        return {
+          value: t.id, // class_academic_term_id
+          label: isActive ? `${baseName} (نشط)` : baseName,
+          subtext: isActive ? 'الفصل النشط حالياً للصف' : undefined,
+        };
+      }),
+    ];
+  }
+
+  return [
+    { label: 'جميع الفصول الدراسية', value: 'all' },
+    ...academicTermsList.value.map((t: any) => ({
+      value: t.id,
+      label: t.name,
+    })),
+  ];
+});
 
 const statusFilterOptions: TaqniyaSelectOption[] = [
   { label: 'كافة الحالات الأكاديمية', value: 'all' },
@@ -464,12 +542,16 @@ onMounted(async () => {
 
 const fetchAcademicLookups = async () => {
   try {
-    const [yearsRes, classesRes] = await Promise.all([
+    const [yearsRes, classesRes, termsRes, classTermsRes] = await Promise.all([
       academicApi.getYears({ per_page: 50 }),
       academicApi.getClasses({ per_page: 50 }),
+      academicApi.getTerms({ per_page: 50 }).catch(() => ({ data: { data: [] } })),
+      academicApi.getClassAcademicTerms({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
     ]);
     if (yearsRes.data?.success) academicYearsList.value = yearsRes.data.data;
     if (classesRes.data?.success) classesList.value = classesRes.data.data;
+    academicTermsList.value = termsRes.data?.data?.terms || termsRes.data?.data || [];
+    allClassAcademicTerms.value = classTermsRes.data?.data?.classes || classTermsRes.data?.data || [];
   } catch (err: any) {
     console.error('Failed to load academic lookups:', err);
   }
@@ -481,6 +563,28 @@ const onClassFilterChange = (val: any) => {
     filters.value.class_id = undefined;
   } else {
     filters.value.grade_level = Number(val);
+  }
+  // Reset term filter when class changes
+  selectedTermModel.value = 'all';
+  filters.value.class_academic_term_id = undefined;
+  filters.value.page = 1;
+  fetchTranscripts();
+};
+
+const onTranscriptTypeChange = (val: any) => {
+  if (val !== 'term') {
+    filters.value.class_academic_term_id = undefined;
+    selectedTermModel.value = 'all';
+  }
+  filters.value.page = 1;
+  fetchTranscripts();
+};
+
+const onTermFilterChange = (val: any) => {
+  if (val === 'all' || !val) {
+    filters.value.class_academic_term_id = undefined;
+  } else {
+    filters.value.class_academic_term_id = Number(val);
   }
   filters.value.page = 1;
   fetchTranscripts();
@@ -494,6 +598,7 @@ const fetchTranscripts = async () => {
       per_page: filters.value.per_page,
       academic_year_name: filters.value.academic_year_name === 'all' ? undefined : filters.value.academic_year_name,
       grade_level: filters.value.grade_level,
+      class_academic_term_id: filters.value.class_academic_term_id,
       transcript_type: filters.value.transcript_type === 'all' ? undefined : filters.value.transcript_type,
       final_status: filters.value.final_status === 'all' ? undefined : filters.value.final_status,
       search: filters.value.search,
@@ -553,6 +658,8 @@ const handleSelectClassCard = (cSum: ExecutiveClassSummary) => {
     filters.value.grade_level = cSum.grade_level;
     selectedClassIdModel.value = cSum.grade_level;
   }
+  selectedTermModel.value = 'all';
+  filters.value.class_academic_term_id = undefined;
   filters.value.page = 1;
   fetchTranscripts();
 };
