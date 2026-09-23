@@ -45,7 +45,7 @@
               class="px-3 py-1 rounded-xl bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/30 text-xs font-black print:border-black print:text-black flex items-center gap-1.5"
             >
               <Calendar class="w-3.5 h-3.5" />
-              <span>صحيفة فصلية: {{ activeTranscript.term_name || activeTranscript.transcript_type_ar || 'الفصل الدراسي' }}</span>
+              <span>صحيفة فصلية: {{ activeTranscript.term_name || 'الفصل الدراسي الأول' }}</span>
             </span>
 
             <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 print:text-gray-600">
@@ -56,7 +56,7 @@
         </div>
 
         <!-- Student Meta Information Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-black/[0.02] dark:bg-white/[0.02] p-4 rounded-2xl border border-[#B4AED8]/30 dark:border-white/[0.04] text-xs">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-black/[0.02] dark:bg-white/[0.02] p-4 rounded-2xl border border-[#B4AED8]/30 dark:border-white/[0.04] text-xs">
           <div>
             <span class="text-[10px] font-bold text-bx-muted block">اسم الطالب الرباعي:</span>
             <span class="font-black text-bx-title print:text-black">{{ activeTranscript.student_name }}</span>
@@ -78,9 +78,18 @@
             <span class="font-bold text-bx-title print:text-black">{{ activeTranscript.academic_year_name }}</span>
           </div>
           <div>
-            <span class="text-[10px] font-bold text-bx-muted block">نوع الوثيقة:</span>
+            <span class="text-[10px] font-bold text-bx-muted block">الفصل الدراسي:</span>
+            <span
+              class="font-black print:text-black"
+              :class="isAnnualTranscript ? 'text-purple-600 dark:text-purple-400' : 'text-sky-600 dark:text-sky-400'"
+            >
+              {{ isAnnualTranscript ? 'كامل العام (كافة الفصول)' : (activeTranscript.term_name || 'الفصل الدراسي الأول') }}
+            </span>
+          </div>
+          <div class="col-span-2 sm:col-span-1 lg:col-span-2">
+            <span class="text-[10px] font-bold text-bx-muted block">نوع الوثيقة الأكاديمية:</span>
             <span class="font-bold print:text-black" :class="isAnnualTranscript ? 'text-purple-600 dark:text-purple-400' : 'text-sky-600 dark:text-sky-400'">
-              {{ isAnnualTranscript ? 'صحيفة مجمعة لنهاية العام' : `كشف درجات فصلية (${activeTranscript.term_name || 'الفصل الدراسي'})` }}
+              {{ isAnnualTranscript ? 'صحيفة سنوية مجمعة لنهاية العام' : `كشف درجات معتمد (${activeTranscript.term_name || 'الفصل الدراسي الأول'})` }}
             </span>
           </div>
         </div>
@@ -112,7 +121,7 @@
           <div class="flex items-center justify-between">
             <h4 class="text-xs font-black text-bx-title flex items-center gap-1.5 print:text-black">
               <BookOpen class="w-4 h-4 text-bx-primary" />
-              <span>جدول رصد درجات المواد الدراسية — {{ activeTranscript.term_name || 'الفصل الدراسي' }}:</span>
+              <span>جدول رصد درجات المواد الدراسية — {{ activeTranscript.term_name || 'الفصل الدراسي الأول' }}:</span>
             </h4>
             <span class="text-[11px] font-bold text-bx-muted">
               عدد المواد المرصودة: {{ termSubjectsList.length }} مادة

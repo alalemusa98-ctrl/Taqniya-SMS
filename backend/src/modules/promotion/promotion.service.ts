@@ -205,8 +205,8 @@ export class PromotionService {
       class_academic_term_id: t.class_academic_term_id ? Number(t.class_academic_term_id) : undefined,
       term_name:
         t.class_academic_term?.academic_term?.name ||
-        (t.transcript_data as any)?.term_name ||
-        (t.transcript_type === TranscriptType.annual ? 'الصحيفة السنوية' : 'الفصل الدراسي'),
+        ((t.transcript_data as any)?.term_name && (t.transcript_data as any)?.term_name !== 'الفصل الدراسي' ? (t.transcript_data as any)?.term_name : undefined) ||
+        (t.transcript_type === TranscriptType.annual ? 'الصحيفة السنوية المجمعة' : 'الفصل الدراسي الأول'),
       total_score: Number(t.total_score),
       max_possible_score: (t.transcript_data as any)?.max_possible_score,
       percentage: Number(t.percentage),
@@ -385,8 +385,8 @@ export class PromotionService {
         class_academic_term_id: transcript.class_academic_term_id ? Number(transcript.class_academic_term_id) : undefined,
         term_name:
           transcript.class_academic_term?.academic_term?.name ||
-          (transcript.transcript_data as any)?.term_name ||
-          (transcript.transcript_type === TranscriptType.annual ? 'الصحيفة السنوية المجمعة' : 'الفصل الدراسي'),
+          ((transcript.transcript_data as any)?.term_name && (transcript.transcript_data as any)?.term_name !== 'الفصل الدراسي' ? (transcript.transcript_data as any)?.term_name : undefined) ||
+          (transcript.transcript_type === TranscriptType.annual ? 'الصحيفة السنوية المجمعة' : 'الفصل الدراسي الأول'),
         total_score: Number(transcript.total_score),
         max_possible_score: (transcript.transcript_data as any)?.max_possible_score,
         percentage: Number(transcript.percentage),

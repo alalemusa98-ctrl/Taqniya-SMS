@@ -49,71 +49,57 @@
         <span class="font-mono text-xs font-bold text-bx-primary">{{ item.student_code || '—' }}</span>
       </template>
 
-      <!-- Student Name Column -->
+      <!-- Student Name Column (No single letter bubble) -->
       <template #cell-student_name="{ item }">
-        <div class="flex items-center gap-2.5">
-          <div class="w-7 h-7 rounded-full bg-bx-primary/10 text-bx-primary flex items-center justify-center text-xs font-bold shrink-0">
-            {{ (item.student_name || item.student_code || 'ط').charAt(0) }}
-          </div>
-          <span class="font-bold text-bx-title text-xs">{{ item.student_name || item.student_code || '—' }}</span>
-        </div>
+        <span class="font-bold text-bx-title text-xs">{{ item.student_name || item.student_code || '—' }}</span>
       </template>
 
-      <!-- Section Column -->
+      <!-- Section Column (Refined badge style) -->
       <template #cell-section_name="{ item }">
-        <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-bx-surface-2 text-bx-muted border border-bx-border">
+        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-white/[0.06] text-bx-title border border-slate-300 dark:border-white/[0.12] shadow-2xs">
           {{ item.section_name || '—' }}
         </span>
       </template>
 
       <!-- Transcript Type Column -->
       <template #cell-transcript_type="{ item }">
-        <div class="flex flex-col items-center gap-0.5">
+        <div class="flex items-center justify-center">
           <span
             v-if="item.transcript_type === 'annual'"
-            class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20"
+            class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 whitespace-nowrap"
           >
             صحيفة سنوية مجمعة
           </span>
           <span
             v-else
-            class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20"
+            class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20 whitespace-nowrap"
           >
-            {{ item.term_name || item.transcript_type_ar || 'صحيفة فصلية' }}
+            صحيفة فصلية: {{ formatTermShortName(item.term_name || item.transcript_type_ar) }}
           </span>
         </div>
       </template>
 
-      <!-- Total Score Column -->
+      <!-- Total Score Column (Showing score 'من' total) -->
       <template #cell-total_score="{ item }">
-        <div class="font-mono text-xs font-bold text-bx-title">
+        <div class="font-mono text-xs font-bold text-bx-title whitespace-nowrap">
           <span>{{ item.total_score }}</span>
-          <span v-if="item.max_possible_score" class="text-[10px] text-bx-muted font-normal mr-1">/ {{ item.max_possible_score }}</span>
+          <span class="text-bx-muted font-normal mx-1">من</span>
+          <span class="text-bx-muted">{{ item.max_possible_score || (item.transcript_data as any)?.max_possible_score || 700 }}</span>
         </div>
       </template>
 
-      <!-- Percentage Column -->
+      <!-- Percentage Column (With high-contrast visible track in light mode) -->
       <template #cell-percentage="{ item }">
-        <div class="flex items-center gap-2 min-w-[120px]">
-          <div class="flex-1 h-2 bg-bx-surface-2 rounded-full overflow-hidden border border-bx-border/50">
+        <div class="flex items-center gap-2.5 min-w-[140px]">
+          <div class="flex-1 h-2.5 bg-slate-300/80 dark:bg-white/[0.15] rounded-full overflow-hidden border border-slate-400/60 dark:border-white/[0.25] shadow-xs">
             <div
               class="h-full rounded-full transition-all duration-300"
               :class="getPercentageFillClass(item.percentage)"
               :style="{ width: `${Math.min(100, Math.max(0, item.percentage))}%` }"
             ></div>
           </div>
-          <span class="font-mono text-xs font-black text-bx-title w-12 text-left">{{ item.percentage }}%</span>
+          <span class="font-mono text-xs font-black text-bx-title w-12 text-left shrink-0">{{ item.percentage }}%</span>
         </div>
-      </template>
-
-      <!-- Final Status Column -->
-      <template #cell-final_status="{ item }">
-        <span
-          class="inline-block px-2.5 py-1 rounded-full text-[11px] font-bold"
-          :class="getStatusPillClass(item.final_status)"
-        >
-          {{ item.final_status_ar || getStatusText(item.final_status) }}
-        </span>
       </template>
 
       <!-- Actions Column -->
@@ -164,15 +150,22 @@ defineEmits<{
 
 const searchTerm = ref('');
 
+const formatTermShortName = (name?: string) => {
+  if (!name) return 'الفصل الأول';
+  if (name.includes('الأول')) return 'الفصل الأول';
+  if (name.includes('الثاني')) return 'الفصل الثاني';
+  if (name.includes('الثالث')) return 'الفصل الثالث';
+  return name;
+};
+
 const columns: TableColumn[] = [
   { key: 'rank', label: 'الترتيب', align: 'center', width: '70px' },
   { key: 'student_code', label: 'كود الطالب', align: 'start', width: '100px' },
   { key: 'student_name', label: 'اسم الطالب الرباعي', align: 'start' },
   { key: 'section_name', label: 'الشعبة', align: 'center', width: '90px' },
-  { key: 'transcript_type', label: 'نوع الصحيفة', align: 'center', width: '150px' },
-  { key: 'total_score', label: 'المجموع الكلي', align: 'center', width: '110px' },
-  { key: 'percentage', label: 'النسبة المئوية', align: 'start', width: '160px' },
-  { key: 'final_status', label: 'القرار النهائي', align: 'center', width: '130px' },
+  { key: 'transcript_type', label: 'نوع الصحيفة', align: 'center', width: '160px' },
+  { key: 'total_score', label: 'المجموع الكلي', align: 'center', width: '120px' },
+  { key: 'percentage', label: 'النسبة المئوية', align: 'start', width: '180px' },
   { key: 'actions', label: 'الإجراءات', align: 'center', width: '90px' },
 ];
 
@@ -202,37 +195,5 @@ const getPercentageFillClass = (percentage: number) => {
   if (percentage >= 65) return 'bg-blue-500';
   if (percentage >= 50) return 'bg-amber-500';
   return 'bg-rose-500';
-};
-
-const getStatusPillClass = (status: string) => {
-  switch (status) {
-    case 'passed':
-      return 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
-    case 'second_round':
-      return 'bg-amber-500/10 text-amber-600 border border-amber-500/20';
-    case 'retained':
-    case 'failed':
-      return 'bg-rose-500/10 text-rose-600 border border-rose-500/20';
-    case 'graduated':
-      return 'bg-purple-500/10 text-purple-600 border border-purple-500/20';
-    default:
-      return 'bg-bx-surface-2 text-bx-muted border border-bx-border';
-  }
-};
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'passed':
-      return 'ناجح ومرحل';
-    case 'second_round':
-      return 'دور ثان';
-    case 'retained':
-    case 'failed':
-      return 'باق للإعادة';
-    case 'graduated':
-      return 'متخرج';
-    default:
-      return status;
-  }
 };
 </script>
