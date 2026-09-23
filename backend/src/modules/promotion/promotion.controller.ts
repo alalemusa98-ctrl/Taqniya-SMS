@@ -41,14 +41,17 @@ import type { Request } from 'express';
     transform: true,
     exceptionFactory: (validationErrors = []) => {
       const errors: Record<string, string[]> = {};
+      const errorMessages: string[] = [];
       for (const err of validationErrors) {
         if (err.constraints) {
-          errors[err.property] = Object.values(err.constraints);
+          const list = Object.values(err.constraints);
+          errors[err.property] = list;
+          errorMessages.push(...list);
         }
       }
       return new UnprocessableEntityException({
         success: false,
-        message: 'فشل التحقق من صحة البيانات المدخلة.',
+        message: errorMessages.length > 0 ? errorMessages.join(' | ') : 'فشل التحقق من صحة البيانات المدخلة.',
         errors,
       });
     },

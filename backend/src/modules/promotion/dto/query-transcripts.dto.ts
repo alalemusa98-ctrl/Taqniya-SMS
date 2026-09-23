@@ -14,7 +14,7 @@ export class QueryTranscriptsDto {
   transcript_type?: TranscriptType;
 
   @IsOptional()
-  @Transform(({ value }) => (value === '' || value === 'all' ? undefined : Number(value)))
+  @Type(() => Number)
   @IsNumber()
   grade_level?: number;
 
@@ -24,14 +24,19 @@ export class QueryTranscriptsDto {
   class_name?: string;
 
   @IsOptional()
-  @Transform(({ value }) => (value === '' || value === 'all' ? undefined : Number(value)))
+  @Type(() => Number)
   @IsNumber()
   class_id?: number;
 
   @IsOptional()
-  @Transform(({ value }) => (value === '' || value === 'all' ? undefined : Number(value)))
+  @Type(() => Number)
   @IsNumber()
   class_section_id?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  section_id?: number;
 
   @IsOptional()
   @Transform(({ value }) => (value === '' || value === 'all' ? undefined : value))
@@ -39,9 +44,14 @@ export class QueryTranscriptsDto {
   section_name?: string;
 
   @IsOptional()
-  @Transform(({ value }) => (value === '' || value === 'all' ? undefined : Number(value)))
+  @Type(() => Number)
   @IsNumber()
   class_academic_term_id?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  academic_term_id?: number;
 
   @IsOptional()
   @Transform(({ value }) => (value === '' || value === 'all' ? undefined : value))
@@ -64,12 +74,12 @@ export class QueryTranscriptsDto {
   sort_order?: 'asc' | 'desc';
 
   @IsOptional()
-  @Transform(({ value }) => (value ? Number(value) : 1))
+  @Type(() => Number)
   @IsNumber()
   page?: number;
 
   @IsOptional()
-  @Transform(({ value }) => (value ? Number(value) : 15))
+  @Type(() => Number)
   @IsNumber()
   per_page?: number;
 }
