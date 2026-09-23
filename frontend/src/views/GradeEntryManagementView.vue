@@ -1,263 +1,304 @@
 <template>
   <TaqniyaErrorBoundary>
-    <div class="space-y-8 p-6 sm:p-8 max-w-[1600px] mx-auto min-h-screen text-bx-text font-sans" dir="rtl">
-      <!-- Page Header -->
-      <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#B4AED8] dark:border-white/[0.08]">
-        <div class="flex items-center gap-4">
-          <div class="w-14 h-14 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center border border-bx-primary/20 shadow-xs">
-            <GraduationCap class="w-8 h-8" />
-          </div>
+    <div class="space-y-4 font-sans text-bx-text" dir="rtl">
+      <!-- Unified Container Card (Matching Timetables Reference Design) -->
+      <div class="rounded-3xl border border-bx-border bg-bx-surface p-6 sm:p-7 shadow-sm">
+        
+        <!-- 1. Card Header: Title on Right, Controls & Actions on Left -->
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-bx-divider">
+          <!-- Title & Subtitle with Taqniya Brand Accent -->
           <div>
-            <h1 class="text-2xl sm:text-3xl font-black text-bx-title font-display tracking-tight">
-              شيت رصد الدرجات وإصدار الصحائف المدرسية
-            </h1>
-            <p class="text-xs sm:text-sm text-bx-muted mt-1 font-medium">
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <span class="w-2.5 h-7 rounded-full bg-bx-primary shrink-0"></span>
+              <h1 class="text-xl sm:text-2xl font-black font-display text-bx-title">
+                شيت رصد الدرجات وإصدار الصحائف المدرسية
+              </h1>
+              <span
+                v-if="selectedYearName"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-xs"
+              >
+                <Calendar class="w-3.5 h-3.5" />
+                <span>العام الدراسي: {{ selectedYearName }}</span>
+              </span>
+            </div>
+            <p class="text-xs text-bx-muted font-medium mt-1 ms-5">
               رصد وتوثيق درجات أعمال السنة والامتحانات لكل صف وشعبة، تدقيق النواقص، وتوليد الصحائف السنوية المجمعة
             </p>
           </div>
-        </div>
 
-        <!-- Top Actions -->
-        <div class="flex items-center gap-3 flex-wrap shrink-0">
-          <!-- Audit Vacancies / Missing Grades Button -->
-          <button
-            type="button"
-            class="px-4 py-2.5 rounded-2xl bg-bx-surface-2 hover:bg-bx-surface-3 text-bx-title border border-bx-border font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer"
-            @click="isAuditModalOpen = true"
-          >
-            <AlertTriangle class="w-4 h-4 text-amber-500" />
-            <span>تدقيق نواقص الرصد</span>
-            <span v-if="totalMissingStudents > 0" class="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-500 text-white font-mono">
-              {{ totalMissingStudents }}
-            </span>
-          </button>
-
-          <!-- Generate Annual Transcripts for selected section -->
-          <button
-            v-if="selectedSection"
-            type="button"
-            class="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
-            @click="isAnnualModalOpen = true"
-          >
-            <Sparkles class="w-4 h-4" />
-            <span>إصدار الصحيفة السنوية للشعبة</span>
-          </button>
-        </div>
-      </header>
-
-      <!-- KPI Overview Cards using TaqniyaKpiCard -->
-      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <TaqniyaKpiCard
-          :icon="Users"
-          title="إجمالي الطلاب المسكنين"
-          :value="totalEnrolledStudents"
-          subtext="عبر كافة الصفوف والشعب"
-          color="purple"
-        />
-
-        <TaqniyaKpiCard
-          :icon="CheckCircle2"
-          title="الدرجات المرصودة"
-          :value="totalGradedStudents"
-          :subtext="`متبقي ${totalMissingStudents} طالب`"
-          color="emerald"
-        />
-
-        <TaqniyaKpiCard
-          :icon="Layers"
-          title="نسبة إنجاز الرصد"
-          :value="`${overallCompletionRate}%`"
-          subtext="على مستوى المدرسة"
-          color="amber"
-        />
-
-        <TaqniyaKpiCard
-          :icon="Sparkles"
-          title="نسبة النجاح العامة"
-          :value="`${overallPassRate}%`"
-          subtext="للطلاب المرصودة نتائجهم"
-          color="indigo"
-        />
-      </section>
-
-      <!-- Filter Controls Panel -->
-      <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-6 shadow-xs space-y-4">
-        <div class="flex items-center gap-2 font-bold text-sm text-bx-title">
-          <Filter class="w-4 h-4 text-bx-primary" />
-          <span>محددات وسياق رصد الدرجات الأكاديمي</span>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <!-- 1. Academic Year -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-bx-muted">العام الدراسي:</label>
-            <TaqniyaSelect
-              v-model="selectedYearName"
-              :options="yearFilterOptions"
-              placeholder="اختر العام الدراسي"
-              :full-width="true"
-              @update:model-value="fetchAuditProgress"
-            />
-          </div>
-
-          <!-- 2. Class Filter (Optional) -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-bx-muted">الصف الدراسي:</label>
-            <TaqniyaSelect
-              v-model="selectedClassIdModel"
-              :options="classFilterOptions"
-              placeholder="كافة الصفوف الدراسية"
-              :full-width="true"
-              @update:model-value="onClassFilterChange"
-            />
-          </div>
-
-          <!-- 3. Term Filter -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-bx-muted">الفصل الدراسي / الفترة:</label>
-            <TaqniyaSelect
-              v-model="selectedTermModel"
-              :options="termFilterOptions"
-              placeholder="اختر الفصل الدراسي للرصد"
-              :full-width="true"
-              @update:model-value="fetchAuditProgress"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Class & Sections Grid Matrix -->
-      <section class="space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-bold text-bx-title font-display flex items-center gap-2">
-            <Layers class="w-5 h-5 text-bx-primary" />
-            <span>مصفوفة الصفوف والشعب وحالة الرصد</span>
-          </h2>
-          <span class="text-xs text-bx-muted">اضغط على أي شعبة لعرض كشف طلابها ورصد الدرجات</span>
-        </div>
-
-        <div v-if="isLoadingProgress" class="flex flex-col items-center justify-center p-12 text-bx-muted gap-3">
-          <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
-          <span class="text-sm font-semibold">جاري تحميل مصفوفة الشعب...</span>
-        </div>
-        <GradeEntryClassGrid
-          v-else
-          :sections="filteredSections"
-          :selected-section-id="selectedSection?.class_section_id"
-          @select-section="handleSelectSection"
-        />
-      </section>
-
-      <!-- Section Students Roster Table -->
-      <section v-if="selectedSection" class="space-y-4 pt-4 border-t border-[#B4AED8] dark:border-white/[0.08]">
-        <!-- Roster Header Banner -->
-        <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-xs flex items-center justify-between flex-wrap gap-4">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-bold border border-bx-primary/20 shadow-xs">
-              <Users class="w-5 h-5" />
-            </div>
-            <div>
-              <h3 class="text-base font-black text-bx-title font-display">
-                كشف طلاب: {{ selectedSection.class_name }} ({{ selectedSection.section_name }})
-              </h3>
-              <p class="text-xs text-bx-muted mt-0.5 font-medium">
-                إجمالي المسكنين: {{ rosterStudents.length }} طالب • المرصودون: {{ gradedStudentsCount }} طالب
-              </p>
-            </div>
-          </div>
-
-          <!-- Section Search Filter -->
-          <div class="relative min-w-[240px]">
-            <input
-              v-model="rosterSearch"
-              type="text"
-              placeholder="بحث باسم الطالب أو رمزه..."
-              class="w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl px-4 py-2 pr-9 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all"
-            />
-            <Search class="w-4 h-4 text-bx-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-        </div>
-
-        <!-- Roster Table using TaqniyaTable -->
-        <TaqniyaTable
-          :columns="rosterColumns"
-          :items="filteredRosterStudents"
-          :is-loading="isLoadingRoster"
-          row-key="student_id"
-          empty-title="لا يوجد طلاب مسكنين في هذه الشعبة"
-          empty-subtitle="يمكنك تسكين الطلاب عبر شاشة تسكين وتسجيل الطلاب."
-        >
-          <!-- Student Code Column -->
-          <template #cell-student_code="{ value }">
-            <span class="font-mono text-xs font-bold text-bx-primary">{{ value || '—' }}</span>
-          </template>
-
-          <!-- Student Name Column -->
-          <template #cell-student_name="{ item }">
-            <div class="flex items-center gap-2.5">
-              <div class="w-7 h-7 rounded-full bg-bx-primary/10 text-bx-primary flex items-center justify-center text-xs font-bold shrink-0">
-                {{ (item.student_name || 'ط').charAt(0) }}
-              </div>
-              <span class="font-bold text-bx-title text-xs">{{ item.student_name }}</span>
-            </div>
-          </template>
-
-          <!-- Seating Number Column -->
-          <template #cell-seating_number="{ value }">
-            <span class="font-mono text-xs text-bx-muted">{{ value || '—' }}</span>
-          </template>
-
-          <!-- Grading Status Column -->
-          <template #cell-is_graded="{ value }">
-            <span
-              class="px-2.5 py-0.5 rounded-full text-[11px] font-bold"
-              :class="value ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'"
+          <!-- Controls: Audit Toggle + Report Modal + Annual Button + Search -->
+          <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            <!-- Generate Annual Transcripts for selected section -->
+            <button
+              v-if="selectedSection"
+              type="button"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+              @click="isAnnualModalOpen = true"
             >
-              {{ value ? 'تم الرصد ✅' : 'قيد الرصد ⏳' }}
-            </span>
-          </template>
+              <Sparkles class="w-3.5 h-3.5" />
+              <span>إصدار الصحيفة السنوية</span>
+            </button>
 
-          <!-- Total Score Column -->
-          <template #cell-total_score="{ item }">
-            <span v-if="item.transcript" class="font-mono text-xs font-bold text-bx-title">
-              {{ item.transcript.total_score }}
-            </span>
-            <span v-else class="text-bx-muted text-xs">—</span>
-          </template>
-
-          <!-- Percentage Column -->
-          <template #cell-percentage="{ item }">
-            <span v-if="item.transcript" class="font-mono text-xs font-black text-bx-primary">
-              {{ item.transcript.percentage }}%
-            </span>
-            <span v-else class="text-bx-muted text-xs">—</span>
-          </template>
-
-          <!-- Final Status Column -->
-          <template #cell-final_status="{ item }">
-            <span
-              v-if="item.transcript"
-              class="px-2.5 py-0.5 rounded-full text-[11px] font-bold"
-              :class="getStatusBadgeClass(item.transcript.final_status)"
-            >
-              {{ item.transcript.final_status_ar || item.transcript.final_status }}
-            </span>
-            <span v-else class="text-bx-muted text-xs">—</span>
-          </template>
-
-          <!-- Actions Column -->
-          <template #cell-actions="{ item }">
+            <!-- Audit Toggle Button (Matching Timetables Audit Mode) -->
             <button
               type="button"
-              class="px-3 py-1.5 text-xs font-bold rounded-lg bg-bx-primary text-white hover:bg-bx-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-              @click="handleOpenGradeEntry(item)"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border shadow-sm"
+              :class="
+                isAuditMode
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 ring-2 ring-amber-400/20'
+                  : 'border-bx-border text-bx-title hover:bg-purple-500/[0.04]'
+              "
+              @click="isAuditMode = !isAuditMode"
             >
-              <Pen class="w-3.5 h-3.5" />
-              <span>{{ item.is_graded ? 'تعديل الدرجات' : 'رصد الدرجات' }}</span>
+              <BarChart3 class="w-3.5 h-3.5" />
+              <span>{{ isAuditMode ? 'إلغاء وضع التدقيق' : '📊 تدقيق الشواغر والنواقص' }}</span>
+              <span v-if="totalMissingStudents > 0" class="px-1.5 py-0.2 text-[10px] rounded-full bg-rose-500 text-white font-mono">
+                {{ totalMissingStudents }}
+              </span>
             </button>
-          </template>
-        </TaqniyaTable>
-      </section>
+
+            <!-- Detailed Audit Modal Button -->
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-bx-border text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-purple-500/[0.04] transition-all cursor-pointer"
+              @click="isAuditModalOpen = true"
+              title="عرض تقرير حصر النواقص والشعب غير المكتملة"
+            >
+              <AlertTriangle class="w-3.5 h-3.5 text-amber-500" />
+              <span>تقرير النواقص</span>
+            </button>
+
+            <!-- Search Input (Pill Shaped) -->
+            <div class="relative flex-1 sm:w-60">
+              <Search class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-bx-muted pointer-events-none" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="بحث في الصفوف والشعب..."
+                class="w-full pr-10 pl-5 py-2 rounded-full border border-bx-border bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-start"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. KPI Metrics Cards (Exact Taqniya Standard) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 py-6">
+          <TaqniyaKpiCard
+            title="إجمالي الطلاب المسكنين"
+            :value="`${totalEnrolledStudents} طالب`"
+            :icon="Users"
+            variant="blue"
+            badge-text="كافة الشعب"
+            :progress="100"
+          />
+
+          <TaqniyaKpiCard
+            title="الدرجات المرصودة"
+            :value="`${totalGradedStudents} طالب`"
+            :icon="CheckCircle2"
+            variant="primary"
+            badge-text="مرصود رسمي"
+            :progress="overallCompletionRate"
+          />
+
+          <TaqniyaKpiCard
+            title="نواقص رصد الدرجات"
+            :value="`${totalMissingStudents} غير مرصود`"
+            :icon="Clock"
+            variant="amber"
+            :badge-text="totalMissingStudents > 0 ? 'نواقص ⚠️' : 'مكتمل ✅'"
+            :progress="Math.max(0, 100 - (totalMissingStudents > 0 ? (totalMissingStudents / (totalEnrolledStudents || 1)) * 100 : 0))"
+          />
+
+          <TaqniyaKpiCard
+            title="نسبة النجاح العامة"
+            :value="`${overallPassRate}%`"
+            :icon="TrendingUp"
+            variant="emerald"
+            badge-text="للمرصودين"
+            :progress="overallPassRate"
+          />
+        </div>
+
+        <!-- 3. Filters Bar: Year, Class & Term Selectors -->
+        <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Academic Year Select -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">العام الدراسي</label>
+              <TaqniyaSelect
+                v-model="selectedYearName"
+                :options="yearFilterOptions"
+                placeholder="اختر العام الدراسي..."
+                full-width
+                @update:model-value="fetchAuditProgress"
+              />
+            </div>
+
+            <!-- Class Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">تصفية حسب الصف الدراسي</label>
+              <TaqniyaSelect
+                v-model="selectedClassIdModel"
+                :options="classFilterOptions"
+                placeholder="كافة الصفوف..."
+                full-width
+                @update:model-value="onClassFilterChange"
+              />
+            </div>
+
+            <!-- Term Filter -->
+            <div>
+              <label class="block text-[11px] font-bold text-bx-muted mb-1">الفصل الدراسي / الفترة</label>
+              <TaqniyaSelect
+                v-model="selectedTermModel"
+                :options="termFilterOptions"
+                placeholder="اختر الفصل الدراسي..."
+                full-width
+                @update:model-value="fetchAuditProgress"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Class & Sections Grid Matrix (Matching Timetables 3-Column Card Layout) -->
+        <div class="mb-6 space-y-3">
+          <div v-if="isLoadingProgress" class="flex flex-col items-center justify-center p-12 text-bx-muted gap-3">
+            <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
+            <span class="text-xs font-semibold">جاري تحميل مصفوفة الصفوف والشعب وحالة الرصد...</span>
+          </div>
+
+          <GradeEntryClassGrid
+            v-else
+            :sections="filteredSections"
+            :selected-section-id="selectedSection?.class_section_id"
+            :is-audit-mode="isAuditMode"
+            @select-section="handleSelectSection"
+          />
+        </div>
+
+        <!-- 5. Section Students Roster Table -->
+        <div v-if="selectedSection" class="space-y-4 pt-6 border-t border-bx-divider">
+          <!-- Roster Header Banner -->
+          <div class="bg-[var(--bx-surface-solid)] border border-bx-border rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center font-bold border border-bx-primary/20 shadow-xs">
+                <Users class="w-5 h-5" />
+              </div>
+              <div>
+                <h3 class="text-sm sm:text-base font-black text-bx-title font-display">
+                  كشف درجات طلاب: {{ selectedSection.class_name }} ({{ selectedSection.section_name }})
+                </h3>
+                <p class="text-[11px] text-bx-muted mt-0.5 font-medium">
+                  إجمالي المسكنين: {{ rosterStudents.length }} طالب • المرصودون: {{ gradedStudentsCount }} طالب • متبقي: {{ selectedSection.missing_count }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Section Search Filter (Pill Shaped) -->
+            <div class="relative min-w-[240px]">
+              <Search class="w-4 h-4 text-bx-muted absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                v-model="rosterSearch"
+                type="text"
+                placeholder="بحث باسم الطالب أو رمزه..."
+                class="w-full bg-transparent border border-bx-border rounded-full px-4 py-1.5 pr-9 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all"
+              />
+            </div>
+          </div>
+
+          <!-- Roster Table using TaqniyaTable -->
+          <TaqniyaTable
+            :columns="rosterColumns"
+            :items="filteredRosterStudents"
+            :is-loading="isLoadingRoster"
+            row-key="student_id"
+            empty-title="لا يوجد طلاب مسكنين في هذه الشعبة"
+            empty-subtitle="يمكنك تسكين الطلاب عبر شاشة تسكين وتسجيل الطلاب."
+          >
+            <!-- Student Code Column -->
+            <template #cell-student_code="{ value }">
+              <span class="font-mono text-xs font-bold text-bx-primary">{{ value || '—' }}</span>
+            </template>
+
+            <!-- Student Name Column -->
+            <template #cell-student_name="{ item }">
+              <span class="font-bold text-bx-title text-xs">{{ item.student_name }}</span>
+            </template>
+
+            <!-- Seating Number Column -->
+            <template #cell-seating_number="{ value }">
+              <span class="font-mono text-xs text-bx-muted">{{ value || '—' }}</span>
+            </template>
+
+            <!-- Grading Status Column -->
+            <template #cell-is_graded="{ value }">
+              <span
+                v-if="value"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-xs"
+              >
+                <CheckCircle2 class="w-3.5 h-3.5" />
+                <span>تم الرصد</span>
+              </span>
+              <span
+                v-else
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20 shadow-xs"
+              >
+                <Clock class="w-3.5 h-3.5" />
+                <span>قيد الرصد</span>
+              </span>
+            </template>
+
+            <!-- Total Score Column -->
+            <template #cell-total_score="{ item }">
+              <span v-if="item.transcript" class="font-mono text-xs font-bold text-bx-title">
+                {{ item.transcript.total_score }}
+              </span>
+              <span v-else class="text-bx-muted text-xs">—</span>
+            </template>
+
+            <!-- Percentage Column -->
+            <template #cell-percentage="{ item }">
+              <span v-if="item.transcript" class="font-mono text-xs font-black text-bx-primary">
+                {{ item.transcript.percentage }}%
+              </span>
+              <span v-else class="text-bx-muted text-xs">—</span>
+            </template>
+
+            <!-- Final Status Column -->
+            <template #cell-final_status="{ item }">
+              <span
+                v-if="item.transcript"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border shadow-xs"
+                :class="getStatusBadgeClass(item.transcript.final_status)"
+              >
+                <Award v-if="item.transcript.final_status === 'passed' || item.transcript.final_status === 'graduated'" class="w-3.5 h-3.5" />
+                <AlertTriangle v-else-if="item.transcript.final_status === 'second_round'" class="w-3.5 h-3.5" />
+                <XCircle v-else class="w-3.5 h-3.5" />
+                <span>{{ item.transcript.final_status_ar || item.transcript.final_status }}</span>
+              </span>
+              <span v-else class="text-bx-muted text-xs">—</span>
+            </template>
+
+            <!-- Actions Column -->
+            <template #cell-actions="{ item }">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer shadow-xs"
+                :class="
+                  item.is_graded
+                    ? 'bg-bx-surface-2 hover:bg-bx-primary hover:text-white text-bx-title border border-bx-border hover:border-bx-primary'
+                    : 'bg-bx-primary text-white hover:bg-bx-primary-hover shadow-xs'
+                "
+                @click="handleOpenGradeEntry(item)"
+              >
+                <PenLine class="w-3.5 h-3.5" />
+                <span>{{ item.is_graded ? 'تعديل الدرجات' : 'رصد الدرجات' }}</span>
+              </button>
+            </template>
+          </TaqniyaTable>
+        </div>
+      </div>
 
       <!-- Drawers & Modals -->
       <!-- 1. Student Grade Entry Drawer -->
@@ -297,16 +338,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import {
-  GraduationCap,
+  Calendar,
+  Clock,
   Sparkles,
-  Layers,
+  BarChart3,
   CheckCircle2,
   Users,
-  Filter,
+  TrendingUp,
   Loader2,
   Search,
-  Pen,
+  PenLine,
   AlertTriangle,
+  Award,
+  XCircle,
 } from 'lucide-vue-next';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
@@ -346,6 +390,8 @@ const selectedYearName = ref<string>('');
 const selectedClassIdModel = ref<string | number>('all');
 const selectedTermModel = ref<string | number>('all');
 const selectedSection = ref<SectionAuditProgressItem | null>(null);
+const isAuditMode = ref(false);
+const searchQuery = ref('');
 
 // Roster State
 const rosterStudents = ref<StudentRosterItem[]>([]);
@@ -379,9 +425,9 @@ const rosterColumns: TableColumn[] = [
 // Dropdown Options
 const yearFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   ...academicYearsList.value.map((y) => ({
-    label: `${y.name} ${y.is_active ? '(النشط)' : ''}`,
+    label: `${y.name} ${Number(y.is_active) === 1 ? '(النشط)' : ''}`,
     value: y.name,
-    subtext: y.is_active ? 'العام الأكاديمي النشط حالياً' : undefined,
+    subtext: Number(y.is_active) === 1 ? 'العام الأكاديمي النشط حالياً' : undefined,
   })),
 ]);
 
@@ -418,12 +464,17 @@ const currentTermName = computed(() => {
   return term?.name || 'الفصل الدراسي';
 });
 
-// Filtered Sections by selected class
+// Filtered Sections by selected class & search
 const filteredSections = computed(() => {
-  if (selectedClassIdModel.value === 'all' || !selectedClassIdModel.value) {
-    return allSections.value;
+  let list = allSections.value;
+  if (selectedClassIdModel.value !== 'all' && selectedClassIdModel.value) {
+    list = list.filter((s) => s.class_id === Number(selectedClassIdModel.value));
   }
-  return allSections.value.filter((s) => s.class_id === Number(selectedClassIdModel.value));
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase();
+    list = list.filter((s) => s.class_name.toLowerCase().includes(q) || s.section_name.toLowerCase().includes(q));
+  }
+  return list;
 });
 
 // Filtered Roster by search
@@ -545,7 +596,6 @@ const fetchAuditProgress = async () => {
 };
 
 const onClassFilterChange = () => {
-  // If current selected section doesn't match class, clear it
   if (
     selectedClassIdModel.value !== 'all' &&
     selectedSection.value &&
@@ -589,17 +639,17 @@ const handleSaveStudentTranscript = async (payload: FreezeTranscriptDto) => {
   try {
     const res = await gradeEntryApi.freezeTranscript(payload);
     if (res.success) {
-      toast.success(res.message || 'تم حفظ واعتماد كشف درجات الطالب بنجاح.');
+      toast.success('تم رصد وتجميد درجات الطالب بنجاح.');
       isStudentDrawerOpen.value = false;
+
+      // Refresh data
       if (selectedSection.value) {
-        await Promise.all([
-          fetchSectionRoster(selectedSection.value.class_section_id),
-          fetchAuditProgress(),
-        ]);
+        await fetchSectionRoster(selectedSection.value.class_section_id);
       }
+      await fetchAuditProgress();
     }
   } catch (err: any) {
-    toast.error(err.response?.data?.message || 'فشل تجميد صحيفة الدرجات.');
+    toast.error(err.response?.data?.message || 'فشل حفظ درجات الطالب.');
   } finally {
     isFreezing.value = false;
   }
@@ -614,12 +664,15 @@ const handleConfirmAnnualGeneration = async () => {
       academic_year_name: selectedYearName.value,
     });
     if (res.success) {
-      toast.success(res.message || 'تم توليد الصحائف السنوية المجمعة بنجاح.');
+      toast.success(res.message || 'تم إصدار الصحيفة السنوية المجمعة بنجاح.');
       isAnnualModalOpen.value = false;
       await fetchAuditProgress();
+      if (selectedSection.value) {
+        await fetchSectionRoster(selectedSection.value.class_section_id);
+      }
     }
   } catch (err: any) {
-    toast.error(err.response?.data?.message || 'فشل توليد الصحائف السنوية.');
+    toast.error(err.response?.data?.message || 'فشل إصدار الصحيفة السنوية.');
   } finally {
     isGeneratingAnnual.value = false;
   }
@@ -632,7 +685,6 @@ const getStatusBadgeClass = (status: string) => {
       return 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
     case 'second_round':
       return 'bg-amber-500/10 text-amber-600 border border-amber-500/20';
-    case 'retained':
     case 'failed':
       return 'bg-rose-500/10 text-rose-600 border border-rose-500/20';
     default:
