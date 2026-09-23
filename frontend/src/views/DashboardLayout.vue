@@ -19,6 +19,7 @@ import {
   BookOpen,
   CalendarCheck,
   CalendarDays,
+  Sparkles,
   Menu,
   X,
 } from 'lucide-vue-next';
@@ -132,6 +133,12 @@ const assessmentsGroup: NavDropdownItem[] = [
     to: '/official-exams',
     description: 'جدولة ونشر مواعيد الامتحانات النصفية والنهائية ومرفقاتها',
     icon: CalendarDays,
+  },
+  {
+    label: 'الترحيل الأكاديمي والنتائج',
+    to: '/promotions',
+    description: 'كشوفات الدرجات، لوحة الشرف، تجميد السجلات، والترحيل السنوي',
+    icon: Sparkles,
   },
 ];
 

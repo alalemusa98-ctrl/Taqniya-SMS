@@ -17,6 +17,7 @@ import { TimetablesModule } from './modules/timetables/timetables.module.js';
 import { AssignmentsModule } from './modules/assignments/assignments.module.js';
 import { QuizzesModule } from './modules/quizzes/quizzes.module.js';
 import { OfficialExamsModule } from './modules/official-exams/official-exams.module.js';
+import { PromotionModule } from './modules/promotion/promotion.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -49,6 +50,7 @@ import { AppService } from './app.service.js';
     AssignmentsModule,
     QuizzesModule,
     OfficialExamsModule,
+    PromotionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
