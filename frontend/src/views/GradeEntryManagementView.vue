@@ -282,19 +282,27 @@
 
             <!-- Actions Column -->
             <template #cell-actions="{ item }">
-              <button
-                type="button"
-                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer shadow-xs"
-                :class="
-                  item.is_graded
-                    ? 'bg-bx-surface-2 hover:bg-bx-primary hover:text-white text-bx-title border border-bx-border hover:border-bx-primary'
-                    : 'bg-bx-primary text-white hover:bg-bx-primary-hover shadow-xs'
-                "
-                @click="handleOpenGradeEntry(item)"
-              >
-                <PenLine class="w-3.5 h-3.5" />
-                <span>{{ item.is_graded ? 'تعديل الدرجات' : 'رصد الدرجات' }}</span>
-              </button>
+              <div class="flex items-center justify-center gap-1.5">
+                <!-- View Details / Transcript Icon Button -->
+                <button
+                  type="button"
+                  @click="handleViewTranscript(item)"
+                  class="w-7 h-7 rounded-full border border-purple-300 bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white dark:border-purple-400 dark:bg-purple-950/80 dark:text-purple-300 dark:hover:bg-purple-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                  :title="item.is_graded ? 'عرض كشف الدرجات والصحيفة المعتمدة' : 'معاينة بيانات الطالب'"
+                >
+                  <Eye class="w-3.5 h-3.5" />
+                </button>
+
+                <!-- Grade Entry / Edit Icon Button -->
+                <button
+                  type="button"
+                  @click="handleOpenGradeEntry(item)"
+                  class="w-7 h-7 rounded-full border border-sky-300 bg-sky-50 text-sky-600 hover:bg-sky-600 hover:text-white dark:border-sky-400 dark:bg-sky-950/80 dark:text-sky-300 dark:hover:bg-sky-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                  :title="item.is_graded ? 'تعديل درجات الطالب' : 'رصد درجات الطالب'"
+                >
+                  <Edit2 class="w-3.5 h-3.5" />
+                </button>
+              </div>
             </template>
           </TaqniyaTable>
         </div>
@@ -315,7 +323,14 @@
         @save="handleSaveStudentTranscript"
       />
 
-      <!-- 2. Grade Entry Audit Modal -->
+      <!-- 2. Official Transcript Detail & Print Drawer -->
+      <TranscriptDetailDrawer
+        :is-open="isDetailDrawerOpen"
+        :transcript="selectedTranscriptForDetail"
+        @close="isDetailDrawerOpen = false"
+      />
+
+      <!-- 3. Grade Entry Audit Modal -->
       <GradeEntryAuditModal
         :is-open="isAuditModalOpen"
         :sections="allSections"
@@ -323,7 +338,7 @@
         @select-section="handleSelectSection"
       />
 
-      <!-- 3. Annual Transcripts Confirm Modal -->
+      <!-- 4. Annual Transcripts Confirm Modal -->
       <AnnualTranscriptsConfirmModal
         :is-open="isAnnualModalOpen"
         :section-info="selectedSection"
@@ -347,7 +362,8 @@ import {
   TrendingUp,
   Loader2,
   Search,
-  PenLine,
+  Eye,
+  Edit2,
   AlertTriangle,
   Award,
   XCircle,
@@ -358,6 +374,7 @@ import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/Taqniy
 import TaqniyaTable, { type TableColumn } from '../components/ui/TaqniyaTable.vue';
 import GradeEntryClassGrid from '../components/grade-entry/GradeEntryClassGrid.vue';
 import GradeEntryStudentDrawer from '../components/grade-entry/GradeEntryStudentDrawer.vue';
+import TranscriptDetailDrawer from '../components/promotion/TranscriptDetailDrawer.vue';
 import GradeEntryAuditModal from '../components/grade-entry/GradeEntryAuditModal.vue';
 import AnnualTranscriptsConfirmModal from '../components/grade-entry/AnnualTranscriptsConfirmModal.vue';
 
@@ -401,6 +418,8 @@ const rosterSearch = ref('');
 // Modals / Drawers State
 const isStudentDrawerOpen = ref(false);
 const selectedStudent = ref<StudentRosterItem | null>(null);
+const isDetailDrawerOpen = ref(false);
+const selectedTranscriptForDetail = ref<any>(null);
 const isAuditModalOpen = ref(false);
 const isAnnualModalOpen = ref(false);
 
@@ -632,6 +651,31 @@ const fetchSectionRoster = async (classSectionId: number) => {
 const handleOpenGradeEntry = (student: StudentRosterItem) => {
   selectedStudent.value = student;
   isStudentDrawerOpen.value = true;
+};
+
+const handleViewTranscript = (student: StudentRosterItem) => {
+  if (student.transcript) {
+    selectedTranscriptForDetail.value = {
+      id: student.transcript.id,
+      student_id: student.student_id,
+      student_name: student.student_name,
+      student_code: student.student_code,
+      transcript_type: selectedTermId.value ? 'term' : 'annual',
+      transcript_type_ar: selectedTermId.value ? currentTermName.value : 'نهاية العام الدراسي',
+      academic_year_name: selectedYearName.value,
+      class_name: selectedSection.value?.class_name || '',
+      section_name: selectedSection.value?.section_name || '',
+      grade_level: selectedSection.value?.grade_level || 0,
+      total_score: student.transcript.total_score,
+      percentage: student.transcript.percentage,
+      final_status: student.transcript.final_status,
+      transcript_data: student.transcript.transcript_data,
+      created_at: student.transcript.created_at,
+    };
+    isDetailDrawerOpen.value = true;
+  } else {
+    handleOpenGradeEntry(student);
+  }
 };
 
 const handleSaveStudentTranscript = async (payload: FreezeTranscriptDto) => {

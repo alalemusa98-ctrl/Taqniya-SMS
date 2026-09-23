@@ -8,15 +8,32 @@
     @close="emit('close')"
   >
     <div v-if="student" class="space-y-6" dir="rtl">
+      <!-- Validation Error Alert Banner -->
+      <div
+        v-if="validationErrors.length > 0"
+        class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2.5 shadow-xs animate-pulse"
+      >
+        <AlertTriangle class="w-4 h-4 shrink-0 text-rose-500" />
+        <div class="flex-1">
+          <span class="font-bold block">تنبيه: توجد درجات غير صالحة تتجاوز النهاية العظمى!</span>
+          <span class="text-[11px] opacity-90">يرجى تصحيح الدرجات المظللة باللون الأحمر قبل اعتماد الصحيفة.</span>
+        </div>
+      </div>
+
       <!-- Live Calculation Summary Banner -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[var(--bx-surface-solid)] border border-bx-border rounded-2xl p-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[var(--bx-surface-solid)] border border-bx-border rounded-2xl p-4 shadow-xs">
         <div>
           <span class="text-[11px] font-bold text-bx-muted block">المجموع الكلي:</span>
           <span class="text-base font-black text-bx-title font-mono">{{ totalScore }} / {{ totalMaxScore }}</span>
         </div>
         <div>
           <span class="text-[11px] font-bold text-bx-muted block">النسبة المئوية:</span>
-          <span class="text-base font-black text-bx-primary font-mono">{{ percentage }}%</span>
+          <span
+            class="text-base font-black font-mono"
+            :class="percentage > 100 ? 'text-rose-600' : 'text-bx-primary'"
+          >
+            {{ percentage }}%
+          </span>
         </div>
         <div>
           <span class="text-[11px] font-bold text-bx-muted block">مواد الرسوب:</span>
@@ -26,7 +43,7 @@
         </div>
         <div>
           <span class="text-[11px] font-bold text-bx-muted block">القرار الأكاديمي:</span>
-          <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold mt-0.5" :class="decisionBadgeClass">
+          <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold mt-0.5" :class="decisionBadgeClass">
             {{ decisionLabel }}
           </span>
         </div>
@@ -51,7 +68,12 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-[#B4AED8]/30 dark:divide-white/[0.04]">
-              <tr v-for="subj in gradeRows" :key="subj.subject_id" class="hover:bg-bx-primary/5 transition-colors">
+              <tr
+                v-for="subj in gradeRows"
+                :key="subj.subject_id"
+                class="hover:bg-bx-primary/5 transition-colors"
+                :class="isRowInvalid(subj) ? 'bg-rose-500/[0.03]' : ''"
+              >
                 <td class="py-2.5 px-3 font-bold text-bx-title">
                   {{ subj.subject_name }}
                   <span class="block text-[10px] text-bx-muted font-normal">درجة النجاح: {{ subj.passing_score }}</span>
@@ -59,36 +81,56 @@
 
                 <!-- Coursework input -->
                 <td class="py-2 px-3 text-center">
-                  <div class="inline-flex items-center gap-1">
-                    <input
-                      v-model.number="subj.coursework_score"
-                      type="number"
-                      min="0"
-                      :max="subj.max_coursework_score"
-                      step="0.5"
-                      class="w-16 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-lg p-1.5 text-center font-mono font-bold text-xs outline-none focus:border-bx-primary"
-                    />
-                    <span class="text-[10px] text-bx-muted">/ {{ subj.max_coursework_score }}</span>
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="inline-flex items-center gap-1">
+                      <input
+                        v-model.number="subj.coursework_score"
+                        type="number"
+                        min="0"
+                        :max="subj.max_coursework_score"
+                        step="0.5"
+                        class="w-16 bg-[var(--bx-surface-solid)] border rounded-lg p-1.5 text-center font-mono font-bold text-xs outline-none transition-all"
+                        :class="
+                          isCourseworkInvalid(subj)
+                            ? 'border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/30'
+                            : 'border-[#B4AED8] dark:border-white/[0.12] focus:border-bx-primary'
+                        "
+                      />
+                      <span class="text-[10px] text-bx-muted">/ {{ subj.max_coursework_score }}</span>
+                    </div>
+                    <span v-if="isCourseworkInvalid(subj)" class="text-[9px] text-rose-600 font-bold">
+                      تجاوزت {{ subj.max_coursework_score }}!
+                    </span>
                   </div>
                 </td>
 
                 <!-- Exam input -->
                 <td class="py-2 px-3 text-center">
-                  <div class="inline-flex items-center gap-1">
-                    <input
-                      v-model.number="subj.exam_score"
-                      type="number"
-                      min="0"
-                      :max="subj.max_exam_score"
-                      step="0.5"
-                      class="w-16 bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-lg p-1.5 text-center font-mono font-bold text-xs outline-none focus:border-bx-primary"
-                    />
-                    <span class="text-[10px] text-bx-muted">/ {{ subj.max_exam_score }}</span>
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="inline-flex items-center gap-1">
+                      <input
+                        v-model.number="subj.exam_score"
+                        type="number"
+                        min="0"
+                        :max="subj.max_exam_score"
+                        step="0.5"
+                        class="w-16 bg-[var(--bx-surface-solid)] border rounded-lg p-1.5 text-center font-mono font-bold text-xs outline-none transition-all"
+                        :class="
+                          isExamInvalid(subj)
+                            ? 'border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/30'
+                            : 'border-[#B4AED8] dark:border-white/[0.12] focus:border-bx-primary'
+                        "
+                      />
+                      <span class="text-[10px] text-bx-muted">/ {{ subj.max_exam_score }}</span>
+                    </div>
+                    <span v-if="isExamInvalid(subj)" class="text-[9px] text-rose-600 font-bold">
+                      تجاوزت {{ subj.max_exam_score }}!
+                    </span>
                   </div>
                 </td>
 
                 <!-- Calculated Total for Subject -->
-                <td class="py-2 px-3 text-center font-mono font-bold text-xs text-bx-title">
+                <td class="py-2 px-3 text-center font-mono font-bold text-xs" :class="isRowInvalid(subj) ? 'text-rose-600 font-black' : 'text-bx-title'">
                   {{ (Number(subj.coursework_score) || 0) + (Number(subj.exam_score) || 0) }}
                 </td>
 
@@ -100,6 +142,13 @@
                 <!-- Subject Status -->
                 <td class="py-2 px-3 text-center">
                   <span
+                    v-if="isRowInvalid(subj)"
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-700 dark:text-rose-300"
+                  >
+                    غير صالح ❌
+                  </span>
+                  <span
+                    v-else
                     class="px-2 py-0.5 rounded-full text-[10px] font-bold"
                     :class="isSubjectPassed(subj) ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'"
                   >
@@ -125,8 +174,8 @@
 
         <button
           type="button"
-          class="px-6 py-2.5 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-          :disabled="isSubmitting"
+          class="px-6 py-2.5 rounded-full bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          :disabled="isSubmitting || validationErrors.length > 0"
           @click="handleSubmit"
         >
           <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
@@ -140,7 +189,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { GraduationCap, BookOpen, Save, Loader2 } from 'lucide-vue-next';
+import { GraduationCap, BookOpen, Save, Loader2, AlertTriangle } from 'lucide-vue-next';
 import TaqniyaDrawer from '../ui/TaqniyaDrawer.vue';
 import type { StudentRosterItem, ClassSubjectRosterItem } from '../../api/grade-entry.api';
 import type { FreezeTranscriptDto } from '../../api/promotion.api';
@@ -215,6 +264,24 @@ watch(
   },
   { immediate: true },
 );
+
+const isCourseworkInvalid = (subj: GradeRow): boolean => {
+  const score = Number(subj.coursework_score);
+  return isNaN(score) || score < 0 || score > subj.max_coursework_score;
+};
+
+const isExamInvalid = (subj: GradeRow): boolean => {
+  const score = Number(subj.exam_score);
+  return isNaN(score) || score < 0 || score > subj.max_exam_score;
+};
+
+const isRowInvalid = (subj: GradeRow): boolean => {
+  return isCourseworkInvalid(subj) || isExamInvalid(subj);
+};
+
+const validationErrors = computed(() => {
+  return gradeRows.value.filter((r) => isRowInvalid(r));
+});
 
 const isSubjectPassed = (subj: GradeRow) => {
   const total = (Number(subj.coursework_score) || 0) + (Number(subj.exam_score) || 0);
@@ -310,12 +377,14 @@ const handleSubmit = () => {
   };
 
   const payload: FreezeTranscriptDto = {
-    student_id: props.student.student_id,
-    academic_term_id: undefined,
+    student_id: Number(props.student.student_id),
+    class_academic_term_id: props.classAcademicTermId ? Number(props.classAcademicTermId) : undefined,
     academic_year_name: props.academicYearName,
-    transcript_type: 'term',
+    class_name: props.sectionInfo?.class_name || '',
+    section_name: props.sectionInfo?.section_name || '',
+    grade_level: Number(props.sectionInfo?.grade_level) || 1,
+    transcript_type: props.classAcademicTermId ? 'term' : 'annual',
     total_score: totalScore.value,
-    max_possible_score: totalMaxScore.value,
     percentage: percentage.value,
     final_status: decisionStatus.value,
     transcript_data: transcriptData,

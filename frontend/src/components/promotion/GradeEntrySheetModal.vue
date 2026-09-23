@@ -255,11 +255,13 @@ const handleFreezeSubmit = () => {
 
   const payload: FreezeTranscriptDto = {
     student_id: props.studentData.student_id,
-    academic_term_id: props.studentData.academic_term_id || undefined,
+    class_academic_term_id: props.studentData.academic_term_id || undefined,
     academic_year_name: props.studentData.academic_year_name || '2024-2025',
+    class_name: props.studentData.class_name || 'الصف',
+    section_name: props.studentData.section_name || 'الشعبة',
+    grade_level: Number(props.studentData.grade_level) || 1,
     transcript_type: props.studentData.transcript_type || 'annual',
     total_score: calculatedTotal.value,
-    max_possible_score: calculatedMaxTotal.value,
     percentage: calculatedPercentage.value,
     final_status: calculatedFinalStatus.value,
     transcript_data: {

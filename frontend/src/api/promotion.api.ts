@@ -142,13 +142,16 @@ export interface QueryTranscriptsDto {
 
 export interface FreezeTranscriptDto {
   student_id: number;
-  academic_term_id?: number;
+  class_academic_term_id?: number;
   academic_year_name: string;
+  class_name: string;
+  section_name: string;
+  grade_level: number;
   transcript_type: 'annual' | 'term';
   total_score: number;
-  max_possible_score?: number;
   percentage: number;
   final_status: 'passed' | 'second_round' | 'failed' | 'graduated';
+  rank?: number;
   transcript_data: Record<string, any>;
 }
 
