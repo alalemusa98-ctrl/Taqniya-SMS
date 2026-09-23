@@ -617,5 +617,25 @@ describe('Phase 09: Promotion & Transcripts Archiving (TDD Verification)', () =>
       expect(promotionLog).toBeDefined();
       expect(promotionLog?.user_id).toBe(BigInt(testAdminId));
     });
+
+    it('TC-GRADE-01: Should fetch sections audit progress correctly', async () => {
+      const res = await promotionController.getSectionAuditProgress({
+        academic_year_name: '2025-2026',
+      });
+      expect(res.success).toBe(true);
+      expect(res.data).toHaveProperty('sections');
+      expect(Array.isArray(res.data.sections)).toBe(true);
+    });
+
+    it('TC-GRADE-02: Should fetch section student roster with grading status', async () => {
+      const res = await promotionController.getSectionRoster(testClass5SectionAId, {
+        academic_year_name: '2025-2026',
+      });
+      expect(res.success).toBe(true);
+      expect(res.data).toHaveProperty('students');
+      expect(res.data).toHaveProperty('subjects');
+      expect(res.data).toHaveProperty('class_section');
+    });
   });
 });
+

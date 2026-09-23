@@ -135,6 +135,12 @@ const assessmentsGroup: NavDropdownItem[] = [
     icon: CalendarDays,
   },
   {
+    label: 'رصد الدرجات والصحائف',
+    to: '/grade-entry',
+    description: 'رصد درجات الطلاب حسب الصف والشعبة وإصدار الصحائف السنوية',
+    icon: BookOpenCheck,
+  },
+  {
     label: 'الترحيل الأكاديمي والنتائج',
     to: '/promotions',
     description: 'كشوفات الدرجات، لوحة الشرف، تجميد السجلات، والترحيل السنوي',

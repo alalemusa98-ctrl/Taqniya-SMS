@@ -3,7 +3,7 @@
     :is-open="isOpen"
     title="محرك الترحيل الأكاديمي السنوي وتوزيع الفصول"
     subtitle="محاكاة ونقل الطلاب للمستوى الأكاديمي التالي مع الحفاظ على تسكين الشعب الدراسية"
-    size="lg"
+    maxWidth="lg"
     @close="emit('close')"
   >
     <div class="space-y-6" dir="rtl">

@@ -20,6 +20,11 @@ import { FreezeTranscriptDto } from './dto/freeze-transcript.dto.js';
 import { QueryTranscriptsDto } from './dto/query-transcripts.dto.js';
 import { PreviewPromotionDto } from './dto/preview-promotion.dto.js';
 import { ExecutePromotionDto } from './dto/execute-promotion.dto.js';
+import {
+  SectionAuditProgressQueryDto,
+  SectionRosterQueryDto,
+  GenerateAnnualSectionDto,
+} from './dto/section-grade-entry.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
@@ -51,6 +56,79 @@ import type { Request } from 'express';
 )
 export class PromotionController {
   constructor(private readonly promotionService: PromotionService) {}
+
+  /**
+   * 3.1 GET /api/v1/transcripts/sections/audit-progress
+   * Get sections grading completion status (Must be declared BEFORE transcripts/:id)
+   */
+  @Get('transcripts/sections/audit-progress')
+  @Roles(RoleType.admin, RoleType.teacher)
+  async getSectionAuditProgress(@Query() query: SectionAuditProgressQueryDto) {
+    return this.promotionService.getSectionAuditProgress(query);
+  }
+
+  /**
+   * 3.2 GET /api/v1/transcripts/sections/:class_section_id/roster
+   * Get student roster and marks status for a section (Must be declared BEFORE transcripts/:id)
+   */
+  @Get('transcripts/sections/:class_section_id/roster')
+  @Roles(RoleType.admin, RoleType.teacher)
+  async getSectionRoster(
+    @Param('class_section_id', ParseIntPipe) classSectionId: number,
+    @Query() query: SectionRosterQueryDto,
+  ) {
+    return this.promotionService.getSectionRoster(classSectionId, query);
+  }
+
+  /**
+   * 3.3 POST /api/v1/transcripts/generate-annual-for-section
+   * Auto-generate annual transcripts for an entire section (Must be declared BEFORE transcripts/:id)
+   */
+  @Post('transcripts/generate-annual-for-section')
+  @Roles(RoleType.admin)
+  async generateAnnualForSection(
+    @Body() dto: GenerateAnnualSectionDto,
+    @CurrentUser() currentUser: any,
+    @Req() req: Request,
+  ) {
+    const ipAddress = req?.ip || req?.socket?.remoteAddress;
+    const userAgent = req?.headers
+      ? (req.headers['user-agent'] as string)
+      : undefined;
+    return this.promotionService.generateAnnualForSection(
+      dto,
+      Number(currentUser.id),
+      ipAddress,
+      userAgent,
+    );
+  }
+
+  /**
+   * 1.4 POST /api/v1/transcripts/freeze
+   * Freeze and archive official transcript (Admin only)
+   */
+  @Post('transcripts/freeze')
+  @Roles(RoleType.admin)
+  @HttpCode(HttpStatus.CREATED)
+  async freezeTranscript(
+    @Body() dto: FreezeTranscriptDto,
+    @CurrentUser() currentUser: any,
+    @Req() req: Request,
+  ) {
+    if (currentUser?.role_type && currentUser.role_type !== RoleType.admin) {
+      throw new ForbiddenException('ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.');
+    }
+    const ipAddress = req?.ip || req?.socket?.remoteAddress;
+    const userAgent = req?.headers
+      ? (req.headers['user-agent'] as string)
+      : undefined;
+    return this.promotionService.freezeTranscript(
+      dto,
+      Number(currentUser.id),
+      ipAddress,
+      userAgent,
+    );
+  }
 
   /**
    * 1.1 GET /api/v1/transcripts
@@ -90,33 +168,6 @@ export class PromotionController {
       studentId,
       query,
       currentUser,
-    );
-  }
-
-  /**
-   * 1.4 POST /api/v1/transcripts/freeze
-   * Freeze and archive official transcript (Admin only)
-   */
-  @Post('transcripts/freeze')
-  @Roles(RoleType.admin)
-  @HttpCode(HttpStatus.CREATED)
-  async freezeTranscript(
-    @Body() dto: FreezeTranscriptDto,
-    @CurrentUser() currentUser: any,
-    @Req() req: Request,
-  ) {
-    if (currentUser?.role_type && currentUser.role_type !== RoleType.admin) {
-      throw new ForbiddenException('ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.');
-    }
-    const ipAddress = req?.ip || req?.socket?.remoteAddress;
-    const userAgent = req?.headers
-      ? (req.headers['user-agent'] as string)
-      : undefined;
-    return this.promotionService.freezeTranscript(
-      dto,
-      Number(currentUser.id),
-      ipAddress,
-      userAgent,
     );
   }
 

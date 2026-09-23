@@ -179,7 +179,6 @@ export class PromotionService {
       student_id: Number(t.student_id),
       student_name: t.student?.full_name || '',
       student_code: t.student?.user?.user_code || '',
-      class_section_id: t.class_section_id ? Number(t.class_section_id) : null,
       class_name: t.class_name,
       section_name: t.section_name,
       grade_level: t.grade_level,
@@ -264,10 +263,10 @@ export class PromotionService {
     } else if (currentUser?.role_type === RoleType.parent) {
       const guardian = await this.prisma.guardian.findUnique({
         where: { user_id: BigInt(currentUser.id) },
-        include: { guardian_students: true },
+        include: { students: true },
       });
-      const hasAccess = guardian?.guardian_students.some(
-        (gs) => gs.student_id === transcript.student_id,
+      const hasAccess = guardian?.students.some(
+        (gs: any) => gs.student_id === transcript.student_id,
       );
       if (!hasAccess) {
         throw new ForbiddenException('ليس لديك الصلاحية لاستعراض صحيفة طالب ليس تحت وصايتك.');
@@ -320,10 +319,10 @@ export class PromotionService {
     } else if (currentUser?.role_type === RoleType.parent) {
       const guardian = await this.prisma.guardian.findUnique({
         where: { user_id: BigInt(currentUser.id) },
-        include: { guardian_students: true },
+        include: { students: true },
       });
-      const hasAccess = guardian?.guardian_students.some(
-        (gs) => gs.student_id === student.id,
+      const hasAccess = guardian?.students.some(
+        (gs: any) => gs.student_id === student.id,
       );
       if (!hasAccess) {
         throw new ForbiddenException('ليس لديك الصلاحية لاستعراض صحائف طالب ليس تحت وصايتك.');
@@ -898,4 +897,487 @@ export class PromotionService {
       },
     };
   }
+
+  /**
+   * 3.1 GET /api/v1/transcripts/sections/audit-progress
+   * Get grading completion & vacancy audit for all class sections
+   */
+  async getSectionAuditProgress(query: {
+    academic_year_name?: string;
+    class_academic_term_id?: number;
+  }) {
+    let yearName = query.academic_year_name;
+    if (!yearName) {
+      const activeYear = await this.prisma.academicYear.findFirst({
+        where: { is_active: 1, deleted_at: null },
+      });
+      yearName = activeYear?.name || '';
+    }
+
+    const sections = await this.prisma.classSection.findMany({
+      where: { deleted_at: null },
+      include: {
+        class: true,
+        section: true,
+      },
+      orderBy: [
+        { class: { grade_level: 'asc' } },
+        { section: { name: 'asc' } },
+      ],
+    });
+
+    const results = await Promise.all(
+      sections.map(async (cs) => {
+        const enrollments = await this.prisma.studentEnrollment.findMany({
+          where: {
+            class_section_id: cs.id,
+            deleted_at: null,
+            ...(yearName ? { academic_year: { name: yearName } } : {}),
+          },
+          select: { student_id: true },
+        });
+
+        const studentIds = enrollments.map((e) => e.student_id);
+        const totalEnrolled = studentIds.length;
+
+        let gradedCount = 0;
+        let passedCount = 0;
+        let secondRoundCount = 0;
+        let failedCount = 0;
+        let annualCount = 0;
+
+        if (studentIds.length > 0) {
+          const transcriptWhere: any = {
+            student_id: { in: studentIds },
+            academic_year_name: yearName,
+            deleted_at: null,
+          };
+
+          if (query.class_academic_term_id) {
+            transcriptWhere.class_academic_term_id = BigInt(
+              query.class_academic_term_id,
+            );
+          }
+
+          const transcripts = await this.prisma.studentTranscript.findMany({
+            where: transcriptWhere,
+          });
+
+          gradedCount = transcripts.length;
+          passedCount = transcripts.filter(
+            (t) => t.final_status === EnrollmentStatus.passed,
+          ).length;
+          secondRoundCount = transcripts.filter(
+            (t) => t.final_status === EnrollmentStatus.second_round,
+          ).length;
+          failedCount = transcripts.filter(
+            (t) => t.final_status === EnrollmentStatus.failed,
+          ).length;
+
+          annualCount = await this.prisma.studentTranscript.count({
+            where: {
+              student_id: { in: studentIds },
+              academic_year_name: yearName,
+              transcript_type: TranscriptType.annual,
+              deleted_at: null,
+            },
+          });
+        }
+
+        const missingCount = Math.max(0, totalEnrolled - gradedCount);
+        const completionRate =
+          totalEnrolled > 0
+            ? Number(((gradedCount / totalEnrolled) * 100).toFixed(1))
+            : 0;
+
+        const passRate =
+          gradedCount > 0
+            ? Number(((passedCount / gradedCount) * 100).toFixed(1))
+            : 0;
+
+        return {
+          class_section_id: Number(cs.id),
+          class_id: Number(cs.class_id),
+          class_name: cs.class.name,
+          grade_level: cs.class.grade_level,
+          section_id: Number(cs.section_id),
+          section_name: cs.section.name,
+          total_enrolled: totalEnrolled,
+          graded_count: gradedCount,
+          missing_count: missingCount,
+          completion_rate: completionRate,
+          passed_count: passedCount,
+          second_round_count: secondRoundCount,
+          failed_count: failedCount,
+          pass_rate: passRate,
+          is_fully_graded: totalEnrolled > 0 && gradedCount >= totalEnrolled,
+          has_annual_generated: annualCount >= totalEnrolled && totalEnrolled > 0,
+        };
+      }),
+    );
+
+    return {
+      success: true,
+      message: 'تم جلب تقرير ومؤشرات تقدم رصد درجات الشعب بنجاح.',
+      data: {
+        academic_year_name: yearName,
+        sections: results,
+      },
+    };
+  }
+
+  /**
+   * 3.2 GET /api/v1/transcripts/sections/:class_section_id/roster
+   * Get enrolled students roster with grading status for a specific section
+   */
+  async getSectionRoster(
+    classSectionId: number,
+    query: {
+      academic_year_name?: string;
+      class_academic_term_id?: number;
+    },
+  ) {
+    let yearName = query.academic_year_name;
+    if (!yearName) {
+      const activeYear = await this.prisma.academicYear.findFirst({
+        where: { is_active: 1, deleted_at: null },
+      });
+      yearName = activeYear?.name || '';
+    }
+
+    const classSection = await this.prisma.classSection.findUnique({
+      where: { id: BigInt(classSectionId) },
+      include: { class: true, section: true },
+    });
+
+    if (!classSection) {
+      throw new NotFoundException('الشعبة الدراسية غير موجودة.');
+    }
+
+    // Get subjects for this class and term
+    const subjectWhere: any = {
+      class_id: classSection.class_id,
+      deleted_at: null,
+    };
+    if (query.class_academic_term_id) {
+      subjectWhere.class_academic_term_id = BigInt(query.class_academic_term_id);
+    }
+
+    const classSubjects = await this.prisma.classSubject.findMany({
+      where: subjectWhere,
+      include: { subject: true },
+      orderBy: { subject: { name: 'asc' } },
+    });
+
+    // Get enrolled students
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        class_section_id: BigInt(classSectionId),
+        deleted_at: null,
+        ...(yearName ? { academic_year: { name: yearName } } : {}),
+      },
+      include: {
+        student: {
+          include: { user: true },
+        },
+      },
+      orderBy: { student: { full_name: 'asc' } },
+    });
+
+    const studentIds = enrollments.map((e) => e.student_id);
+
+    // Get existing transcripts for this term
+    let transcripts: any[] = [];
+    if (studentIds.length > 0) {
+      const transcriptWhere: any = {
+        student_id: { in: studentIds },
+        academic_year_name: yearName,
+        deleted_at: null,
+      };
+      if (query.class_academic_term_id) {
+        transcriptWhere.class_academic_term_id = BigInt(
+          query.class_academic_term_id,
+        );
+      }
+
+      transcripts = await this.prisma.studentTranscript.findMany({
+        where: transcriptWhere,
+      });
+    }
+
+    const transcriptMap = new Map<number, any>();
+    for (const t of transcripts) {
+      transcriptMap.set(Number(t.student_id), t);
+    }
+
+    const students = enrollments.map((e) => {
+      const studentId = Number(e.student_id);
+      const transcript = transcriptMap.get(studentId) || null;
+
+      return {
+        student_id: studentId,
+        student_code: e.student.user?.user_code || '',
+        student_name: e.student.full_name,
+        seating_number: e.seating_number,
+        enrollment_status: e.status,
+        is_graded: !!transcript,
+        transcript: transcript
+          ? {
+              id: Number(transcript.id),
+              total_score: Number(transcript.total_score),
+              percentage: Number(transcript.percentage),
+              final_status: transcript.final_status,
+              final_status_ar: this.getStatusArabic(transcript.final_status),
+              transcript_data: transcript.transcript_data,
+              created_at: transcript.created_at,
+            }
+          : null,
+      };
+    });
+
+    return {
+      success: true,
+      message: 'تم جلب كشف طلاب الشعبة ومواد الرصد بنجاح.',
+      data: {
+        class_section: {
+          id: Number(classSection.id),
+          class_id: Number(classSection.class_id),
+          class_name: classSection.class.name,
+          grade_level: classSection.class.grade_level,
+          section_id: Number(classSection.section_id),
+          section_name: classSection.section.name,
+        },
+        subjects: classSubjects.map((cs) => ({
+          subject_id: Number(cs.subject_id),
+          subject_name: cs.subject.name,
+          passing_score: Number(cs.passing_score),
+          max_score: Number(cs.max_score),
+          max_coursework_score: Number((Number(cs.max_score) * 0.4).toFixed(0)),
+          max_exam_score: Number((Number(cs.max_score) * 0.6).toFixed(0)),
+        })),
+        students,
+      },
+    };
+  }
+
+  /**
+   * 3.3 POST /api/v1/transcripts/generate-annual-for-section
+   * Auto-aggregate term marks into annual frozen transcripts for an entire section
+   */
+  async generateAnnualForSection(
+    dto: { class_section_id: number; academic_year_name?: string },
+    adminUserId: number,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    let yearName = dto.academic_year_name;
+    if (!yearName) {
+      const activeYear = await this.prisma.academicYear.findFirst({
+        where: { is_active: 1, deleted_at: null },
+      });
+      yearName = activeYear?.name || '';
+    }
+
+    const classSection = await this.prisma.classSection.findUnique({
+      where: { id: BigInt(dto.class_section_id) },
+      include: { class: true, section: true },
+    });
+
+    if (!classSection) {
+      throw new NotFoundException('الشعبة الدراسية غير موجودة.');
+    }
+
+    // Get all enrollments
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        class_section_id: BigInt(dto.class_section_id),
+        deleted_at: null,
+        ...(yearName ? { academic_year: { name: yearName } } : {}),
+      },
+      include: { student: { include: { user: true } } },
+    });
+
+    if (enrollments.length === 0) {
+      throw new UnprocessableEntityException('لا يوجد طلاب مسكنين في هذه الشعبة لتوليد الصحيفة السنوية.');
+    }
+
+    let generatedCount = 0;
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const e of enrollments) {
+        const studentId = Number(e.student_id);
+
+        // Fetch all term transcripts for this student in this year
+        const termTranscripts = await tx.studentTranscript.findMany({
+          where: {
+            student_id: BigInt(studentId),
+            academic_year_name: yearName,
+            transcript_type: TranscriptType.term,
+            deleted_at: null,
+          },
+        });
+
+        if (termTranscripts.length === 0) continue;
+
+        // Aggregate subject marks across terms
+        const subjectMap = new Map<string, {
+          subject_name: string;
+          total_score_sum: number;
+          max_score_sum: number;
+          terms_count: number;
+        }>();
+
+        for (const tt of termTranscripts) {
+          const data = (tt.transcript_data as any) || {};
+          const subjects = data.subjects || data.subject_scores || [];
+
+          for (const s of subjects) {
+            const name = s.subject_name || 'مادة';
+            if (!subjectMap.has(name)) {
+              subjectMap.set(name, {
+                subject_name: name,
+                total_score_sum: 0,
+                max_score_sum: 0,
+                terms_count: 0,
+              });
+            }
+            const record = subjectMap.get(name)!;
+            record.total_score_sum += Number(s.total_score) || 0;
+            record.max_score_sum += Number(s.max_score) || 100;
+            record.terms_count += 1;
+          }
+        }
+
+        const annualSubjects: any[] = [];
+        let totalAnnualScore = 0;
+        let totalMaxScore = 0;
+        let failedSubjectsCount = 0;
+
+        for (const [, item] of subjectMap.entries()) {
+          const avgScore = item.terms_count > 0 ? Number((item.total_score_sum / item.terms_count).toFixed(2)) : 0;
+          const avgMax = item.terms_count > 0 ? Number((item.max_score_sum / item.terms_count).toFixed(2)) : 100;
+          const passingScore = avgMax * 0.5;
+          const isPassed = avgScore >= passingScore;
+
+          if (!isPassed) failedSubjectsCount += 1;
+
+          totalAnnualScore += avgScore;
+          totalMaxScore += avgMax;
+
+          annualSubjects.push({
+            subject_name: item.subject_name,
+            total_score: avgScore,
+            max_score: avgMax,
+            passing_score: passingScore,
+            status: isPassed ? 'passed' : 'failed',
+          });
+        }
+
+        const annualPercentage = totalMaxScore > 0 ? Number(((totalAnnualScore / totalMaxScore) * 100).toFixed(2)) : 0;
+
+        let finalStatus: EnrollmentStatus;
+        if (failedSubjectsCount === 0 && annualPercentage >= 50) {
+          finalStatus = classSection.class.grade_level >= 12 ? EnrollmentStatus.graduated : EnrollmentStatus.passed;
+        } else if (failedSubjectsCount <= 2) {
+          finalStatus = EnrollmentStatus.second_round;
+        } else {
+          finalStatus = EnrollmentStatus.failed;
+        }
+
+        const transcriptSnapshot = {
+          annual_summary: true,
+          terms_included: termTranscripts.length,
+          student_id: studentId,
+          student_name: e.student.full_name,
+          student_code: e.student.user?.user_code || '',
+          class_name: classSection.class.name,
+          section_name: classSection.section.name,
+          academic_year_name: yearName,
+          subjects: annualSubjects,
+          total_score: totalAnnualScore,
+          max_possible_score: totalMaxScore,
+          percentage: annualPercentage,
+          final_status: finalStatus,
+          frozen_at: new Date().toISOString(),
+        };
+
+        // Upsert annual transcript
+        const existingAnnual = await tx.studentTranscript.findFirst({
+          where: {
+            student_id: BigInt(studentId),
+            academic_year_name: yearName,
+            transcript_type: TranscriptType.annual,
+            deleted_at: null,
+          },
+        });
+
+        if (existingAnnual) {
+          await tx.studentTranscript.update({
+            where: { id: existingAnnual.id },
+            data: {
+              class_name: classSection.class.name,
+              section_name: classSection.section.name,
+              grade_level: classSection.class.grade_level,
+              total_score: totalAnnualScore,
+              percentage: annualPercentage,
+              final_status: finalStatus,
+              transcript_data: transcriptSnapshot,
+            },
+          });
+        } else {
+          await tx.studentTranscript.create({
+            data: {
+              student_id: BigInt(studentId),
+              transcript_type: TranscriptType.annual,
+              academic_year_name: yearName,
+              class_name: classSection.class.name,
+              section_name: classSection.section.name,
+              grade_level: classSection.class.grade_level,
+              total_score: totalAnnualScore,
+              percentage: annualPercentage,
+              final_status: finalStatus,
+              transcript_data: transcriptSnapshot,
+            },
+          });
+        }
+
+        // Update student enrollment status
+        await tx.studentEnrollment.updateMany({
+          where: {
+            student_id: BigInt(studentId),
+            class_section_id: classSection.id,
+            deleted_at: null,
+          },
+          data: { status: finalStatus },
+        });
+
+        generatedCount += 1;
+      }
+    });
+
+    // Audit log
+    await this.auditService.log({
+      userId: BigInt(adminUserId),
+      action: 'generate_annual_transcripts',
+      entityType: 'student_transcripts',
+      entityId: classSection.id,
+      newValues: {
+        class_section_id: dto.class_section_id,
+        academic_year_name: yearName,
+        generated_count: generatedCount,
+      },
+      ipAddress,
+      userAgent,
+    });
+
+    return {
+      success: true,
+      message: 'تم تجميع درجات الفصول وتوليد واعتماد الصحائف السنوية النهائية بنجاح.',
+      data: {
+        generated_count: generatedCount,
+        total_students: enrollments.length,
+      },
+    };
+  }
 }
+

@@ -19,6 +19,7 @@ const HomeworkManagementView = () => import('../views/HomeworkManagementView.vue
 const QuizzesManagementView = () => import('../views/QuizzesManagementView.vue');
 const OfficialExamsManagementView = () => import('../views/OfficialExamsManagementView.vue');
 const PromotionManagementView = () => import('../views/PromotionManagementView.vue');
+const GradeEntryManagementView = () => import('../views/GradeEntryManagementView.vue');
 
 const routes = [
   {
@@ -113,6 +114,12 @@ const routes = [
         name: 'promotions',
         component: PromotionManagementView,
         meta: { roles: ['admin', 'teacher', 'student', 'parent'] },
+      },
+      {
+        path: 'grade-entry',
+        name: 'grade-entry',
+        component: GradeEntryManagementView,
+        meta: { roles: ['admin', 'teacher'] },
       },
       {
         path: 'audit-logs',
