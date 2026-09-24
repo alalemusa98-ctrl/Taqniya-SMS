@@ -1356,10 +1356,13 @@ export class PromotionService {
       ],
     });
 
-    // Pre-fetch all class academic terms
+    // Pre-fetch all class academic terms with their active subjects
     const allClassTerms = await this.prisma.classAcademicTerm.findMany({
       where: { deleted_at: null },
-      include: { academic_term: true },
+      include: {
+        academic_term: true,
+        class_subjects: { where: { deleted_at: null } },
+      },
     });
 
     const results = await Promise.all(
@@ -1383,7 +1386,11 @@ export class PromotionService {
         let annualCount = 0;
 
         // Resolve target class_academic_term_id for this specific class section
-        const classTerms = allClassTerms.filter((ct) => ct.class_id === cs.class_id);
+        const rawClassTerms = allClassTerms.filter((ct) => ct.class_id === cs.class_id);
+        const termsWithSubjects = rawClassTerms.filter(
+          (ct) => ct.class_subjects && ct.class_subjects.length > 0,
+        );
+        const classTerms = termsWithSubjects.length > 0 ? termsWithSubjects : rawClassTerms;
         let targetClassTermId: bigint | null = null;
 
         if (query.class_academic_term_id) {
@@ -1445,10 +1452,14 @@ export class PromotionService {
           });
         }
 
+        const hasAnnualGenerated =
+          totalEnrolled > 0 && annualCount >= totalEnrolled;
+
         const isAllTermsCompleted =
           totalEnrolled > 0 &&
-          requiredClassTermsCount > 0 &&
-          allTermsTranscriptsCount >= totalEnrolled * requiredClassTermsCount;
+          (hasAnnualGenerated ||
+            (requiredClassTermsCount > 0 &&
+              allTermsTranscriptsCount >= totalEnrolled * requiredClassTermsCount));
 
         const missingCount = Math.max(0, totalEnrolled - gradedCount);
         const completionRate =
@@ -1688,12 +1699,23 @@ export class PromotionService {
       throw new UnprocessableEntityException('لا يوجد طلاب مسكنين في هذه الشعبة لتوليد الصحيفة السنوية.');
     }
 
-    const requiredClassTermsCount = await this.prisma.classAcademicTerm.count({
+    const termsWithSubjectsCount = await this.prisma.classAcademicTerm.count({
       where: {
         class_id: classSection.class_id,
         deleted_at: null,
+        class_subjects: { some: { deleted_at: null } },
       },
     });
+
+    const requiredClassTermsCount =
+      termsWithSubjectsCount > 0
+        ? termsWithSubjectsCount
+        : await this.prisma.classAcademicTerm.count({
+            where: {
+              class_id: classSection.class_id,
+              deleted_at: null,
+            },
+          });
 
     let generatedCount = 0;
 

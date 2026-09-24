@@ -151,7 +151,14 @@
             </button>
           </div>
 
-          <!-- State 3: Terms In Progress (No button shown until all terms are completed) -->
+          <!-- State 3: Empty Class (No Enrolled Students) -->
+          <div v-else-if="cls.totalEnrolled === 0" class="flex items-center justify-between w-full py-1 text-bx-muted">
+            <span class="text-[11px] flex items-center gap-1.5 font-medium">
+              <span>لا يوجد طلاب مسكنين في هذا الصف</span>
+            </span>
+          </div>
+
+          <!-- State 4: Terms In Progress (No button shown until all terms are completed) -->
           <div v-else class="flex items-center justify-between w-full py-1">
             <span class="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1.5 font-bold" title="درجات بعض الفصول أو الشعب ما زالت قيد الرصد">
               <Clock class="w-3.5 h-3.5 text-amber-500" />
@@ -227,12 +234,15 @@ const classGroups = computed<ClassGroup[]>(() => {
 
   // Calculate class-level annual completion metrics
   for (const group of map.values()) {
+    const activeSections = group.sections.filter((s) => s.total_enrolled > 0);
     group.isAllTermsCompleted =
       group.totalEnrolled > 0 &&
-      group.sections.every((s) => s.is_all_terms_completed);
+      activeSections.length > 0 &&
+      activeSections.every((s) => s.is_all_terms_completed || s.has_annual_generated);
     group.hasAnnualGenerated =
       group.totalEnrolled > 0 &&
-      group.sections.every((s) => s.has_annual_generated);
+      activeSections.length > 0 &&
+      activeSections.every((s) => s.has_annual_generated);
   }
 
   return Array.from(map.values()).sort((a, b) => a.grade_level - b.grade_level);
