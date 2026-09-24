@@ -864,9 +864,17 @@ const handleViewTranscriptDetail = async (transcript: StudentTranscript) => {
   }
 };
 
-const handleViewBatchDetail = (batch: PromotionBatch) => {
+const handleViewBatchDetail = async (batch: PromotionBatch) => {
   selectedBatch.value = batch;
   isBatchDetailDrawerOpen.value = true;
+  try {
+    const res = await promotionApi.getPromotionBatchById(batch.id);
+    if (res.success && res.data) {
+      selectedBatch.value = res.data;
+    }
+  } catch (err) {
+    console.error('Failed to fetch full batch details:', err);
+  }
 };
 
 const openPromotionModal = () => {

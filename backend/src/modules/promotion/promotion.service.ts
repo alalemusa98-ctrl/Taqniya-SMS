@@ -725,6 +725,8 @@ export class PromotionService {
       total_retained: b.total_retained,
       total_graduated: b.total_graduated,
       overall_passing_rate: Number(b.overall_passing_rate),
+      class_statistics: b.class_statistics,
+      execution_notes: b.execution_notes,
       created_at: b.created_at,
     }));
 
