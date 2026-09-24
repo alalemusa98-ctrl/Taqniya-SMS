@@ -194,7 +194,7 @@
                 <!-- زر مطابقة وبحث الأسماء للاختيار الفردي -->
                 <button
                   type="button"
-                  class="h-10 px-3 rounded-xl border border-bx-primary/30 hover:border-bx-primary bg-bx-primary/10 hover:bg-bx-primary/20 text-bx-primary font-bold text-xs transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="bx-btn bx-btn-primary h-10 px-3.5 text-xs font-bold rounded-xl shrink-0 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   title="مطابقة واختيار اسم الطالب من قاعدة البيانات"
                   :disabled="isFetchingSuggestions"
                   @click="openStudentSuggestionsModal"
@@ -226,7 +226,7 @@
             <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
               <button
                 type="button"
-                class="h-10 px-4 rounded-xl border border-bx-border hover:bg-black/5 dark:hover:bg-white/5 text-bx-muted hover:text-bx-title font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                class="bx-btn bx-btn-outline h-10 px-4 text-xs font-bold rounded-xl shrink-0 cursor-pointer"
                 @click="resetFilters"
               >
                 <RotateCcw class="w-3.5 h-3.5" />
@@ -235,7 +235,7 @@
 
               <button
                 type="button"
-                class="h-10 px-6 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                class="bx-btn bx-btn-primary h-10 px-6 text-xs font-bold rounded-xl shadow-xs shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="isLoadingTranscripts"
                 @click="executeSearch"
               >
@@ -269,7 +269,7 @@
           <!-- Dedicated Student Search Banner when searching by name -->
           <div
             v-if="filters.search"
-            class="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-bx-primary/15 via-bx-primary/10 to-transparent border border-bx-primary/30 flex items-center justify-between flex-wrap gap-4 shadow-xs"
+            class="p-4 sm:p-5 rounded-3xl bg-purple-500/[0.05] dark:bg-purple-900/10 border border-purple-500/20 dark:border-purple-500/20 flex items-center justify-between flex-wrap gap-4 shadow-xs"
           >
             <div class="flex items-center gap-3.5">
               <div class="w-12 h-12 rounded-2xl bg-bx-primary text-white flex items-center justify-center font-bold shadow-xs shrink-0">
@@ -293,10 +293,10 @@
 
             <button
               type="button"
-              class="px-4 py-2 rounded-xl border border-bx-border hover:bg-black/5 dark:hover:bg-white/5 text-bx-muted hover:text-bx-title font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+              class="bx-btn bx-btn-outline h-9 px-3.5 text-xs font-bold rounded-xl cursor-pointer"
               @click="clearStudentSearch"
             >
-              <X class="w-4 h-4" />
+              <X class="w-3.5 h-3.5" />
               <span>إلغاء تصفية الطالب</span>
             </button>
           </div>
@@ -472,7 +472,7 @@
 
             <button
               type="button"
-              class="h-10 px-4 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
+              class="bx-btn bx-btn-primary h-10 px-4 text-xs font-bold rounded-xl shadow-xs cursor-pointer shrink-0 disabled:opacity-50"
               :disabled="isFetchingSuggestions"
               @click="fetchStudentSuggestions"
             >
@@ -595,14 +595,14 @@
             <div class="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                class="h-9 px-4 rounded-xl border border-bx-border hover:bg-black/5 dark:hover:bg-white/5 text-bx-muted hover:text-bx-title font-bold text-xs transition-all cursor-pointer"
+                class="bx-btn bx-btn-outline h-9 px-4 text-xs font-bold rounded-xl cursor-pointer"
                 @click="isStudentPickerModalOpen = false"
               >
                 إلغاء
               </button>
               <button
                 type="button"
-                class="h-9 px-5 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                class="bx-btn bx-btn-primary h-9 px-5 text-xs font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="!selectedPickerStudent"
                 @click="confirmSelectedStudent"
               >
