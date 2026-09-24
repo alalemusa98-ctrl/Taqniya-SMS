@@ -180,8 +180,12 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
     let termNumber: number;
 
     it('TC-AT-01: Create an academic term in master catalog', async () => {
-      const lastTerm = await prisma.academicTerm.findFirst({ orderBy: { term_number: 'desc' } });
-      termNumber = ((lastTerm?.term_number || 0) + 1) % 120 + 1;
+      const existing = await prisma.academicTerm.findMany({ select: { term_number: true } });
+      const usedNumbers = new Set(existing.map((t) => t.term_number));
+      termNumber = 20;
+      while (usedNumbers.has(termNumber) && termNumber < 100) {
+        termNumber++;
+      }
       const termName = `Term-${Date.now()}`;
       const result = await termsService.create(
         {
@@ -240,10 +244,16 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
     });
 
     it('TC-AT-05: Soft delete term from catalog', async () => {
+      const existing = await prisma.academicTerm.findMany({ select: { term_number: true } });
+      const usedNumbers = new Set(existing.map((t) => t.term_number));
+      let delTermNumber = termNumber + 1;
+      while (usedNumbers.has(delTermNumber) && delTermNumber < 120) {
+        delTermNumber++;
+      }
       const termToDel = await termsService.create(
         {
           name: `DelTerm-${Date.now()}`,
-          term_number: termNumber + 1,
+          term_number: delTermNumber,
         },
         testAdminId,
       );

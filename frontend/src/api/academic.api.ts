@@ -306,9 +306,12 @@ export const academicApi = {
     deduplicatedGet<any>('/academic/class-academic-terms', { params, signal }),
   getClassAcademicTermById: (id: number, signal?: AbortSignal) =>
     deduplicatedGet<any>(`/academic/class-academic-terms/${id}`, { signal }),
+  checkClassAcademicTermActivation: (id: number) =>
+    apiClient.get<any>(`/academic/class-academic-terms/${id}/activation-check`),
   createClassAcademicTerm: (payload: CreateClassAcademicTermPayload) => apiClient.post('/academic/class-academic-terms', payload),
   updateClassAcademicTerm: (id: number, payload: UpdateClassAcademicTermPayload) => apiClient.put(`/academic/class-academic-terms/${id}`, payload),
-  activateClassAcademicTerm: (id: number) => apiClient.post(`/academic/class-academic-terms/${id}/activate`),
+  activateClassAcademicTerm: (id: number, force = false) =>
+    apiClient.post(`/academic/class-academic-terms/${id}/activate${force ? '?force=true' : ''}`),
   closeClassAcademicTerm: (id: number) => apiClient.post(`/academic/class-academic-terms/${id}/close`),
   deleteClassAcademicTerm: (id: number) => apiClient.delete(`/academic/class-academic-terms/${id}`),
 

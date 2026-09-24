@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue';
+import { useRouter } from 'vue-router';
 import {
   academicApi,
   type ClassAcademicTermsGroupItem,
@@ -22,12 +23,18 @@ import {
   Trash2,
   Loader2,
   AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
   Eye,
   GraduationCap,
   CalendarDays,
   Info,
+  ArrowRight,
+  FileSpreadsheet,
+  Users,
 } from 'lucide-vue-next';
 
+const router = useRouter();
 const toast = useToast();
 const loading = ref(false);
 const rawGroups = ref<ClassAcademicTermsGroupItem[]>([]);
@@ -456,17 +463,69 @@ async function handleSave() {
   }
 }
 
-async function handleActivate(termId: number) {
+// Activation Modals & Guard States
+const showActivationWarningModal = ref(false);
+const showActivationConfirmModal = ref(false);
+const isCheckingActivation = ref(false);
+const isActivating = ref(false);
+const activationCheckData = ref<any>(null);
+const targetTermToActivate = ref<{ id: number; term_name?: string; class_name?: string } | null>(null);
+
+async function requestActivate(termId: number, termName?: string, className?: string) {
+  isCheckingActivation.value = true;
+  targetTermToActivate.value = { id: termId, term_name: termName, class_name: className };
   try {
-    const res = await academicApi.activateClassAcademicTerm(termId);
-    toast.success(res.data?.message || 'تم تفعيل الفترة النشطة للصف بنجاح.');
-    if (activeRowDetails.value && activeRowDetails.value.id === termId) {
+    const res = await academicApi.checkClassAcademicTermActivation(termId);
+    if (res.data?.success) {
+      activationCheckData.value = res.data;
+      if (res.data.can_activate) {
+        showActivationConfirmModal.value = true;
+      } else {
+        showActivationWarningModal.value = true;
+      }
+    } else {
+      toast.error(res.data?.message || 'تعذر التحقق من حالة تفعيل الفصل.');
+    }
+  } catch (err: any) {
+    const msg = err.response?.data?.message || 'تعذر التحقق من متطلبات تفعيل الفصل.';
+    toast.error(msg);
+  } finally {
+    isCheckingActivation.value = false;
+  }
+}
+
+async function confirmActivation(force = false) {
+  if (!targetTermToActivate.value) return;
+  isActivating.value = true;
+  try {
+    const res = await academicApi.activateClassAcademicTerm(targetTermToActivate.value.id, force);
+    toast.success(res.data?.message || 'تم تفعيل الفصل الدراسي للصف بنجاح.');
+    if (activeRowDetails.value && activeRowDetails.value.id === targetTermToActivate.value.id) {
       activeRowDetails.value.is_active = 1;
     }
-    fetchClassTerms();
+    showActivationConfirmModal.value = false;
+    showActivationWarningModal.value = false;
+    showDrawer.value = false;
+    await fetchClassTerms();
   } catch (err: any) {
-    const msg = err.response?.data?.message || 'تعذر تفعيل الفترة النشطة.';
+    const msg = err.response?.data?.message || 'تعذر تفعيل الفصل الدراسي.';
     toast.error(msg);
+  } finally {
+    isActivating.value = false;
+  }
+}
+
+function goToGradeEntry() {
+  const classId = activationCheckData.value?.data?.class_id;
+  const termId = activationCheckData.value?.data?.previous_term_id;
+  showActivationWarningModal.value = false;
+  if (classId) {
+    router.push({
+      path: '/grade-entry',
+      query: { class_id: classId, term_id: termId },
+    });
+  } else {
+    router.push('/grade-entry');
   }
 }
 
@@ -728,11 +787,13 @@ onMounted(async () => {
                         <!-- Quick Activate Button (when not already active) -->
                         <button
                           v-if="row.cells[term.id]!.row!.is_active !== 1"
-                          @click="handleActivate(row.cells[term.id]!.row!.id)"
-                          class="w-7 h-7 rounded-full border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow-sm hover:shadow-emerald-500/30 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-2xs hover:scale-110 active:scale-95"
+                          @click="requestActivate(row.cells[term.id]!.row!.id, row.cells[term.id]!.row!.term_name, row.class_name)"
+                          class="w-7 h-7 rounded-full border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow-sm hover:shadow-emerald-500/30 flex items-center justify-center transition-all duration-150 cursor-pointer shadow-2xs hover:scale-110 active:scale-95 disabled:opacity-50"
+                          :disabled="isCheckingActivation && targetTermToActivate?.id === row.cells[term.id]!.row!.id"
                           title="تفعيل هذا الفصل للصف"
                         >
-                          <Zap class="w-3.5 h-3.5" />
+                          <Loader2 v-if="isCheckingActivation && targetTermToActivate?.id === row.cells[term.id]!.row!.id" class="w-3.5 h-3.5 animate-spin" />
+                          <Zap v-else class="w-3.5 h-3.5" />
                         </button>
 
                         <!-- Lock / Unlock Toggle -->
@@ -848,10 +909,12 @@ onMounted(async () => {
         <div class="space-y-2.5 pt-2">
           <button
             v-if="activeRowDetails.is_active !== 1"
-            @click="handleActivate(activeRowDetails.id)"
-            class="w-full py-2.5 px-4 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all cursor-pointer shadow-sm"
+            @click="requestActivate(activeRowDetails.id, activeRowDetails.term_name, activeRowDetails.class_name)"
+            class="w-full py-2.5 px-4 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+            :disabled="isCheckingActivation"
           >
-            <Zap class="w-4 h-4" />
+            <Loader2 v-if="isCheckingActivation && targetTermToActivate?.id === activeRowDetails.id" class="w-4 h-4 animate-spin" />
+            <Zap v-else class="w-4 h-4" />
             <span>تفعيل هذه الفترة للصف</span>
           </button>
 
@@ -1053,6 +1116,175 @@ onMounted(async () => {
           >
             <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
             <span>تأكيد فك الارتباط</span>
+          </button>
+        </div>
+      </template>
+    </TaqniyaModal>
+
+    <!-- 1. Warning Modal: Incomplete Grades / Missing Students -->
+    <TaqniyaModal
+      :is-open="showActivationWarningModal"
+      title="تنبيه: متطلبات رصد الدرجات غير مكتملة"
+      subtitle="لا يمكن تفعيل الفصل الجديد لوجود طلاب غير مرصودين في الفصل السابق"
+      max-width="lg"
+      @close="showActivationWarningModal = false"
+    >
+      <template #icon>
+        <div class="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shadow-xs">
+          <AlertTriangle class="w-6 h-6" />
+        </div>
+      </template>
+
+      <div class="space-y-4" dir="rtl" v-if="activationCheckData?.data">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="p-3.5 rounded-2xl bg-purple-500/5 border border-[#B4AED8]/50 dark:border-white/10 space-y-1">
+            <span class="text-[11px] font-bold text-bx-muted block">الصف الدراسي المستهدف:</span>
+            <span class="text-xs font-black text-bx-title font-display flex items-center gap-1.5">
+              <GraduationCap class="w-3.5 h-3.5 text-bx-primary" />
+              <span>{{ activationCheckData.data.class_name }}</span>
+            </span>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-1">
+            <span class="text-[11px] font-bold text-bx-muted block">الفصل المراد تفعيله:</span>
+            <span class="text-xs font-black text-emerald-600 dark:text-emerald-400 font-display flex items-center gap-1.5">
+              <Zap class="w-3.5 h-3.5" />
+              <span>{{ activationCheckData.data.target_term_name }}</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Audit Progress Status Box -->
+        <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-black text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+              <AlertCircle class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>حالة رصد الفصل السابق ({{ activationCheckData.data.previous_term_name }}):</span>
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+              {{ activationCheckData.data.missing_count }} غير مرصود
+            </span>
+          </div>
+          <p class="text-xs text-bx-title leading-relaxed">
+            تم رصد درجات <strong>{{ activationCheckData.data.completed_students }}</strong> من أصل <strong>{{ activationCheckData.data.total_students }}</strong> طالب في الصف. لحماية سلامة النتائج ومنع تضارب الفصول، يلزم استكمال رصد جميع الطلاب أولاً قبل تفعيل الفصل الجديد.
+          </p>
+        </div>
+
+        <!-- Missing Students List -->
+        <div v-if="activationCheckData.data.missing_students?.length > 0" class="space-y-2">
+          <div class="flex items-center justify-between text-xs font-bold text-bx-muted">
+            <span class="flex items-center gap-1.5">
+              <Users class="w-3.5 h-3.5 text-bx-primary" />
+              <span>قائمة الطلاب غير المستكملين للرصد:</span>
+            </span>
+            <span class="text-[11px] font-mono text-bx-muted">
+              ({{ activationCheckData.data.missing_students.length }} طالب)
+            </span>
+          </div>
+
+          <div class="max-h-48 overflow-y-auto rounded-2xl border border-[#B4AED8] dark:border-white/10 divide-y divide-[#B4AED8]/40 dark:divide-white/[0.06] bg-[var(--bx-surface-solid)]">
+            <div
+              v-for="s in activationCheckData.data.missing_students"
+              :key="s.student_id"
+              class="px-3.5 py-2.5 flex items-center justify-between text-xs hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            >
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+                <span class="font-bold text-bx-title">{{ s.student_name }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/10 text-bx-primary border border-purple-500/20">
+                  {{ s.section_name }}
+                </span>
+                <span class="font-mono text-[10px] text-bx-muted">{{ s.student_code }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 w-full" dir="rtl">
+          <button
+            type="button"
+            @click="showActivationWarningModal = false"
+            class="w-full sm:w-auto px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+          >
+            إغلاق
+          </button>
+
+          <button
+            type="button"
+            @click="goToGradeEntry"
+            class="w-full sm:w-auto px-6 py-2.5 rounded-full bg-bx-primary text-white text-xs font-bold shadow-md shadow-bx-primary/20 hover:bg-bx-primary-hover flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+          >
+            <FileSpreadsheet class="w-4 h-4" />
+            <span>الانتقال لشيت رصد الدرجات لإكمال الرصد</span>
+            <ArrowRight class="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </template>
+    </TaqniyaModal>
+
+    <!-- 2. Confirmation Modal: All Grades Complete & Ready to Activate -->
+    <TaqniyaModal
+      :is-open="showActivationConfirmModal"
+      title="تأكيد تفعيل الفصل الدراسي الجديد"
+      subtitle="تم التحقق من اكتمال كافة متطلبات ورصد الفصل السابق بنجاح"
+      max-width="md"
+      @close="showActivationConfirmModal = false"
+    >
+      <template #icon>
+        <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-xs">
+          <CheckCircle2 class="w-6 h-6" />
+        </div>
+      </template>
+
+      <div class="space-y-4" dir="rtl" v-if="activationCheckData?.data">
+        <!-- Success Banner -->
+        <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-2">
+          <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-black text-xs font-display">
+            <CheckCircle2 class="w-4 h-4" />
+            <span>جاهز للتفعيل والانتقال الأكاديمي</span>
+          </div>
+          <p class="text-xs text-bx-title leading-relaxed">
+            <span v-if="activationCheckData.data.previous_term_name">
+              تم التحقق بنجاح من أن كافة درجات الطلاب (<strong>{{ activationCheckData.data.total_students }} طالب</strong>) في الفصل السابق (<strong>{{ activationCheckData.data.previous_term_name }}</strong>) لصف <strong>{{ activationCheckData.data.class_name }}</strong> مرصودة بالكامل ومكتملة 100%.
+            </span>
+            <span v-else>
+              تم التحقق بنجاح من إمكانية تفعيل الفصل الدراسي لصف <strong>{{ activationCheckData.data.class_name }}</strong>.
+            </span>
+          </p>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-purple-500/5 border border-[#B4AED8]/50 dark:border-white/10 text-xs text-bx-muted leading-relaxed flex items-start gap-2.5">
+          <Zap class="w-4 h-4 text-bx-primary shrink-0 mt-0.5" />
+          <p class="text-[11px] leading-relaxed">
+            عند الضغط على تأكيد، سيصبح <strong>{{ activationCheckData.data.target_term_name }}</strong> هو الفصل النشط للصف الدراسي لجميع المعلمين ورصد الدرجات والامتحانات.
+          </p>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex items-center justify-end gap-2.5" dir="rtl">
+          <button
+            type="button"
+            @click="showActivationConfirmModal = false"
+            :disabled="isActivating"
+            class="px-5 py-2.5 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title transition-all cursor-pointer"
+          >
+            إلغاء
+          </button>
+          <button
+            type="button"
+            @click="confirmActivation(false)"
+            :disabled="isActivating"
+            class="px-6 py-2.5 rounded-full bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-600/20 hover:bg-emerald-700 flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+          >
+            <Loader2 v-if="isActivating" class="w-3.5 h-3.5 animate-spin" />
+            <Zap v-else class="w-4 h-4" />
+            <span>تأكيد التفعيل والانتقال</span>
           </button>
         </div>
       </template>

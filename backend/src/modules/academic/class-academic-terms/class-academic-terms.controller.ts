@@ -37,6 +37,11 @@ export class ClassAcademicTermsController {
     return this.termsService.findOne(id);
   }
 
+  @Get(':id/activation-check')
+  async checkActivation(@Param('id', ParseIntPipe) id: number) {
+    return this.termsService.checkActivation(id);
+  }
+
   @Post()
   async create(@Body() dto: CreateClassAcademicTermDto, @Req() req: Request) {
     const adminId = (req as any).user?.id ? Number((req as any).user.id) : undefined;
@@ -58,11 +63,17 @@ export class ClassAcademicTermsController {
   }
 
   @Post(':id/activate')
-  async activate(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
-    const adminId = (req as any).user?.id ? Number((req as any).user.id) : undefined;
-    const ipAddress = req.ip || req.socket.remoteAddress;
-    const userAgent = req.headers['user-agent'];
-    return this.termsService.activate(id, adminId, ipAddress, userAgent);
+  async activate(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('force') queryForce?: string,
+    @Body('force') bodyForce?: boolean,
+    @Req() req?: Request,
+  ) {
+    const adminId = (req as any)?.user?.id ? Number((req as any).user.id) : undefined;
+    const ipAddress = req?.ip || req?.socket?.remoteAddress;
+    const userAgent = req?.headers ? req.headers['user-agent'] : undefined;
+    const force = queryForce === 'true' || queryForce === '1' || bodyForce === true;
+    return this.termsService.activate(id, adminId, ipAddress, userAgent, force);
   }
 
   @Post(':id/close')

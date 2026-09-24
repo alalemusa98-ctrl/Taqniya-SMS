@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service.js';
@@ -26,6 +27,257 @@ export class ClassAcademicTermsService {
       term_name: item.academic_term ? item.academic_term.name : undefined,
       is_active: Number(item.is_active),
       is_closed: Number(item.is_closed),
+    };
+  }
+
+  async checkActivation(id: number) {
+    const target = await this.prisma.classAcademicTerm.findFirst({
+      where: {
+        id: BigInt(id),
+        deleted_at: null,
+      },
+      include: {
+        class: true,
+        academic_term: true,
+      },
+    });
+
+    if (!target) {
+      throw new NotFoundException('تخصيص فترة الصف غير موجود.');
+    }
+
+    if (target.is_active === 1) {
+      return {
+        success: true,
+        can_activate: true,
+        is_already_active: true,
+        has_previous_term: false,
+        message: 'هذا الفصل الدراسي نشط بالفعل لهذا الصف.',
+        data: {
+          target_term_id: Number(target.id),
+          target_term_name: target.academic_term?.name || `فصل ${target.academic_term_id}`,
+          class_id: Number(target.class_id),
+          class_name: target.class?.name,
+          total_students: 0,
+          completed_students: 0,
+          missing_count: 0,
+          missing_students: [],
+        },
+      };
+    }
+
+    const currentActive = await this.prisma.classAcademicTerm.findFirst({
+      where: {
+        class_id: target.class_id,
+        is_active: 1,
+        deleted_at: null,
+      },
+      include: {
+        academic_term: true,
+      },
+    });
+
+    if (!currentActive) {
+      return {
+        success: true,
+        can_activate: true,
+        has_previous_term: false,
+        message: 'لا يوجد فصل دراسي نشط سابق. يمكن تفعيل الفصل مباشرة.',
+        data: {
+          target_term_id: Number(target.id),
+          target_term_name: target.academic_term?.name || `فصل ${target.academic_term_id}`,
+          class_id: Number(target.class_id),
+          class_name: target.class?.name,
+          total_students: 0,
+          completed_students: 0,
+          missing_count: 0,
+          missing_students: [],
+        },
+      };
+    }
+
+    const activeYear = await this.prisma.academicYear.findFirst({
+      where: { is_active: 1, deleted_at: null },
+    });
+
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        class_section: { class_id: target.class_id },
+        deleted_at: null,
+        ...(activeYear ? { academic_year_id: activeYear.id } : {}),
+      },
+      include: {
+        student: true,
+        class_section: { include: { section: true } },
+      },
+    });
+
+    const totalStudents = enrollments.length;
+    const previousTermName = currentActive.academic_term?.name || `الفصل ${currentActive.academic_term_id}`;
+
+    if (totalStudents === 0) {
+      return {
+        success: true,
+        can_activate: true,
+        has_previous_term: true,
+        previous_term_name: previousTermName,
+        previous_term_id: Number(currentActive.id),
+        message: `تم التحقق بنجاح (لا يوجد طلاب مسجلين في هذا الصف بعد). يمكن تفعيل ${target.academic_term?.name || 'الفصل'}.`,
+        data: {
+          target_term_id: Number(target.id),
+          target_term_name: target.academic_term?.name || `فصل ${target.academic_term_id}`,
+          previous_term_id: Number(currentActive.id),
+          previous_term_name: previousTermName,
+          class_id: Number(target.class_id),
+          class_name: target.class?.name,
+          total_students: 0,
+          completed_students: 0,
+          missing_count: 0,
+          missing_students: [],
+        },
+      };
+    }
+
+    const studentIds = enrollments.map((e) => e.student_id);
+    const transcripts = await this.prisma.studentTranscript.findMany({
+      where: {
+        student_id: { in: studentIds },
+        academic_year_name: activeYear?.name,
+        deleted_at: null,
+        OR: [
+          { class_academic_term_id: currentActive.id },
+          { class_academic_term: { academic_term_id: currentActive.academic_term_id } },
+        ],
+      },
+      select: {
+        student_id: true,
+      },
+    });
+
+    const gradedStudentIds = new Set(transcripts.map((t) => Number(t.student_id)));
+    const missingStudents = enrollments
+      .filter((e) => !gradedStudentIds.has(Number(e.student_id)))
+      .map((e) => ({
+        student_id: Number(e.student_id),
+        student_name: e.student?.full_name || `طالب #${e.student_id}`,
+        student_code: `STD-${e.student_id}`,
+        section_name: e.class_section?.section?.name || 'الشعبة العامة',
+        class_section_id: Number(e.class_section_id),
+      }));
+
+    const missingCount = missingStudents.length;
+    const completedCount = totalStudents - missingCount;
+
+    if (missingCount > 0) {
+      return {
+        success: true,
+        can_activate: false,
+        has_previous_term: true,
+        previous_term_name: previousTermName,
+        previous_term_id: Number(currentActive.id),
+        message: `لا يمكن تفعيل "${target.academic_term?.name}" لوجود ${missingCount} طالب من أصل ${totalStudents} لم يتم استكمال رصد درجاتهم في الفصل النشط السابق ("${previousTermName}").`,
+        data: {
+          target_term_id: Number(target.id),
+          target_term_name: target.academic_term?.name || `فصل ${target.academic_term_id}`,
+          previous_term_id: Number(currentActive.id),
+          previous_term_name: previousTermName,
+          class_id: Number(target.class_id),
+          class_name: target.class?.name,
+          total_students: totalStudents,
+          completed_students: completedCount,
+          missing_count: missingCount,
+          missing_students: missingStudents,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      can_activate: true,
+      has_previous_term: true,
+      previous_term_name: previousTermName,
+      previous_term_id: Number(currentActive.id),
+      message: `تم التحقق بنجاح من اكتمال رصد كافة درجات الطلاب (${totalStudents} طالب) للفصل السابق ("${previousTermName}"). كل شيء مكتمل وجاهز للتفعيل.`,
+      data: {
+        target_term_id: Number(target.id),
+        target_term_name: target.academic_term?.name || `فصل ${target.academic_term_id}`,
+        previous_term_id: Number(currentActive.id),
+        previous_term_name: previousTermName,
+        class_id: Number(target.class_id),
+        class_name: target.class?.name,
+        total_students: totalStudents,
+        completed_students: totalStudents,
+        missing_count: 0,
+        missing_students: [],
+      },
+    };
+  }
+
+  async activate(
+    id: number,
+    adminId?: number,
+    ipAddress?: string,
+    userAgent?: string,
+    force = false,
+  ) {
+    const existing = await this.prisma.classAcademicTerm.findFirst({
+      where: {
+        id: BigInt(id),
+        deleted_at: null,
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('تخصيص فترة الصف غير موجود.');
+    }
+
+    if (!force) {
+      const check = await this.checkActivation(id);
+      if (!check.can_activate) {
+        throw new BadRequestException(check.message);
+      }
+    }
+
+    // Atomic transaction: deactivate all other terms for this class, activate this one
+    await this.prisma.$transaction([
+      this.prisma.classAcademicTerm.updateMany({
+        where: {
+          class_id: existing.class_id,
+          deleted_at: null,
+        },
+        data: {
+          is_active: 0,
+        },
+      }),
+      this.prisma.classAcademicTerm.update({
+        where: {
+          id: BigInt(id),
+        },
+        data: {
+          is_active: 1,
+        },
+      }),
+    ]);
+
+    await this.auditService.log({
+      userId: adminId ? BigInt(adminId) : null,
+      action: 'activate',
+      entityType: 'class_academic_terms',
+      entityId: BigInt(id),
+      newValues: { is_active: 1 },
+      ipAddress: ipAddress,
+      userAgent: userAgent,
+    });
+
+    return {
+      success: true,
+      message: 'تم تفعيل الفترة النشطة للصف بنجاح.',
+      data: {
+        id: Number(existing.id),
+        class_id: Number(existing.class_id),
+        academic_term_id: Number(existing.academic_term_id),
+        is_active: 1,
+      },
     };
   }
 
@@ -332,66 +584,6 @@ export class ClassAcademicTermsService {
       success: true,
       message: 'تم تحديث فترة الصف بنجاح.',
       data: serialized,
-    };
-  }
-
-  async activate(
-    id: number,
-    adminId?: number,
-    ipAddress?: string,
-    userAgent?: string,
-  ) {
-    const existing = await this.prisma.classAcademicTerm.findFirst({
-      where: {
-        id: BigInt(id),
-        deleted_at: null,
-      },
-    });
-
-    if (!existing) {
-      throw new NotFoundException('تخصيص فترة الصف غير موجود.');
-    }
-
-    // Atomic transaction: deactivate all other terms for this class, activate this one
-    await this.prisma.$transaction([
-      this.prisma.classAcademicTerm.updateMany({
-        where: {
-          class_id: existing.class_id,
-          deleted_at: null,
-        },
-        data: {
-          is_active: 0,
-        },
-      }),
-      this.prisma.classAcademicTerm.update({
-        where: {
-          id: BigInt(id),
-        },
-        data: {
-          is_active: 1,
-        },
-      }),
-    ]);
-
-    await this.auditService.log({
-      userId: adminId ? BigInt(adminId) : null,
-      action: 'activate',
-      entityType: 'class_academic_terms',
-      entityId: BigInt(id),
-      newValues: { is_active: 1 },
-      ipAddress: ipAddress,
-      userAgent: userAgent,
-    });
-
-    return {
-      success: true,
-      message: 'تم تفعيل الفترة النشطة للصف بنجاح.',
-      data: {
-        id: Number(existing.id),
-        class_id: Number(existing.class_id),
-        academic_term_id: Number(existing.academic_term_id),
-        is_active: 1,
-      },
     };
   }
 
