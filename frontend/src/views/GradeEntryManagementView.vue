@@ -461,7 +461,7 @@ const classFilterOptions = computed<TaqniyaSelectOption[]>(() => [
 
 const termFilterOptions = computed<TaqniyaSelectOption[]>(() => {
   return [
-    { label: 'جميع الفصول الدراسية', value: 'all' },
+    { label: 'الفصل النشط حالياً (تلقائي)', value: 'all', subtext: 'يعرض درجات الفصل النشط لكل صف تلقائياً' },
     ...academicTermsList.value.map((t: any) => ({
       value: t.id,
       label: t.name,
@@ -505,11 +505,15 @@ const selectedTermId = computed<number | undefined>(() => {
 });
 
 const currentTermName = computed(() => {
-  if (resolvedClassAcademicTerm.value?.term_name) {
-    return resolvedClassAcademicTerm.value.term_name;
+  if (resolvedClassAcademicTerm.value) {
+    return (
+      resolvedClassAcademicTerm.value.term_name ||
+      resolvedClassAcademicTerm.value.academic_term?.name ||
+      'الفصل الدراسي النشط'
+    );
   }
   const term = academicTermsList.value.find((t) => t.id === Number(selectedTermModel.value));
-  return term?.name || 'الفصل الدراسي الأول';
+  return term?.name || 'الفصل الدراسي النشط';
 });
 
 // Filtered Sections by selected class & search
@@ -606,10 +610,8 @@ const fetchAcademicLookups = async () => {
       selectedYearName.value = activeYear.name;
     }
 
-    const activeTerm = academicTermsList.value.find((t: any) => Number(t.is_active) === 1 || t.is_active === true) || academicTermsList.value[0];
-    if (activeTerm && selectedTermModel.value === 'all') {
-      selectedTermModel.value = activeTerm.id;
-    }
+    // Keep selectedTermModel as 'all' so resolvedClassAcademicTerm dynamically resolves the active term (is_active === 1) for each class
+    selectedTermModel.value = 'all';
   } catch (err: any) {
     console.error('Failed to load academic lookups:', err);
   }

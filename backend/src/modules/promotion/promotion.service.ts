@@ -1158,6 +1158,12 @@ export class PromotionService {
       ],
     });
 
+    // Pre-fetch all class academic terms
+    const allClassTerms = await this.prisma.classAcademicTerm.findMany({
+      where: { deleted_at: null },
+      include: { academic_term: true },
+    });
+
     const results = await Promise.all(
       sections.map(async (cs) => {
         const enrollments = await this.prisma.studentEnrollment.findMany({
@@ -1178,23 +1184,29 @@ export class PromotionService {
         let failedCount = 0;
         let annualCount = 0;
 
-        if (studentIds.length > 0) {
+        // Resolve target class_academic_term_id for this specific class section
+        const classTerms = allClassTerms.filter((ct) => ct.class_id === cs.class_id);
+        let targetClassTermId: bigint | null = null;
+
+        if (query.class_academic_term_id) {
+          const reqId = BigInt(query.class_academic_term_id);
+          const match = classTerms.find(
+            (ct) => ct.id === reqId || ct.academic_term_id === reqId,
+          );
+          targetClassTermId = match ? match.id : reqId;
+        } else {
+          // Default: Resolve the currently active term for THIS specific class!
+          const activeTerm = classTerms.find((ct) => ct.is_active === 1);
+          targetClassTermId = activeTerm ? activeTerm.id : (classTerms[0]?.id || null);
+        }
+
+        if (studentIds.length > 0 && targetClassTermId) {
           const transcriptWhere: any = {
             student_id: { in: studentIds },
             academic_year_name: yearName,
+            class_academic_term_id: targetClassTermId,
             deleted_at: null,
           };
-
-          if (query.class_academic_term_id) {
-            transcriptWhere.OR = [
-              { class_academic_term_id: BigInt(query.class_academic_term_id) },
-              {
-                class_academic_term: {
-                  academic_term_id: BigInt(query.class_academic_term_id),
-                },
-              },
-            ];
-          }
 
           const transcripts = await this.prisma.studentTranscript.findMany({
             where: transcriptWhere,
@@ -1291,20 +1303,34 @@ export class PromotionService {
       throw new NotFoundException('الشعبة الدراسية غير موجودة.');
     }
 
+    // Resolve target class_academic_term_id for this specific class
+    const classTerms = await this.prisma.classAcademicTerm.findMany({
+      where: {
+        class_id: classSection.class_id,
+        deleted_at: null,
+      },
+      include: { academic_term: true },
+    });
+
+    let targetClassTermId: bigint | null = null;
+    if (query.class_academic_term_id) {
+      const reqId = BigInt(query.class_academic_term_id);
+      const match = classTerms.find(
+        (ct) => ct.id === reqId || ct.academic_term_id === reqId,
+      );
+      targetClassTermId = match ? match.id : reqId;
+    } else {
+      const activeTerm = classTerms.find((ct) => ct.is_active === 1);
+      targetClassTermId = activeTerm ? activeTerm.id : (classTerms[0]?.id || null);
+    }
+
     // Get subjects for this class and term
     const subjectWhere: any = {
       class_id: classSection.class_id,
       deleted_at: null,
     };
-    if (query.class_academic_term_id) {
-      subjectWhere.OR = [
-        { class_academic_term_id: BigInt(query.class_academic_term_id) },
-        {
-          class_academic_term: {
-            academic_term_id: BigInt(query.class_academic_term_id),
-          },
-        },
-      ];
+    if (targetClassTermId) {
+      subjectWhere.class_academic_term_id = targetClassTermId;
     }
 
     const classSubjects = await this.prisma.classSubject.findMany({
@@ -1332,22 +1358,13 @@ export class PromotionService {
 
     // Get existing transcripts for this term
     let transcripts: any[] = [];
-    if (studentIds.length > 0) {
+    if (studentIds.length > 0 && targetClassTermId) {
       const transcriptWhere: any = {
         student_id: { in: studentIds },
         academic_year_name: yearName,
+        class_academic_term_id: targetClassTermId,
         deleted_at: null,
       };
-      if (query.class_academic_term_id) {
-        transcriptWhere.OR = [
-          { class_academic_term_id: BigInt(query.class_academic_term_id) },
-          {
-            class_academic_term: {
-              academic_term_id: BigInt(query.class_academic_term_id),
-            },
-          },
-        ];
-      }
 
       transcripts = await this.prisma.studentTranscript.findMany({
         where: transcriptWhere,
