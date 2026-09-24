@@ -841,7 +841,6 @@ const handleSelectClassCard = (cSum: ExecutiveClassSummary) => {
     filters.value.class_section_id = undefined;
     selectedSectionName.value = 'all';
   }
-  filters.value.class_academic_term_id = undefined;
   filters.value.page = 1;
   fetchTranscripts();
 };

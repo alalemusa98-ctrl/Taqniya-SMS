@@ -144,6 +144,60 @@ export class PromotionService {
     const orderBy: any = {};
     orderBy[sortField] = sortOrder;
 
+    // Build summaryWhere matching the active filter criteria (year, transcript_type, term, section, status)
+    const summaryWhere: any = {
+      deleted_at: null,
+    };
+
+    if (yearName) {
+      summaryWhere.academic_year_name = yearName;
+    }
+
+    if (query.transcript_type) {
+      summaryWhere.transcript_type = query.transcript_type;
+    } else {
+      summaryWhere.transcript_type = TranscriptType.annual;
+    }
+
+    const summaryAndConditions: any[] = [];
+
+    if (query.class_academic_term_id) {
+      summaryAndConditions.push({
+        OR: [
+          { class_academic_term_id: BigInt(query.class_academic_term_id) },
+          {
+            class_academic_term: {
+              academic_term_id: BigInt(query.class_academic_term_id),
+            },
+          },
+        ],
+      });
+    } else if (query.academic_term_id) {
+      summaryWhere.class_academic_term = {
+        academic_term_id: BigInt(query.academic_term_id),
+      };
+    }
+
+    if (query.class_section_id) {
+      const cs = await this.prisma.classSection.findUnique({
+        where: { id: BigInt(query.class_section_id) },
+        include: { section: true },
+      });
+      if (cs?.section) {
+        summaryWhere.section_name = cs.section.name;
+      }
+    } else if (query.section_name) {
+      summaryWhere.section_name = query.section_name;
+    }
+
+    if (query.final_status) {
+      summaryWhere.final_status = query.final_status;
+    }
+
+    if (summaryAndConditions.length > 0) {
+      summaryWhere.AND = summaryAndConditions;
+    }
+
     const [total, transcripts, allYearTranscripts] = await Promise.all([
       this.prisma.studentTranscript.count({ where }),
       this.prisma.studentTranscript.findMany({
@@ -164,14 +218,12 @@ export class PromotionService {
         skip,
         take: perPage,
       }),
-      // Aggregate summary statistics for all classes in this year & transcript_type (prevent double-counting)
+      // Aggregate summary statistics matching filter criteria (strictly 1 entry per student per class)
       this.prisma.studentTranscript.findMany({
-        where: {
-          academic_year_name: yearName,
-          transcript_type: query.transcript_type || TranscriptType.annual,
-          deleted_at: null,
-        },
+        where: summaryWhere,
         select: {
+          id: true,
+          student_id: true,
           grade_level: true,
           class_name: true,
           final_status: true,
@@ -179,9 +231,17 @@ export class PromotionService {
       }),
     ]);
 
-    // Build Executive Class Summaries (keyed by class_name to prevent stage collisions)
+    // Build Executive Class Summaries (deduplicated by student_id to prevent duplicate counting)
     const classSummaryMap = new Map<string, any>();
+    const seenStudentInClass = new Set<string>();
+
     for (const item of allYearTranscripts) {
+      const studentClassKey = `${item.class_name}_${item.student_id}`;
+      if (seenStudentInClass.has(studentClassKey)) {
+        continue;
+      }
+      seenStudentInClass.add(studentClassKey);
+
       if (!classSummaryMap.has(item.class_name)) {
         classSummaryMap.set(item.class_name, {
           grade_level: item.grade_level,
