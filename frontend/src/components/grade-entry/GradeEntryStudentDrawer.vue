@@ -76,7 +76,7 @@
               >
                 <td class="py-2.5 px-3 font-bold text-bx-title">
                   {{ subj.subject_name }}
-                  <span class="block text-[10px] text-bx-muted font-normal">درجة النجاح: {{ subj.passing_score }}</span>
+                  <span class="block text-[10px] text-bx-muted font-normal">درجة النجاح الكلية: {{ subj.passing_score }}</span>
                 </td>
 
                 <!-- Coursework input -->
@@ -126,6 +126,9 @@
                     <span v-if="isExamInvalid(subj)" class="text-[9px] text-rose-600 font-bold">
                       تجاوزت {{ subj.max_exam_score }}!
                     </span>
+                    <span class="text-[10px] text-bx-muted font-normal">
+                      (صغرى: {{ subj.exam_passing_score }})
+                    </span>
                   </div>
                 </td>
 
@@ -139,7 +142,7 @@
                   {{ subj.max_score }}
                 </td>
 
-                <!-- Subject Status -->
+                <!-- Subject Status with Dual-Criterion Indicator -->
                 <td class="py-2 px-3 text-center">
                   <span
                     v-if="isRowInvalid(subj)"
@@ -149,10 +152,13 @@
                   </span>
                   <span
                     v-else
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1"
                     :class="isSubjectPassed(subj) ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'"
+                    :title="isExamConditionFailed(subj) ? `المجموع (${(Number(subj.coursework_score)||0)+(Number(subj.exam_score)||0)}) مستوفٍ ولكن درجة الامتحان (${subj.exam_score}) أقل من صغرى الامتحان (${subj.exam_passing_score})` : undefined"
                   >
-                    {{ isSubjectPassed(subj) ? 'ناجح' : 'راسب' }}
+                    <span v-if="isSubjectPassed(subj)">ناجح ✅</span>
+                    <span v-else-if="isExamConditionFailed(subj)">راسب (شرط الامتحان ⚠️)</span>
+                    <span v-else>راسب ❌</span>
                   </span>
                 </td>
               </tr>
@@ -226,6 +232,7 @@ interface GradeRow {
   max_score: number;
   max_coursework_score: number;
   max_exam_score: number;
+  exam_passing_score: number;
   coursework_score: number;
   exam_score: number;
 }
@@ -247,16 +254,19 @@ watch(
       );
 
       const maxScore = Number(s.max_score) || 100;
-      const maxCoursework = s.max_coursework_score || Number((maxScore * 0.4).toFixed(0));
-      const maxExam = s.max_exam_score || Number((maxScore * 0.6).toFixed(0));
+      const maxCoursework = Number(s.max_coursework_score) || Number((maxScore * 0.4).toFixed(0));
+      const maxExam = Number(s.max_exam_score) || Number((maxScore * 0.6).toFixed(0));
+      const examPass = Number(s.exam_passing_score) || Number((maxExam * 0.5).toFixed(0));
+      const pass = Number(s.passing_score) || Number((maxScore * 0.5).toFixed(0));
 
       return {
         subject_id: s.subject_id,
         subject_name: s.subject_name,
-        passing_score: Number(s.passing_score) || 50,
+        passing_score: pass,
         max_score: maxScore,
         max_coursework_score: maxCoursework,
         max_exam_score: maxExam,
+        exam_passing_score: examPass,
         coursework_score: existing ? Number(existing.coursework_score) || 0 : 0,
         exam_score: existing ? Number(existing.exam_score) || 0 : 0,
       };
@@ -284,8 +294,21 @@ const validationErrors = computed(() => {
 });
 
 const isSubjectPassed = (subj: GradeRow) => {
-  const total = (Number(subj.coursework_score) || 0) + (Number(subj.exam_score) || 0);
-  return total >= subj.passing_score;
+  const coursework = Number(subj.coursework_score) || 0;
+  const exam = Number(subj.exam_score) || 0;
+  const total = coursework + exam;
+  const isTotalPassed = total >= subj.passing_score;
+  const isExamPassed = exam >= subj.exam_passing_score;
+  return isTotalPassed && isExamPassed;
+};
+
+const isExamConditionFailed = (subj: GradeRow): boolean => {
+  const coursework = Number(subj.coursework_score) || 0;
+  const exam = Number(subj.exam_score) || 0;
+  const total = coursework + exam;
+  const isTotalPassed = total >= subj.passing_score;
+  const isExamPassed = exam >= subj.exam_passing_score;
+  return isTotalPassed && !isExamPassed;
 };
 
 const totalScore = computed(() => {
@@ -353,6 +376,7 @@ const handleSubmit = () => {
     max_coursework_score: r.max_coursework_score,
     exam_score: Number(r.exam_score) || 0,
     max_exam_score: r.max_exam_score,
+    exam_passing_score: r.exam_passing_score,
     total_score: (Number(r.coursework_score) || 0) + (Number(r.exam_score) || 0),
     passing_score: r.passing_score,
     max_score: r.max_score,

@@ -20,6 +20,25 @@
         </p>
       </div>
 
+      <!-- Annual Cumulative Exam Compensation Feature Toggle -->
+      <div class="p-3.5 bg-bx-surface-2 rounded-2xl border border-bx-border space-y-1">
+        <label class="flex items-start gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            v-model="enableAnnualExamCompensation"
+            class="w-4 h-4 mt-0.5 rounded-md border-[#B4AED8] text-bx-primary focus:ring-0 cursor-pointer accent-purple-600 shrink-0"
+          />
+          <div class="space-y-0.5">
+            <span class="text-xs font-bold text-bx-title block">
+              تفعيل ميزة جبر مجموع الامتحانات السنوية (Cumulative Exam Compensation)
+            </span>
+            <span class="text-[11px] text-bx-muted leading-relaxed block">
+              عند التفعيل، يُحتسب شرط صغرى الامتحان على مجموع درجات امتحانات الفصول مجتمعة بدلاً من اشتراط اجتياز كل سمستر على حدة.
+            </span>
+          </div>
+        </label>
+      </div>
+
       <div class="p-3 bg-bx-surface-2 rounded-xl text-xs text-bx-muted space-y-1">
         <span class="font-bold text-bx-title block">ملاحظات هامة:</span>
         <ul class="list-disc pr-4 space-y-0.5">
@@ -44,7 +63,7 @@
           type="button"
           class="px-5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-xs"
           :disabled="isGenerating"
-          @click="emit('confirm')"
+          @click="emit('confirm', enableAnnualExamCompensation)"
         >
           <Loader2 v-if="isGenerating" class="w-4 h-4 animate-spin" />
           <Sparkles v-else class="w-4 h-4" />
@@ -56,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { Sparkles, Loader2 } from 'lucide-vue-next';
 import TaqniyaModal from '../ui/TaqniyaModal.vue';
 
@@ -76,8 +95,10 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'confirm'): void;
+  (e: 'confirm', enableCompensation: boolean): void;
 }>();
+
+const enableAnnualExamCompensation = ref(false);
 
 const totalStudentsCount = computed(() => {
   if (props.targetClass) {

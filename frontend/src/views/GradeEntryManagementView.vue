@@ -747,7 +747,7 @@ const handleOpenAnnualModalForSection = (section: any) => {
   isAnnualModalOpen.value = true;
 };
 
-const handleConfirmAnnualGeneration = async () => {
+const handleConfirmAnnualGeneration = async (enableCompensation?: boolean) => {
   isGeneratingAnnual.value = true;
   try {
     let res: any;
@@ -755,12 +755,14 @@ const handleConfirmAnnualGeneration = async () => {
       res = await gradeEntryApi.generateAnnualForClass({
         class_id: targetClassForAnnual.value.class_id,
         academic_year_name: selectedYearName.value,
+        enable_annual_exam_compensation: !!enableCompensation,
       });
     } else if (targetSectionForAnnual.value || selectedSection.value) {
       const secId = targetSectionForAnnual.value?.class_section_id || selectedSection.value?.class_section_id;
       res = await gradeEntryApi.generateAnnualForSection({
         class_section_id: secId,
         academic_year_name: selectedYearName.value,
+        enable_annual_exam_compensation: !!enableCompensation,
       });
     }
 

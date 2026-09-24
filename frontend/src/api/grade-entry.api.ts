@@ -35,6 +35,7 @@ export interface ClassSubjectRosterItem {
   max_score: number;
   max_coursework_score: number;
   max_exam_score: number;
+  exam_passing_score?: number;
 }
 
 export interface StudentRosterItem {
@@ -126,6 +127,7 @@ export const gradeEntryApi = {
   async generateAnnualForSection(payload: {
     class_section_id: number;
     academic_year_name?: string;
+    enable_annual_exam_compensation?: boolean;
   }) {
     const res = await apiClient.post<{
       success: boolean;
@@ -141,6 +143,7 @@ export const gradeEntryApi = {
   async generateAnnualForClass(payload: {
     class_id: number;
     academic_year_name?: string;
+    enable_annual_exam_compensation?: boolean;
   }) {
     const res = await apiClient.post<{
       success: boolean;
