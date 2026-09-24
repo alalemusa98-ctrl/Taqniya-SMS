@@ -28,16 +28,33 @@
 
           <!-- Controls: Audit Toggle + Report Modal + Annual Button + Search -->
           <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-            <!-- Generate Annual Transcripts for selected section -->
-            <button
-              v-if="selectedSection"
-              type="button"
-              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
-              @click="isAnnualModalOpen = true"
-            >
-              <Sparkles class="w-3.5 h-3.5" />
-              <span>إصدار الصحيفة السنوية</span>
-            </button>
+            <!-- Generate / Exported Annual Transcripts for selected section -->
+            <div v-if="selectedSection" class="flex items-center gap-2">
+              <!-- If already exported for this section -->
+              <span
+                v-if="selectedSection.has_annual_generated"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-xs"
+              >
+                <CheckCircle2 class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>تم تصدير الصحيفة لهذا الفصل</span>
+              </span>
+
+              <!-- Action button: Re-export if generated, or Issue if not -->
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer shadow-md"
+                :class="
+                  selectedSection.has_annual_generated
+                    ? 'text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 hover:scale-[1.02] active:scale-[0.98]'
+                    : 'text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98]'
+                "
+                @click="openAnnualModalForCurrentSection"
+              >
+                <RotateCw v-if="selectedSection.has_annual_generated" class="w-3.5 h-3.5" />
+                <Sparkles v-else class="w-3.5 h-3.5 text-purple-200 animate-pulse" />
+                <span>{{ selectedSection.has_annual_generated ? 'إعادة تصدير الصحيفة' : 'إصدار الصحيفة السنوية' }}</span>
+              </button>
+            </div>
 
             <!-- Audit Toggle Button (Matching Timetables Audit Mode) -->
             <button
@@ -188,24 +205,59 @@
                 <Users class="w-5 h-5" />
               </div>
               <div>
-                <h3 class="text-sm sm:text-base font-black text-bx-title font-display">
-                  كشف درجات طلاب: {{ selectedSection.class_name }} ({{ selectedSection.section_name }})
-                </h3>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-sm sm:text-base font-black text-bx-title font-display">
+                    كشف درجات طلاب: {{ selectedSection.class_name }} ({{ selectedSection.section_name }})
+                  </h3>
+                  <!-- Exported Transcript Badge for this section -->
+                  <span
+                    v-if="selectedSection.has_annual_generated"
+                    class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-2xs"
+                  >
+                    <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
+                    <span>تم تصدير الصحيفة لهذا الفصل</span>
+                  </span>
+                </div>
                 <p class="text-[11px] text-bx-muted mt-0.5 font-medium">
                   إجمالي المسكنين: {{ rosterStudents.length }} طالب • المرصودون: {{ gradedStudentsCount }} طالب • متبقي: {{ selectedSection.missing_count }}
                 </p>
               </div>
             </div>
 
-            <!-- Section Search Filter (Pill Shaped) -->
-            <div class="relative min-w-[240px]">
-              <Search class="w-4 h-4 text-bx-muted absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                v-model="rosterSearch"
-                type="text"
-                placeholder="بحث باسم الطالب أو رمزه..."
-                class="w-full bg-transparent border border-bx-border rounded-full px-4 py-1.5 pr-9 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all"
-              />
+            <!-- Right Controls: Quick Transcript Action + Search Filter -->
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <!-- Re-export / Issue Button in Roster Banner -->
+              <button
+                v-if="selectedSection.has_annual_generated"
+                type="button"
+                @click="openAnnualModalForCurrentSection"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 transition-all cursor-pointer shadow-2xs hover:scale-102 active:scale-98"
+                title="إعادة احتساب وتصدير الصحيفة المعتمدة لهذه الشعبة"
+              >
+                <RotateCw class="w-3.5 h-3.5" />
+                <span>إعادة تصدير الصحيفة</span>
+              </button>
+              <button
+                v-else-if="selectedSection.graded_count === selectedSection.total_enrolled && selectedSection.total_enrolled > 0"
+                type="button"
+                @click="openAnnualModalForCurrentSection"
+                class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-md shadow-purple-500/20 hover:shadow-purple-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                title="اكتمال رصد الدرجات! انقر لإصدار الصحيفة السنوية للشعبة"
+              >
+                <Sparkles class="w-3.5 h-3.5 animate-pulse" />
+                <span>إصدار الصحيفة للشعبة</span>
+              </button>
+
+              <!-- Section Search Filter (Pill Shaped) -->
+              <div class="relative min-w-[220px]">
+                <Search class="w-4 h-4 text-bx-muted absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  v-model="rosterSearch"
+                  type="text"
+                  placeholder="بحث باسم الطالب أو رمزه..."
+                  class="w-full bg-transparent border border-bx-border rounded-full px-4 py-1.5 pr-9 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all"
+                />
+              </div>
             </div>
           </div>
 
@@ -370,6 +422,7 @@ import {
   AlertTriangle,
   Award,
   XCircle,
+  RotateCw,
 } from 'lucide-vue-next';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
@@ -745,6 +798,14 @@ const handleOpenAnnualModalForSection = (section: any) => {
   targetClassForAnnual.value = null;
   targetSectionForAnnual.value = section;
   isAnnualModalOpen.value = true;
+};
+
+const openAnnualModalForCurrentSection = () => {
+  if (selectedSection.value) {
+    targetClassForAnnual.value = null;
+    targetSectionForAnnual.value = selectedSection.value;
+    isAnnualModalOpen.value = true;
+  }
 };
 
 const handleConfirmAnnualGeneration = async (enableCompensation?: boolean) => {

@@ -101,49 +101,71 @@
               <!-- Annual Generated Badge -->
               <span
                 v-else-if="sec.has_annual_generated"
-                class="w-2 h-2 rounded-full bg-purple-500"
-                title="تم إصدار الصحيفة السنوية النهائية"
-              ></span>
+                class="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-bold"
+                :class="
+                  selectedSectionId === sec.class_section_id
+                    ? 'bg-white/20 text-white'
+                    : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                "
+                title="تم تصدير الصحيفة المعتمدة لهذه الشعبة"
+              >
+                <CheckCircle2 class="w-2.5 h-2.5" />
+                <span>تم التصدير</span>
+              </span>
             </button>
           </div>
         </div>
 
         <!-- Class-Level Annual Transcript Action Card Footer -->
-        <div class="pt-2.5 mt-2 border-t border-bx-divider flex items-center justify-between gap-2">
-          <!-- State 1: Annual Transcripts Already Generated -->
-          <div v-if="cls.hasAnnualGenerated" class="flex items-center justify-between w-full">
-            <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 class="w-3.5 h-3.5" />
-              <span>الصحيفة النهائية معتمدة</span>
+        <div class="pt-2.5 mt-2 border-t border-bx-divider">
+          <!-- State 1: Annual Transcripts Already Generated For This Class -->
+          <div
+            v-if="cls.hasAnnualGenerated"
+            class="flex items-center justify-between w-full p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20"
+          >
+            <span class="inline-flex items-center gap-1.5 text-xs font-black text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 class="w-4 h-4 text-emerald-500 shrink-0" />
+              <span>تم تصدير الصحيفة لهذا الفصل</span>
             </span>
             <button
               @click.stop="$emit('generate-annual-class', cls)"
               type="button"
-              class="text-[10px] font-semibold text-purple-600 hover:text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1 cursor-pointer"
-              title="إعادة احتساب وتوليد الصحيفة السنوية لطلاب الصف"
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 transition-all cursor-pointer shadow-2xs hover:scale-102 active:scale-98"
+              title="إعادة احتساب وتصدير الصحيفة السنوية لطلاب الصف"
             >
-              <Sparkles class="w-3 h-3" />
-              <span>إعادة التوليد</span>
+              <RotateCw class="w-3 h-3" />
+              <span>إعادة التصدير</span>
             </button>
           </div>
 
           <!-- State 2: All Terms Fully Graded (Ready to Generate Annual Transcript) -->
-          <div v-else-if="cls.isAllTermsCompleted" class="w-full flex items-center justify-between">
+          <div v-else-if="cls.isAllTermsCompleted" class="w-full">
             <button
               @click.stop="$emit('generate-annual-class', cls)"
               type="button"
-              class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-xs active:scale-98 transition-all cursor-pointer"
-              title="تم رصد درجات كافة فصول هذا الصف بالكامل! انقر لتوليد الصحيفة النهائية"
+              class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-500/20 hover:shadow-purple-500/35 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer"
+              title="تم رصد درجات كافة فصول هذا الصف بالكامل! انقر لتوليد وتصدير الصحيفة"
             >
-              <Sparkles class="w-3.5 h-3.5 animate-pulse" />
-              <span>إصدار الصحيفة النهائية للصف</span>
+              <Sparkles class="w-4 h-4 animate-pulse" />
+              <span>إصدار الصحيفة السنوية للصف</span>
             </button>
           </div>
 
-          <!-- State 3: Terms Still Incomplete -->
-          <div v-else class="text-[10px] text-bx-muted flex items-center gap-1">
-            <Clock class="w-3 h-3 text-bx-muted" />
-            <span>رصد فصول الصف قيد الاكتمال</span>
+          <!-- State 3: Terms In Progress (Allow direct generation with status indicator) -->
+          <div v-else class="flex items-center justify-between w-full">
+            <span class="text-[10px] text-bx-muted flex items-center gap-1 font-medium" title="درجات بعض الفصول أو الشعب ما زالت قيد الرصد">
+              <Clock class="w-3 h-3 text-amber-500" />
+              <span>فصول الصف قيد الرصد</span>
+            </span>
+            <button
+              @click.stop="$emit('generate-annual-class', cls)"
+              type="button"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-xs hover:shadow-md hover:scale-102 active:scale-98 transition-all cursor-pointer"
+              title="إصدار الصحيفة السنوية لكافة طلاب هذا الصف"
+            >
+              <Sparkles class="w-3.5 h-3.5" />
+              <span>إصدار الصحيفة</span>
+            </button>
           </div>
         </div>
       </div>
@@ -153,7 +175,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { School, AlertTriangle, CheckCircle2, Sparkles, Clock } from 'lucide-vue-next';
+import { School, AlertTriangle, CheckCircle2, Sparkles, Clock, RotateCw } from 'lucide-vue-next';
 import type { SectionAuditProgressItem } from '../../api/grade-entry.api';
 
 interface Props {
