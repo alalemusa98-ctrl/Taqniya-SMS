@@ -24,6 +24,7 @@ import {
   SectionAuditProgressQueryDto,
   SectionRosterQueryDto,
   GenerateAnnualSectionDto,
+  GenerateAnnualClassDto,
 } from './dto/section-grade-entry.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
@@ -99,6 +100,29 @@ export class PromotionController {
       ? (req.headers['user-agent'] as string)
       : undefined;
     return this.promotionService.generateAnnualForSection(
+      dto,
+      Number(currentUser.id),
+      ipAddress,
+      userAgent,
+    );
+  }
+
+  /**
+   * 3.3b POST /api/v1/transcripts/generate-annual-for-class
+   * Auto-generate annual transcripts for an entire class (Must be declared BEFORE transcripts/:id)
+   */
+  @Post('transcripts/generate-annual-for-class')
+  @Roles(RoleType.admin)
+  async generateAnnualForClass(
+    @Body() dto: GenerateAnnualClassDto,
+    @CurrentUser() currentUser: any,
+    @Req() req: Request,
+  ) {
+    const ipAddress = req?.ip || req?.socket?.remoteAddress;
+    const userAgent = req?.headers
+      ? (req.headers['user-agent'] as string)
+      : undefined;
+    return this.promotionService.generateAnnualForClass(
       dto,
       Number(currentUser.id),
       ipAddress,

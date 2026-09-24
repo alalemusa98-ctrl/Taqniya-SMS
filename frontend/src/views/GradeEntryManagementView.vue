@@ -174,6 +174,8 @@
             :selected-section-id="selectedSection?.class_section_id"
             :is-audit-mode="isAuditMode"
             @select-section="handleSelectSection"
+            @generate-annual-class="handleOpenAnnualModalForClass"
+            @generate-annual-section="handleOpenAnnualModalForSection"
           />
         </div>
 
@@ -341,7 +343,8 @@
       <!-- 4. Annual Transcripts Confirm Modal -->
       <AnnualTranscriptsConfirmModal
         :is-open="isAnnualModalOpen"
-        :section-info="selectedSection"
+        :target-class="targetClassForAnnual"
+        :section-info="targetSectionForAnnual || selectedSection"
         :is-generating="isGeneratingAnnual"
         @close="isAnnualModalOpen = false"
         @confirm="handleConfirmAnnualGeneration"
@@ -422,6 +425,8 @@ const isDetailDrawerOpen = ref(false);
 const selectedTranscriptForDetail = ref<any>(null);
 const isAuditModalOpen = ref(false);
 const isAnnualModalOpen = ref(false);
+const targetClassForAnnual = ref<any>(null);
+const targetSectionForAnnual = ref<any>(null);
 
 // Loading Flags
 const isLoadingProgress = ref(false);
@@ -730,15 +735,36 @@ const handleSaveStudentTranscript = async (payload: FreezeTranscriptDto) => {
   }
 };
 
+const handleOpenAnnualModalForClass = (classGroup: any) => {
+  targetClassForAnnual.value = classGroup;
+  targetSectionForAnnual.value = null;
+  isAnnualModalOpen.value = true;
+};
+
+const handleOpenAnnualModalForSection = (section: any) => {
+  targetClassForAnnual.value = null;
+  targetSectionForAnnual.value = section;
+  isAnnualModalOpen.value = true;
+};
+
 const handleConfirmAnnualGeneration = async () => {
-  if (!selectedSection.value) return;
   isGeneratingAnnual.value = true;
   try {
-    const res = await gradeEntryApi.generateAnnualForSection({
-      class_section_id: selectedSection.value.class_section_id,
-      academic_year_name: selectedYearName.value,
-    });
-    if (res.success) {
+    let res: any;
+    if (targetClassForAnnual.value) {
+      res = await gradeEntryApi.generateAnnualForClass({
+        class_id: targetClassForAnnual.value.class_id,
+        academic_year_name: selectedYearName.value,
+      });
+    } else if (targetSectionForAnnual.value || selectedSection.value) {
+      const secId = targetSectionForAnnual.value?.class_section_id || selectedSection.value?.class_section_id;
+      res = await gradeEntryApi.generateAnnualForSection({
+        class_section_id: secId,
+        academic_year_name: selectedYearName.value,
+      });
+    }
+
+    if (res?.success) {
       toast.success(res.message || 'تم إصدار الصحيفة السنوية المجمعة بنجاح.');
       isAnnualModalOpen.value = false;
       await fetchAuditProgress();

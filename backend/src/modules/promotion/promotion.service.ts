@@ -1233,6 +1233,25 @@ export class PromotionService {
           });
         }
 
+        let allTermsTranscriptsCount = 0;
+        const requiredClassTermsCount = classTerms.length;
+
+        if (studentIds.length > 0) {
+          allTermsTranscriptsCount = await this.prisma.studentTranscript.count({
+            where: {
+              student_id: { in: studentIds },
+              academic_year_name: yearName,
+              transcript_type: TranscriptType.term,
+              deleted_at: null,
+            },
+          });
+        }
+
+        const isAllTermsCompleted =
+          totalEnrolled > 0 &&
+          requiredClassTermsCount > 0 &&
+          allTermsTranscriptsCount >= totalEnrolled * requiredClassTermsCount;
+
         const missingCount = Math.max(0, totalEnrolled - gradedCount);
         const completionRate =
           totalEnrolled > 0
@@ -1260,7 +1279,10 @@ export class PromotionService {
           failed_count: failedCount,
           pass_rate: passRate,
           is_fully_graded: totalEnrolled > 0 && gradedCount >= totalEnrolled,
+          is_all_terms_completed: isAllTermsCompleted,
           has_annual_generated: annualCount >= totalEnrolled && totalEnrolled > 0,
+          required_terms_count: requiredClassTermsCount,
+          all_terms_transcripts_count: allTermsTranscriptsCount,
         };
       }),
     );
@@ -1653,6 +1675,68 @@ export class PromotionService {
       data: {
         generated_count: generatedCount,
         total_students: enrollments.length,
+      },
+    };
+  }
+
+  /**
+   * 3.3b POST /api/v1/transcripts/generate-annual-for-class
+   * Auto-aggregate term marks into annual frozen transcripts for an entire class
+   */
+  async generateAnnualForClass(
+    dto: { class_id: number; academic_year_name?: string },
+    adminUserId: number,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    let yearName = dto.academic_year_name;
+    if (!yearName) {
+      const activeYear = await this.prisma.academicYear.findFirst({
+        where: { is_active: 1, deleted_at: null },
+      });
+      yearName = activeYear?.name || '';
+    }
+
+    const classRecord = await this.prisma.class.findUnique({
+      where: { id: BigInt(dto.class_id) },
+    });
+
+    if (!classRecord || classRecord.deleted_at) {
+      throw new NotFoundException('الصف الدراسي المحدد غير موجود.');
+    }
+
+    const classSections = await this.prisma.classSection.findMany({
+      where: { class_id: BigInt(dto.class_id), deleted_at: null },
+    });
+
+    if (classSections.length === 0) {
+      throw new NotFoundException('لا توجد شعب دراسية لهذا الصف.');
+    }
+
+    let totalGenerated = 0;
+    let totalStudents = 0;
+
+    for (const cs of classSections) {
+      try {
+        const res = await this.generateAnnualForSection(
+          { class_section_id: Number(cs.id), academic_year_name: yearName },
+          adminUserId,
+          ipAddress,
+          userAgent,
+        );
+        totalGenerated += res.data.generated_count;
+        totalStudents += res.data.total_students;
+      } catch (err: any) {
+        // If a section has no enrollments or other non-fatal condition, skip
+      }
+    }
+
+    return {
+      success: true,
+      message: `تم توليد ${totalGenerated} صحيفة سنوية بنجاح لجميع طلاب ${classRecord.name}.`,
+      data: {
+        generated_count: totalGenerated,
+        total_students: totalStudents,
       },
     };
   }

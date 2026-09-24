@@ -17,7 +17,10 @@ export interface SectionAuditProgressItem {
   failed_count: number;
   pass_rate: number;
   is_fully_graded: boolean;
+  is_all_terms_completed?: boolean;
   has_annual_generated: boolean;
+  required_terms_count?: number;
+  all_terms_transcripts_count?: number;
 }
 
 export interface SectionAuditProgressResponse {
@@ -129,6 +132,21 @@ export const gradeEntryApi = {
       message: string;
       data: { generated_count: number; total_students: number };
     }>('/transcripts/generate-annual-for-section', payload);
+    return res.data;
+  },
+
+  /**
+   * 3.5 Batch generate annual transcripts for entire class
+   */
+  async generateAnnualForClass(payload: {
+    class_id: number;
+    academic_year_name?: string;
+  }) {
+    const res = await apiClient.post<{
+      success: boolean;
+      message: string;
+      data: { generated_count: number; total_students: number };
+    }>('/transcripts/generate-annual-for-class', payload);
     return res.data;
   },
 };

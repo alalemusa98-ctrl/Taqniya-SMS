@@ -35,3 +35,14 @@ export class GenerateAnnualSectionDto {
   @IsString()
   academic_year_name?: string;
 }
+
+export class GenerateAnnualClassDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  class_id!: number;
+
+  @IsOptional()
+  @IsString()
+  academic_year_name?: string;
+}
