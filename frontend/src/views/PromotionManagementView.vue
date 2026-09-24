@@ -906,9 +906,14 @@ const handleExecutePromotion = async (payload: ExecutePromotionDto) => {
   try {
     const res = await promotionApi.executePromotion(payload);
     if (res.success) {
-      toast.success(res.message || 'تم تنفيذ الترحيل الأكاديمي بنجاح.');
+      toast.success(res.message || 'تم تنفيذ الترحيل الأكاديمي بنجاح وتفعيل العام الدراسي الجديد.');
       isPromotionModalOpen.value = false;
-      await Promise.all([fetchTranscripts(), fetchPromotionBatches()]);
+      await Promise.all([
+        fetchAcademicLookups(),
+        fetchSections(),
+        fetchTranscripts(),
+        fetchPromotionBatches(),
+      ]);
     }
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'فشل تنفيذ الترحيل السنوي.');

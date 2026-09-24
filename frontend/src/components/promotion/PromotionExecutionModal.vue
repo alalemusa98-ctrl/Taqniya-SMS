@@ -338,7 +338,18 @@
           ></textarea>
         </div>
 
-        <!-- 2.5 Mandatory Confirmation Checkbox -->
+        <!-- 2.5 Automated System Actions Notice -->
+        <div class="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-900 dark:text-purple-200 flex items-center gap-2.5">
+          <Sparkles class="w-4 h-4 text-purple-600 shrink-0" />
+          <div class="space-y-0.5">
+            <span class="font-bold block">إجراءات النظام التلقائية عند الاعتماد:</span>
+            <span class="text-[11px] leading-relaxed block text-purple-800 dark:text-purple-300">
+              سيتم تفعيل السنة المستهدفة تلقائياً لتكون هي السنة النشطة في المدرسة، مع جعل <strong>الفصل الدراسي الأول</strong> هو الفصل النشط تلقائياً لكافة الصفوف.
+            </span>
+          </div>
+        </div>
+
+        <!-- 2.6 Mandatory Confirmation Checkbox -->
         <div class="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/25 flex items-start gap-3">
           <input
             id="confirm-promotion"

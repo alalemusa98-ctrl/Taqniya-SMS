@@ -560,6 +560,28 @@ describe('Phase 09: Promotion & Transcripts Archiving (TDD Verification)', () =>
 
       expect(student2NewEnrollment).toBeDefined();
       expect(student2NewEnrollment?.class_section.class.grade_level).toBe(5);
+
+      // Verify that the target academic year is activated and other years deactivated
+      const activeYear = await prisma.academicYear.findUnique({
+        where: { id: BigInt(testAcademicYear2Id) },
+      });
+      expect(activeYear?.is_active).toBe(1);
+
+      const previousYear = await prisma.academicYear.findUnique({
+        where: { id: BigInt(testAcademicYear1Id) },
+      });
+      expect(previousYear?.is_active).toBe(0);
+
+      // Verify that Term 1 is activated for classes
+      const activeTerms = await prisma.classAcademicTerm.findMany({
+        where: {
+          academic_term_id: BigInt(testAcademicTerm1Id),
+          deleted_at: null,
+        },
+      });
+      for (const ct of activeTerms) {
+        expect(ct.is_active).toBe(1);
+      }
     });
 
     it('TC-PRM-05: Should reject executing promotion between years that were already promoted (409 Conflict)', async () => {

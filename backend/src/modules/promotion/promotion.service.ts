@@ -1179,6 +1179,41 @@ export class PromotionService {
         },
       });
 
+      // 1. Automatically activate the target academic year and deactivate all other academic years
+      await tx.academicYear.updateMany({
+        where: { deleted_at: null },
+        data: { is_active: 0 },
+      });
+
+      await tx.academicYear.update({
+        where: { id: BigInt(dto.to_academic_year_id) },
+        data: { is_active: 1 },
+      });
+
+      // 2. Automatically activate the first academic term (Term 1) for all classes, deactivating other terms
+      const firstTerm = await tx.academicTerm.findFirst({
+        where: { deleted_at: null },
+        orderBy: { term_number: 'asc' },
+      });
+
+      await tx.classAcademicTerm.updateMany({
+        where: { deleted_at: null },
+        data: { is_active: 0, is_closed: 0 },
+      });
+
+      if (firstTerm) {
+        await tx.classAcademicTerm.updateMany({
+          where: {
+            academic_term_id: firstTerm.id,
+            deleted_at: null,
+          },
+          data: {
+            is_active: 1,
+            is_closed: 0,
+          },
+        });
+      }
+
       return batch;
     });
 
@@ -1200,7 +1235,7 @@ export class PromotionService {
 
     return {
       success: true,
-      message: 'تم تنفيذ واكتمال عملية الترحيل الأكاديمي الجماعي بنجاح.',
+      message: 'تم تنفيذ واكتمال عملية الترحيل الأكاديمي بنجاح، وتفعيل العام الدراسي المستهدف وتنشيط الفصل الدراسي الأول لكافة الصفوف تلقائياً.',
       data: {
         batch_id: Number(result.id),
         total_processed: result.total_students,
