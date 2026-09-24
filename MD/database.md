@@ -358,7 +358,7 @@
 ## 9. جدول مقررات الفصول والدرجات بالفصل الدراسي (`class_subjects`)
 
 > **الوصف:**  
-> جدول الربط الثلاثي المحكم يربط كل صف دراسي بالمادة المقررة في تخصيص فترة الصف المحمية بجدول `class_academic_terms` لضمان صحة النزاهة 100%، مع تحديد درجة النجاح والدرجة العظمى المخصصة لكل سمستر بدقة متناهية.
+> جدول الربط الثلاثي المحكم يربط كل صف دراسي بالمادة المقررة في تخصيص فترة الصف المحمية بجدول `class_academic_terms` لضمان صحة النزاهة 100%، مع تحديد توزيع درجات المادة (أعمال سنة + امتحان نهائي)، الدرجة الكلية العظمى، وشرط النجاح المزدوج (درجة النجاح الكلية الصغرى + درجة النجاح الصغرى للامتحان النهائي) المخصصة لكل سمستر بدقة متناهية.
 
 ### 📋 هيكل الأعمدة (Columns Matrix):
 
@@ -368,8 +368,11 @@
 | `class_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الصف الدراسي (يرتبط بـ `classes.id`). |
 | `subject_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف المادة العامة (يرتبط بـ `subjects.id`). |
 | `class_academic_term_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف تخصيص فترة الصف (يرتبط بـ `class_academic_terms.id`). |
-| `passing_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 50.00` | درجة النجاح الصغرى المقررة للمادة في هذا السمستر. |
-| `max_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 100.00` | الدرجة الكلية العظمى للمادة في هذا السمستر. |
+| `max_coursework_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 40.00` | الدرجة العظمى لأعمال السنة للمادة في هذا السمستر. |
+| `max_exam_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 60.00` | الدرجة العظمى للامتحان النهائي للمادة في هذا السمستر. |
+| `exam_passing_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 30.00` | درجة النجاح الصغرى للامتحان النهائي المقررة للمادة في هذا السمستر (شرط اجتياز الامتحان). |
+| `passing_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 50.00` | درجة النجاح الصغرى الإجمالية المقررة للمادة في هذا السمستر. |
+| `max_score` | `DECIMAL(5,2)` | `NOT NULL`, `DEFAULT 100.00` | الدرجة الكلية العظمى للمادة في هذا السمستر (`max_coursework_score + max_exam_score`). |
 | `created_at` | `TIMESTAMP` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
 | `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
 | `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي. |
@@ -385,6 +388,16 @@
 * `INDEX idx_class_subjects_class (class_id)`
 * `INDEX idx_class_subjects_subject (subject_id)`
 * `INDEX idx_class_subjects_class_term (class_academic_term_id)`
+
+### 📐 قيود النزاهة والحسابات الأكاديمية (Integrity & Academic Rules):
+* `max_score = max_coursework_score + max_exam_score` (الدرجة الكلية هي حاصل جمع أعمال السنة والامتحان).
+* `passing_score <= max_score` (درجة النجاح الكلية لا تتجاوز الدرجة الكلية العظمى).
+* `exam_passing_score <= max_exam_score` (درجة نجاح الامتحان لا تتجاوز عظمى الامتحان).
+* **قاعدة النجاح المزدوج للمادة (Dual-Criterion Subject Passing Rule):**  
+  يعتبر الطالب ناجحاً في المادة حصراً إذا حقق الشرطين معاً:  
+  1. `total_score >= passing_score` (المجموع الكلي لا يقل عن درجة النجاح الكلية).  
+  2. `exam_score >= exam_passing_score` (درجة الامتحان النهائي لا تقل عن درجة نجاح الامتحان).  
+  *إذا لم يستوفِ الطالب شرط الامتحان حتى وإن تجاوز المجموع الكلي درجة النجاح، يعتبر راسباً / دور ثانٍ في المادة.*
 
 ---
 

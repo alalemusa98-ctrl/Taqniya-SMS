@@ -561,7 +561,7 @@
 
 ### 3.1 `GET /api/v1/academic/class-subjects` — استعراض مناهج ومقررات الصفوف بالفصول
 
-> **الوصف الوظيفي:** استرجاع الهيكل الكامل لمناهج ومقررات صفوف المدرسة موزَّعة بحسب الفصول الدراسية (`terms`)، مع تفاصيل المواد ودرجات النجاح والدرجة العظمى لكل فصل دون تكرار، مع إمكانية الفلترة لصف دراسي محدد أو فصل محدد.
+> **الوصف الوظيفي:** استرجاع الهيكل الكامل لمناهج ومقررات صفوف المدرسة موزَّعة بحسب الفصول الدراسية (`terms`)، مع تفاصيل المواد ودرجات أعمال السنة، والامتحان النهائي، ودرجة النجاح الكلية، ودرجة نجاح الامتحان النهائي، والدرجة العظمى لكل فصل دون تكرار، مع إمكانية الفلترة لصف دراسي محدد أو فصل محدد.
 
 - **Query Parameters:**
   - `class_id` (optional, integer): فلترة المنهج لصف دراسي محدد فقط (مثال: `class_id=9`).
@@ -595,6 +595,9 @@
                 "subject_id": 1,
                 "name": "الرياضيات",
                 "code": "MATH",
+                "max_coursework_score": "40.00",
+                "max_exam_score": "60.00",
+                "exam_passing_score": "30.00",
                 "passing_score": "50.00",
                 "max_score": "100.00"
               },
@@ -603,6 +606,9 @@
                 "subject_id": 2,
                 "name": "العلوم",
                 "code": "SCI",
+                "max_coursework_score": "40.00",
+                "max_exam_score": "60.00",
+                "exam_passing_score": "30.00",
                 "passing_score": "50.00",
                 "max_score": "100.00"
               }
@@ -619,6 +625,9 @@
                 "subject_id": 1,
                 "name": "الرياضيات",
                 "code": "MATH",
+                "max_coursework_score": "40.00",
+                "max_exam_score": "60.00",
+                "exam_passing_score": "30.00",
                 "passing_score": "50.00",
                 "max_score": "100.00"
               },
@@ -627,6 +636,9 @@
                 "subject_id": 2,
                 "name": "العلوم",
                 "code": "SCI",
+                "max_coursework_score": "40.00",
+                "max_exam_score": "60.00",
+                "exam_passing_score": "30.00",
                 "passing_score": "50.00",
                 "max_score": "100.00"
               }
@@ -643,6 +655,9 @@
                 "subject_id": 1,
                 "name": "الرياضيات",
                 "code": "MATH",
+                "max_coursework_score": "40.00",
+                "max_exam_score": "60.00",
+                "exam_passing_score": "30.00",
                 "passing_score": "50.00",
                 "max_score": "100.00"
               },
@@ -651,6 +666,9 @@
                 "subject_id": 3,
                 "name": "اللغة الإنجليزية",
                 "code": "ENG",
+                "max_coursework_score": "40.00",
+                "max_exam_score": "60.00",
+                "exam_passing_score": "30.00",
                 "passing_score": "50.00",
                 "max_score": "100.00"
               }
@@ -673,6 +691,9 @@
                 "subject_id": 4,
                 "name": "الفيزياء",
                 "code": "PHYS",
+                "max_coursework_score": "40.00",
+                "max_exam_score": "60.00",
+                "exam_passing_score": "30.00",
                 "passing_score": "50.00",
                 "max_score": "100.00"
               },
@@ -681,6 +702,9 @@
                 "subject_id": 5,
                 "name": "الكيمياء",
                 "code": "CHEM",
+                "max_coursework_score": "40.00",
+                "max_exam_score": "60.00",
+                "exam_passing_score": "30.00",
                 "passing_score": "50.00",
                 "max_score": "100.00"
               }
@@ -697,6 +721,9 @@
                 "subject_id": 4,
                 "name": "الفيزياء",
                 "code": "PHYS",
+                "max_coursework_score": "40.00",
+                "max_exam_score": "60.00",
+                "exam_passing_score": "30.00",
                 "passing_score": "50.00",
                 "max_score": "100.00"
               }
@@ -738,13 +765,16 @@
 
 ### 3.2 `POST /api/v1/academic/class-subjects` — إسناد مادة وتحديد درجات الفترة
 
-> **الوصف الوظيفي:** إضافة مادة لمنهج فترة محددة بالصف وتعيين درجة النجاح والدرجة العظمى. يستخرج الخادم معرف الصف تلقائياً من `class_academic_term_id`.
+> **الوصف الوظيفي:** إضافة مادة لمنهج فترة محددة بالصف وتعيين درجات أعمال السنة، والامتحان النهائي، ودرجة نجاح الامتحان، ودرجة النجاح الكلية، والدرجة العظمى. يستخرج الخادم معرف الصف تلقائياً من `class_academic_term_id`.
 
 - **Request Body:**
   ```json
   {
     "class_academic_term_id": 10,
     "subject_id": 1,
+    "max_coursework_score": 40.00,
+    "max_exam_score": 60.00,
+    "exam_passing_score": 30.00,
     "passing_score": 50.00,
     "max_score": 100.00
   }
@@ -763,6 +793,9 @@
     "subject_id": 1,
     "subject_name": "الرياضيات",
     "class_academic_term_id": 10,
+    "max_coursework_score": "40.00",
+    "max_exam_score": "60.00",
+    "exam_passing_score": "30.00",
     "passing_score": "50.00",
     "max_score": "100.00"
   }
@@ -783,7 +816,9 @@
   "success": false,
   "message": "بيانات إسناد المادة غير صالحة.",
   "errors": {
-    "passing_score": ["درجة النجاح يجب ألا تتجاوز الدرجة الكلية العظمى."]
+    "passing_score": ["درجة النجاح الإجمالية يجب ألا تتجاوز الدرجة الكلية العظمى."],
+    "exam_passing_score": ["درجة نجاح الامتحان النهائي يجب ألا تتجاوز الدرجة العظمى للامتحان."],
+    "max_score": ["الدرجة الكلية العظمى يجب أن تساوي مجموع عظمى أعمال السنة وعظمى الامتحان."]
   }
 }
 ```
@@ -794,13 +829,16 @@
 
 ### 3.3 `PUT /api/v1/academic/class-subjects/:id` — تعديل درجات مادة مسندة بالفترة
 
-> **الوصف الوظيفي:** تحديث بيانات مادة مسندة بفترة صف (متطابق تماماً مع هيكل الإنشاء).
+> **الوصف الوظيفي:** تحديث بيانات وتوزيع درجات مادة مسندة بفترة صف (متطابق تماماً مع هيكل الإنشاء).
 
 - **Request Body:**
   ```json
   {
     "class_academic_term_id": 10,
     "subject_id": 1,
+    "max_coursework_score": 40.00,
+    "max_exam_score": 60.00,
+    "exam_passing_score": 30.00,
     "passing_score": 60.00,
     "max_score": 100.00
   }
@@ -819,6 +857,9 @@
     "subject_id": 1,
     "subject_name": "الرياضيات",
     "class_academic_term_id": 10,
+    "max_coursework_score": "40.00",
+    "max_exam_score": "60.00",
+    "exam_passing_score": "30.00",
     "passing_score": "60.00",
     "max_score": "100.00"
   }
@@ -847,7 +888,9 @@
   "success": false,
   "message": "بيانات التحديث غير صالحة.",
   "errors": {
-    "passing_score": ["درجة النجاح يجب ألا تتجاوز الدرجة العظمى."]
+    "passing_score": ["درجة النجاح الإجمالية يجب ألا تتجاوز الدرجة الكلية العظمى."],
+    "exam_passing_score": ["درجة نجاح الامتحان النهائي يجب ألا تتجاوز الدرجة العظمى للامتحان."],
+    "max_score": ["الدرجة الكلية العظمى يجب أن تساوي مجموع عظمى أعمال السنة وعظمى الامتحان."]
   }
 }
 ```

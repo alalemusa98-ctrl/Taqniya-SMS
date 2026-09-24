@@ -209,28 +209,37 @@ stateDiagram-v2
 ---
 
 #### 🔹 [Operation 3.1] `GET /api/v1/academic/class-subjects` — استعراض منهج ومقررات الصف بالفصول
-- **الغرض والوظيفة:** استرجاع الهيكل الكامل لمنهج الصف الدراسي موزَّعاً ومنظماً بحسب الفصول الدراسية (`terms`) دون تكرار لبيانات الصف، مع تفاصيل المواد ودرجاتها لكل فصل ودعم الترقيم القياسي (`page`, `per_page`, `meta`).
+- **الغرض والوظيفة:** استرجاع الهيكل الكامل لمنهج الصف الدراسي موزَّعاً ومنظماً بحسب الفصول الدراسية (`terms`) دون تكرار لبيانات الصف، مع تفاصيل المواد ودرجاتها وأوزانها (أعمال سنة، امتحان نهائي، درجة نجاح الامتحان، درجة النجاح الكلية، والدرجة العظمى) لكل فصل ودعم الترقيم القياسي (`page`, `per_page`, `meta`).
 - **عقد الاستجابات والمعاملات (Network SSoT):**
   - معاملات التصفية بـ `class_id` وهياكل JSON الصريحة مقسمة بالفصول لـ (`200 OK`) مسجلة في [`routes.md`](./routes.md).
 
 #### 🔹 [Operation 3.2] `POST /api/v1/academic/class-subjects` — إسناد مادة وتحديد درجات الفترة
-- **الغرض والوظيفة:** إضافة مادة لمنهج فترة محددة بالصف وتعيين درجة النجاح والدرجة العظمى (يستنتج الخادم `class_id` تلقائياً من `class_academic_term_id`).
+- **الغرض والوظيفة:** إضافة مادة لمنهج فترة محددة بالصف وتعيين تفاصيل الدرجات والنجاح المزدوج (يستنتج الخادم `class_id` تلقائياً من `class_academic_term_id`).
 - **قواعد التحقق:**
   - `class_academic_term_id`: مطلوب، معرف فترة صف صالحة وغير محذوفة.
   - `subject_id`: مطلوب، معرف مادة عامة صالحة.
+  - `max_coursework_score`: مطلوب، رقم عشري (`>= 0`).
+  - `max_exam_score`: مطلوب، رقم عشري (`> 0`).
+  - `exam_passing_score`: مطلوب، رقم عشري (`>= 0`).
   - `passing_score`: مطلوب، رقم عشري (`>= 0`).
   - `max_score`: مطلوب، رقم عشري (`> 0`).
-  - **قيد النزاهة الإجباري:** `passing_score <= max_score`.
+  - **قيود النزاهة الإجبارية:**
+    - `max_score == max_coursework_score + max_exam_score` (`422 Unprocessable Entity`).
+    - `passing_score <= max_score` (`422 Unprocessable Entity`).
+    - `exam_passing_score <= max_exam_score` (`422 Unprocessable Entity`).
   - **قيد التفرد المركب:** التحقق من عدم تكرار المادة لنفس الفترة (`uq_class_term_subject`).
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - جسم الطلب والردود (`201 Created`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
 
 #### 🔹 [Operation 3.3] `PUT /api/v1/academic/class-subjects/:id` — تعديل درجات مادة مسندة بالفترة
-- **الغرض والوظيفة:** تحديث بيانات مادة مسندة بفترة صف (هيكل المدخلات متطابق تماماً مع هيكل الإنشاء).
+- **الغرض والوظيفة:** تحديث بيانات وتوزيع درجات مادة مسندة بفترة صف (هيكل المدخلات متطابق تماماً مع هيكل الإنشاء).
 - **قواعد المعالجة:**
   - التحقق من وجود السجل وعدم حذفه (`404 Not Found`).
   - **فحص حالة إغلاق الفترة:** إذا كانت الفترة مغلقة للأرشفة (`is_closed = 1`)، رفض التعديل وإرجاع `409 Conflict`.
-  - التحقق من قيد `passing_score <= max_score` (`422 Unprocessable Entity`).
+  - التحقق من قيود الدرجات:
+    - `max_score == max_coursework_score + max_exam_score`
+    - `passing_score <= max_score`
+    - `exam_passing_score <= max_exam_score`
   - تحديث بيانات السجل وتسجيل القيم في `audit_logs`.
 - **عقد الاستجابات والمدخلات (Network SSoT):**
   - استجابات التعديل (`200 OK`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`) مسجلة في [`routes.md`](./routes.md).
@@ -267,7 +276,7 @@ stateDiagram-v2
 - [ ] قصر صلاحية التخصيص والتسكين والتفعيل والإغلاق والتعديل والحذف حصراً على المستخدمين بدور `admin`.
 - [ ] إرجاع `401 Unauthorized` لأي طلب بدون توكن مصادقة صالح.
 - [ ] إرجاع `403 Forbidden` عند محاولة المعلم أو الطالب أو ولي الأمر إجراء أي تعديل.
-- [ ] التحقق الصارم من قيد الدرجات `passing_score <= max_score` وإرجاع `422` عند المخالفة.
+- [ ] التحقق الصارم من قيود الدرجات: `max_score == max_coursework_score + max_exam_score` و `passing_score <= max_score` و `exam_passing_score <= max_exam_score` وإرجاع `422` عند المخالفة.
 - [ ] استنتاج `class_id` تلقائياً من `class_academic_term_id` في عمليات مناهج الصفوف.
 - [ ] تطابق هيكل الـ Request Body بين عمليات الإنشاء والتعديل لـ `class-subjects`.
 - [ ] التحقق من تفرد القيود المركبة (`uq_class_term`, `uq_class_sections`, `uq_class_term_subject`) وإرجاع `409 Conflict`.

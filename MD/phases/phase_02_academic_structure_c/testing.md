@@ -47,11 +47,12 @@
 
 | معرف الاختبار (Test ID) | نوع الاختبار | السيناريو ووصف الحالة | المدخلات المتوقعة | النتيجة والرمز المتوقع |
 | :--- | :--- | :--- | :--- | :--- |
-| `TC-CSU-01` | **Integration** | استرجاع منهج ومقررات الصف مقسماً بحسب الفصول مع الترقيم | `GET /api/v1/academic/class-subjects?class_id=9&page=1` | `200 OK` بهيكل هرمي يضم الفصول والمواد والدرجات و `meta`. |
-| `TC-CSU-02` | **Unit / Validation** | إسناد مادة وتحديد درجات الفترة | `class_academic_term_id: 10, subject_id: 1, pass: 50.00, max: 100.00` | `201 Created` وحفظ السجل. |
+| `TC-CSU-01` | **Integration** | استرجاع منهج ومقررات الصف مقسماً بحسب الفصول مع الترقيم وأوزان الدرجات | `GET /api/v1/academic/class-subjects?class_id=9&page=1` | `200 OK` بهيكل يضم الفصول والمواد وأوزان الدرجات (coursework, exam, exam_passing, pass, max) و `meta`. |
+| `TC-CSU-02` | **Unit / Validation** | إسناد مادة وتحديد درجات الفترة وشرط النجاح المزدوج | `class_academic_term_id: 10, subject_id: 1, max_coursework: 40, max_exam: 60, exam_pass: 30, pass: 50, max: 100` | `201 Created` وحفظ السجل. |
 | `TC-CSU-03` | **Conflict** | منع تكرار إسناد نفس المادة لنفس الفترة بالصف | `class_academic_term_id: 10, subject_id: 1` (مسندة مسبقاً) | `409 Conflict` (`uq_class_term_subject`). |
-| `TC-CSU-04` | **Validation** | **قيد النزاهة:** رفض درجة نجاح أكبر من الدرجة العظمى | `passing_score: 110.00, max_score: 100.00` | `422 Unprocessable Entity`. |
-| `TC-CSU-05` | **Integration** | تعديل درجات مادة مسندة بفترة مفتوحة | `PUT /api/v1/academic/class-subjects/:id` | `200 OK` وتحديث السجل. |
+| `TC-CSU-04` | **Validation** | **قيد النزاهة:** رفض درجة نجاح إجمالية أكبر من الدرجة العظمى | `passing_score: 110.00, max_score: 100.00` | `422 Unprocessable Entity`. |
+| `TC-CSU-04B`| **Validation** | **قيد النزاهة:** رفض درجة نجاح امتحان أكبر من عظمى الامتحان أو عدم تطابق المجموع | `exam_passing_score: 70.00, max_exam_score: 60.00` أو `max_score != coursework + exam` | `422 Unprocessable Entity`. |
+| `TC-CSU-05` | **Integration** | تعديل درجات مادة مسندة بفترة مفتوحة | `PUT /api/v1/academic/class-subjects/:id` مع درجات صالحة | `200 OK` وتحديث السجل. |
 | `TC-CSU-06` | **Conflict / Lock** | **قفل الفترات المغلقة:** محاولة تعديل درجات مادة بفترة مغلقة للأرشفة | `PUT /api/v1/academic/class-subjects/:id` لفترة مغلقة | `409 Conflict` ورفض التعديل. |
 | `TC-CSU-07` | **Relational Integrity** | **منع إزالة مادة رصدت درجاتها (RESTRICT):** محاولة إزالة مادة لها درجات أو حصص | `DELETE /api/v1/academic/class-subjects/:id` لمادة لها درجات | `409 Conflict` ورفض الحذف. |
 | `TC-CSU-08` | **Soft Delete** | إزالة مادة حرة من منهج الفترة | `DELETE /api/v1/academic/class-subjects/:id` | `200 OK` وضبط `deleted_at`. |

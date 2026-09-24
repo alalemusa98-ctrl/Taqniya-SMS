@@ -37,9 +37,7 @@
 
 ## 4. منطق الأعمال والخادم (Backend Domain Logic)
 
-- [x] توثيق قواعد التحقق لكافة المدخلات في `backend.md`.
-- [x] توثيق قيد التناسب الإجباري للدرجات (`passing_score <= max_score`).
-- [x] توثيق قيد الفترة النشطة الوحيدة لكل صف وتفعيلها داخل Atomic Transaction.
+- [x] توثيق قيود التناسب الإجبارية للدرجات (`max_score == max_coursework_score + max_exam_score` و `passing_score <= max_score` و `exam_passing_score <= max_exam_score` وقاعدة النجاح المزدوج).
 - [x] توثيق حظر تعديل درجات المواد بالفترات المغلقة للأرشفة (`is_closed = 1`).
 - [x] توثيق حظر فك الربط وإزالة المواد المرجعي (RESTRICT Policy) وإرجاع `409 Conflict`.
 - [x] توثيق تسجيل العمليات الحساسة في سجلات التدقيق `audit_logs`.

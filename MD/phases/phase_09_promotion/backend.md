@@ -56,14 +56,17 @@ stateDiagram-v2
 
 ### 🔒 قواعد ثبات النظام الصارمة (System Invariants):
 1. **اللقطة التجميدية الثابتة والدقيقة للصحائف (`Immutable JSON Snapshot`):**
-   - تحفظ درجات المواد والتقييمات بصيغة JSON غير قابلة للتعديل بجدول `student_transcripts.transcript_data` متضمنة `coursework_score` والحد الأقصى `max_coursework_score` و `exam_score` والحد الأقصى `max_exam_score` و `second_round_details`.
-2. **قيد تفرد الصحيفة (`uq_student_transcript_term`):**
+   - تحفظ درجات المواد والتقييمات بصيغة JSON غير قابلة للتعديل بجدول `student_transcripts.transcript_data` متضمنة `coursework_score` والحد الأقصى `max_coursework_score` و `exam_score` والحد الأقصى `max_exam_score` و `exam_passing_score` و `passing_score` و `is_passed` و `second_round_details`.
+2. **قاعدة النجاح المزدوج للمادة في محرك الترحيل (Dual-Criterion Passing Invariant):**
+   - يُعتبر الطالب مجتازاً للمادة (`is_passed = true`) حصراً عند تحقق: `(total_score >= passing_score) && (exam_score >= exam_passing_score)`.
+   - في حال كان المجموع الكلي $\ge 50$ ولكن درجة الامتحان أقل من درجة نجاح الامتحان (مثل $20 < 30$)، يُعتبر الطالب راسباً في المادة وتتحول حالته إلى `second_round`.
+3. **قيد تفرد الصحيفة (`uq_student_transcript_term`):**
    - يمنع تكرار تجميد أكثر من صحيفة معتمدة لنفس الطالب في نفس العام الدراسي والفترة ونوع الصحيفة.
-3. **سياسة النقل المباشر لرموز الشعب (Direct Section-to-Section Mapping):**
+4. **سياسة النقل المباشر لرموز الشعب (Direct Section-to-Section Mapping):**
    - يُنقل الطلاب الناجحون بنفس رمز شعبتهم الأصلية إلى الصف الأعلى بالعام الجديد (5/أ $\rightarrow$ 6/أ، و 5/ب $\rightarrow$ 6/ب، و 5/ج $\rightarrow$ 6/ج).
-4. **تنبيه السعة المنخفضة لشعب الراسبين (Low Enrollment Alert):**
+5. **تنبيه السعة المنخفضة لشعب الراسبين (Low Enrollment Alert):**
    - في حال وجود طلاب راسبين بشعبة سابقة لا مقابل لها (مثل 7 طلاب راسبين بـ 6/د)، تُبقى الشعبة كما هي مع إصدار تنبيه مرئي `low_enrollment_warnings` للإدارة بالمعاينة.
-5. **التنفيذ الذري للترحيل الجماعي (Atomic Execution Invariant):**
+6. **التنفيذ الذري للترحيل الجماعي (Atomic Execution Invariant):**
    - تنفذ عملية الترحيل لجميع طلاب المدرسة في معاملة ذرية متكاملة تضمن إما نجاح ترحيل وتسكين كافة الطلاب أو التراجع التام عند حدوث أي خطأ.
 
 ---
@@ -133,14 +136,21 @@ stateDiagram-v2
 - **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
 
 #### 🔹 [Operation 2.3] `POST /api/v1/promotions/preview` — معاينة نتائج الترحيل وتنبيهات الشعب
-- **الغرض والوظيفة:** محاكاة عملية الترحيل وحساب أعداد الناجحين والراسبين ورصد الشعب ذات السعة المنخفضة (أقل من 10 طلاب) وإرجاع `low_enrollment_warnings`.
+- **الغرض والوظيفة:** محاكاة عملية الترحيل السنوية وحساب أعداد الناجحين والراسبين والدور الثاني ورصد الشعب ذات السعة المنخفضة (أقل من 10 طلاب) وإرجاع `low_enrollment_warnings`.
+- **المدخلات وخيارات الاحتساب (Parameters & Calculation Flags):**
+  - `from_academic_year_id`: مطلوب، معرف العام الدراسي المنتهي.
+  - `to_academic_year_id`: مطلوب، معرف العام الدراسي الجديد المستهدف.
+  - `enable_annual_exam_compensation`: اختياري، منطقي (`boolean`، القيمة الافتراضية `false`).
+    - عند `false` (النمط الصارم): تقييم اجتياز الامتحان النهائي لكل فصل دراسي بشكل مستقل (`exam_score >= exam_passing_score`).
+    - عند `true` (نمط التعويض السنوي): يتم احتساب مجموع امتحانات الفصول معاً ومقارنتها بإجمالي درجات نجاح الامتحانات السنوية (`sum(exam_scores) >= sum(exam_passing_scores)`).
 - **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).
 
 #### 🔹 [Operation 2.4] `POST /api/v1/promotions/execute` — اعتماد وتنفيذ الترحيل السنوي الجماعي
-- **الغرض والوظيفة:** تنفيذ الترحيل الذري للطلاب وتسكينهم بالعام الجديد وتوثيق السجل في `promotion_batches`.
+- **الغرض والوظيفة:** تنفيذ الترحيل الذري للطلاب وتسكينهم بالعام الجديد بناءً على سياسة الاحتساب المعتمدة وتوثيق السجل في `promotion_batches`.
 - **قواعد التحقق والتنفيذ:**
   - `from_academic_year_id`: مطلوب، معرف عام دراسي سابق.
   - `to_academic_year_id`: مطلوب، معرف عام دراسي جديد.
+  - `enable_annual_exam_compensation`: اختياري، منطقي (`boolean`، افتراضي `false`).
   - التحقق من عدم تنفيذ ترحيل مسبق بين العامين (`uq_promotion_batch_years`).
   - نقل الناجحين للصف الأعلى بنفس رمز الشعبة، ونقل الراسبين لنفس الصف للإعادة.
 - **عقد الاستجابات (Network SSoT):** مسجلة في [`routes.md`](./routes.md).

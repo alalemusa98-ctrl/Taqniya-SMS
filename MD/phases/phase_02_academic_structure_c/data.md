@@ -77,7 +77,7 @@
 
 ### 1.3 [الخطوة 3] جدول مقررات الفصول والدرجات بالفصل الدراسي (`class_subjects`)
 
-> **الوصف:** جدول الربط الثلاثي المحكم يربط كل صف دراسي بالمادة المقررة في تخصيص فترة الصف بجدول `class_academic_terms` لضمان صحة النزاهة 100%، مع تحديد درجة النجاح الصغرى `passing_score` والدرجة العظمى `max_score` المخصصة لكل سمستر بدقة متناهية.
+> **الوصف:** جدول الربط الثلاثي المحكم يربط كل صف دراسي بالمادة المقررة في تخصيص فترة الصف بجدول `class_academic_terms` لضمان صحة النزاهة 100%، مع تحديد توزيع درجات المادة (أعمال سنة + امتحان نهائي)، والدرجة العظمى الإجمالية، وقاعدة النجاح المزدوج (درجة النجاح الكلية الصغرى `passing_score` + درجة النجاح الصغرى للامتحان `exam_passing_score`) المخصصة لكل سمستر بدقة متناهية.
 
 | اسم العمود (Column) | نوع البيانات (MySQL Type) | القيود والخصائص (Constraints) | الوصف والدلالة الوظيفية |
 | :--- | :--- | :--- | :--- |
@@ -85,8 +85,11 @@
 | `class_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف الصف الدراسي (يرتبط بـ `classes.id`). |
 | `subject_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف المادة العامة (يرتبط بـ `subjects.id`). |
 | `class_academic_term_id` | `BIGINT UNSIGNED` | `NOT NULL` | معرف تخصيص فترة الصف (يرتبط بـ `class_academic_terms.id`). |
-| `passing_score` | `DECIMAL(5,2)` | `NOT NULL, DEFAULT 50.00` | درجة النجاح الصغرى المقررة للمادة في هذا السمستر. |
-| `max_score` | `DECIMAL(5,2)` | `NOT NULL, DEFAULT 100.00` | الدرجة الكلية العظمى للمادة في هذا السمستر. |
+| `max_coursework_score` | `DECIMAL(5,2)` | `NOT NULL, DEFAULT 40.00` | الدرجة العظمى لأعمال السنة للمادة في هذا السمستر. |
+| `max_exam_score` | `DECIMAL(5,2)` | `NOT NULL, DEFAULT 60.00` | الدرجة العظمى للامتحان النهائي للمادة في هذا السمستر. |
+| `exam_passing_score` | `DECIMAL(5,2)` | `NOT NULL, DEFAULT 30.00` | درجة النجاح الصغرى للامتحان النهائي المقررة للمادة في هذا السمستر (شرط اجتياز الامتحان). |
+| `passing_score` | `DECIMAL(5,2)` | `NOT NULL, DEFAULT 50.00` | درجة النجاح الصغرى الإجمالية المقررة للمادة في هذا السمستر. |
+| `max_score` | `DECIMAL(5,2)` | `NOT NULL, DEFAULT 100.00` | الدرجة الكلية العظمى للمادة في هذا السمستر (`max_coursework_score + max_exam_score`). |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | توقيت إنشاء السجل. |
 | `updated_at` | `TIMESTAMP` | `NULL ON UPDATE CURRENT_TIMESTAMP` | توقيت آخر تحديث. |
 | `deleted_at` | `TIMESTAMP` | `NULL DEFAULT NULL` | طابع الحذف المنطقي (Soft Delete). |
@@ -105,7 +108,13 @@
 
 - **قيود منطق الأعمال وقواعد البيانات (Business & Data Invariants):**
   - `uq_class_term_subject`: يمنع تكرار إسناد نفس المادة لنفس فترة الصف الدراسي.
-  - قيد الدرجات: يجب دائماً تحقق `passing_score <= max_score` و `passing_score >= 0` و `max_score > 0`.
+  - قيود الدرجات:
+    - `max_score = max_coursework_score + max_exam_score`
+    - `passing_score <= max_score` و `passing_score >= 0`
+    - `exam_passing_score <= max_exam_score` و `exam_passing_score >= 0`
+    - `max_coursework_score >= 0` و `max_exam_score > 0`
+  - **قاعدة النجاح المزدوج للمادة (Dual-Criterion Subject Passing Rule):**
+    - نجاح الطالب بالمادة يستوجب استيفاء الشرطين: `(total_score >= passing_score) AND (exam_score >= exam_passing_score)`.
   - `ON DELETE RESTRICT`: يمنع إزالة أي مادة من منهج الصف إذا تم رصد درجات امتحانات رسمية أو جدول حصص للمادة بتلك الفترة.
 
 ---
@@ -159,6 +168,9 @@ erDiagram
         bigint class_id FK
         bigint subject_id FK
         bigint class_academic_term_id FK
+        decimal max_coursework_score
+        decimal max_exam_score
+        decimal exam_passing_score
         decimal passing_score
         decimal max_score
         timestamp created_at
