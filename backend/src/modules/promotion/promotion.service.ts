@@ -846,7 +846,27 @@ export class PromotionService {
     let retained = 0;
     let graduated = 0;
 
-    // Track simulated section counts in target year
+    // Fetch all classes and sections to build the unified matrix
+    const [allClasses, allSectionsMaster] = await Promise.all([
+      this.prisma.class.findMany({
+        where: { deleted_at: null },
+        include: {
+          stage: true,
+          class_sections: {
+            where: { deleted_at: null },
+            include: { section: true },
+          },
+        },
+        orderBy: { grade_level: 'asc' },
+      }),
+      this.prisma.section.findMany({
+        where: { deleted_at: null },
+        orderBy: { id: 'asc' },
+      }),
+    ]);
+
+    // Track statistics per class-section and simulated target section counts
+    const sectionStatsMap = new Map<string, { total: number; passed: number; failed: number; second_round: number }>();
     const targetSectionStudents = new Map<string, { source_label: string; class_name: string; section_name: string; count: number }>();
 
     for (const e of enrollments) {
@@ -854,6 +874,20 @@ export class PromotionService {
       const sec = e.class_section?.section;
       const gradeLevel = cls?.grade_level || 1;
       const sourceLabel = `${cls?.name || 'الصف ' + gradeLevel} - ${sec?.name || 'شعبة أ'}`;
+
+      if (e.class_section) {
+        const classId = Number(e.class_section.class_id);
+        const sectionId = Number(e.class_section.section_id);
+        const secKey = `${classId}_${sectionId}`;
+        if (!sectionStatsMap.has(secKey)) {
+          sectionStatsMap.set(secKey, { total: 0, passed: 0, failed: 0, second_round: 0 });
+        }
+        const st = sectionStatsMap.get(secKey)!;
+        st.total += 1;
+        if (e.status === EnrollmentStatus.passed) st.passed += 1;
+        else if (e.status === EnrollmentStatus.failed) st.failed += 1;
+        else if (e.status === EnrollmentStatus.second_round) st.second_round += 1;
+      }
 
       if (e.status === EnrollmentStatus.passed) {
         if (gradeLevel >= 12) {
@@ -882,6 +916,42 @@ export class PromotionService {
       }
     }
 
+    // Build unified sections matrix
+    const sectionsMatrix = allClasses.map((cls) => {
+      const assignedSectionIds = new Set(cls.class_sections.map((cs) => Number(cs.section_id)));
+      return {
+        class_id: Number(cls.id),
+        class_name: cls.name,
+        grade_level: cls.grade_level,
+        stage_name: cls.stage?.name || 'التعليم العام',
+        stage_id: cls.stage_id ? Number(cls.stage_id) : undefined,
+        sections: allSectionsMaster.map((sec) => {
+          const secId = Number(sec.id);
+          const isAssigned = assignedSectionIds.has(secId);
+          const secKey = `${Number(cls.id)}_${secId}`;
+          const stats = sectionStatsMap.get(secKey) || { total: 0, passed: 0, failed: 0, second_round: 0 };
+          const passRate = stats.total > 0 ? Math.round((stats.passed / stats.total) * 100 * 10) / 10 : 0;
+          return {
+            section_id: secId,
+            section_name: sec.name,
+            section_code: `SEC-${String(secId).padStart(3, '0')}#`,
+            is_assigned: isAssigned,
+            total_students: stats.total,
+            passed_count: stats.passed,
+            failed_count: stats.failed,
+            second_round_count: stats.second_round,
+            pass_rate: passRate,
+          };
+        }),
+      };
+    });
+
+    const sectionsList = allSectionsMaster.map((sec) => ({
+      id: Number(sec.id),
+      name: sec.name,
+      code: `SEC-${String(sec.id).padStart(3, '0')}#`,
+    }));
+
     // Generate mapping examples
     const mappingExamples: any[] = [];
     const lowEnrollmentWarnings: any[] = [];
@@ -903,6 +973,10 @@ export class PromotionService {
       }
     }
 
+    const overallPassRate = totalStudents > 0
+      ? Math.round(((toBePromoted + graduated) / totalStudents) * 100 * 10) / 10
+      : 0;
+
     return {
       success: true,
       message: 'تم معاينة نتائج الترحيل وتوليد تنبيهات الشعب بنجاح.',
@@ -913,9 +987,12 @@ export class PromotionService {
           second_round: secondRound,
           retained: retained,
           graduated: graduated,
+          overall_pass_rate: overallPassRate,
         },
         promotion_mapping_examples: mappingExamples.slice(0, 10),
         low_enrollment_warnings: lowEnrollmentWarnings,
+        sections_matrix: sectionsMatrix,
+        sections_list: sectionsList,
       },
     };
   }

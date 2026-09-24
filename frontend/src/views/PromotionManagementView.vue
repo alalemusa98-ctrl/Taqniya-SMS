@@ -721,8 +721,22 @@ const fetchAcademicLookups = async () => {
       academicApi.getTerms({ per_page: 50 }).catch(() => ({ data: { data: [] } })),
       academicApi.getClassAcademicTerms({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
     ]);
-    if (yearsRes.data?.success) academicYearsList.value = yearsRes.data.data;
-    if (classesRes.data?.success) classesList.value = classesRes.data.data;
+    if (yearsRes.data?.data) {
+      academicYearsList.value = Array.isArray(yearsRes.data.data)
+        ? yearsRes.data.data
+        : yearsRes.data.data.years || [];
+    } else if (Array.isArray(yearsRes.data)) {
+      academicYearsList.value = yearsRes.data;
+    }
+
+    if (classesRes.data?.data) {
+      classesList.value = Array.isArray(classesRes.data.data)
+        ? classesRes.data.data
+        : classesRes.data.data.classes || [];
+    } else if (Array.isArray(classesRes.data)) {
+      classesList.value = classesRes.data;
+    }
+
     academicTermsList.value = termsRes.data?.data?.terms || termsRes.data?.data || [];
     allClassAcademicTerms.value = classTermsRes.data?.data?.classes || classTermsRes.data?.data || [];
   } catch (err: any) {

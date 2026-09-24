@@ -129,6 +129,27 @@ export interface PromotionMappingExample {
   students_count: number;
 }
 
+export interface MatrixSectionItem {
+  section_id: number;
+  section_name: string;
+  section_code?: string;
+  is_assigned: boolean;
+  total_students: number;
+  passed_count: number;
+  failed_count: number;
+  second_round_count: number;
+  pass_rate: number;
+}
+
+export interface MatrixClassItem {
+  class_id: number;
+  class_name: string;
+  grade_level: number;
+  stage_name: string;
+  stage_id?: number;
+  sections: MatrixSectionItem[];
+}
+
 export interface PromotionSimulationResult {
   summary: {
     total_students: number;
@@ -136,9 +157,12 @@ export interface PromotionSimulationResult {
     second_round: number;
     retained: number;
     graduated?: number;
+    overall_pass_rate?: number;
   };
   promotion_mapping_examples: PromotionMappingExample[];
   low_enrollment_warnings: LowEnrollmentWarning[];
+  sections_matrix?: MatrixClassItem[];
+  sections_list?: Array<{ id: number; name: string; code: string }>;
 }
 
 export interface QueryTranscriptsDto {

@@ -6,7 +6,7 @@ interface Props {
   isOpen: boolean;
   title?: string;
   subtitle?: string;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
   showCloseButton?: boolean;
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
@@ -31,6 +31,12 @@ const maxWidthClasses = {
   lg: 'max-w-lg',
   xl: 'max-w-xl',
   '2xl': 'max-w-2xl',
+  '3xl': 'max-w-3xl',
+  '4xl': 'max-w-4xl',
+  '5xl': 'max-w-5xl',
+  '6xl': 'max-w-6xl',
+  '7xl': 'max-w-7xl',
+  full: 'max-w-[96vw]',
 };
 
 const handleBackdropClick = () => {
@@ -78,39 +84,41 @@ onUnmounted(() => {
 
       <!-- Modal Card -->
       <div
-        class="relative z-10 w-full rounded-3xl bg-bx-surface border border-bx-border shadow-2xl p-6 sm:p-8 space-y-5 animate-in zoom-in-95 duration-200"
+        class="relative z-10 w-full max-h-[92vh] flex flex-col rounded-3xl bg-bx-surface border border-bx-border shadow-2xl p-6 sm:p-8 animate-in zoom-in-95 duration-200"
         :class="maxWidthClasses[maxWidth]"
       >
         <!-- Header slot or default header -->
-        <slot name="header">
-          <div v-if="title || showCloseButton" class="flex items-center justify-between border-b border-bx-divider pb-4">
-            <div class="flex items-center gap-3">
-              <slot name="icon" />
-              <div>
-                <h3 v-if="title" class="text-base font-bold text-bx-title font-display">{{ title }}</h3>
-                <p v-if="subtitle" class="text-xs text-bx-muted font-normal mt-0.5">{{ subtitle }}</p>
+        <div class="shrink-0">
+          <slot name="header">
+            <div v-if="title || showCloseButton" class="flex items-center justify-between border-b border-bx-divider pb-4">
+              <div class="flex items-center gap-3">
+                <slot name="icon" />
+                <div>
+                  <h3 v-if="title" class="text-base font-bold text-bx-title font-display">{{ title }}</h3>
+                  <p v-if="subtitle" class="text-xs text-bx-muted font-normal mt-0.5">{{ subtitle }}</p>
+                </div>
               </div>
-            </div>
 
-            <button
-              v-if="showCloseButton"
-              type="button"
-              @click="emit('close')"
-              class="p-1.5 rounded-xl text-bx-muted hover:text-bx-primary hover:bg-purple-500/10 transition-colors cursor-pointer"
-              title="إغلاق"
-            >
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-        </slot>
+              <button
+                v-if="showCloseButton"
+                type="button"
+                @click="emit('close')"
+                class="p-1.5 rounded-xl text-bx-muted hover:text-bx-primary hover:bg-purple-500/10 transition-colors cursor-pointer"
+                title="إغلاق"
+              >
+                <X class="w-5 h-5" />
+              </button>
+            </div>
+          </slot>
+        </div>
 
         <!-- Body Content -->
-        <div class="space-y-4">
+        <div class="space-y-5 overflow-y-auto py-2 flex-1 pr-1 pl-1">
           <slot />
         </div>
 
         <!-- Footer -->
-        <div v-if="$slots.footer" class="pt-4 border-t border-bx-divider">
+        <div v-if="$slots.footer" class="pt-4 border-t border-bx-divider shrink-0">
           <slot name="footer" />
         </div>
       </div>

@@ -106,24 +106,25 @@ const updatePlacement = () => {
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
 
   // Detect nearest scrollable parent container (e.g. Drawer, Modal, or overflow element)
+  let scrollParentTop = 0;
   let scrollParentBottom = viewportHeight;
   let parent = containerRef.value.parentElement;
   while (parent && parent !== document.body) {
     const style = window.getComputedStyle(parent);
     if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
       const parentRect = parent.getBoundingClientRect();
+      scrollParentTop = Math.max(scrollParentTop, parentRect.top);
       scrollParentBottom = Math.min(scrollParentBottom, parentRect.bottom);
       break;
     }
     parent = parent.parentElement;
   }
 
-  const spaceBelow = scrollParentBottom - rect.bottom;
-  const spaceAbove = rect.top;
+  const spaceBelow = Math.max(0, scrollParentBottom - rect.bottom);
+  const spaceAbove = Math.max(0, rect.top - scrollParentTop);
 
-  // If space below is less than 230px (fewer than ~4 items comfortably)
-  // and there is more room above than below, open upwards!
-  if (spaceBelow < 230 && spaceAbove > spaceBelow) {
+  // If space below is less than 200px AND space above has significantly more room (> 220px)
+  if (spaceBelow < 200 && spaceAbove > 220 && spaceAbove > spaceBelow) {
     actualPlacement.value = 'up';
   } else {
     actualPlacement.value = 'down';
@@ -193,7 +194,10 @@ const removeOption = (val: string | number) => {
   <div
     ref="containerRef"
     class="relative text-start font-sans"
-    :class="fullWidth ? 'w-full block' : 'inline-block w-auto min-w-[190px]'"
+    :class="[
+      fullWidth ? 'w-full block' : 'inline-block w-auto min-w-[190px]',
+      isOpen ? 'z-50' : 'z-10'
+    ]"
     dir="rtl"
   >
     <!-- Trigger Button -->
@@ -250,7 +254,7 @@ const removeOption = (val: string | number) => {
     <div
       v-if="isOpen"
       ref="dropdownMenuRef"
-      class="z-50 p-2.5 max-h-72 overflow-y-auto rounded-2xl shadow-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] space-y-2 absolute end-0"
+      class="z-[100] p-2.5 max-h-72 overflow-y-auto rounded-2xl shadow-2xl border border-[#B4AED8] dark:border-white/[0.15] bg-[var(--bx-surface-solid)] space-y-2 absolute end-0"
       :class="[
         fullWidth ? 'w-full min-w-full' : 'min-w-[240px] w-max max-w-sm',
         actualPlacement === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
