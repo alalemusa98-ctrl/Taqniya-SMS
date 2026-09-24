@@ -39,15 +39,11 @@
                 <span>تم تصدير الصحيفة لهذا الفصل</span>
               </span>
 
-              <!-- Action button: Re-export if generated, or Issue if not -->
+              <!-- Action button: Re-export if generated, or Issue if ALL terms completed -->
               <button
+                v-if="selectedSection.has_annual_generated || selectedSection.is_all_terms_completed"
                 type="button"
-                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer shadow-md"
-                :class="
-                  selectedSection.has_annual_generated
-                    ? 'text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 hover:scale-[1.02] active:scale-[0.98]'
-                    : 'text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98]'
-                "
+                class="bx-btn bx-btn-primary h-9 px-4 text-xs font-bold transition-all cursor-pointer shadow-md"
                 @click="openAnnualModalForCurrentSection"
               >
                 <RotateCw v-if="selectedSection.has_annual_generated" class="w-3.5 h-3.5" />
@@ -231,18 +227,18 @@
                 v-if="selectedSection.has_annual_generated"
                 type="button"
                 @click="openAnnualModalForCurrentSection"
-                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 transition-all cursor-pointer shadow-2xs hover:scale-102 active:scale-98"
+                class="bx-btn bx-btn-outline h-8 px-3.5 text-xs font-bold transition-all cursor-pointer"
                 title="إعادة احتساب وتصدير الصحيفة المعتمدة لهذه الشعبة"
               >
                 <RotateCw class="w-3.5 h-3.5" />
                 <span>إعادة تصدير الصحيفة</span>
               </button>
               <button
-                v-else-if="selectedSection.graded_count === selectedSection.total_enrolled && selectedSection.total_enrolled > 0"
+                v-else-if="selectedSection.is_all_terms_completed"
                 type="button"
                 @click="openAnnualModalForCurrentSection"
-                class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-md shadow-purple-500/20 hover:shadow-purple-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-                title="اكتمال رصد الدرجات! انقر لإصدار الصحيفة السنوية للشعبة"
+                class="bx-btn bx-btn-primary h-8 px-4 text-xs font-black shadow-md shadow-purple-500/20 hover:shadow-purple-500/30 transition-all cursor-pointer"
+                title="تم اكتمال رصد درجات كافة فصول هذا الصف بالكامل! انقر لإصدار الصحيفة السنوية للشعبة"
               >
                 <Sparkles class="w-3.5 h-3.5 animate-pulse" />
                 <span>إصدار الصحيفة للشعبة</span>
