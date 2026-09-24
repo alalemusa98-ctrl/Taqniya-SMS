@@ -47,13 +47,18 @@ export class PromotionService {
     const perPage = Number(query.per_page) || 15;
     const skip = (page - 1) * perPage;
 
-    // Resolve academic year if not provided
-    let yearName = query.academic_year_name;
-    if (!yearName) {
+    // Resolve academic year if not provided and not explicitly 'all'
+    const isAllYears = query.academic_year_name === 'all';
+    let yearName: string | undefined = undefined;
+
+    if (query.academic_year_name && query.academic_year_name !== 'all') {
+      yearName = query.academic_year_name;
+    } else if (!query.search && !isAllYears) {
+      // Default to active year ONLY on initial blank load when not searching for a student and not explicitly asking for 'all'
       const activeYear = await this.prisma.academicYear.findFirst({
         where: { is_active: 1, deleted_at: null },
       });
-      yearName = activeYear?.name || '';
+      yearName = activeYear?.name;
     }
 
     const where: any = {
@@ -192,6 +197,25 @@ export class PromotionService {
 
     if (query.final_status) {
       summaryWhere.final_status = query.final_status;
+    }
+
+    if (query.search) {
+      summaryAndConditions.push({
+        OR: [
+          {
+            student: {
+              full_name: { contains: query.search },
+            },
+          },
+          {
+            student: {
+              user: {
+                user_code: { contains: query.search },
+              },
+            },
+          },
+        ],
+      });
     }
 
     if (summaryAndConditions.length > 0) {

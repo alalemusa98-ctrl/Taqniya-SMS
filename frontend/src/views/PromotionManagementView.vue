@@ -81,7 +81,7 @@
       <!-- TAB 1: Transcripts & Leaderboard -->
       <section v-if="activeTab === 'transcripts'" class="space-y-6">
         <!-- 1. School Classes & Sections Grid (Matching Grade Entry View) -->
-        <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-xs">
+        <div class="bg-[var(--bx-surface-solid)]/80 dark:bg-[#31324B]/70 backdrop-blur-md border border-[#B4AED8]/50 dark:border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-sm hover:border-[#B4AED8]/70 dark:hover:border-white/[0.12] transition-colors">
           <PromotionClassSectionsGrid
             :sections="allSections"
             :classes="classesList"
@@ -91,6 +91,7 @@
             :selected-section-name="filters.section_name"
             @select-class="handleSelectGridClass"
             @select-section="handleSelectGridSection"
+            @clear-selection="handleClearGridSelection"
           />
         </div>
 
@@ -103,7 +104,7 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
             <!-- 1. العام الدراسي -->
             <div class="space-y-1">
               <label class="block text-[11px] font-bold text-bx-muted">العام الدراسي:</label>
@@ -165,20 +166,60 @@
                 full-width
               />
             </div>
+
+            <!-- 6. البحث باسم الطالب أو رقمه -->
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold text-bx-muted">البحث باسم الطالب أو رقمه:</label>
+              <div class="flex items-center gap-1.5">
+                <div class="relative flex-1">
+                  <input
+                    v-model="searchInput"
+                    type="text"
+                    placeholder="اسم الطالب أو رقمه..."
+                    class="h-10 w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl ps-8 pe-8 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all shadow-xs"
+                    @keyup.enter="executeSearch"
+                  />
+                  <Search class="w-4 h-4 text-bx-muted absolute start-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <button
+                    v-if="searchInput"
+                    type="button"
+                    class="w-4 h-4 text-bx-muted hover:text-bx-title absolute end-2.5 top-1/2 -translate-y-1/2 cursor-pointer flex items-center justify-center transition-colors"
+                    title="مسح البحث"
+                    @click="searchInput = ''; filters.search = undefined"
+                  >
+                    <X class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <!-- زر مطابقة وبحث الأسماء للاختيار الفردي -->
+                <button
+                  type="button"
+                  class="h-10 px-3 rounded-xl border border-bx-primary/30 hover:border-bx-primary bg-bx-primary/10 hover:bg-bx-primary/20 text-bx-primary font-bold text-xs transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="مطابقة واختيار اسم الطالب من قاعدة البيانات"
+                  :disabled="isFetchingSuggestions"
+                  @click="openStudentSuggestionsModal"
+                >
+                  <Users class="w-4 h-4" />
+                  <span class="text-xs font-bold whitespace-nowrap">مطابقة</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Search & Actions Bar (Unified & Balanced Heights) -->
           <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[#B4AED8]/30 dark:border-white/[0.06]">
-            <!-- Search input with matched height -->
-            <div class="relative w-full sm:w-auto sm:min-w-[300px]">
-              <input
-                v-model="searchInput"
-                type="text"
-                placeholder="بحث سريع باسم الطالب أو رقمه (اضغط Enter)..."
-                class="h-10 w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl px-3.5 pr-9 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all shadow-xs"
-                @keyup.enter="executeSearch"
-              />
-              <Search class="w-4 h-4 text-bx-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <!-- Active Search Summary Tag -->
+            <div class="flex items-center gap-2 text-xs w-full sm:w-auto">
+              <span v-if="searchInput" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-bx-primary/10 border border-bx-primary/20 text-bx-primary font-bold">
+                <Search class="w-3.5 h-3.5" />
+                <span>تصفية الطالب: "{{ searchInput }}"</span>
+                <button type="button" class="hover:opacity-75 cursor-pointer" @click="searchInput = ''; filters.search = undefined">
+                  <X class="w-3 h-3" />
+                </button>
+              </span>
+              <span v-else class="text-[11px] text-bx-muted font-medium">
+                اضغط Enter في حقل البحث أو زر "استعلام وعرض الكشوفات" للتنفيذ
+              </span>
             </div>
 
             <!-- Action Buttons with matched height -->
@@ -225,8 +266,43 @@
 
         <!-- When search has been executed -->
         <template v-else>
-          <!-- Executive Class Cards Grid -->
-          <div v-if="executiveClassSummaries.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <!-- Dedicated Student Search Banner when searching by name -->
+          <div
+            v-if="filters.search"
+            class="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-bx-primary/15 via-bx-primary/10 to-transparent border border-bx-primary/30 flex items-center justify-between flex-wrap gap-4 shadow-xs"
+          >
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-bx-primary text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                <User class="w-6 h-6" />
+              </div>
+              <div>
+                <h4 class="text-sm sm:text-base font-black text-bx-title font-display">
+                  كشوفات وسجلات الطالب: <span class="text-bx-primary font-black">"{{ filters.search }}"</span>
+                </h4>
+                <p class="text-xs text-bx-muted font-medium mt-0.5">
+                  تم العثور على <strong>{{ totalTranscriptsCount }}</strong> صحيفة مسجلة
+                  <span v-if="!filters.academic_year_name || filters.academic_year_name === 'all'">
+                    عبر <strong>كافة الأعوام الدراسية</strong>
+                  </span>
+                  <span v-else>
+                    للعام الدراسي <strong>{{ filters.academic_year_name }}</strong>
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl border border-bx-border hover:bg-black/5 dark:hover:bg-white/5 text-bx-muted hover:text-bx-title font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+              @click="clearStudentSearch"
+            >
+              <X class="w-4 h-4" />
+              <span>إلغاء تصفية الطالب</span>
+            </button>
+          </div>
+
+          <!-- Executive Class Cards Grid (Only shown when not searching for a single student) -->
+          <div v-else-if="executiveClassSummaries.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <ExecutiveClassCard
               v-for="cSum in executiveClassSummaries"
               :key="cSum.grade_level"
@@ -241,6 +317,7 @@
             <ClassLeaderboardTable
               :transcripts="transcripts"
               :is-loading="isLoadingTranscripts"
+              :is-student-search="Boolean(filters.search)"
               @view-detail="handleViewTranscriptDetail"
             />
 
@@ -356,6 +433,186 @@
         @preview="handleRunSimulation"
         @execute="handleExecutePromotion"
       />
+
+      <!-- Single Student Match & Picker Modal -->
+      <TaqniyaModal
+        :is-open="isStudentPickerModalOpen"
+        title="مطابقة واختيار اسم الطالب"
+        subtitle="اختر طالباً واحداً فقط من النتائج لعرض كافة كشوفاته ودرجاته"
+        max-width="2xl"
+        @close="isStudentPickerModalOpen = false"
+      >
+        <template #icon>
+          <div class="w-10 h-10 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center border border-bx-primary/20">
+            <Users class="w-5 h-5" />
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <!-- Search input inside modal -->
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <input
+                v-model="pickerSearchQuery"
+                type="text"
+                placeholder="اكتب جزءاً من اسم الطالب أو رقمه للبحث..."
+                class="h-10 w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl ps-9 pe-9 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all"
+                @keyup.enter="fetchStudentSuggestions"
+              />
+              <Search class="w-4 h-4 text-bx-muted absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <button
+                v-if="pickerSearchQuery"
+                type="button"
+                class="w-4 h-4 text-bx-muted hover:text-bx-title absolute end-3 top-1/2 -translate-y-1/2 cursor-pointer flex items-center justify-center"
+                @click="pickerSearchQuery = ''; fetchStudentSuggestions()"
+              >
+                <X class="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              class="h-10 px-4 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
+              :disabled="isFetchingSuggestions"
+              @click="fetchStudentSuggestions"
+            >
+              <Loader2 v-if="isFetchingSuggestions" class="w-3.5 h-3.5 animate-spin" />
+              <Search v-else class="w-3.5 h-3.5" />
+              <span>بحث</span>
+            </button>
+          </div>
+
+          <!-- Single Choice Notice & Count -->
+          <div class="flex items-center justify-between text-xs text-bx-muted px-1">
+            <span class="font-medium">
+              يُسمح بتحديد <strong>طالب واحد فقط</strong>.
+            </span>
+            <span v-if="!isFetchingSuggestions && suggestedStudents.length > 0" class="font-mono text-[11px] font-bold text-bx-primary">
+              تم العثور على {{ suggestedStudents.length }} طالب
+            </span>
+          </div>
+
+          <!-- Results List -->
+          <div class="max-h-[360px] overflow-y-auto space-y-2 pe-1">
+            <!-- Loading State -->
+            <div v-if="isFetchingSuggestions" class="py-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
+              <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
+              <span class="text-xs font-medium">جاري البحث في قاعدة البيانات...</span>
+            </div>
+
+            <!-- Empty State -->
+            <div
+              v-else-if="suggestedStudents.length === 0"
+              class="py-10 text-center space-y-2 border border-dashed border-[#B4AED8]/50 dark:border-white/[0.1] rounded-2xl p-6"
+            >
+              <User class="w-8 h-8 mx-auto text-bx-muted/60" />
+              <p class="text-xs font-bold text-bx-title">لا توجد نتائج مطابقة</p>
+              <p class="text-[11px] text-bx-muted">جرب البحث بكلمات مختلفة أو اسم آخر للطالب.</p>
+            </div>
+
+            <!-- Student Items (Single selection) -->
+            <div
+              v-for="s in suggestedStudents"
+              v-else
+              :key="s.id"
+              class="p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group"
+              :class="selectedPickerStudent?.id === s.id
+                ? 'bg-bx-primary/10 border-bx-primary shadow-xs ring-1 ring-bx-primary/30'
+                : 'bg-[var(--bx-surface-solid)] border-[#B4AED8]/50 dark:border-white/[0.08] hover:border-bx-primary/40 hover:bg-black/5 dark:hover:bg-white/5'"
+              @click="selectStudentFromPicker(s)"
+              @dblclick="selectStudentFromPicker(s); confirmSelectedStudent()"
+            >
+              <!-- Info with Radio Indicator -->
+              <div class="flex items-center gap-3 min-w-0">
+                <!-- Radio Circle indicator -->
+                <div
+                  class="w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors"
+                  :class="selectedPickerStudent?.id === s.id
+                    ? 'border-bx-primary bg-bx-primary text-white'
+                    : 'border-[#B4AED8] dark:border-white/[0.2] bg-white dark:bg-white/[0.05] group-hover:border-bx-primary/50'"
+                >
+                  <div v-if="selectedPickerStudent?.id === s.id" class="w-2 h-2 rounded-full bg-white"></div>
+                </div>
+
+                <!-- Avatar / User Icon -->
+                <div
+                  class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs"
+                  :class="s.gender === 'female'
+                    ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                    : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'"
+                >
+                  <User class="w-4 h-4" />
+                </div>
+
+                <!-- Name & Details -->
+                <div class="min-w-0">
+                  <div class="text-xs font-bold text-bx-title truncate group-hover:text-bx-primary transition-colors">
+                    {{ s.full_name }}
+                  </div>
+                  <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span class="text-[10px] font-mono font-bold text-bx-muted bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded">
+                      {{ s.user_code }}
+                    </span>
+                    <span v-if="s.class_section" class="text-[10px] text-bx-muted font-medium">
+                      {{ s.class_section }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Selection Status Badge -->
+              <div class="shrink-0">
+                <span
+                  v-if="selectedPickerStudent?.id === s.id"
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-bx-primary text-white shadow-2xs"
+                >
+                  <Check class="w-3 h-3" />
+                  <span>محدد</span>
+                </span>
+                <span
+                  v-else
+                  class="text-[11px] text-bx-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  انقر للاختيار
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <template #footer>
+          <div class="flex items-center justify-between gap-3">
+            <div class="text-xs text-bx-muted truncate max-w-[260px] sm:max-w-md">
+              <span v-if="selectedPickerStudent" class="font-bold text-bx-primary">
+                الطالب المحدد: {{ selectedPickerStudent.full_name }}
+              </span>
+              <span v-else>
+                لم يتم اختيار أي طالب بعد
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                class="h-9 px-4 rounded-xl border border-bx-border hover:bg-black/5 dark:hover:bg-white/5 text-bx-muted hover:text-bx-title font-bold text-xs transition-all cursor-pointer"
+                @click="isStudentPickerModalOpen = false"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                class="h-9 px-5 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="!selectedPickerStudent"
+                @click="confirmSelectedStudent"
+              >
+                <Check class="w-3.5 h-3.5" />
+                <span>تأكيد وعرض الدرجات</span>
+              </button>
+            </div>
+          </div>
+        </template>
+      </TaqniyaModal>
     </div>
   </TaqniyaErrorBoundary>
 </template>
@@ -373,18 +630,25 @@ import {
   Filter,
   Search,
   Eye,
+  X,
+  User,
+  Users,
+  Check,
+  Loader2,
 } from 'lucide-vue-next';
 import TaqniyaErrorBoundary from '../components/ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../components/ui/TaqniyaKpiCard.vue';
 import TaqniyaSelect, { type TaqniyaSelectOption } from '../components/ui/TaqniyaSelect.vue';
 import TaqniyaTable, { type TableColumn } from '../components/ui/TaqniyaTable.vue';
 import TaqniyaPagination from '../components/ui/TaqniyaPagination.vue';
+import TaqniyaModal from '../components/ui/TaqniyaModal.vue';
 import ExecutiveClassCard from '../components/promotion/ExecutiveClassCard.vue';
 import ClassLeaderboardTable from '../components/promotion/ClassLeaderboardTable.vue';
 import TranscriptDetailDrawer from '../components/promotion/TranscriptDetailDrawer.vue';
 import PromotionBatchDetailDrawer from '../components/promotion/PromotionBatchDetailDrawer.vue';
 import PromotionExecutionModal from '../components/promotion/PromotionExecutionModal.vue';
 import PromotionClassSectionsGrid from '../components/promotion/PromotionClassSectionsGrid.vue';
+import { studentsApi, type Student } from '../api/students.api';
 
 import {
   promotionApi,
@@ -441,6 +705,71 @@ const hasExecutedSearch = ref(false);
 // Search input
 const searchInput = ref('');
 
+// Student Picker Modal State (Single Choice)
+const isStudentPickerModalOpen = ref(false);
+const isFetchingSuggestions = ref(false);
+const pickerSearchQuery = ref('');
+const suggestedStudents = ref<Student[]>([]);
+const selectedPickerStudent = ref<Student | null>(null);
+
+const openStudentSuggestionsModal = () => {
+  pickerSearchQuery.value = searchInput.value.trim();
+  selectedPickerStudent.value = null;
+  isStudentPickerModalOpen.value = true;
+  fetchStudentSuggestions();
+};
+
+const fetchStudentSuggestions = async () => {
+  isFetchingSuggestions.value = true;
+  try {
+    const q = pickerSearchQuery.value.trim();
+    const res = await studentsApi.getStudents({
+      search: q || undefined,
+      per_page: 50,
+    });
+    const resData: any = res.data;
+    if (resData && Array.isArray(resData.data)) {
+      suggestedStudents.value = resData.data;
+    } else if (Array.isArray(resData)) {
+      suggestedStudents.value = resData;
+    } else {
+      suggestedStudents.value = [];
+    }
+  } catch (err: any) {
+    console.error('Failed to fetch students for picker:', err);
+    toast.error('تعذر جلب قائمة الطلاب المطابقة.');
+    suggestedStudents.value = [];
+  } finally {
+    isFetchingSuggestions.value = false;
+  }
+};
+
+const selectStudentFromPicker = (student: Student) => {
+  selectedPickerStudent.value = student;
+};
+
+const confirmSelectedStudent = () => {
+  if (!selectedPickerStudent.value) return;
+
+  const chosen = selectedPickerStudent.value;
+  searchInput.value = chosen.full_name;
+  filters.value.search = chosen.full_name;
+
+  // If no specific class is locked, clear class constraints to fetch all student transcripts across historical years and grades
+  if (selectedClassIdModel.value === 'all' || !selectedClassIdModel.value) {
+    filters.value.class_id = undefined;
+    filters.value.class_name = undefined;
+    filters.value.grade_level = undefined;
+    filters.value.section_name = undefined;
+    filters.value.class_section_id = undefined;
+  }
+
+  isStudentPickerModalOpen.value = false;
+  hasExecutedSearch.value = true;
+  executeSearch();
+  toast.success(`تم اختيار الطالب: ${chosen.full_name}`);
+};
+
 // Filters & Pagination
 const filters = ref<QueryTranscriptsDto>({
   page: 1,
@@ -450,14 +779,14 @@ const filters = ref<QueryTranscriptsDto>({
   class_name: undefined,
   section_name: undefined,
   class_academic_term_id: undefined,
-  transcript_type: undefined,
+  transcript_type: 'annual',
   final_status: undefined,
   search: undefined,
 });
 
 const selectedClassIdModel = ref<string | number>('all');
 const selectedSectionName = ref<string>('all');
-const selectedTranscriptOption = ref<string>('all');
+const selectedTranscriptOption = ref<string>('annual');
 
 const meta = ref({
   current_page: 1,
@@ -598,6 +927,16 @@ const handleSelectGridSection = (sec: SectionAuditProgressItem) => {
   selectedSectionName.value = sec.section_name;
 };
 
+const handleClearGridSelection = () => {
+  selectedClassIdModel.value = 'all';
+  filters.value.class_id = undefined;
+  filters.value.class_name = undefined;
+  filters.value.grade_level = undefined;
+  filters.value.section_name = undefined;
+  filters.value.class_section_id = undefined;
+  selectedSectionName.value = 'all';
+};
+
 // Filter Change Handlers (No auto-fetch; only updates state)
 const onYearFilterChange = (val: any) => {
   if (val === 'all' || !val) {
@@ -670,16 +1009,29 @@ const onTranscriptTypeChange = (val: any) => {
 // Explicit Search & Reset Actions
 const executeSearch = () => {
   if (!filters.value.class_id && !filters.value.class_name && !searchInput.value.trim()) {
-    toast.warning('يرجى تحديد الصف الدراسي أولاً للاستعلام.');
-    return;
-  }
-  if (!filters.value.transcript_type || selectedTranscriptOption.value === 'all') {
-    toast.warning('يلزم تحديد "نوع الصحيفة" (مثلاً: النهائية، الفصل الأول...) قبل عرض النتائج.');
+    toast.warning('يرجى تحديد الصف الدراسي أو إدخال اسم الطالب للاستعلام.');
     return;
   }
   filters.value.search = searchInput.value.trim() || undefined;
+
+  // If searching by student name and no specific class was chosen from dropdown, search across all classes
+  if (searchInput.value.trim() && (selectedClassIdModel.value === 'all' || !selectedClassIdModel.value)) {
+    filters.value.class_id = undefined;
+    filters.value.class_name = undefined;
+    filters.value.grade_level = undefined;
+    filters.value.section_name = undefined;
+    filters.value.class_section_id = undefined;
+  }
+
   filters.value.page = 1;
   hasExecutedSearch.value = true;
+  fetchTranscripts();
+};
+
+const clearStudentSearch = () => {
+  searchInput.value = '';
+  filters.value.search = undefined;
+  filters.value.page = 1;
   fetchTranscripts();
 };
 
@@ -691,13 +1043,14 @@ const resetFilters = () => {
   filters.value.section_name = undefined;
   filters.value.class_academic_term_id = undefined;
   filters.value.academic_term_id = undefined;
-  filters.value.transcript_type = undefined;
+  filters.value.academic_year_name = 'all';
+  filters.value.transcript_type = 'annual';
   filters.value.final_status = undefined;
   filters.value.search = undefined;
   filters.value.page = 1;
   selectedClassIdModel.value = 'all';
   selectedSectionName.value = 'all';
-  selectedTranscriptOption.value = 'all';
+  selectedTranscriptOption.value = 'annual';
   searchInput.value = '';
   transcripts.value = [];
   executiveClassSummaries.value = [];
@@ -747,7 +1100,7 @@ const fetchAcademicLookups = async () => {
 const fetchSections = async () => {
   try {
     const res = await gradeEntryApi.getSectionAuditProgress({
-      academic_year_name: filters.value.academic_year_name,
+      academic_year_name: filters.value.academic_year_name === 'all' ? undefined : filters.value.academic_year_name,
     });
     if (res.success && res.data?.sections) {
       allSections.value = res.data.sections;
@@ -763,7 +1116,9 @@ const fetchTranscripts = async () => {
     const queryParams: QueryTranscriptsDto = {
       page: filters.value.page,
       per_page: filters.value.per_page,
-      academic_year_name: filters.value.academic_year_name === 'all' ? undefined : filters.value.academic_year_name,
+      academic_year_name: filters.value.academic_year_name === 'all'
+        ? 'all'
+        : (filters.value.academic_year_name || (filters.value.search ? 'all' : undefined)),
       class_id: filters.value.class_id,
       class_name: filters.value.class_name,
       grade_level: filters.value.grade_level,

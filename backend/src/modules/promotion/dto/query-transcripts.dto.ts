@@ -4,7 +4,7 @@ import { TranscriptType, EnrollmentStatus } from '@prisma/client';
 
 export class QueryTranscriptsDto {
   @IsOptional()
-  @Transform(({ value }) => (value === '' || value === 'all' ? undefined : value))
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsString()
   academic_year_name?: string;
 

@@ -3,12 +3,20 @@
     <!-- Section Header Banner -->
     <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-xs flex items-center justify-between flex-wrap gap-4">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold border border-amber-500/20 shadow-xs">
-          <Trophy class="w-5 h-5" />
+        <div
+          class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold border shadow-xs"
+          :class="isStudentSearch ? 'bg-bx-primary/10 text-bx-primary border-bx-primary/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'"
+        >
+          <UserCheck v-if="isStudentSearch" class="w-5 h-5 text-bx-primary" />
+          <Trophy v-else class="w-5 h-5" />
         </div>
         <div>
-          <h3 class="text-base font-black text-bx-title font-display">لوحة شرف وترتيب الطلاب (Class Leaderboard)</h3>
-          <p class="text-xs text-bx-muted mt-0.5 font-medium">ترتيب الطلاب تنازلياً حسب النسبة والمعدل العام</p>
+          <h3 class="text-base font-black text-bx-title font-display">
+            {{ isStudentSearch ? 'سجل كشوفات ودرجات الطالب' : 'لوحة شرف وترتيب الطلاب (Class Leaderboard)' }}
+          </h3>
+          <p class="text-xs text-bx-muted mt-0.5 font-medium">
+            {{ isStudentSearch ? 'عرض كافة الصحائف المعتمدة المسجلة للطالب عبر الأعوام والفصول الدراسية' : 'ترتيب الطلاب تنازلياً حسب النسبة والمعدل العام' }}
+          </p>
         </div>
       </div>
 
@@ -36,7 +44,12 @@
     >
       <!-- Rank Column -->
       <template #cell-rank="{ item, index }">
-        <div class="inline-flex items-center justify-center min-w-[36px] px-2 py-1 rounded-lg text-xs font-black" :class="getRankBadgeClass(item.calculated_rank || item.rank || (index + 1))">
+        <!-- In Student Search mode: simple sequence number (#) without medal or ranking badges -->
+        <div v-if="isStudentSearch" class="inline-flex items-center justify-center min-w-[32px] px-2 py-0.5 rounded-lg text-xs font-mono font-bold text-bx-muted bg-black/5 dark:bg-white/5 border border-bx-border/50">
+          <span>#{{ index + 1 }}</span>
+        </div>
+        <!-- In Leaderboard mode: competitive ranking with medals -->
+        <div v-else class="inline-flex items-center justify-center min-w-[36px] px-2 py-1 rounded-lg text-xs font-black" :class="getRankBadgeClass(item.calculated_rank || item.rank || (index + 1))">
           <span v-if="(item.calculated_rank || item.rank || (index + 1)) === 1">🥇 1</span>
           <span v-else-if="(item.calculated_rank || item.rank || (index + 1)) === 2">🥈 2</span>
           <span v-else-if="(item.calculated_rank || item.rank || (index + 1)) === 3">🥉 3</span>
@@ -44,19 +57,31 @@
         </div>
       </template>
 
+      <!-- Academic Year Column -->
+      <template #cell-academic_year="{ item }">
+        <span class="font-bold text-xs text-bx-primary font-mono whitespace-nowrap bg-bx-primary/10 px-2 py-0.5 rounded-lg border border-bx-primary/20">
+          {{ item.academic_year_name || '—' }}
+        </span>
+      </template>
+
       <!-- Student Code Column -->
       <template #cell-student_code="{ item }">
         <span class="font-mono text-xs font-bold text-bx-primary">{{ item.student_code || '—' }}</span>
       </template>
 
-      <!-- Student Name Column (No single letter bubble) -->
+      <!-- Student Name Column -->
       <template #cell-student_name="{ item }">
         <span class="font-bold text-bx-title text-xs">{{ item.student_name || item.student_code || '—' }}</span>
       </template>
 
+      <!-- Class Column -->
+      <template #cell-class_name="{ item }">
+        <span class="font-bold text-xs text-bx-title whitespace-nowrap">{{ item.class_name || '—' }}</span>
+      </template>
+
       <!-- Section Column (Refined badge style) -->
       <template #cell-section_name="{ item }">
-        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-white/[0.06] text-bx-title border border-slate-300 dark:border-white/[0.12] shadow-2xs">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-white/[0.06] text-bx-title border border-slate-300 dark:border-white/[0.12] shadow-2xs whitespace-nowrap">
           {{ item.section_name || '—' }}
         </span>
       </template>
@@ -121,18 +146,20 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Trophy, Search, Eye } from 'lucide-vue-next';
+import { Trophy, Search, Eye, UserCheck } from 'lucide-vue-next';
 import TaqniyaTable, { type TableColumn } from '../ui/TaqniyaTable.vue';
 import type { StudentTranscript } from '../../api/promotion.api';
 
 interface Props {
   transcripts?: StudentTranscript[];
   isLoading?: boolean;
+  isStudentSearch?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   transcripts: () => [],
   isLoading: false,
+  isStudentSearch: false,
 });
 
 defineEmits<{
@@ -149,16 +176,18 @@ const formatTermShortName = (name?: string) => {
   return name;
 };
 
-const columns: TableColumn[] = [
-  { key: 'rank', label: 'الترتيب', align: 'center', width: '70px' },
-  { key: 'student_code', label: 'كود الطالب', align: 'start', width: '100px' },
+const columns = computed<TableColumn[]>(() => [
+  { key: 'rank', label: props.isStudentSearch ? '#' : 'الترتيب', align: 'center', width: '60px' },
+  { key: 'academic_year', label: 'العام الدراسي', align: 'start', width: '110px' },
+  { key: 'student_code', label: 'كود الطالب', align: 'start', width: '95px' },
   { key: 'student_name', label: 'اسم الطالب الرباعي', align: 'start' },
-  { key: 'section_name', label: 'الشعبة', align: 'center', width: '90px' },
-  { key: 'transcript_type', label: 'نوع الصحيفة', align: 'center', width: '160px' },
-  { key: 'total_score', label: 'المجموع الكلي', align: 'center', width: '120px' },
-  { key: 'percentage', label: 'النسبة المئوية', align: 'start', width: '180px' },
-  { key: 'actions', label: 'الإجراءات', align: 'center', width: '90px' },
-];
+  { key: 'class_name', label: 'الصف', align: 'start', width: '120px' },
+  { key: 'section_name', label: 'الشعبة', align: 'center', width: '85px' },
+  { key: 'transcript_type', label: 'نوع الصحيفة', align: 'center', width: '150px' },
+  { key: 'total_score', label: 'المجموع الكلي', align: 'center', width: '115px' },
+  { key: 'percentage', label: 'النسبة المئوية', align: 'start', width: '150px' },
+  { key: 'actions', label: 'الإجراءات', align: 'center', width: '80px' },
+]);
 
 const filteredTranscripts = computed(() => {
   const list = Array.isArray(props.transcripts) ? props.transcripts : [];
