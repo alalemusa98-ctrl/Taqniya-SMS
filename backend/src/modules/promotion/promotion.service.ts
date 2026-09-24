@@ -1553,20 +1553,20 @@ export class PromotionService {
         let failedSubjectsCount = 0;
 
         for (const [, item] of subjectMap.entries()) {
-          const avgScore = item.terms_count > 0 ? Number((item.total_score_sum / item.terms_count).toFixed(2)) : 0;
-          const avgMax = item.terms_count > 0 ? Number((item.max_score_sum / item.terms_count).toFixed(2)) : 100;
-          const passingScore = avgMax * 0.5;
-          const isPassed = avgScore >= passingScore;
+          const totalScore = Number(item.total_score_sum.toFixed(2));
+          const maxScore = Number(item.max_score_sum.toFixed(2));
+          const passingScore = maxScore * 0.5;
+          const isPassed = totalScore >= passingScore;
 
           if (!isPassed) failedSubjectsCount += 1;
 
-          totalAnnualScore += avgScore;
-          totalMaxScore += avgMax;
+          totalAnnualScore += totalScore;
+          totalMaxScore += maxScore;
 
           annualSubjects.push({
             subject_name: item.subject_name,
-            total_score: avgScore,
-            max_score: avgMax,
+            total_score: totalScore,
+            max_score: maxScore,
             passing_score: passingScore,
             status: isPassed ? 'passed' : 'failed',
           });
@@ -1597,6 +1597,14 @@ export class PromotionService {
           max_possible_score: totalMaxScore,
           percentage: annualPercentage,
           final_status: finalStatus,
+          student_term_transcripts: termTranscripts.map((tt) => ({
+            id: Number(tt.id),
+            class_academic_term_id: Number(tt.class_academic_term_id),
+            term_name: (tt.transcript_data as any)?.term_name || `الفصل الدراسي`,
+            transcript_data: tt.transcript_data,
+            total_score: Number(tt.total_score),
+            percentage: Number(tt.percentage),
+          })),
           frozen_at: new Date().toISOString(),
         };
 

@@ -218,26 +218,27 @@
                   <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center w-10">#</th>
                   <th rowspan="2" class="py-3 px-4 border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[150px]">المادة الدراسية</th>
 
-                  <!-- Dynamic Term Headers -->
+                  <!-- Dynamic Term Headers (3 columns each: Coursework, Exam, Total) -->
                   <th
                     v-for="term in renderedAnnualTerms"
                     :key="term.id"
-                    colspan="2"
+                    colspan="3"
                     class="py-2.5 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] font-black text-bx-title bg-purple-500/5 print:bg-gray-100 print:text-black"
                   >
                     {{ term.name }}
                   </th>
 
-                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center min-w-[80px]">المعدل السنوي</th>
-                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center min-w-[80px]">النهاية الكبرى</th>
+                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center min-w-[90px]">المجموع النهائي</th>
+                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center min-w-[90px]">النهاية الكبرى</th>
                   <th rowspan="2" class="py-3 px-3 text-center min-w-[80px]">النتيجة</th>
                 </tr>
 
-                <!-- Sub-Headers for each Term (Coursework & Exam) -->
+                <!-- Sub-Headers for each Term (Coursework, Exam, Term Total) -->
                 <tr class="bg-black/[0.02] dark:bg-white/[0.02] text-bx-muted font-semibold text-[11px] border-b border-[#B4AED8]/40 dark:border-white/[0.08] print:bg-gray-50 print:text-black">
                   <template v-for="term in renderedAnnualTerms" :key="`sub-${term.id}`">
                     <th class="py-2 px-2 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06]">أعمال السنة</th>
                     <th class="py-2 px-2 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06]">الامتحان</th>
+                    <th class="py-2 px-2 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] font-bold text-bx-title">المجموع</th>
                   </template>
                 </tr>
               </thead>
@@ -253,7 +254,7 @@
                     {{ subj.subject_name }}
                   </td>
 
-                  <!-- Term Scores -->
+                  <!-- Term Scores (Coursework, Exam, Total) -->
                   <template v-for="term in renderedAnnualTerms" :key="`val-${term.id}`">
                     <td class="py-2 px-2 text-center font-mono border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-title print:text-black">
                       <span v-if="subj.terms[term.id] && subj.terms[term.id].coursework_score !== undefined">
@@ -267,10 +268,16 @@
                       </span>
                       <span v-else class="text-amber-500 text-[10px]">—</span>
                     </td>
+                    <td class="py-2 px-2 text-center font-mono font-bold border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-primary print:text-black">
+                      <span v-if="subj.terms[term.id] && subj.terms[term.id].total_score !== undefined">
+                        {{ subj.terms[term.id].total_score }}
+                      </span>
+                      <span v-else class="text-amber-500 text-[10px]">—</span>
+                    </td>
                   </template>
 
-                  <!-- Final Totals for Subject -->
-                  <td class="py-2.5 px-3 text-center font-bold font-mono text-bx-title border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-black">
+                  <!-- Final Totals for Subject (Summed across terms) -->
+                  <td class="py-2.5 px-3 text-center font-black font-mono text-bx-title border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-black">
                     {{ subj.total_score }}
                   </td>
                   <td class="py-2.5 px-3 text-center font-mono text-bx-muted border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-gray-600">
@@ -290,18 +297,18 @@
               <!-- Annual Footer -->
               <tfoot>
                 <tr class="bg-black/[0.03] dark:bg-white/[0.03] font-bold text-xs border-t-2 border-[#B4AED8] dark:border-white/[0.12] print:bg-gray-100 print:text-black">
-                  <td :colspan="2 + (renderedAnnualTerms.length * 2)" class="py-3 px-4 text-left font-black text-bx-title print:text-black">
+                  <td :colspan="2 + (renderedAnnualTerms.length * 3)" class="py-3 px-4 text-left font-black text-bx-title print:text-black">
                     المجموع السنوي العام والنسبة المئوية:
                   </td>
                   <td class="py-3 px-3 text-center font-mono font-black text-bx-title text-sm print:text-black">
-                    {{ activeTranscript.total_score }}
+                    {{ annualCalculatedTotal || activeTranscript.total_score }}
                   </td>
                   <td class="py-3 px-3 text-center font-mono text-bx-muted print:text-gray-600">
-                    {{ activeTranscript.max_possible_score || annualCalculatedMax }}
+                    {{ annualCalculatedMax || activeTranscript.max_possible_score }}
                   </td>
                   <td class="py-3 px-3 text-center">
                     <span class="font-black font-mono text-purple-600 dark:text-purple-400 text-sm print:text-black">
-                      {{ activeTranscript.percentage }}%
+                      {{ annualCalculatedPercentage }}%
                     </span>
                   </td>
                 </tr>
@@ -520,7 +527,15 @@ interface AnnualTermColumn {
 
 interface ProcessedAnnualSubjectItem {
   subject_name: string;
-  terms: Record<string | number, { coursework_score?: number; exam_score?: number; total_score?: number }>;
+  terms: Record<
+    string | number,
+    {
+      coursework_score?: number;
+      exam_score?: number;
+      total_score?: number;
+      max_score?: number;
+    }
+  >;
   total_score: number;
   max_score: number;
   is_passed: boolean;
@@ -568,7 +583,7 @@ const annualProcessedSubjects = computed<ProcessedAnnualSubjectItem[]>(() => {
             subject_name: name,
             terms: {},
             total_score: 0,
-            max_score: Number(s.max_score) || 100,
+            max_score: 0,
             is_passed: true,
           });
         }
@@ -577,30 +592,34 @@ const annualProcessedSubjects = computed<ProcessedAnnualSubjectItem[]>(() => {
         const cScore = s.coursework_score !== undefined ? Number(s.coursework_score) : undefined;
         const eScore = s.exam_score !== undefined ? Number(s.exam_score) : undefined;
         const tScore = Number(s.total_score) || ((cScore || 0) + (eScore || 0));
+        const mScore = Number(s.max_score) || 100;
 
         item.terms[termId] = {
           coursework_score: cScore,
           exam_score: eScore,
           total_score: tScore,
+          max_score: mScore,
         };
       }
     }
 
     return Array.from(subjectMap.values()).map((item) => {
       let sum = 0;
-      let count = 0;
+      let maxSum = 0;
       for (const tVal of Object.values(item.terms)) {
         if (tVal.total_score !== undefined) {
           sum += tVal.total_score;
-          count += 1;
+          maxSum += tVal.max_score || 100;
         }
       }
-      const finalScore = count > 0 ? Number((sum / count).toFixed(1)) : 0;
-      const passingScore = item.max_score * 0.5;
+      const finalScore = Number(sum.toFixed(1));
+      const totalMax = maxSum > 0 ? maxSum : 100;
+      const passingScore = totalMax * 0.5;
 
       return {
         ...item,
         total_score: finalScore,
+        max_score: totalMax,
         is_passed: finalScore >= passingScore,
       };
     });
@@ -627,6 +646,7 @@ const annualProcessedSubjects = computed<ProcessedAnnualSubjectItem[]>(() => {
           coursework_score: cScore,
           exam_score: eScore,
           total_score: tScore,
+          max_score: maxScore,
         },
       },
       total_score: tScore,
@@ -636,8 +656,19 @@ const annualProcessedSubjects = computed<ProcessedAnnualSubjectItem[]>(() => {
   });
 });
 
+const annualCalculatedTotal = computed(() => {
+  return annualProcessedSubjects.value.reduce((sum, s) => sum + s.total_score, 0);
+});
+
 const annualCalculatedMax = computed(() => {
   return annualProcessedSubjects.value.reduce((sum, s) => sum + s.max_score, 0);
+});
+
+const annualCalculatedPercentage = computed(() => {
+  if (annualCalculatedMax.value > 0) {
+    return Number(((annualCalculatedTotal.value / annualCalculatedMax.value) * 100).toFixed(2));
+  }
+  return activeTranscript.value?.percentage || 0;
 });
 
 const decisionArabicText = computed(() => {
