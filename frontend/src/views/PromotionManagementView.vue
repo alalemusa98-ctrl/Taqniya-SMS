@@ -882,12 +882,13 @@ const openPromotionModal = () => {
   isPromotionModalOpen.value = true;
 };
 
-const handleRunSimulation = async (payload: { from_year_id: number; to_year_id: number }) => {
+const handleRunSimulation = async (payload: { from_year_id: number; to_year_id: number; enable_annual_exam_compensation?: boolean }) => {
   isSimulating.value = true;
   try {
     const res = await promotionApi.previewPromotion({
       from_academic_year_id: payload.from_year_id,
       to_academic_year_id: payload.to_year_id,
+      enable_annual_exam_compensation: payload.enable_annual_exam_compensation,
     });
     if (res.success) {
       promotionSimulation.value = res.data;

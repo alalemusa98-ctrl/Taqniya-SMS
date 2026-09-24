@@ -61,6 +61,9 @@ export interface MultiTermConfig {
   term_name: string;
   class_subject_id?: number;
   enabled: boolean;
+  max_coursework_score: number;
+  max_exam_score: number;
+  exam_passing_score: number;
   passing_score: number;
   max_score: number;
   is_closed?: number;
@@ -175,6 +178,9 @@ export interface TermSubjectAssignment {
   class_academic_term_id: number;
   class_subject_id: number;
   term_name: string;
+  max_coursework_score: number;
+  max_exam_score: number;
+  exam_passing_score: number;
   passing_score: number;
   max_score: number;
   is_closed: number;
@@ -247,8 +253,11 @@ const allClassSubjectGroups = computed<UnifiedClassMatrixGroup[]>(() => {
           class_academic_term_id: term.class_academic_term_id,
           class_subject_id: sub.id,
           term_name: term.term_name,
-          passing_score: Number(sub.passing_score || 0),
-          max_score: Number(sub.max_score || 0),
+          max_coursework_score: Number((sub as any).max_coursework_score ?? 40.0),
+          max_exam_score: Number((sub as any).max_exam_score ?? 60.0),
+          exam_passing_score: Number((sub as any).exam_passing_score ?? 30.0),
+          passing_score: Number(sub.passing_score ?? 50.0),
+          max_score: Number(sub.max_score ?? 100.0),
           is_closed: term.is_closed,
         };
       }
@@ -369,6 +378,9 @@ function onClassChange() {
     class_academic_term_id: t.id,
     term_name: t.term_name,
     enabled: true,
+    max_coursework_score: 40.0,
+    max_exam_score: 60.0,
+    exam_passing_score: 30.0,
     passing_score: 50.0,
     max_score: 100.0,
     is_closed: t.is_closed,
@@ -399,6 +411,9 @@ function openEditDrawer(row: UnifiedSubjectMatrixRow) {
       term_name: t.term_name,
       class_subject_id: existing?.class_subject_id,
       enabled: !!existing,
+      max_coursework_score: existing ? existing.max_coursework_score : 40.0,
+      max_exam_score: existing ? existing.max_exam_score : 60.0,
+      exam_passing_score: existing ? existing.exam_passing_score : 30.0,
       passing_score: existing ? existing.passing_score : 50.0,
       max_score: existing ? existing.max_score : 100.0,
       is_closed: t.is_closed,
@@ -432,12 +447,23 @@ async function handleSaveMultiTerm() {
 
   // Validate scores
   for (const t of enabledTerms) {
-    if (t.passing_score < 0 || t.max_score <= 0) {
-      toast.error(`درجات غير صحيحة في ${t.term_name}.`);
+    const coursework = Number(t.max_coursework_score) || 0;
+    const exam = Number(t.max_exam_score) || 0;
+    const examPass = Number(t.exam_passing_score) || 0;
+    const pass = Number(t.passing_score) || 0;
+    const totalMax = coursework + exam;
+    t.max_score = totalMax;
+
+    if (coursework < 0 || exam <= 0) {
+      toast.error(`الدرجات العظمى غير صحيحة في ${t.term_name}.`);
       return;
     }
-    if (t.passing_score > t.max_score) {
-      toast.error(`درجة النجاح تتجاوز الدرجة العظمى في ${t.term_name}.`);
+    if (examPass < 0 || examPass > exam) {
+      toast.error(`درجة النجاح في الامتحان النهائي يجب أن تكون بين 0 و ${exam} في ${t.term_name}.`);
+      return;
+    }
+    if (pass < 0 || pass > totalMax) {
+      toast.error(`درجة النجاح الكلية يجب أن تكون بين 0 و ${totalMax} في ${t.term_name}.`);
       return;
     }
   }
@@ -448,26 +474,22 @@ async function handleSaveMultiTerm() {
 
     for (const t of multiTermForm.value.terms) {
       if (t.enabled) {
+        const payload = {
+          class_academic_term_id: t.class_academic_term_id,
+          subject_id: multiTermForm.value.subject_id,
+          max_coursework_score: Number(t.max_coursework_score),
+          max_exam_score: Number(t.max_exam_score),
+          exam_passing_score: Number(t.exam_passing_score),
+          passing_score: Number(t.passing_score),
+          max_score: Number(t.max_coursework_score) + Number(t.max_exam_score),
+        };
+
         if (t.class_subject_id) {
           // Update existing
-          promises.push(
-            academicApi.updateClassSubject(t.class_subject_id, {
-              class_academic_term_id: t.class_academic_term_id,
-              subject_id: multiTermForm.value.subject_id,
-              passing_score: Number(t.passing_score),
-              max_score: Number(t.max_score),
-            }),
-          );
+          promises.push(academicApi.updateClassSubject(t.class_subject_id, payload));
         } else {
           // Create new assignment
-          promises.push(
-            academicApi.createClassSubject({
-              class_academic_term_id: t.class_academic_term_id,
-              subject_id: multiTermForm.value.subject_id,
-              passing_score: Number(t.passing_score),
-              max_score: Number(t.max_score),
-            }),
-          );
+          promises.push(academicApi.createClassSubject(payload));
         }
       } else if (t.class_subject_id) {
         // Was assigned, now unselected -> delete
@@ -614,20 +636,27 @@ onMounted(async () => {
           <template v-if="column.key.startsWith('term_')">
             <div
               v-if="getTermAssignment(row, column.key, group.terms)"
-              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border border-emerald-500/30 dark:border-emerald-400/40 bg-emerald-500/[0.05] dark:bg-emerald-950/30 shadow-2xs"
+              class="inline-flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl border border-emerald-500/30 dark:border-emerald-400/40 bg-emerald-500/[0.05] dark:bg-emerald-950/30 shadow-2xs"
             >
-              <span class="text-[11px] font-black text-emerald-600 dark:text-emerald-400" title="درجة النجاح">
-                {{ getTermAssignment(row, column.key, group.terms).passing_score }}
-              </span>
-              <span class="text-bx-muted opacity-40 text-[9px] font-bold">/</span>
-              <span class="text-[11px] font-black text-bx-title" title="الدرجة العظمى">
-                {{ getTermAssignment(row, column.key, group.terms).max_score }}
-              </span>
-              <span
-                v-if="getTermAssignment(row, column.key, group.terms).is_closed === 1"
-                class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"
-                title="مغلقة للأرشفة"
-              ></span>
+              <div class="flex items-center gap-1">
+                <span class="text-[11px] font-black text-emerald-600 dark:text-emerald-400" title="درجة النجاح الكلية">
+                  {{ getTermAssignment(row, column.key, group.terms).passing_score }}
+                </span>
+                <span class="text-bx-muted opacity-40 text-[9px] font-bold">/</span>
+                <span class="text-[11px] font-black text-bx-title" title="الدرجة الكلية العظمى">
+                  {{ getTermAssignment(row, column.key, group.terms).max_score }}
+                </span>
+                <span
+                  v-if="getTermAssignment(row, column.key, group.terms).is_closed === 1"
+                  class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"
+                  title="مغلقة للأرشفة"
+                ></span>
+              </div>
+              <div class="text-[9px] font-semibold text-bx-muted flex items-center gap-1">
+                <span>أعمال: {{ getTermAssignment(row, column.key, group.terms).max_coursework_score }}</span>
+                <span>|</span>
+                <span>امتحان: {{ getTermAssignment(row, column.key, group.terms).exam_passing_score }}/{{ getTermAssignment(row, column.key, group.terms).max_exam_score }}</span>
+              </div>
             </div>
             <span v-else class="text-slate-400 dark:text-slate-500 font-bold text-xs">—</span>
           </template>
@@ -673,7 +702,7 @@ onMounted(async () => {
           <span>إجمالي الصفوف المعروضة: <strong class="text-bx-title font-black">{{ filteredGroups?.length || 0 }}</strong> صفوف (مجموع <strong class="text-bx-title font-black">{{ totalSubjectsCount }}</strong> مقرراً مسكناً)</span>
         </div>
         <div class="text-[11px] text-bx-muted">
-          مناهج ومقررات الصفوف (عرض كامل بدون تجزئة صفحات)
+          مناهج ومقررات الصفوف (معايير التقييم: أعمال السنة + الامتحان النهائي + شرط النجاح المزدوج)
         </div>
       </div>
     </div>
@@ -718,7 +747,7 @@ onMounted(async () => {
         <div class="space-y-3">
           <h5 class="text-xs font-black text-bx-title flex items-center gap-2">
             <CalendarDays class="w-4 h-4 text-bx-primary" />
-            <span>حالة المادة عبر فصول العام الدراسي</span>
+            <span>معايير الدرجات وحالة المادة عبر الفصول الدراسية</span>
           </h5>
 
           <div
@@ -757,17 +786,29 @@ onMounted(async () => {
             <!-- Scores Grid for this Term -->
             <div
               v-if="activeRowDetails.assignments[t.term_name]"
-              class="grid grid-cols-2 gap-3 pt-3 text-xs"
+              class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 text-xs"
             >
-              <div>
-                <span class="text-bx-muted text-[11px] block">درجة النجاح الصغرى</span>
-                <span class="font-black text-emerald-600 dark:text-emerald-400 text-base">
+              <div class="p-2 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                <span class="text-bx-muted text-[10px] block">أعمال السنة</span>
+                <span class="font-black text-bx-title text-sm">
+                  {{ activeRowDetails.assignments[t.term_name].max_coursework_score }}
+                </span>
+              </div>
+              <div class="p-2 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                <span class="text-bx-muted text-[10px] block">الامتحان (صغرى/عظمى)</span>
+                <span class="font-black text-blue-600 dark:text-blue-400 text-sm">
+                  {{ activeRowDetails.assignments[t.term_name].exam_passing_score }} / {{ activeRowDetails.assignments[t.term_name].max_exam_score }}
+                </span>
+              </div>
+              <div class="p-2 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                <span class="text-bx-muted text-[10px] block">صغرى المادة</span>
+                <span class="font-black text-emerald-600 dark:text-emerald-400 text-sm">
                   {{ activeRowDetails.assignments[t.term_name].passing_score }}
                 </span>
               </div>
-              <div>
-                <span class="text-bx-muted text-[11px] block">الدرجة الكلية العظمى</span>
-                <span class="font-black text-bx-title text-base">
+              <div class="p-2 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                <span class="text-bx-muted text-[10px] block">عظمى المادة</span>
+                <span class="font-black text-bx-title text-sm">
                   {{ activeRowDetails.assignments[t.term_name].max_score }}
                 </span>
               </div>
@@ -849,9 +890,9 @@ onMounted(async () => {
           <div class="flex items-center justify-between">
             <label class="text-xs font-black text-bx-title flex items-center gap-1.5">
               <CalendarDays class="w-3.5 h-3.5 text-bx-primary" />
-              <span>فصول العام الدراسي والدرجات المخصصة:</span>
+              <span>فصول العام الدراسي ومعايير الدرجات:</span>
             </label>
-            <span class="text-[11px] text-bx-muted">حدد الفصول واضبط الدرجات في نفس الشاشة</span>
+            <span class="text-[11px] text-bx-muted">حدد الفصول واضبط نسب أعمال السنة والامتحان</span>
           </div>
 
           <!-- Term Card for Each Semester -->
@@ -891,33 +932,78 @@ onMounted(async () => {
             </div>
 
             <!-- Scores inputs if enabled -->
-            <div v-if="term.enabled" class="grid grid-cols-2 gap-3 pt-1">
-              <div class="space-y-1">
-                <span class="text-[11px] font-bold text-bx-muted flex items-center gap-1">
-                  <Award class="w-3 h-3 text-emerald-600" />
-                  درجة النجاح الصغرى
-                </span>
-                <input
-                  v-model.number="term.passing_score"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  class="w-full px-3.5 py-2 rounded-full text-xs bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] text-bx-title focus:outline-none focus:border-bx-primary transition-all font-bold"
-                />
+            <div v-if="term.enabled" class="space-y-3 pt-1">
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1">
+                  <span class="text-[11px] font-bold text-bx-muted flex items-center gap-1">
+                    عظمى أعمال السنة
+                  </span>
+                  <input
+                    v-model.number="term.max_coursework_score"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    placeholder="40"
+                    class="w-full px-3.5 py-2 rounded-full text-xs bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] text-bx-title focus:outline-none focus:border-bx-primary transition-all font-bold"
+                  />
+                </div>
+
+                <div class="space-y-1">
+                  <span class="text-[11px] font-bold text-bx-muted flex items-center gap-1">
+                    عظمى الامتحان النهائي
+                  </span>
+                  <input
+                    v-model.number="term.max_exam_score"
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    placeholder="60"
+                    class="w-full px-3.5 py-2 rounded-full text-xs bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] text-bx-title focus:outline-none focus:border-bx-primary transition-all font-bold"
+                  />
+                </div>
               </div>
 
-              <div class="space-y-1">
-                <span class="text-[11px] font-bold text-bx-muted flex items-center gap-1">
-                  <Award class="w-3 h-3 text-bx-primary" />
-                  الدرجة الكلية العظمى
-                </span>
-                <input
-                  v-model.number="term.max_score"
-                  type="number"
-                  step="0.5"
-                  min="1"
-                  class="w-full px-3.5 py-2 rounded-full text-xs bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] text-bx-title focus:outline-none focus:border-bx-primary transition-all font-bold"
-                />
+              <div class="grid grid-cols-3 gap-2.5">
+                <div class="space-y-1">
+                  <span class="text-[10px] font-bold text-bx-muted flex items-center gap-1" title="شرط النجاح في ورقة الامتحان">
+                    <Award class="w-3 h-3 text-blue-600" />
+                    صغرى الامتحان
+                  </span>
+                  <input
+                    v-model.number="term.exam_passing_score"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    placeholder="30"
+                    class="w-full px-3 py-2 rounded-full text-xs bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] text-bx-title focus:outline-none focus:border-bx-primary transition-all font-bold"
+                  />
+                </div>
+
+                <div class="space-y-1">
+                  <span class="text-[10px] font-bold text-bx-muted flex items-center gap-1" title="درجة النجاح الإجمالية">
+                    <Award class="w-3 h-3 text-emerald-600" />
+                    صغرى المادة
+                  </span>
+                  <input
+                    v-model.number="term.passing_score"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    placeholder="50"
+                    class="w-full px-3 py-2 rounded-full text-xs bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] text-bx-title focus:outline-none focus:border-bx-primary transition-all font-bold"
+                  />
+                </div>
+
+                <div class="space-y-1">
+                  <span class="text-[10px] font-bold text-bx-muted flex items-center gap-1">
+                    عظمى المادة (تلقائي)
+                  </span>
+                  <div
+                    class="w-full px-3 py-2 rounded-full text-xs bg-purple-500/10 border border-[#B4AED8] dark:border-white/[0.12] text-bx-title font-black text-center"
+                  >
+                    {{ (Number(term.max_coursework_score) || 0) + (Number(term.max_exam_score) || 0) }}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -927,7 +1013,7 @@ onMounted(async () => {
         <div class="p-3.5 rounded-2xl bg-purple-500/5 border border-[#B4AED8]/50 dark:border-white/10 text-xs text-bx-muted leading-relaxed flex items-start gap-2.5">
           <Info class="w-4 h-4 text-bx-primary shrink-0 mt-0.5" />
           <p class="text-[11px] leading-relaxed">
-            يمكنك تفعيل المادة في فصلين أو ثلاثة فصول دراسية وضبط درجات كل فصل بضغطة زر واحدة دون الحاجة للدخول لكل سمستر بشكل منفرد.
+            وفقاً للسياسة التعليمية: النجاح في المادة يشترط تحقيق كل من <strong>صغرى الامتحان النهائي</strong> و<strong>صغرى المادة الإجمالية</strong> معاً.
           </p>
         </div>
 

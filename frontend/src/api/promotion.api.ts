@@ -203,6 +203,7 @@ export interface FreezeTranscriptDto {
 export interface ExecutePromotionDto {
   from_academic_year_id: number;
   to_academic_year_id: number;
+  enable_annual_exam_compensation?: boolean;
   execution_notes?: string;
 }
 
@@ -246,6 +247,46 @@ export const promotionApi = {
   },
 
   /**
+   * 1.5 GET /api/v1/transcripts/sections/audit-progress
+   */
+  async getSectionAuditProgress(params: any = {}) {
+    const res = await apiClient.get('/transcripts/sections/audit-progress', { params });
+    return res.data;
+  },
+
+  /**
+   * 1.6 GET /api/v1/transcripts/sections/:class_section_id/roster
+   */
+  async getSectionRoster(classSectionId: number, params: any = {}) {
+    const res = await apiClient.get(`/transcripts/sections/${classSectionId}/roster`, { params });
+    return res.data;
+  },
+
+  /**
+   * 1.7 POST /api/v1/transcripts/generate-annual-for-section
+   */
+  async generateAnnualForSection(payload: {
+    class_section_id: number;
+    academic_year_name?: string;
+    enable_annual_exam_compensation?: boolean;
+  }) {
+    const res = await apiClient.post('/transcripts/generate-annual-for-section', payload);
+    return res.data;
+  },
+
+  /**
+   * 1.8 POST /api/v1/transcripts/generate-annual-for-class
+   */
+  async generateAnnualForClass(payload: {
+    class_id: number;
+    academic_year_name?: string;
+    enable_annual_exam_compensation?: boolean;
+  }) {
+    const res = await apiClient.post('/transcripts/generate-annual-for-class', payload);
+    return res.data;
+  },
+
+  /**
    * 2.1 GET /api/v1/promotions/batches
    */
   async getPromotionBatches(params: any = {}) {
@@ -264,7 +305,11 @@ export const promotionApi = {
   /**
    * 2.3 POST /api/v1/promotions/preview
    */
-  async previewPromotion(payload: { from_academic_year_id: number; to_academic_year_id: number }) {
+  async previewPromotion(payload: {
+    from_academic_year_id: number;
+    to_academic_year_id: number;
+    enable_annual_exam_compensation?: boolean;
+  }) {
     const res = await apiClient.post('/promotions/preview', payload);
     return res.data;
   },

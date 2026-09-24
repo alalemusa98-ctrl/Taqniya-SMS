@@ -62,6 +62,25 @@
             </button>
           </div>
         </div>
+
+        <!-- Annual Cumulative Exam Compensation Feature Toggle -->
+        <div class="pt-3 border-t border-[#B4AED8]/30 dark:border-white/[0.06]">
+          <label class="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              v-model="enableAnnualExamCompensation"
+              class="w-4 h-4 mt-0.5 rounded-md border-[#B4AED8] text-bx-primary focus:ring-0 cursor-pointer accent-purple-600 shrink-0"
+            />
+            <div class="space-y-0.5">
+              <span class="text-xs font-bold text-bx-title block">
+                تفعيل ميزة جبر مجموع الامتحانات النهائية السنوية (Cumulative Exam Compensation)
+              </span>
+              <span class="text-[11px] text-bx-muted leading-relaxed block">
+                عند التفعيل، يتم احتساب شرط الامتحان النهائي على مجموع درجات امتحانات فصول السنة مجتمعة بدلاً من اشتراط اجتياز صغرى الامتحان في كل سمستر على حدة.
+              </span>
+            </div>
+          </label>
+        </div>
       </div>
 
       <!-- Guidance Card before simulation is executed -->
@@ -403,12 +422,13 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'preview', payload: { from_year_id: number; to_year_id: number }): void;
+  (e: 'preview', payload: { from_year_id: number; to_year_id: number; enable_annual_exam_compensation?: boolean }): void;
   (e: 'execute', payload: ExecutePromotionDto): void;
 }>();
 
 const fromYearId = ref<number | ''>('');
 const toYearId = ref<number | ''>('');
+const enableAnnualExamCompensation = ref(false);
 const executionNotes = ref('');
 const isConfirmed = ref(false);
 const matrixSearch = ref('');
@@ -501,6 +521,7 @@ const runPreview = () => {
   emit('preview', {
     from_year_id: Number(fromYearId.value),
     to_year_id: Number(toYearId.value),
+    enable_annual_exam_compensation: enableAnnualExamCompensation.value,
   });
 };
 
@@ -509,6 +530,7 @@ const handleExecute = () => {
   emit('execute', {
     from_academic_year_id: Number(fromYearId.value),
     to_academic_year_id: Number(toYearId.value),
+    enable_annual_exam_compensation: enableAnnualExamCompensation.value,
     execution_notes: executionNotes.value || 'تم تنفيذ الترحيل الأكاديمي السنوي بنجاح.',
   });
 };

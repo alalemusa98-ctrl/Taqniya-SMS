@@ -302,6 +302,9 @@ model ClassSubject {
   class_id               BigInt    @db.UnsignedBigInt
   subject_id             BigInt    @db.UnsignedBigInt
   class_academic_term_id BigInt    @db.UnsignedBigInt
+  max_coursework_score   Decimal   @default(40.00) @db.Decimal(5, 2)
+  max_exam_score         Decimal   @default(60.00) @db.Decimal(5, 2)
+  exam_passing_score     Decimal   @default(30.00) @db.Decimal(5, 2)
   passing_score          Decimal   @default(50.00) @db.Decimal(5, 2)
   max_score              Decimal   @default(100.00) @db.Decimal(5, 2)
   created_at             DateTime  @default(now()) @db.Timestamp(0)

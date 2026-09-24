@@ -198,6 +198,9 @@ export interface ClassSubjectItem {
   subject_id: number;
   name: string;
   code?: string | null;
+  max_coursework_score: string;
+  max_exam_score: string;
+  exam_passing_score: string;
   passing_score: string;
   max_score: string;
 }
@@ -234,13 +237,19 @@ export interface CreateClassSectionPayload {
 export interface CreateClassSubjectPayload {
   class_academic_term_id: number;
   subject_id: number;
-  passing_score: number;
-  max_score: number;
+  max_coursework_score?: number;
+  max_exam_score?: number;
+  exam_passing_score?: number;
+  passing_score?: number;
+  max_score?: number;
 }
 
 export interface UpdateClassSubjectPayload {
   class_academic_term_id?: number;
   subject_id?: number;
+  max_coursework_score?: number;
+  max_exam_score?: number;
+  exam_passing_score?: number;
   passing_score?: number;
   max_score?: number;
 }

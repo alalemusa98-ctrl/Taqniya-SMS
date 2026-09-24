@@ -24,6 +24,9 @@ export class ClassSubjectsService {
       subject_id: Number(item.subject_id),
       subject_name: item.subject ? item.subject.name : undefined,
       class_academic_term_id: Number(item.class_academic_term_id),
+      max_coursework_score: Number(item.max_coursework_score ?? 40.0).toFixed(2),
+      max_exam_score: Number(item.max_exam_score ?? 60.0).toFixed(2),
+      exam_passing_score: Number(item.exam_passing_score ?? 30.0).toFixed(2),
       passing_score: Number(item.passing_score).toFixed(2),
       max_score: Number(item.max_score).toFixed(2),
       created_at: item.created_at ? item.created_at.toISOString() : null,
@@ -134,6 +137,9 @@ export class ClassSubjectsService {
           subject_id: Number(cs.subject_id),
           name: cs.subject?.name,
           code: cs.subject?.code,
+          max_coursework_score: Number(cs.max_coursework_score ?? 40.0).toFixed(2),
+          max_exam_score: Number(cs.max_exam_score ?? 60.0).toFixed(2),
+          exam_passing_score: Number(cs.exam_passing_score ?? 30.0).toFixed(2),
           passing_score: Number(cs.passing_score).toFixed(2),
           max_score: Number(cs.max_score).toFixed(2),
         })),
@@ -194,14 +200,27 @@ export class ClassSubjectsService {
     ipAddress?: string,
     userAgent?: string,
   ) {
-    // 1. Score invariant check
+    // 1. Score invariants check
+    const errors: Record<string, string[]> = {};
+
     if (dto.passing_score > dto.max_score) {
+      errors.passing_score = ['درجة النجاح الإجمالية يجب ألا تتجاوز الدرجة الكلية العظمى.'];
+    }
+
+    if (dto.exam_passing_score > dto.max_exam_score) {
+      errors.exam_passing_score = ['درجة نجاح الامتحان النهائي يجب ألا تتجاوز الدرجة العظمى للامتحان.'];
+    }
+
+    const calculatedTotal = Number(dto.max_coursework_score) + Number(dto.max_exam_score);
+    if (Math.abs(calculatedTotal - Number(dto.max_score)) > 0.001) {
+      errors.max_score = ['الدرجة الكلية العظمى يجب أن تساوي مجموع عظمى أعمال السنة وعظمى الامتحان.'];
+    }
+
+    if (Object.keys(errors).length > 0) {
       throw new UnprocessableEntityException({
         success: false,
         message: 'بيانات إسناد المادة غير صالحة.',
-        errors: {
-          passing_score: ['درجة النجاح يجب ألا تتجاوز الدرجة الكلية العظمى.'],
-        },
+        errors,
       });
     }
 
@@ -262,6 +281,9 @@ export class ClassSubjectsService {
         class_id: classAcademicTerm.class_id,
         subject_id: BigInt(dto.subject_id),
         class_academic_term_id: BigInt(dto.class_academic_term_id),
+        max_coursework_score: dto.max_coursework_score,
+        max_exam_score: dto.max_exam_score,
+        exam_passing_score: dto.exam_passing_score,
         passing_score: dto.passing_score,
         max_score: dto.max_score,
       },
@@ -291,6 +313,9 @@ export class ClassSubjectsService {
         subject_id: serialized.subject_id,
         subject_name: serialized.subject_name,
         class_academic_term_id: serialized.class_academic_term_id,
+        max_coursework_score: serialized.max_coursework_score,
+        max_exam_score: serialized.max_exam_score,
+        exam_passing_score: serialized.exam_passing_score,
         passing_score: serialized.passing_score,
         max_score: serialized.max_score,
       },
@@ -326,18 +351,43 @@ export class ClassSubjectsService {
       );
     }
 
+    const maxCw =
+      dto.max_coursework_score !== undefined
+        ? Number(dto.max_coursework_score)
+        : Number(existing.max_coursework_score ?? 40.0);
+    const maxEx =
+      dto.max_exam_score !== undefined
+        ? Number(dto.max_exam_score)
+        : Number(existing.max_exam_score ?? 60.0);
+    const exPass =
+      dto.exam_passing_score !== undefined
+        ? Number(dto.exam_passing_score)
+        : Number(existing.exam_passing_score ?? 30.0);
     const passScore =
-      dto.passing_score !== undefined ? dto.passing_score : Number(existing.passing_score);
+      dto.passing_score !== undefined ? Number(dto.passing_score) : Number(existing.passing_score);
     const maxScore =
-      dto.max_score !== undefined ? dto.max_score : Number(existing.max_score);
+      dto.max_score !== undefined ? Number(dto.max_score) : Number(existing.max_score);
+
+    const errors: Record<string, string[]> = {};
 
     if (passScore > maxScore) {
+      errors.passing_score = ['درجة النجاح الإجمالية يجب ألا تتجاوز الدرجة الكلية العظمى.'];
+    }
+
+    if (exPass > maxEx) {
+      errors.exam_passing_score = ['درجة نجاح الامتحان النهائي يجب ألا تتجاوز الدرجة العظمى للامتحان.'];
+    }
+
+    const calculatedTotal = maxCw + maxEx;
+    if (Math.abs(calculatedTotal - maxScore) > 0.001) {
+      errors.max_score = ['الدرجة الكلية العظمى يجب أن تساوي مجموع عظمى أعمال السنة وعظمى الامتحان.'];
+    }
+
+    if (Object.keys(errors).length > 0) {
       throw new UnprocessableEntityException({
         success: false,
         message: 'بيانات التحديث غير صالحة.',
-        errors: {
-          passing_score: ['درجة النجاح يجب ألا تتجاوز الدرجة العظمى.'],
-        },
+        errors,
       });
     }
 
@@ -369,6 +419,9 @@ export class ClassSubjectsService {
       data: {
         class_academic_term_id: termId,
         subject_id: subId,
+        max_coursework_score: maxCw,
+        max_exam_score: maxEx,
+        exam_passing_score: exPass,
         passing_score: passScore,
         max_score: maxScore,
       },
@@ -399,6 +452,9 @@ export class ClassSubjectsService {
         subject_id: serialized.subject_id,
         subject_name: serialized.subject_name,
         class_academic_term_id: serialized.class_academic_term_id,
+        max_coursework_score: serialized.max_coursework_score,
+        max_exam_score: serialized.max_exam_score,
+        exam_passing_score: serialized.exam_passing_score,
         passing_score: serialized.passing_score,
         max_score: serialized.max_score,
       },
@@ -449,13 +505,15 @@ export class ClassSubjectsService {
       },
     });
 
+    const serialized = this.serializeClassSubject(existing);
+
     await this.auditService.log({
       userId: adminId ? BigInt(adminId) : null,
       action: 'delete',
       entityType: 'class_subjects',
       entityId: BigInt(id),
-      oldValues: this.serializeClassSubject(existing),
-      newValues: { deleted_at: deleted.deleted_at },
+      oldValues: serialized,
+      newValues: null,
       ipAddress: ipAddress,
       userAgent: userAgent,
     });

@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsNotEmpty, IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
 export class PreviewPromotionDto {
   @IsNotEmpty({ message: 'العام الدراسي المرحل منه مطلوب.' })
@@ -11,4 +11,9 @@ export class PreviewPromotionDto {
   @Type(() => Number)
   @IsNumber({}, { message: 'معرف العام الدراسي المرحل إليه يجب أن يكون رقماً.' })
   to_academic_year_id: number;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
+  @IsBoolean({ message: 'ميزة التعويض السنوي للامتحان يجب أن تكون قيمة منطقية.' })
+  enable_annual_exam_compensation?: boolean;
 }

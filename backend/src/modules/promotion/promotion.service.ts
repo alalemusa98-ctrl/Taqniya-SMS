@@ -1517,10 +1517,11 @@ export class PromotionService {
         subjects: classSubjects.map((cs) => ({
           subject_id: Number(cs.subject_id),
           subject_name: cs.subject.name,
-          passing_score: Number(cs.passing_score),
-          max_score: Number(cs.max_score),
-          max_coursework_score: Number((Number(cs.max_score) * 0.4).toFixed(0)),
-          max_exam_score: Number((Number(cs.max_score) * 0.6).toFixed(0)),
+          max_coursework_score: Number(cs.max_coursework_score ?? 40.0),
+          max_exam_score: Number(cs.max_exam_score ?? 60.0),
+          exam_passing_score: Number(cs.exam_passing_score ?? 30.0),
+          passing_score: Number(cs.passing_score ?? 50.0),
+          max_score: Number(cs.max_score ?? 100.0),
         })),
         students,
       },
@@ -1532,7 +1533,7 @@ export class PromotionService {
    * Auto-aggregate term marks into annual frozen transcripts for an entire section
    */
   async generateAnnualForSection(
-    dto: { class_section_id: number; academic_year_name?: string },
+    dto: { class_section_id: number; academic_year_name?: string; enable_annual_exam_compensation?: boolean },
     adminUserId: number,
     ipAddress?: string,
     userAgent?: string,
@@ -1597,12 +1598,19 @@ export class PromotionService {
           continue;
         }
 
-        // Aggregate subject marks across terms
+        // Aggregate subject marks across terms with dual-criterion support
         const subjectMap = new Map<string, {
           subject_name: string;
           total_score_sum: number;
           max_score_sum: number;
+          coursework_score_sum: number;
+          max_coursework_score_sum: number;
+          exam_score_sum: number;
+          max_exam_score_sum: number;
+          exam_passing_score_sum: number;
+          passing_score_sum: number;
           terms_count: number;
+          terms_failed_exam_count: number;
         }>();
 
         for (const tt of termTranscripts) {
@@ -1616,13 +1624,39 @@ export class PromotionService {
                 subject_name: name,
                 total_score_sum: 0,
                 max_score_sum: 0,
+                coursework_score_sum: 0,
+                max_coursework_score_sum: 0,
+                exam_score_sum: 0,
+                max_exam_score_sum: 0,
+                exam_passing_score_sum: 0,
+                passing_score_sum: 0,
                 terms_count: 0,
+                terms_failed_exam_count: 0,
               });
             }
             const record = subjectMap.get(name)!;
-            record.total_score_sum += Number(s.total_score) || 0;
-            record.max_score_sum += Number(s.max_score) || 100;
+            const subTotal = Number(s.total_score) || 0;
+            const subMax = Number(s.max_score) || 100;
+            const subCoursework = Number(s.coursework_score) || 0;
+            const subMaxCoursework = Number(s.max_coursework_score) || 40;
+            const subExam = Number(s.exam_score) || 0;
+            const subMaxExam = Number(s.max_exam_score) || 60;
+            const subExamPass = Number(s.exam_passing_score) || (subMaxExam * 0.5);
+            const subPass = Number(s.passing_score) || (subMax * 0.5);
+
+            record.total_score_sum += subTotal;
+            record.max_score_sum += subMax;
+            record.coursework_score_sum += subCoursework;
+            record.max_coursework_score_sum += subMaxCoursework;
+            record.exam_score_sum += subExam;
+            record.max_exam_score_sum += subMaxExam;
+            record.exam_passing_score_sum += subExamPass;
+            record.passing_score_sum += subPass;
             record.terms_count += 1;
+
+            if (subExam < subExamPass) {
+              record.terms_failed_exam_count += 1;
+            }
           }
         }
 
@@ -1634,8 +1668,25 @@ export class PromotionService {
         for (const [, item] of subjectMap.entries()) {
           const totalScore = Number(item.total_score_sum.toFixed(2));
           const maxScore = Number(item.max_score_sum.toFixed(2));
-          const passingScore = maxScore * 0.5;
-          const isPassed = totalScore >= passingScore;
+          const passingScore = Number(item.passing_score_sum.toFixed(2));
+          const examScore = Number(item.exam_score_sum.toFixed(2));
+          const maxExamScore = Number(item.max_exam_score_sum.toFixed(2));
+          const examPassingScore = Number(item.exam_passing_score_sum.toFixed(2));
+          const courseworkScore = Number(item.coursework_score_sum.toFixed(2));
+          const maxCourseworkScore = Number(item.max_coursework_score_sum.toFixed(2));
+
+          // Evaluate Dual-Criterion Passing Rule
+          const totalPassed = totalScore >= passingScore;
+          let examPassed = false;
+          if (dto.enable_annual_exam_compensation) {
+            // Annual Cumulative Exam Compensation Mode
+            examPassed = examScore >= examPassingScore;
+          } else {
+            // Strict Per-Term Mode
+            examPassed = item.terms_failed_exam_count === 0;
+          }
+
+          const isPassed = totalPassed && examPassed;
 
           if (!isPassed) failedSubjectsCount += 1;
 
@@ -1644,9 +1695,15 @@ export class PromotionService {
 
           annualSubjects.push({
             subject_name: item.subject_name,
+            coursework_score: courseworkScore,
+            max_coursework_score: maxCourseworkScore,
+            exam_score: examScore,
+            max_exam_score: maxExamScore,
+            exam_passing_score: examPassingScore,
             total_score: totalScore,
             max_score: maxScore,
             passing_score: passingScore,
+            terms_failed_exam_count: item.terms_failed_exam_count,
             status: isPassed ? 'passed' : 'failed',
           });
         }
@@ -1664,6 +1721,7 @@ export class PromotionService {
 
         const transcriptSnapshot = {
           annual_summary: true,
+          enable_annual_exam_compensation: !!dto.enable_annual_exam_compensation,
           terms_included: termTranscripts.length,
           student_id: studentId,
           student_name: e.student.full_name,
@@ -1771,7 +1829,7 @@ export class PromotionService {
    * Auto-aggregate term marks into annual frozen transcripts for an entire class
    */
   async generateAnnualForClass(
-    dto: { class_id: number; academic_year_name?: string },
+    dto: { class_id: number; academic_year_name?: string; enable_annual_exam_compensation?: boolean },
     adminUserId: number,
     ipAddress?: string,
     userAgent?: string,
@@ -1806,7 +1864,11 @@ export class PromotionService {
     for (const cs of classSections) {
       try {
         const res = await this.generateAnnualForSection(
-          { class_section_id: Number(cs.id), academic_year_name: yearName },
+          {
+            class_section_id: Number(cs.id),
+            academic_year_name: yearName,
+            enable_annual_exam_compensation: dto.enable_annual_exam_compensation,
+          },
           adminUserId,
           ipAddress,
           userAgent,
