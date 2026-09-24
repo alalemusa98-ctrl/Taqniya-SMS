@@ -289,7 +289,7 @@ export class StudentEnrollmentsService {
       throw new NotFoundException('سجل الطالب أو التسكين غير موجود.');
     }
 
-    // Read operational enrollments
+    // Read operational enrollments ordered by academic year
     const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
         student_id: BigInt(studentId),
@@ -305,45 +305,74 @@ export class StudentEnrollmentsService {
       orderBy: { academic_year_id: 'desc' },
     });
 
-    // Read immutable historical transcripts
+    // Read historical transcripts for student to extract final status and percentage
     const transcripts = await this.prisma.studentTranscript.findMany({
       where: {
         student_id: BigInt(studentId),
         deleted_at: null,
       },
-      orderBy: { created_at: 'desc' },
+      orderBy: [
+        { transcript_type: 'asc' }, // 'annual' comes before 'term'
+        { created_at: 'desc' },
+      ],
     });
 
-    const resultList: any[] = [];
+    // Map transcripts by academic_year_name (preferring annual transcript)
+    const transcriptMap = new Map<string, any>();
+    for (const t of transcripts) {
+      if (!transcriptMap.has(t.academic_year_name)) {
+        transcriptMap.set(t.academic_year_name, t);
+      } else if (t.transcript_type === 'annual') {
+        transcriptMap.set(t.academic_year_name, t);
+      }
+    }
 
-    // Active enrollments first
+    const resultList: any[] = [];
+    const processedYears = new Set<string>();
+
+    // Map enrollments with their corresponding transcript data
     for (const e of enrollments) {
+      const yearName = e.academic_year?.name || '';
+      processedYears.add(yearName);
+      const matchedTranscript = transcriptMap.get(yearName);
+
+      const status = matchedTranscript?.final_status || e.status;
+      const percentage = matchedTranscript?.percentage !== undefined ? Number(matchedTranscript.percentage) : null;
+      const totalScore = matchedTranscript?.total_score !== undefined ? Number(matchedTranscript.total_score) : null;
+
       resultList.push({
         id: Number(e.id),
         academic_year_id: Number(e.academic_year_id),
-        academic_year_name: e.academic_year.name,
-        class_name: e.class.name,
+        academic_year_name: yearName,
+        class_name: e.class?.name || `الصف ${e.grade_level}`,
         grade_level: e.grade_level,
-        section_name: e.class_section.section.name,
-        seating_number: e.seating_number,
-        status: e.status,
+        section_name: e.class_section?.section?.name || '—',
+        seating_number: e.seating_number || null,
+        status,
+        percentage,
+        total_score: totalScore,
         created_at: e.created_at.toISOString(),
       });
     }
 
-    // Historical transcripts
+    // Include any historical transcripts from years not present in operational enrollments
     for (const t of transcripts) {
-      resultList.push({
-        id: Number(t.id),
-        academic_year_id: null,
-        academic_year_name: t.academic_year_name,
-        class_name: t.class_name,
-        grade_level: t.grade_level,
-        section_name: t.section_name,
-        seating_number: null,
-        status: t.final_status,
-        created_at: t.created_at.toISOString(),
-      });
+      if (!processedYears.has(t.academic_year_name)) {
+        processedYears.add(t.academic_year_name);
+        resultList.push({
+          id: Number(t.id),
+          academic_year_id: null,
+          academic_year_name: t.academic_year_name,
+          class_name: t.class_name,
+          grade_level: t.grade_level,
+          section_name: t.section_name || '—',
+          seating_number: (t.transcript_data as any)?.seating_number || null,
+          status: t.final_status,
+          percentage: Number(t.percentage),
+          total_score: Number(t.total_score),
+          created_at: t.created_at.toISOString(),
+        });
+      }
     }
 
     return {

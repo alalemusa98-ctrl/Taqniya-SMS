@@ -47,6 +47,8 @@ export interface StudentEnrollmentHistoryItem {
   section_name: string;
   seating_number: string | null;
   status: EnrollmentStatusType;
+  percentage?: number | null;
+  total_score?: number | null;
   created_at: string;
 }
 
