@@ -33,17 +33,17 @@
       <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         <TaqniyaKpiCard
           :icon="Layers"
-          title="إجمالي الكشوفات المسجلة"
-          :value="totalTranscriptsCount"
-          subtext="سجلات مؤرشفة ومجمدة"
+          title="إجمالي الكشوفات المستعلمة"
+          :value="hasExecutedSearch ? totalTranscriptsCount : '—'"
+          subtext="سجلات كشوفات مطابقة"
           color="purple"
         />
 
         <TaqniyaKpiCard
           :icon="CheckCircle2"
           title="نسبة النجاح العامة"
-          :value="`${overallPassRate}%`"
-          subtext="على مستوى المدرسة"
+          :value="hasExecutedSearch ? `${overallPassRate}%` : '—'"
+          subtext="للكشوفات المعروضة"
           color="emerald"
         />
 
@@ -80,122 +80,181 @@
 
       <!-- TAB 1: Transcripts & Leaderboard -->
       <section v-if="activeTab === 'transcripts'" class="space-y-6">
-        <!-- Filters Panel using TaqniyaSelect -->
-        <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-6 shadow-xs space-y-4">
-          <div class="flex items-center justify-between flex-wrap gap-3">
-            <div class="flex items-center gap-2 font-bold text-sm text-bx-title">
-              <Filter class="w-4 h-4 text-bx-primary" />
-              <span>تصفية وفلترة الكشوفات الأكاديمية</span>
-            </div>
+        <!-- 1. School Classes & Sections Grid (Matching Grade Entry View) -->
+        <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-xs">
+          <PromotionClassSectionsGrid
+            :sections="allSections"
+            :classes="classesList"
+            :selected-class-id="filters.class_id"
+            :selected-class-name="filters.class_name"
+            :selected-section-id="filters.class_section_id"
+            :selected-section-name="filters.section_name"
+            @select-class="handleSelectGridClass"
+            @select-section="handleSelectGridSection"
+          />
+        </div>
 
-            <!-- Search input with icon -->
-            <div class="relative min-w-[260px]">
-              <input
-                v-model="searchInput"
-                type="text"
-                placeholder="بحث باسم الطالب أو رمزه..."
-                class="w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl px-4 py-2 pr-9 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all"
-                @input="onSearchInput"
-              />
-              <Search class="w-4 h-4 text-bx-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <!-- 2. Filters & Search Panel -->
+        <div class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-bold text-xs sm:text-sm text-bx-title">
+              <Filter class="w-4 h-4 text-bx-primary" />
+              <span>محددات وفلاتر الاستعلام عن الكشوفات</span>
             </div>
           </div>
 
-          <div
-            class="grid grid-cols-1 sm:grid-cols-2 gap-4"
-            :class="filters.transcript_type === 'term' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'"
-          >
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <!-- 1. العام الدراسي -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-bold text-bx-muted">العام الدراسي:</label>
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold text-bx-muted">العام الدراسي:</label>
               <TaqniyaSelect
                 v-model="filters.academic_year_name"
                 :options="yearFilterOptions"
-                placeholder="جميع الأعوام الدراسية"
-                :full-width="true"
-                @update:model-value="fetchTranscripts"
+                placeholder="جميع الأعوام..."
+                full-width
+                @update:model-value="onYearFilterChange"
               />
             </div>
 
-            <!-- 2. الصف الدراسي (يظهر قبل نوع الصحيفة) -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-bold text-bx-muted">الصف الدراسي:</label>
+            <!-- 2. الصف الدراسي -->
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold text-bx-muted">الصف الدراسي:</label>
               <TaqniyaSelect
                 v-model="selectedClassIdModel"
                 :options="classFilterOptions"
-                placeholder="كافة الصفوف الدراسية"
-                :full-width="true"
+                placeholder="اختر الصف..."
+                full-width
                 @update:model-value="onClassFilterChange"
               />
             </div>
 
-            <!-- 3. نوع الصحيفة -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-bold text-bx-muted">نوع الصحيفة:</label>
+            <!-- 3. الشعبة -->
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold text-bx-muted">الشعبة:</label>
               <TaqniyaSelect
-                v-model="filters.transcript_type"
+                v-model="selectedSectionName"
+                :options="sectionFilterOptions"
+                placeholder="كافة الشعب..."
+                full-width
+                @update:model-value="onSectionFilterChange"
+              />
+            </div>
+
+            <!-- 4. نوع الصحيفة (إلزامي) -->
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold text-bx-muted">
+                <span>نوع الصحيفة:</span>
+                <span class="text-rose-500 font-bold ms-0.5" title="حقل إلزامي">*</span>
+              </label>
+              <TaqniyaSelect
+                v-model="selectedTranscriptOption"
                 :options="transcriptTypeFilterOptions"
-                placeholder="جميع أنواع الصحائف"
-                :full-width="true"
+                placeholder="اختر نوع الصحيفة..."
+                full-width
                 @update:model-value="onTranscriptTypeChange"
               />
             </div>
 
-            <!-- 4. الفصل الدراسي (يظهر فقط عند اختيار الصحيفة الفصلية) -->
-            <div v-if="filters.transcript_type === 'term'" class="space-y-1.5 animate-in fade-in zoom-in-95 duration-200">
-              <label class="text-xs font-bold text-bx-muted">الفصل الدراسي / الفترة:</label>
-              <TaqniyaSelect
-                v-model="selectedTermModel"
-                :options="termFilterOptions"
-                placeholder="كافة فترات وفصول الصف"
-                :full-width="true"
-                @update:model-value="onTermFilterChange"
-              />
-            </div>
-
-            <!-- 5. الحالة النهائية للطالب -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-bold text-bx-muted">الحالة النهائية للطالب:</label>
+            <!-- 5. الحالة الأكاديمية -->
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold text-bx-muted">الحالة الأكاديمية:</label>
               <TaqniyaSelect
                 v-model="filters.final_status"
                 :options="statusFilterOptions"
-                placeholder="كافة الحالات الأكاديمية"
-                :full-width="true"
-                @update:model-value="fetchTranscripts"
+                placeholder="كافة الحالات..."
+                full-width
               />
+            </div>
+          </div>
+
+          <!-- Search & Actions Bar (Unified & Balanced Heights) -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[#B4AED8]/30 dark:border-white/[0.06]">
+            <!-- Search input with matched height -->
+            <div class="relative w-full sm:w-auto sm:min-w-[300px]">
+              <input
+                v-model="searchInput"
+                type="text"
+                placeholder="بحث سريع باسم الطالب أو رقمه (اضغط Enter)..."
+                class="h-10 w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl px-3.5 pr-9 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all shadow-xs"
+                @keyup.enter="executeSearch"
+              />
+              <Search class="w-4 h-4 text-bx-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            <!-- Action Buttons with matched height -->
+            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                class="h-10 px-4 rounded-xl border border-bx-border hover:bg-black/5 dark:hover:bg-white/5 text-bx-muted hover:text-bx-title font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                @click="resetFilters"
+              >
+                <RotateCcw class="w-3.5 h-3.5" />
+                <span>إعادة ضبط</span>
+              </button>
+
+              <button
+                type="button"
+                class="h-10 px-6 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                :disabled="isLoadingTranscripts"
+                @click="executeSearch"
+              >
+                <Search class="w-3.5 h-3.5" />
+                <span>{{ isLoadingTranscripts ? 'جاري الاستعلام...' : 'استعلام وعرض الكشوفات' }}</span>
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- Executive Class Cards Grid -->
-        <div v-if="executiveClassSummaries.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <ExecutiveClassCard
-            v-for="cSum in executiveClassSummaries"
-            :key="cSum.grade_level"
-            :class-summary="cSum"
-            :is-selected="filters.grade_level === cSum.grade_level"
-            @select="handleSelectClassCard"
-          />
-        </div>
-
-        <!-- Leaderboard Table using TaqniyaTable -->
-        <div class="space-y-4">
-          <ClassLeaderboardTable
-            :transcripts="transcripts"
-            :is-loading="isLoadingTranscripts"
-            @view-detail="handleViewTranscriptDetail"
-            @freeze="handleOpenGradeEntry"
-          />
-
-          <!-- Pagination using TaqniyaPagination -->
-          <div v-if="totalPages > 1" class="flex justify-center pt-4">
-            <TaqniyaPagination
-              :current-page="meta.current_page"
-              :total-pages="totalPages"
-              @page-change="handlePageChange"
-            />
+        <!-- Guidance / Prompt State before searching -->
+        <div
+          v-if="!hasExecutedSearch"
+          class="bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.08] rounded-3xl p-12 text-center shadow-xs space-y-4"
+        >
+          <div class="w-16 h-16 rounded-3xl bg-bx-primary/10 text-bx-primary flex items-center justify-center mx-auto border border-bx-primary/20 shadow-xs">
+            <Filter class="w-8 h-8" />
+          </div>
+          <div class="max-w-md mx-auto space-y-1.5">
+            <h3 class="text-lg font-black text-bx-title font-display">
+              يرجى تحديد الصف الدراسي ونوع الصحيفة
+            </h3>
+            <p class="text-xs text-bx-muted font-medium leading-relaxed">
+              اختر الصف الدراسي من المصفوفة أو القائمة أعلاه، وتأكد من تحديد <strong>نوع الصحيفة (سنوية نهائية أو فصلية)</strong>، ثم اضغط على زر <strong>"استعلام وعرض الكشوفات"</strong> للبدء في استعراض النتائج الرسمية ولوحة الشرف.
+            </p>
           </div>
         </div>
+
+        <!-- When search has been executed -->
+        <template v-else>
+          <!-- Executive Class Cards Grid -->
+          <div v-if="executiveClassSummaries.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <ExecutiveClassCard
+              v-for="cSum in executiveClassSummaries"
+              :key="cSum.grade_level"
+              :class-summary="cSum"
+              :is-selected="filters.grade_level === cSum.grade_level"
+              @select="handleSelectClassCard"
+            />
+          </div>
+
+          <!-- Leaderboard Table using TaqniyaTable -->
+          <div class="space-y-4">
+            <ClassLeaderboardTable
+              :transcripts="transcripts"
+              :is-loading="isLoadingTranscripts"
+              @view-detail="handleViewTranscriptDetail"
+              @freeze="handleOpenGradeEntry"
+            />
+
+            <!-- Pagination using TaqniyaPagination -->
+            <div v-if="totalPages > 1" class="flex justify-center pt-4">
+              <TaqniyaPagination
+                :current-page="meta.current_page"
+                :total-pages="totalPages"
+                @page-change="handlePageChange"
+              />
+            </div>
+          </div>
+        </template>
       </section>
 
       <!-- TAB 2: Promotion Batches History using TaqniyaTable -->
@@ -336,6 +395,7 @@ import TranscriptDetailDrawer from '../components/promotion/TranscriptDetailDraw
 import PromotionBatchDetailDrawer from '../components/promotion/PromotionBatchDetailDrawer.vue';
 import GradeEntrySheetModal from '../components/promotion/GradeEntrySheetModal.vue';
 import PromotionExecutionModal from '../components/promotion/PromotionExecutionModal.vue';
+import PromotionClassSectionsGrid from '../components/promotion/PromotionClassSectionsGrid.vue';
 
 import {
   promotionApi,
@@ -353,6 +413,10 @@ import {
   type AcademicClassItem,
   type AcademicTermItem,
 } from '../api/academic.api';
+import {
+  gradeEntryApi,
+  type SectionAuditProgressItem,
+} from '../api/grade-entry.api';
 import { useToast } from '../composables/useToast';
 
 const toast = useToast();
@@ -367,6 +431,7 @@ const academicYearsList = ref<AcademicYearItem[]>([]);
 const classesList = ref<AcademicClassItem[]>([]);
 const academicTermsList = ref<AcademicTermItem[]>([]);
 const allClassAcademicTerms = ref<any[]>([]);
+const allSections = ref<SectionAuditProgressItem[]>([]);
 const promotionSimulation = ref<PromotionSimulationResult | null>(null);
 
 // Selected Items & Drawers/Modals
@@ -384,9 +449,11 @@ const isFreezing = ref(false);
 const isSimulating = ref(false);
 const isExecutingPromotion = ref(false);
 
-// Search input & debounce
+// Search execution flag (Transcripts not shown initially)
+const hasExecutedSearch = ref(false);
+
+// Search input
 const searchInput = ref('');
-let searchDebounceTimer: any = null;
 
 // Filters & Pagination
 const filters = ref<QueryTranscriptsDto>({
@@ -394,7 +461,8 @@ const filters = ref<QueryTranscriptsDto>({
   per_page: 15,
   academic_year_name: undefined,
   grade_level: undefined,
-  class_id: undefined,
+  class_name: undefined,
+  section_name: undefined,
   class_academic_term_id: undefined,
   transcript_type: undefined,
   final_status: undefined,
@@ -402,7 +470,8 @@ const filters = ref<QueryTranscriptsDto>({
 });
 
 const selectedClassIdModel = ref<string | number>('all');
-const selectedTermModel = ref<string | number>('all');
+const selectedSectionName = ref<string>('all');
+const selectedTranscriptOption = ref<string>('all');
 
 const meta = ref({
   current_page: 1,
@@ -434,81 +503,81 @@ const yearFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   ...academicYearsList.value.map((y) => ({
     label: `${y.name} ${y.is_active ? '(النشط)' : ''}`,
     value: y.name,
-    subtext: y.is_active ? 'العام الأكاديمي النشط حالياً' : undefined,
   })),
 ]);
 
 const classFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   { label: 'كافة الصفوف الدراسية', value: 'all' },
   ...classesList.value.map((c) => ({
-    label: `${c.name} (المستوى ${c.grade_level})`,
-    value: c.grade_level,
-    subtext: `المستوى الدراسي ${c.grade_level}`,
+    label: `${c.name} ${c.stage_name ? `(${c.stage_name})` : ''}`,
+    value: c.id,
   })),
 ]);
 
-const transcriptTypeFilterOptions: TaqniyaSelectOption[] = [
-  { label: 'جميع أنواع الصحائف', value: 'all' },
-  { label: 'صحيفة سنوية نهائية (Annual)', value: 'annual' },
-  { label: 'صحيفة فصلية (Term)', value: 'term' },
-];
-
-const termFilterOptions = computed<TaqniyaSelectOption[]>(() => {
-  if (!filters.value.grade_level || selectedClassIdModel.value === 'all') {
-    return [
-      { label: 'جميع الفصول الدراسية', value: 'all' },
-      ...academicTermsList.value.map((t: any) => {
-        const isActive = Number(t.is_active) === 1 || t.is_active === true;
-        return {
-          value: t.id,
-          label: isActive ? `${t.name} (الفصل النشط)` : t.name,
-          subtext: isActive ? 'الفصل النشط حالياً' : `فصل رقم ${t.term_number || t.id}`,
-        };
-      }),
-    ];
+const sectionFilterOptions = computed<TaqniyaSelectOption[]>(() => {
+  if (selectedClassIdModel.value === 'all' || !selectedClassIdModel.value) {
+    return [{ label: 'كافة الشعب المدرسية', value: 'all' }];
   }
-
-  // Find class ID matching selected grade level
-  const selectedClass = classesList.value.find(
-    (c) => c.grade_level === Number(filters.value.grade_level) || c.id === Number(selectedClassIdModel.value)
+  const currentClassSections = allSections.value.filter(
+    (s) => s.class_id === Number(selectedClassIdModel.value)
   );
-  const classId = selectedClass?.id;
-
-  const termsList = Array.isArray(allClassAcademicTerms.value)
-    ? allClassAcademicTerms.value
-    : (allClassAcademicTerms.value as any)?.classes || [];
-  const classGroup = termsList.find((g: any) => Number(g.class_id) === Number(classId));
-
-  if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
-    return [
-      { label: 'كافة الفصول للصف المختار', value: 'all' },
-      ...classGroup.terms.map((t: any) => {
-        const isActive = Number(t.is_active) === 1 || t.is_active === true;
-        const baseName = t.term_name || `الفصل الدراسي ${t.academic_term_id}`;
-        return {
-          value: t.id, // class_academic_term_id
-          label: isActive ? `${baseName} (نشط)` : baseName,
-          subtext: isActive ? 'الفصل النشط حالياً للصف' : undefined,
-        };
-      }),
-    ];
+  if (currentClassSections.length === 0) {
+    return [{ label: 'كافة الشعب (ترتيب عام)', value: 'all' }];
   }
-
   return [
-    { label: 'جميع الفصول الدراسية', value: 'all' },
-    ...academicTermsList.value.map((t: any) => ({
-      value: t.id,
-      label: t.name,
+    { label: 'كافة شعب الصف (ترتيب عام)', value: 'all' },
+    ...currentClassSections.map((s) => ({
+      label: `${s.section_name} (${s.total_enrolled} طالب)`,
+      value: s.section_name,
     })),
   ];
 });
 
+const transcriptTypeFilterOptions = computed<TaqniyaSelectOption[]>(() => {
+  const options: TaqniyaSelectOption[] = [
+    { label: 'اختر نوع الصحيفة (إلزامي)...', value: 'all' },
+    { label: 'النهائية', value: 'annual' },
+  ];
+
+  const classId = Number(selectedClassIdModel.value);
+  if (classId && !isNaN(classId)) {
+    const termsList = Array.isArray(allClassAcademicTerms.value)
+      ? allClassAcademicTerms.value
+      : (allClassAcademicTerms.value as any)?.classes || [];
+    const classGroup = termsList.find((g: any) => Number(g.class_id) === classId);
+
+    if (classGroup && classGroup.terms && classGroup.terms.length > 0) {
+      classGroup.terms.forEach((t: any) => {
+        options.push({
+          label: t.term_name || `الفصل الدراسي ${t.academic_term_id}`,
+          value: `term_cat_${t.id}`,
+        });
+      });
+      return options;
+    }
+  }
+
+  if (academicTermsList.value && academicTermsList.value.length > 0) {
+    academicTermsList.value.forEach((t: any) => {
+      options.push({
+        label: t.name || `الفصل ${t.id}`,
+        value: `term_at_${t.id}`,
+      });
+    });
+  } else {
+    options.push({ label: 'الفصل الأول', value: 'term_default_1' });
+    options.push({ label: 'الفصل الثاني', value: 'term_default_2' });
+  }
+
+  return options;
+});
+
 const statusFilterOptions: TaqniyaSelectOption[] = [
   { label: 'كافة الحالات الأكاديمية', value: 'all' },
-  { label: 'ناجح ومرحل (Passed)', value: 'passed' },
-  { label: 'دور ثانٍ (Second Round)', value: 'second_round' },
-  { label: 'باقٍ للإعادة (Failed)', value: 'failed' },
-  { label: 'متخرج (Graduated)', value: 'graduated' },
+  { label: 'ناجح ومرحل', value: 'passed' },
+  { label: 'دور ثانٍ', value: 'second_round' },
+  { label: 'باقٍ للإعادة', value: 'failed' },
+  { label: 'متخرج', value: 'graduated' },
 ];
 
 // Computed Metrics
@@ -521,21 +590,139 @@ const overallPassRate = computed(() => {
   return total > 0 ? Number(((passed / total) * 100).toFixed(1)) : 0;
 });
 
-// Search input handler
-const onSearchInput = () => {
-  clearTimeout(searchDebounceTimer);
-  searchDebounceTimer = setTimeout(() => {
-    filters.value.search = searchInput.value.trim() || undefined;
-    filters.value.page = 1;
-    fetchTranscripts();
-  }, 300);
+// Grid Selection Handlers
+const handleSelectGridClass = (classId: number, className: string, gradeLevel: number) => {
+  selectedClassIdModel.value = classId;
+  filters.value.class_id = classId;
+  filters.value.class_name = className;
+  filters.value.grade_level = gradeLevel;
+  // Unset section so all sections of this class are included for general ranking
+  filters.value.section_name = undefined;
+  filters.value.class_section_id = undefined;
+  selectedSectionName.value = 'all';
+};
+
+const handleSelectGridSection = (sec: SectionAuditProgressItem) => {
+  selectedClassIdModel.value = sec.class_id;
+  filters.value.class_id = sec.class_id;
+  filters.value.class_name = sec.class_name;
+  filters.value.grade_level = sec.grade_level;
+  filters.value.section_name = sec.section_name;
+  filters.value.class_section_id = sec.class_section_id;
+  selectedSectionName.value = sec.section_name;
+};
+
+// Filter Change Handlers (No auto-fetch; only updates state)
+const onYearFilterChange = (val: any) => {
+  if (val === 'all' || !val) {
+    filters.value.academic_year_name = undefined;
+  } else {
+    filters.value.academic_year_name = val;
+  }
+  fetchSections();
+};
+
+const onClassFilterChange = (val: any) => {
+  if (val === 'all' || !val) {
+    filters.value.class_id = undefined;
+    filters.value.class_name = undefined;
+    filters.value.grade_level = undefined;
+    selectedClassIdModel.value = 'all';
+  } else {
+    const classId = Number(val);
+    selectedClassIdModel.value = classId;
+    filters.value.class_id = classId;
+    const cls = classesList.value.find((c) => c.id === classId);
+    filters.value.class_name = cls?.name;
+    filters.value.grade_level = cls?.grade_level;
+  }
+  selectedSectionName.value = 'all';
+  filters.value.section_name = undefined;
+  filters.value.class_section_id = undefined;
+};
+
+const onSectionFilterChange = (val: any) => {
+  if (val === 'all' || !val) {
+    filters.value.section_name = undefined;
+    filters.value.class_section_id = undefined;
+    selectedSectionName.value = 'all';
+  } else {
+    filters.value.section_name = val;
+    selectedSectionName.value = val;
+    const sec = allSections.value.find(
+      (s) => s.class_id === Number(selectedClassIdModel.value) && s.section_name === val,
+    );
+    filters.value.class_section_id = sec?.class_section_id;
+  }
+};
+
+const onTranscriptTypeChange = (val: any) => {
+  selectedTranscriptOption.value = val;
+  if (val === 'all' || !val) {
+    filters.value.transcript_type = undefined;
+    filters.value.class_academic_term_id = undefined;
+    filters.value.academic_term_id = undefined;
+  } else if (val === 'annual') {
+    filters.value.transcript_type = 'annual';
+    filters.value.class_academic_term_id = undefined;
+    filters.value.academic_term_id = undefined;
+  } else if (typeof val === 'string' && val.startsWith('term_cat_')) {
+    filters.value.transcript_type = 'term';
+    filters.value.class_academic_term_id = Number(val.replace('term_cat_', ''));
+    filters.value.academic_term_id = undefined;
+  } else if (typeof val === 'string' && val.startsWith('term_at_')) {
+    filters.value.transcript_type = 'term';
+    filters.value.class_academic_term_id = undefined;
+    filters.value.academic_term_id = Number(val.replace('term_at_', ''));
+  } else {
+    filters.value.transcript_type = 'term';
+    filters.value.class_academic_term_id = undefined;
+    filters.value.academic_term_id = undefined;
+  }
+};
+
+// Explicit Search & Reset Actions
+const executeSearch = () => {
+  if (!filters.value.class_id && !filters.value.class_name && !searchInput.value.trim()) {
+    toast.warning('يرجى تحديد الصف الدراسي أولاً للاستعلام.');
+    return;
+  }
+  if (!filters.value.transcript_type || selectedTranscriptOption.value === 'all') {
+    toast.warning('يلزم تحديد "نوع الصحيفة" (مثلاً: النهائية، الفصل الأول...) قبل عرض النتائج.');
+    return;
+  }
+  filters.value.search = searchInput.value.trim() || undefined;
+  filters.value.page = 1;
+  hasExecutedSearch.value = true;
+  fetchTranscripts();
+};
+
+const resetFilters = () => {
+  filters.value.class_id = undefined;
+  filters.value.class_name = undefined;
+  filters.value.grade_level = undefined;
+  filters.value.class_section_id = undefined;
+  filters.value.section_name = undefined;
+  filters.value.class_academic_term_id = undefined;
+  filters.value.academic_term_id = undefined;
+  filters.value.transcript_type = undefined;
+  filters.value.final_status = undefined;
+  filters.value.search = undefined;
+  filters.value.page = 1;
+  selectedClassIdModel.value = 'all';
+  selectedSectionName.value = 'all';
+  selectedTranscriptOption.value = 'all';
+  searchInput.value = '';
+  transcripts.value = [];
+  executiveClassSummaries.value = [];
+  hasExecutedSearch.value = false;
 };
 
 // Lifecycle
 onMounted(async () => {
   await Promise.all([
     fetchAcademicLookups(),
-    fetchTranscripts(),
+    fetchSections(),
     fetchPromotionBatches(),
   ]);
 });
@@ -543,8 +730,8 @@ onMounted(async () => {
 const fetchAcademicLookups = async () => {
   try {
     const [yearsRes, classesRes, termsRes, classTermsRes] = await Promise.all([
-      academicApi.getYears({ per_page: 50 }),
-      academicApi.getClasses({ per_page: 50 }),
+      academicApi.getYears({ per_page: 50 }).catch(() => ({ data: { data: [] } })),
+      academicApi.getClasses({ per_page: 50 }).catch(() => ({ data: { data: [] } })),
       academicApi.getTerms({ per_page: 50 }).catch(() => ({ data: { data: [] } })),
       academicApi.getClassAcademicTerms({ per_page: 100 }).catch(() => ({ data: { data: [] } })),
     ]);
@@ -557,44 +744,17 @@ const fetchAcademicLookups = async () => {
   }
 };
 
-const onClassFilterChange = (val: any) => {
-  if (val === 'all' || !val) {
-    filters.value.grade_level = undefined;
-    filters.value.class_id = undefined;
-  } else {
-    filters.value.grade_level = Number(val);
-  }
-  // Reset term filter when class changes
-  selectedTermModel.value = 'all';
-  filters.value.class_academic_term_id = undefined;
-  filters.value.page = 1;
-  fetchTranscripts();
-};
-
-const onTranscriptTypeChange = (val: any) => {
-  if (val === 'all' || !val) {
-    filters.value.transcript_type = undefined;
-    filters.value.class_academic_term_id = undefined;
-    selectedTermModel.value = 'all';
-  } else {
-    filters.value.transcript_type = val;
-    if (val !== 'term') {
-      filters.value.class_academic_term_id = undefined;
-      selectedTermModel.value = 'all';
+const fetchSections = async () => {
+  try {
+    const res = await gradeEntryApi.getSectionAuditProgress({
+      academic_year_name: filters.value.academic_year_name,
+    });
+    if (res.success && res.data?.sections) {
+      allSections.value = res.data.sections;
     }
+  } catch (err: any) {
+    console.error('Failed to load section audit progress:', err);
   }
-  filters.value.page = 1;
-  fetchTranscripts();
-};
-
-const onTermFilterChange = (val: any) => {
-  if (val === 'all' || !val) {
-    filters.value.class_academic_term_id = undefined;
-  } else {
-    filters.value.class_academic_term_id = Number(val);
-  }
-  filters.value.page = 1;
-  fetchTranscripts();
 };
 
 const fetchTranscripts = async () => {
@@ -604,7 +764,12 @@ const fetchTranscripts = async () => {
       page: filters.value.page,
       per_page: filters.value.per_page,
       academic_year_name: filters.value.academic_year_name === 'all' ? undefined : filters.value.academic_year_name,
+      class_id: filters.value.class_id,
+      class_name: filters.value.class_name,
       grade_level: filters.value.grade_level,
+      class_section_id: filters.value.class_section_id,
+      section_name: filters.value.section_name,
+      academic_term_id: filters.value.academic_term_id,
       class_academic_term_id: filters.value.class_academic_term_id,
       transcript_type: filters.value.transcript_type === 'all' ? undefined : filters.value.transcript_type,
       final_status: filters.value.final_status === 'all' ? undefined : filters.value.final_status,
@@ -658,14 +823,24 @@ const fetchPromotionBatches = async () => {
 };
 
 const handleSelectClassCard = (cSum: ExecutiveClassSummary) => {
-  if (filters.value.grade_level === cSum.grade_level) {
+  const matchClass = classesList.value.find((c) => c.name === cSum.class_name);
+  if (filters.value.class_name === cSum.class_name) {
+    filters.value.class_id = undefined;
+    filters.value.class_name = undefined;
     filters.value.grade_level = undefined;
     selectedClassIdModel.value = 'all';
+    filters.value.section_name = undefined;
+    filters.value.class_section_id = undefined;
+    selectedSectionName.value = 'all';
   } else {
+    filters.value.class_id = matchClass?.id;
+    filters.value.class_name = cSum.class_name;
     filters.value.grade_level = cSum.grade_level;
-    selectedClassIdModel.value = cSum.grade_level;
+    selectedClassIdModel.value = matchClass ? matchClass.id : 'all';
+    filters.value.section_name = undefined;
+    filters.value.class_section_id = undefined;
+    selectedSectionName.value = 'all';
   }
-  selectedTermModel.value = 'all';
   filters.value.class_academic_term_id = undefined;
   filters.value.page = 1;
   fetchTranscripts();

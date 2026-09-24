@@ -68,27 +68,44 @@ export class PromotionService {
       where.transcript_type = query.transcript_type;
     }
 
-    if (query.grade_level !== undefined && query.grade_level !== null) {
+    if (query.class_id) {
+      const cls = await this.prisma.class.findUnique({
+        where: { id: BigInt(query.class_id) },
+      });
+      if (cls) {
+        where.class_name = cls.name;
+      }
+    } else if (query.class_name) {
+      where.class_name = query.class_name;
+    } else if (query.grade_level !== undefined && query.grade_level !== null) {
       where.grade_level = Number(query.grade_level);
     }
 
-    if (query.class_name) {
-      where.class_name = query.class_name;
-    }
-
-    if (query.section_name) {
+    if (query.class_section_id) {
+      const cs = await this.prisma.classSection.findUnique({
+        where: { id: BigInt(query.class_section_id) },
+        include: { section: true },
+      });
+      if (cs?.section) {
+        where.section_name = cs.section.name;
+      }
+    } else if (query.section_name) {
       where.section_name = query.section_name;
     }
 
+    const andConditions: any[] = [];
+
     if (query.class_academic_term_id) {
-      where.OR = [
-        { class_academic_term_id: BigInt(query.class_academic_term_id) },
-        {
-          class_academic_term: {
-            academic_term_id: BigInt(query.class_academic_term_id),
+      andConditions.push({
+        OR: [
+          { class_academic_term_id: BigInt(query.class_academic_term_id) },
+          {
+            class_academic_term: {
+              academic_term_id: BigInt(query.class_academic_term_id),
+            },
           },
-        },
-      ];
+        ],
+      });
     } else if (query.academic_term_id) {
       where.class_academic_term = {
         academic_term_id: BigInt(query.academic_term_id),
@@ -100,20 +117,26 @@ export class PromotionService {
     }
 
     if (query.search) {
-      where.OR = [
-        {
-          student: {
-            full_name: { contains: query.search },
-          },
-        },
-        {
-          student: {
-            user: {
-              user_code: { contains: query.search },
+      andConditions.push({
+        OR: [
+          {
+            student: {
+              full_name: { contains: query.search },
             },
           },
-        },
-      ];
+          {
+            student: {
+              user: {
+                user_code: { contains: query.search },
+              },
+            },
+          },
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     const sortField = query.sort_by || 'percentage';
@@ -141,11 +164,11 @@ export class PromotionService {
         skip,
         take: perPage,
       }),
-      // Aggregate summary statistics for all classes in this year & transcript_type
+      // Aggregate summary statistics for all classes in this year & transcript_type (prevent double-counting)
       this.prisma.studentTranscript.findMany({
         where: {
           academic_year_name: yearName,
-          ...(query.transcript_type ? { transcript_type: query.transcript_type } : {}),
+          transcript_type: query.transcript_type || TranscriptType.annual,
           deleted_at: null,
         },
         select: {
@@ -156,11 +179,11 @@ export class PromotionService {
       }),
     ]);
 
-    // Build Executive Class Summaries
-    const classSummaryMap = new Map<number, any>();
+    // Build Executive Class Summaries (keyed by class_name to prevent stage collisions)
+    const classSummaryMap = new Map<string, any>();
     for (const item of allYearTranscripts) {
-      if (!classSummaryMap.has(item.grade_level)) {
-        classSummaryMap.set(item.grade_level, {
+      if (!classSummaryMap.has(item.class_name)) {
+        classSummaryMap.set(item.class_name, {
           grade_level: item.grade_level,
           class_name: item.class_name,
           total_students: 0,
@@ -170,7 +193,7 @@ export class PromotionService {
           graduated_count: 0,
         });
       }
-      const summary = classSummaryMap.get(item.grade_level);
+      const summary = classSummaryMap.get(item.class_name);
       summary.total_students += 1;
       if (item.final_status === EnrollmentStatus.passed) summary.passed_count += 1;
       else if (item.final_status === EnrollmentStatus.second_round) summary.second_round_count += 1;
@@ -233,16 +256,20 @@ export class PromotionService {
           query.transcript_type || TranscriptType.annual,
         ),
         classes_summary: classesSummary,
-        selected_class: query.grade_level
+        selected_class: where.class_name || query.grade_level
           ? {
-              grade_level: Number(query.grade_level),
+              grade_level: Number(query.grade_level || 0),
               class_name:
                 classesSummary.find(
-                  (c) => c.grade_level === Number(query.grade_level),
-                )?.class_name || '',
+                  (c) =>
+                    (where.class_name && c.class_name === where.class_name) ||
+                    (query.grade_level && c.grade_level === Number(query.grade_level)),
+                )?.class_name || where.class_name || '',
               total_students:
                 classesSummary.find(
-                  (c) => c.grade_level === Number(query.grade_level),
+                  (c) =>
+                    (where.class_name && c.class_name === where.class_name) ||
+                    (query.grade_level && c.grade_level === Number(query.grade_level)),
                 )?.total_students || 0,
             }
           : null,
