@@ -242,7 +242,6 @@
               :transcripts="transcripts"
               :is-loading="isLoadingTranscripts"
               @view-detail="handleViewTranscriptDetail"
-              @freeze="handleOpenGradeEntry"
             />
 
             <!-- Pagination using TaqniyaPagination -->
@@ -346,15 +345,6 @@
         @close="isBatchDetailDrawerOpen = false"
       />
 
-      <!-- Grade Entry & Freeze Modal -->
-      <GradeEntrySheetModal
-        :is-open="isGradeModalOpen"
-        :student-data="selectedTranscript"
-        :is-submitting="isFreezing"
-        @close="isGradeModalOpen = false"
-        @submit-freeze="handleSubmitFreeze"
-      />
-
       <!-- Promotion Execution Modal -->
       <PromotionExecutionModal
         :is-open="isPromotionModalOpen"
@@ -393,7 +383,6 @@ import ExecutiveClassCard from '../components/promotion/ExecutiveClassCard.vue';
 import ClassLeaderboardTable from '../components/promotion/ClassLeaderboardTable.vue';
 import TranscriptDetailDrawer from '../components/promotion/TranscriptDetailDrawer.vue';
 import PromotionBatchDetailDrawer from '../components/promotion/PromotionBatchDetailDrawer.vue';
-import GradeEntrySheetModal from '../components/promotion/GradeEntrySheetModal.vue';
 import PromotionExecutionModal from '../components/promotion/PromotionExecutionModal.vue';
 import PromotionClassSectionsGrid from '../components/promotion/PromotionClassSectionsGrid.vue';
 
@@ -404,7 +393,6 @@ import {
   type PromotionBatch,
   type PromotionSimulationResult,
   type QueryTranscriptsDto,
-  type FreezeTranscriptDto,
   type ExecutePromotionDto,
 } from '../api/promotion.api';
 import {
@@ -439,13 +427,11 @@ const selectedTranscript = ref<StudentTranscript | null>(null);
 const selectedBatch = ref<PromotionBatch | null>(null);
 const isDetailDrawerOpen = ref(false);
 const isBatchDetailDrawerOpen = ref(false);
-const isGradeModalOpen = ref(false);
 const isPromotionModalOpen = ref(false);
 
 // Loading Flags
 const isLoadingTranscripts = ref(false);
 const isLoadingBatches = ref(false);
-const isFreezing = ref(false);
 const isSimulating = ref(false);
 const isExecutingPromotion = ref(false);
 
@@ -867,27 +853,6 @@ const handleViewTranscriptDetail = async (transcript: StudentTranscript) => {
 const handleViewBatchDetail = (batch: PromotionBatch) => {
   selectedBatch.value = batch;
   isBatchDetailDrawerOpen.value = true;
-};
-
-const handleOpenGradeEntry = (transcript: StudentTranscript) => {
-  selectedTranscript.value = transcript;
-  isGradeModalOpen.value = true;
-};
-
-const handleSubmitFreeze = async (payload: FreezeTranscriptDto) => {
-  isFreezing.value = true;
-  try {
-    const res = await promotionApi.freezeTranscript(payload);
-    if (res.success) {
-      toast.success(res.message || 'تم تجميد وتثبيت كشف الدرجات رسمياً.');
-      isGradeModalOpen.value = false;
-      await fetchTranscripts();
-    }
-  } catch (err: any) {
-    toast.error(err.response?.data?.message || 'فشل تجميد الكشف الأكاديمي.');
-  } finally {
-    isFreezing.value = false;
-  }
 };
 
 const openPromotionModal = () => {

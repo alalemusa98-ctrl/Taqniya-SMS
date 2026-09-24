@@ -113,14 +113,6 @@
           >
             <Eye class="w-3.5 h-3.5" />
           </button>
-          <button
-            type="button"
-            class="p-1.5 rounded-lg border border-bx-border hover:border-amber-500 text-bx-muted hover:text-amber-600 transition-colors cursor-pointer"
-            title="تجميد وتثبيت السجل الأكاديمي"
-            @click="$emit('freeze', item)"
-          >
-            <Lock class="w-3.5 h-3.5" />
-          </button>
         </div>
       </template>
     </TaqniyaTable>
@@ -129,7 +121,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Trophy, Search, Eye, Lock } from 'lucide-vue-next';
+import { Trophy, Search, Eye } from 'lucide-vue-next';
 import TaqniyaTable, { type TableColumn } from '../ui/TaqniyaTable.vue';
 import type { StudentTranscript } from '../../api/promotion.api';
 
@@ -145,7 +137,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 defineEmits<{
   (e: 'view-detail', transcript: StudentTranscript): void;
-  (e: 'freeze', transcript: StudentTranscript): void;
 }>();
 
 const searchTerm = ref('');
