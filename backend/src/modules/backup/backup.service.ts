@@ -12,6 +12,15 @@ export interface BackupItem {
   note: string | null;
 }
 
+export interface UploadedMulterFile {
+  fieldname?: string;
+  originalname?: string;
+  encoding?: string;
+  mimetype?: string;
+  buffer: Buffer;
+  size?: number;
+}
+
 export interface BackupSummary {
   total_backups: number;
   total_size: string;
@@ -199,7 +208,7 @@ export class BackupService {
     }
   }
 
-  async uploadBackup(file: Express.Multer.File): Promise<BackupItem> {
+  async uploadBackup(file: UploadedMulterFile): Promise<BackupItem> {
     this.ensureStorageDir();
     if (!file || !file.buffer) {
       throw new BadRequestException('يجب تقديم ملف مضغوط صالح بصيغة ZIP.');

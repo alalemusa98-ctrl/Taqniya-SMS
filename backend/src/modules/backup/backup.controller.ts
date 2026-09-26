@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import { BackupService } from './backup.service.js';
+import { BackupService, type UploadedMulterFile } from './backup.service.js';
 import { CreateBackupDto } from './dto/create-backup.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
@@ -49,7 +49,7 @@ export class BackupController {
   @Post('upload')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('file'))
-  async uploadBackup(@UploadedFile() file: Express.Multer.File) {
+  async uploadBackup(@UploadedFile() file: UploadedMulterFile) {
     const data = await this.backupService.uploadBackup(file);
     return {
       success: true,

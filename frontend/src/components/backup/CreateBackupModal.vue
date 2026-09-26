@@ -1,8 +1,116 @@
+<template>
+  <TaqniyaModal
+    :is-open="isOpen"
+    title="إنشاء نسخة احتياطية جديدة (Database Backup)"
+    subtitle="توليد وتفريغ كامل لقاعدة البيانات وضغطها في حزمة ZIP مؤمنة"
+    max-width="xl"
+    @close="emit('close')"
+  >
+    <template #icon>
+      <div class="w-10 h-10 rounded-2xl bg-bx-primary/10 text-bx-primary flex items-center justify-center border border-bx-primary/20 shadow-xs">
+        <Database class="w-5 h-5" />
+      </div>
+    </template>
+
+    <div class="space-y-4" dir="rtl">
+      <!-- Info Alert Card -->
+      <div class="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-900 dark:text-purple-200 flex items-start gap-3">
+        <div class="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0 mt-0.5">
+          <Database class="w-4 h-4" />
+        </div>
+        <div class="text-xs leading-relaxed space-y-1">
+          <span class="font-bold block text-purple-700 dark:text-purple-300">تفريغ فوري وتجزئة دفعية:</span>
+          <span>
+            سيقوم المحرك بتصدير الجداول والبيانات بنظام الـ Chunking (دفعات 500 سجل) لضمان استقرار الذاكرة، ثم ضغط ملف الـ SQL مع الملاحظة المرفقة داخل ملف ZIP في مسار التخزين.
+          </span>
+        </div>
+      </div>
+
+      <!-- Note Input Card -->
+      <div class="p-4 bg-bx-surface-2 rounded-2xl border border-bx-border space-y-2">
+        <label class="block text-xs font-bold text-bx-title flex items-center gap-1.5">
+          <FileText class="w-4 h-4 text-bx-primary" />
+          <span>ملاحظة أو سبب إنشاء النسخة (اختياري للتوثيق):</span>
+        </label>
+        <textarea
+          v-model="note"
+          rows="3"
+          maxlength="500"
+          placeholder="مثال: نسخة احتياطية قبل تعديل الهيكل الأكاديمي، أو قبل اعتماد الترحيل السنوي..."
+          class="w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl p-3 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all resize-none"
+        ></textarea>
+        <div class="flex justify-between items-center text-[10px] text-bx-muted font-medium">
+          <span>يتم حفظ الملاحظة داخل ملف نصي في أرشيف الـ ZIP للاسترشاد بها عند الاستعادة.</span>
+          <span class="font-mono">{{ note.length }}/500</span>
+        </div>
+      </div>
+
+      <!-- Preset Quick Suggestions -->
+      <div class="p-3.5 bg-bx-surface-2 rounded-2xl border border-bx-border space-y-2">
+        <div class="text-xs font-bold text-bx-muted flex items-center gap-1.5">
+          <Sparkles class="w-3.5 h-3.5 text-amber-500" />
+          <span>نماذج مقترحة للملاحظات:</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          <button
+            v-for="(preset, idx) in presetNotes"
+            :key="idx"
+            type="button"
+            @click="note = preset"
+            class="text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-bx-surface hover:bg-purple-500/10 hover:text-bx-primary text-bx-text border border-bx-border transition-all cursor-pointer"
+          >
+            {{ preset }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Error Message -->
+      <div v-if="errorMessage" class="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-2">
+        <AlertCircle class="w-4 h-4 shrink-0" />
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+
+    <!-- Footer Actions Slot -->
+    <template #footer>
+      <div class="flex items-center justify-between w-full">
+        <button
+          type="button"
+          class="px-5 py-2 text-xs font-bold rounded-xl bg-bx-surface-2 hover:bg-bx-surface-3 text-bx-title border border-bx-border transition-colors cursor-pointer"
+          :disabled="loading"
+          @click="emit('close')"
+        >
+          إلغاء
+        </button>
+
+        <button
+          type="button"
+          class="px-6 py-2.5 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="loading"
+          @click="handleSubmit"
+        >
+          <Loader2 v-if="loading" class="w-4 h-4 animate-spin" />
+          <Database v-else class="w-4 h-4" />
+          <span>{{ loading ? 'جاري إنشاء وضغط النسخة...' : 'تأكيد وبدء إنشاء النسخة الآن' }}</span>
+        </button>
+      </div>
+    </template>
+  </TaqniyaModal>
+</template>
+
 <script setup lang="ts">
 import { ref } from 'vue';
 import TaqniyaModal from '../ui/TaqniyaModal.vue';
 import { backupApi } from '../../api/backup.api';
-import { Database, FileText, Sparkles, Loader2 } from 'lucide-vue-next';
+import { Database, FileText, Sparkles, Loader2, AlertCircle } from 'lucide-vue-next';
+
+interface Props {
+  isOpen?: boolean;
+}
+
+withDefaults(defineProps<Props>(), {
+  isOpen: true,
+});
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -17,12 +125,8 @@ const presetNotes = [
   'نسخة احتياطية دورية للنظام',
   'نسخة احتياطية قبل تعديل الهيكل الأكاديمي',
   'نسخة احتياطية قبل رصد الدرجات وإصدار الصحائف',
-  'نسخة احتياطية قبل تنفيذ الترحيل السنوي وتسكين الطلاب',
+  'نسخة احتياطية قبل اعتماد الترحيل السنوي وتسكين الطلاب',
 ];
-
-const setPresetNote = (preset: string) => {
-  note.value = preset;
-};
 
 const handleSubmit = async () => {
   loading.value = true;
@@ -39,91 +143,3 @@ const handleSubmit = async () => {
   }
 };
 </script>
-
-<template>
-  <TaqniyaModal
-    :is-open="true"
-    title="إنشاء نسخة احتياطية جديدة"
-    subtitle="توليد وتفريغ كامل لقاعدة البيانات وضغطها في حزمة ZIP مؤمنة"
-    @close="emit('close')"
-  >
-    <div class="space-y-6 text-right dir-rtl">
-      <!-- Info Card -->
-      <div class="p-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 flex items-start gap-3.5">
-        <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5">
-          <Database class="w-5 h-5" />
-        </div>
-        <div class="text-xs text-indigo-950 dark:text-indigo-200 leading-relaxed">
-          <span class="font-bold block text-sm mb-0.5">تفريغ فوري وتجزئة دفعية:</span>
-          سيقوم النظام بتصدير الجداول والبيانات بنمط الـ Chunking وحفظها بملف SQL مضغوط داخل مسار التخزين مع الملاحظة الوصفية المدخلة أدناه.
-        </div>
-      </div>
-
-      <!-- Note Input -->
-      <div>
-        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-          <FileText class="w-4 h-4 text-primary" />
-          <span>ملاحظة أو وصف النسخة (اختياري)</span>
-        </label>
-        <textarea
-          v-model="note"
-          rows="3"
-          maxlength="500"
-          placeholder="اكتب وصفاً أو سبباً لإنشاء النسخة، مثلاً: نسخة احتياطية قبل ترحيل الطلاب..."
-          class="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 focus:border-primary dark:focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 text-slate-800 dark:text-slate-100 font-medium transition-all text-sm resize-none"
-        ></textarea>
-        <div class="flex justify-between items-center mt-1 text-xs text-slate-400 font-medium">
-          <span>يمكن الاسترشاد بالملاحظة لاحقاً عند استعادة البيانات.</span>
-          <span>{{ note.length }}/500</span>
-        </div>
-      </div>
-
-      <!-- Quick Preset Suggestions -->
-      <div>
-        <div class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5">
-          <Sparkles class="w-3.5 h-3.5 text-amber-500" />
-          <span>نماذج سريعة للملاحظات:</span>
-        </div>
-        <div class="flex flex-wrap gap-1.5">
-          <button
-            v-for="(preset, idx) in presetNotes"
-            :key="idx"
-            type="button"
-            @click="setPresetNote(preset)"
-            class="text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/20 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
-          >
-            {{ preset }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Error Alert -->
-      <div v-if="errorMessage" class="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-bold">
-        {{ errorMessage }}
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="flex items-center gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-        <button
-          type="button"
-          @click="handleSubmit"
-          :disabled="loading"
-          class="flex-1 h-12 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md shadow-primary/20 disabled:opacity-60 cursor-pointer"
-        >
-          <Loader2 v-if="loading" class="w-5 h-5 animate-spin" />
-          <Database v-else class="w-5 h-5" />
-          <span>{{ loading ? 'جارٍ إنشاء وضغط النسخة...' : 'بدء إنشاء النسخة الآن' }}</span>
-        </button>
-
-        <button
-          type="button"
-          @click="emit('close')"
-          :disabled="loading"
-          class="h-12 px-6 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-sm transition-all cursor-pointer"
-        >
-          إلغاء
-        </button>
-      </div>
-    </div>
-  </TaqniyaModal>
-</template>
