@@ -150,7 +150,22 @@ export interface MatrixClassItem {
   sections: MatrixSectionItem[];
 }
 
+export interface IncompletePromotionStudent {
+  student_id: number;
+  student_code: string;
+  student_name: string;
+  class_name: string;
+  section_name: string;
+  required_terms_count: number;
+  completed_terms_count: number;
+  reason: string;
+}
+
 export interface PromotionSimulationResult {
+  can_execute?: boolean;
+  blocking_message?: string;
+  incomplete_students_count?: number;
+  incomplete_students?: IncompletePromotionStudent[];
   summary: {
     total_students: number;
     to_be_promoted: number;

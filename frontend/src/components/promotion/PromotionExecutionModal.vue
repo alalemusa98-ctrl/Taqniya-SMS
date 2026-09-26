@@ -101,6 +101,73 @@
 
       <!-- 2. Simulation Results Container -->
       <div v-if="previewResult" class="space-y-6 animate-in fade-in zoom-in-95 duration-200">
+        <!-- CRITICAL PROMOTION BLOCKER BANNER (If incomplete grades exist) -->
+        <div
+          v-if="previewResult.can_execute === false || (previewResult.incomplete_students_count && previewResult.incomplete_students_count > 0)"
+          class="p-5 rounded-3xl bg-rose-500/10 border-2 border-rose-500/40 text-rose-900 dark:text-rose-100 space-y-4 shadow-sm"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <AlertTriangle class="w-6 h-6" />
+              </div>
+              <div>
+                <h4 class="text-sm font-black text-rose-700 dark:text-rose-300">
+                  ⛔ تنبيه نظامي مانع: لا يمكن تنفيذ الترحيل السنوي لوجود ({{ previewResult.incomplete_students_count }}) طلاب لم يكتمل رصد درجاتهم!
+                </h4>
+                <p class="text-xs text-rose-800/80 dark:text-rose-200/80 mt-0.5 leading-relaxed">
+                  {{ previewResult.blocking_message || 'وفقاً لقواعد الحوكمة الأكاديمية الصارمة، لا يُسمح بتنفيذ الترحيل السنوي حتى يتم استكمال رصد درجات كافة الفصول وإصدار الصحائف السنوية لكافة طلاب العام الدراسي.' }}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline shrink-0 flex items-center gap-1 cursor-pointer"
+              @click="showIncompleteDetails = !showIncompleteDetails"
+            >
+              <span>{{ showIncompleteDetails ? 'إخفاء كشف النواقص ▲' : 'عرض كشف النواقص والطلاب ▼' }}</span>
+            </button>
+          </div>
+
+          <!-- Expandable Incomplete Students Table -->
+          <div
+            v-if="showIncompleteDetails && previewResult.incomplete_students && previewResult.incomplete_students.length > 0"
+            class="overflow-x-auto rounded-2xl border border-rose-500/20 bg-[var(--bx-surface-solid)]"
+          >
+            <table class="w-full text-right text-xs border-collapse">
+              <thead>
+                <tr class="bg-rose-500/5 text-bx-muted font-bold border-b border-rose-500/20">
+                  <th class="py-2.5 px-3 text-center">#</th>
+                  <th class="py-2.5 px-3">اسم الطالب</th>
+                  <th class="py-2.5 px-3">الصف والشعبة</th>
+                  <th class="py-2.5 px-3 text-center">الفصول المرصودة</th>
+                  <th class="py-2.5 px-3">سبب التعليق</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-rose-500/10">
+                <tr v-for="(stu, idx) in previewResult.incomplete_students" :key="stu.student_id">
+                  <td class="py-2 px-3 text-center font-mono text-bx-muted">{{ idx + 1 }}</td>
+                  <td class="py-2 px-3 font-bold text-bx-title">
+                    {{ stu.student_name }}
+                    <span v-if="stu.student_code" class="block text-[10px] text-bx-muted font-mono">{{ stu.student_code }}</span>
+                  </td>
+                  <td class="py-2 px-3 font-bold text-bx-title">
+                    {{ stu.class_name }} ({{ stu.section_name }})
+                  </td>
+                  <td class="py-2 px-3 text-center font-mono font-bold">
+                    <span class="text-rose-600">{{ stu.completed_terms_count }}</span>
+                    <span class="text-bx-muted"> / {{ stu.required_terms_count }}</span>
+                  </td>
+                  <td class="py-2 px-3 text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                    {{ stu.reason }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- 2.1 KPI Overview Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
           <!-- Total & Pass Rate -->
@@ -377,7 +444,7 @@
         <button
           type="button"
           class="px-6 py-2.5 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!previewResult || !isConfirmed || isExecuting"
+          :disabled="!previewResult || previewResult.can_execute === false || !isConfirmed || isExecuting"
           @click="handleExecute"
         >
           <Loader2 v-if="isExecuting" class="w-4 h-4 animate-spin" />
@@ -443,6 +510,7 @@ const enableAnnualExamCompensation = ref(false);
 const executionNotes = ref('');
 const isConfirmed = ref(false);
 const matrixSearch = ref('');
+const showIncompleteDetails = ref(true);
 
 const yearOptions = computed<TaqniyaSelectOption[]>(() => {
   const list = Array.isArray(props.academicYears)

@@ -335,6 +335,130 @@
           </div>
         </div>
 
+        <!-- SECOND ROUND SCORING & EVALUATION PANEL -->
+        <div
+          v-if="isAnnualTranscript && activeTranscript.final_status === 'second_round' && secondRoundFailingSubjects.length > 0"
+          class="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-bx-text space-y-4 shadow-sm"
+        >
+          <div class="flex items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
+            <div class="flex items-center gap-2">
+              <Award class="w-5 h-5 text-amber-600" />
+              <div>
+                <h4 class="text-xs font-black text-amber-900 dark:text-amber-200">
+                  رصد درجات امتحانات الدور الثاني (Second Round Grade Entry)
+                </h4>
+                <p class="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                  إدخال درجات امتحانات الملاحق للمواد الراسبة وإعادة احتساب قرار الترفيع السنوي
+                </p>
+              </div>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-800 dark:text-amber-200">
+              {{ secondRoundFailingSubjects.length }} مواد متبقية
+            </span>
+          </div>
+
+          <!-- Second Round Mode & Capping Controls -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[var(--bx-surface-solid)] p-3.5 rounded-xl border border-amber-500/20">
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-bold text-bx-title block">نمط احتساب درجة الدور الثاني:</label>
+              <div class="flex items-center gap-3 text-xs">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="replace_exam"
+                    v-model="srMode"
+                    class="text-purple-600 accent-purple-600"
+                  />
+                  <span>استبدال الامتحان فقط (أعمال السنة ثابتة)</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="full_score"
+                    v-model="srMode"
+                    class="text-purple-600 accent-purple-600"
+                  />
+                  <span>المادة كاملة (100%)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="flex items-center">
+              <label class="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  v-model="srCapScore"
+                  class="w-4 h-4 rounded text-purple-600 accent-purple-600"
+                />
+                <span class="text-xs font-bold text-bx-title">
+                  سقف درجة النجاح عند 50% (Passing Score Cap)
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Failed Subjects Table Inputs -->
+          <div class="overflow-x-auto rounded-xl border border-amber-500/20 bg-[var(--bx-surface-solid)]">
+            <table class="w-full text-right text-xs border-collapse">
+              <thead>
+                <tr class="bg-amber-500/5 text-bx-muted font-bold border-b border-amber-500/20">
+                  <th class="py-2.5 px-3">المادة الدراسية</th>
+                  <th class="py-2.5 px-3 text-center">أعمال السنة السابقة</th>
+                  <th class="py-2.5 px-3 text-center">درجة امتحان الدور الثاني</th>
+                  <th class="py-2.5 px-3 text-center">النهاية الكبرى</th>
+                  <th class="py-2.5 px-3 text-center">صغرى النجاح</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-amber-500/10">
+                <tr v-for="s in secondRoundFailingSubjects" :key="s.subject_name">
+                  <td class="py-2.5 px-3 font-bold text-bx-title">
+                    {{ s.subject_name }}
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-mono text-bx-muted">
+                    {{ srMode === 'replace_exam' ? (s.coursework_score ?? '—') : 'ملغاة (0)' }}
+                  </td>
+                  <td class="py-2.5 px-3 text-center">
+                    <div class="inline-flex items-center gap-1 justify-center">
+                      <input
+                        v-model.number="srGrades[s.subject_name]"
+                        type="number"
+                        min="0"
+                        :max="srMode === 'replace_exam' ? (s.max_exam_score || 60) : (s.max_score || 100)"
+                        step="0.5"
+                        placeholder="الدرجة"
+                        class="w-20 bg-[var(--bx-surface-solid)] border border-amber-500/40 rounded-lg p-1.5 text-center font-mono font-bold text-xs outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600"
+                      />
+                      <span class="text-[10px] text-bx-muted">
+                        / {{ srMode === 'replace_exam' ? (s.max_exam_score || 60) : (s.max_score || 100) }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-mono text-bx-muted">
+                    {{ s.max_score || 100 }}
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-mono text-bx-muted">
+                    {{ s.passing_score || 50 }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              class="px-5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:opacity-90 text-white transition-all flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
+              :disabled="isSavingSecondRound"
+              @click="handleSaveSecondRound"
+            >
+              <Loader2 v-if="isSavingSecondRound" class="w-4 h-4 animate-spin" />
+              <Award v-else class="w-4 h-4" />
+              <span>{{ isSavingSecondRound ? 'جاري الحفظ وإعادة الاحتساب...' : 'حفظ واعتماد نتيجة الدور الثاني' }}</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Official Signatures & Seal Box -->
         <div class="grid grid-cols-3 gap-4 pt-4 border-t border-[#B4AED8]/30 dark:border-white/[0.06] text-center text-xs text-bx-muted">
           <div class="space-y-6">
@@ -402,6 +526,8 @@ import {
   type StudentTranscript,
   type TermCompletionInfo,
 } from '../../api/promotion.api';
+import { gradeEntryApi } from '../../api/grade-entry.api';
+import { useToast } from '../../composables/useToast';
 
 interface Props {
   isOpen: boolean;
@@ -412,10 +538,17 @@ const props = defineProps<Props>();
 
 const emit = defineEmits<{
   (e: 'close'): void;
+  (e: 'updated', transcript: any): void;
 }>();
 
+const toast = useToast();
 const isLoading = ref(false);
+const isSavingSecondRound = ref(false);
 const detailedTranscript = ref<StudentTranscript | null>(null);
+
+const srMode = ref<'replace_exam' | 'full_score'>('replace_exam');
+const srCapScore = ref(true);
+const srGrades = ref<Record<string, number>>({});
 
 const activeTranscript = computed<StudentTranscript | null>(() => {
   return detailedTranscript.value || props.transcript;
@@ -436,6 +569,44 @@ const isAnnualComplete = computed(() => {
   }
   return true;
 });
+
+const secondRoundFailingSubjects = computed(() => {
+  if (!activeTranscript.value || !isAnnualTranscript.value) return [];
+  const rawData = activeTranscript.value.transcript_data;
+  const subjects: any[] = rawData?.subjects || [];
+  return subjects.filter((s) => s.status === 'failed' || s.is_passed === false);
+});
+
+const handleSaveSecondRound = async () => {
+  if (!activeTranscript.value?.id) return;
+  isSavingSecondRound.value = true;
+  try {
+    const gradesPayload = Object.entries(srGrades.value).map(([subject_name, second_round_exam_score]) => ({
+      subject_name,
+      second_round_exam_score: Number(second_round_exam_score) || 0,
+    }));
+
+    const res = await gradeEntryApi.recordSecondRoundGrades({
+      transcript_id: Number(activeTranscript.value.id),
+      second_round_mode: srMode.value,
+      cap_passing_score: srCapScore.value,
+      second_round_grades: gradesPayload,
+    });
+
+    if (res.success) {
+      toast.success('تم رصد درجات الدور الثاني بنجاح', res.message);
+      detailedTranscript.value = {
+        ...activeTranscript.value,
+        ...res.data,
+      };
+      emit('updated', res.data);
+    }
+  } catch (err: any) {
+    toast.error('فشل رصد الدور الثاني', err.response?.data?.message || 'حدث خطأ أثناء رصد درجات الدور الثاني.');
+  } finally {
+    isSavingSecondRound.value = false;
+  }
+};
 
 const drawerTitle = computed(() => {
   if (!activeTranscript.value) return 'كشف الدرجات والنتائج الأكاديمية';

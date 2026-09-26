@@ -12,6 +12,11 @@ import { FreezeTranscriptDto } from './dto/freeze-transcript.dto.js';
 import { QueryTranscriptsDto } from './dto/query-transcripts.dto.js';
 import { PreviewPromotionDto } from './dto/preview-promotion.dto.js';
 import { ExecutePromotionDto } from './dto/execute-promotion.dto.js';
+import {
+  GenerateAnnualSectionDto,
+  GenerateAnnualClassDto,
+  RecordSecondRoundDto,
+} from './dto/section-grade-entry.dto.js';
 import { RoleType, TranscriptType, EnrollmentStatus } from '@prisma/client';
 
 @Injectable()
@@ -874,6 +879,116 @@ export class PromotionService {
   }
 
   /**
+   * Helper: Check if all students in an academic year have completed all required term transcripts and finalized annual transcripts
+   */
+  private async getIncompletePromotionStudents(academicYearId: number, academicYearName: string) {
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        academic_year_id: BigInt(academicYearId),
+        deleted_at: null,
+      },
+      include: {
+        student: { include: { user: true } },
+        class_section: {
+          include: {
+            class: true,
+            section: true,
+          },
+        },
+      },
+    });
+
+    if (enrollments.length === 0) {
+      return { enrollments, incompleteStudents: [] };
+    }
+
+    // Get all class academic terms to know required terms count per class
+    const classTerms = await this.prisma.classAcademicTerm.findMany({
+      where: { deleted_at: null },
+      select: {
+        id: true,
+        class_id: true,
+        academic_term_id: true,
+      },
+    });
+
+    const classRequiredTermsMap = new Map<string, number>();
+    for (const ct of classTerms) {
+      const cid = String(ct.class_id);
+      classRequiredTermsMap.set(cid, (classRequiredTermsMap.get(cid) || 0) + 1);
+    }
+
+    // Get all transcripts for this academic year
+    const transcripts = await this.prisma.studentTranscript.findMany({
+      where: {
+        academic_year_name: academicYearName,
+        deleted_at: null,
+      },
+      select: {
+        id: true,
+        student_id: true,
+        transcript_type: true,
+        final_status: true,
+      },
+    });
+
+    const studentTermTranscriptsCountMap = new Map<string, number>();
+    const studentAnnualTranscriptMap = new Map<string, any>();
+
+    for (const t of transcripts) {
+      const sid = String(t.student_id);
+      if (t.transcript_type === TranscriptType.term) {
+        studentTermTranscriptsCountMap.set(sid, (studentTermTranscriptsCountMap.get(sid) || 0) + 1);
+      } else if (t.transcript_type === TranscriptType.annual) {
+        studentAnnualTranscriptMap.set(sid, t);
+      }
+    }
+
+    const incompleteStudents: Array<{
+      student_id: number;
+      student_code: string;
+      student_name: string;
+      class_name: string;
+      section_name: string;
+      required_terms_count: number;
+      completed_terms_count: number;
+      reason: string;
+    }> = [];
+
+    for (const e of enrollments) {
+      const sid = String(e.student_id);
+      const cid = String(e.class_section?.class_id || '');
+      const requiredTerms = classRequiredTermsMap.get(cid) || 0;
+      const completedTerms = studentTermTranscriptsCountMap.get(sid) || 0;
+      const annualTranscript = studentAnnualTranscriptMap.get(sid);
+
+      let reason = '';
+      if (requiredTerms > 0 && completedTerms < requiredTerms) {
+        reason = `لم يكتمل رصد درجات الفصول (${completedTerms} من أصل ${requiredTerms} فصول دراسية مقيدة)`;
+      } else if (!annualTranscript && e.status === EnrollmentStatus.enrolled) {
+        reason = 'لم يتم إصدار وتجميد الصحيفة السنوية المجمعة للطالب';
+      } else if (e.status === EnrollmentStatus.second_round) {
+        reason = 'الطالب في حالة دور ثانٍ معلقة لم يتم رصد واعتماد درجات الدور الثاني له';
+      }
+
+      if (reason) {
+        incompleteStudents.push({
+          student_id: Number(e.student_id),
+          student_code: e.student?.user?.user_code || '',
+          student_name: e.student?.full_name || 'طالب',
+          class_name: e.class_section?.class?.name || '',
+          section_name: e.class_section?.section?.name || '',
+          required_terms_count: requiredTerms,
+          completed_terms_count: completedTerms,
+          reason,
+        });
+      }
+    }
+
+    return { enrollments, incompleteStudents };
+  }
+
+  /**
    * 2.3 POST /api/v1/promotions/preview
    * Simulate promotion results & generate low enrollment warnings
    */
@@ -910,21 +1025,16 @@ export class PromotionService {
       );
     }
 
-    // Fetch all current enrollments in fromYear
-    const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: {
-        academic_year_id: BigInt(dto.from_academic_year_id),
-        deleted_at: null,
-      },
-      include: {
-        class_section: {
-          include: {
-            class: true,
-            section: true,
-          },
-        },
-      },
-    });
+    // Validate completeness of student grades/transcripts in fromYear
+    const { enrollments, incompleteStudents } = await this.getIncompletePromotionStudents(
+      dto.from_academic_year_id,
+      fromYear.name,
+    );
+
+    const canExecute = incompleteStudents.length === 0;
+    const blockingMessage = !canExecute
+      ? `لا يمكن تنفيذ الترحيل السنوي لوجود (${incompleteStudents.length}) طلاب لم يكتمل رصد درجاتهم لكافة الفصول المقررة أو لم تُصدر صحائفهم السنوية أو ما زالوا في حالة الدور الثاني.`
+      : undefined;
 
     let totalStudents = enrollments.length;
     let toBePromoted = 0;
@@ -1067,6 +1177,10 @@ export class PromotionService {
       success: true,
       message: 'تم معاينة نتائج الترحيل وتوليد تنبيهات الشعب بنجاح.',
       data: {
+        can_execute: canExecute,
+        blocking_message: blockingMessage,
+        incomplete_students_count: incompleteStudents.length,
+        incomplete_students: incompleteStudents,
         summary: {
           total_students: totalStudents,
           to_be_promoted: toBePromoted,
@@ -1125,26 +1239,27 @@ export class PromotionService {
       );
     }
 
-    // Fetch existing enrollments
-    const enrollments = await this.prisma.studentEnrollment.findMany({
-      where: {
-        academic_year_id: BigInt(dto.from_academic_year_id),
-        deleted_at: null,
-      },
-      include: {
-        class_section: {
-          include: {
-            class: true,
-            section: true,
-          },
-        },
-      },
-    });
+    // Validate that ALL students have completed term and annual transcripts
+    const { enrollments, incompleteStudents } = await this.getIncompletePromotionStudents(
+      dto.from_academic_year_id,
+      fromYear.name,
+    );
 
     if (enrollments.length === 0) {
       throw new UnprocessableEntityException({
         success: false,
         message: 'لا يوجد طلاب مسكنين في العام الدراسي المحدد لتنفيذ الترحيل.',
+      });
+    }
+
+    if (incompleteStudents.length > 0) {
+      throw new UnprocessableEntityException({
+        success: false,
+        message: `لا يمكن تنفيذ الترحيل السنوي لوجود (${incompleteStudents.length}) طلاب لم يكتمل رصد درجاتهم لكافة الفصول المقررة أو لم تُصدر صحائفهم السنوية أو ما زالوا في حالة الدور الثاني.`,
+        data: {
+          incomplete_count: incompleteStudents.length,
+          incomplete_students: incompleteStudents.slice(0, 50),
+        },
       });
     }
 
@@ -1667,7 +1782,7 @@ export class PromotionService {
    * Auto-aggregate term marks into annual frozen transcripts for an entire section
    */
   async generateAnnualForSection(
-    dto: { class_section_id: number; academic_year_name?: string; enable_annual_exam_compensation?: boolean },
+    dto: GenerateAnnualSectionDto,
     adminUserId: number,
     ipAddress?: string,
     userAgent?: string,
@@ -1876,6 +1991,8 @@ export class PromotionService {
         const transcriptSnapshot = {
           annual_summary: true,
           enable_annual_exam_compensation: !!dto.enable_annual_exam_compensation,
+          second_round_mode: dto.second_round_mode || 'replace_exam',
+          cap_passing_score: !!dto.cap_passing_score,
           terms_included: termTranscripts.length,
           student_id: studentId,
           student_name: e.student.full_name,
@@ -1964,6 +2081,8 @@ export class PromotionService {
       newValues: {
         class_section_id: dto.class_section_id,
         academic_year_name: yearName,
+        second_round_mode: dto.second_round_mode || 'replace_exam',
+        cap_passing_score: !!dto.cap_passing_score,
         generated_count: generatedCount,
       },
       ipAddress,
@@ -1985,7 +2104,7 @@ export class PromotionService {
    * Auto-aggregate term marks into annual frozen transcripts for an entire class
    */
   async generateAnnualForClass(
-    dto: { class_id: number; academic_year_name?: string; enable_annual_exam_compensation?: boolean },
+    dto: GenerateAnnualClassDto,
     adminUserId: number,
     ipAddress?: string,
     userAgent?: string,
@@ -2024,6 +2143,8 @@ export class PromotionService {
             class_section_id: Number(cs.id),
             academic_year_name: yearName,
             enable_annual_exam_compensation: dto.enable_annual_exam_compensation,
+            second_round_mode: dto.second_round_mode,
+            cap_passing_score: dto.cap_passing_score,
           },
           adminUserId,
           ipAddress,
@@ -2042,6 +2163,205 @@ export class PromotionService {
       data: {
         generated_count: totalGenerated,
         total_students: totalStudents,
+      },
+    };
+  }
+
+  /**
+   * 3.4 POST /api/v1/transcripts/record-second-round
+   * Record and evaluate second-round exam grades for a student
+   */
+  async recordSecondRoundGrades(
+    dto: RecordSecondRoundDto,
+    adminUserId: number,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const transcript = await this.prisma.studentTranscript.findUnique({
+      where: { id: BigInt(dto.transcript_id) },
+      include: {
+        student: { include: { user: true } },
+      },
+    });
+
+    if (!transcript || transcript.deleted_at) {
+      throw new NotFoundException('الصحيفة الأكاديمية غير موجودة.');
+    }
+
+    if (transcript.transcript_type !== TranscriptType.annual) {
+      throw new BadRequestException('رصد درجات الدور الثاني متاح فقط للصحائف السنوية المجمعة.');
+    }
+
+    const previousSnapshot = (transcript.transcript_data as any) || {};
+    const subjects: any[] = previousSnapshot.subjects ? [...previousSnapshot.subjects] : [];
+
+    const mode = dto.second_round_mode || previousSnapshot.second_round_mode || 'replace_exam';
+    const isCapPassingScore =
+      dto.cap_passing_score !== undefined
+        ? !!dto.cap_passing_score
+        : !!previousSnapshot.cap_passing_score;
+
+    const gradesMap = new Map<string, number>();
+    for (const g of dto.second_round_grades || []) {
+      gradesMap.set(g.subject_name.trim(), Number(g.second_round_exam_score) || 0);
+    }
+
+    let failedCount = 0;
+    let newTotalScore = 0;
+    let newMaxScore = 0;
+
+    const updatedSubjects = subjects.map((subj) => {
+      const subjectName = subj.subject_name?.trim();
+      const hasSecondRound = gradesMap.has(subjectName);
+
+      if (!hasSecondRound) {
+        // Keep subject as is
+        const isPassed = subj.status === 'passed';
+        if (!isPassed) failedCount += 1;
+        newTotalScore += Number(subj.total_score) || 0;
+        newMaxScore += Number(subj.max_score) || 100;
+        return subj;
+      }
+
+      const secondRoundScore = gradesMap.get(subjectName)!;
+      const maxScore = Number(subj.max_score) || 100;
+      const passingScore = Number(subj.passing_score) || (maxScore * 0.5);
+      const courseworkScore = Number(subj.coursework_score) || 0;
+      const maxCoursework = Number(subj.max_coursework_score) || (maxScore * 0.4);
+      const maxExam = Number(subj.max_exam_score) || (maxScore * 0.6);
+      const examPassingScore = Number(subj.exam_passing_score) || (maxExam * 0.5);
+
+      let calculatedExamScore: number;
+      let calculatedCourseworkScore: number;
+      let rawTotal: number;
+      let isSubjectPassed: boolean;
+
+      if (mode === 'full_score') {
+        // Mode 2: Full subject score is taken from second round exam (out of 100% maxScore)
+        calculatedExamScore = secondRoundScore;
+        calculatedCourseworkScore = 0;
+        rawTotal = secondRoundScore;
+        isSubjectPassed = rawTotal >= passingScore;
+      } else {
+        // Mode 1: replace_exam (Coursework is retained, exam score is replaced)
+        calculatedExamScore = secondRoundScore;
+        calculatedCourseworkScore = courseworkScore;
+        rawTotal = calculatedCourseworkScore + calculatedExamScore;
+        const examConditionPassed = calculatedExamScore >= examPassingScore;
+        const totalConditionPassed = rawTotal >= passingScore;
+        isSubjectPassed = totalConditionPassed && examConditionPassed;
+      }
+
+      // Apply 50% passing score capping if enabled and passed
+      let finalTotal = rawTotal;
+      if (isSubjectPassed && isCapPassingScore && rawTotal > passingScore) {
+        finalTotal = passingScore;
+      }
+
+      finalTotal = Number(finalTotal.toFixed(2));
+      if (!isSubjectPassed) failedCount += 1;
+
+      newTotalScore += finalTotal;
+      newMaxScore += maxScore;
+
+      return {
+        ...subj,
+        coursework_score: calculatedCourseworkScore,
+        exam_score: calculatedExamScore,
+        total_score: finalTotal,
+        raw_total_score: rawTotal,
+        second_round_score: secondRoundScore,
+        second_round_mode: mode,
+        is_capped: isSubjectPassed && isCapPassingScore && rawTotal > passingScore,
+        status: isSubjectPassed ? 'passed' : 'failed',
+      };
+    });
+
+    const newPercentage = newMaxScore > 0
+      ? Number(((newTotalScore / newMaxScore) * 100).toFixed(2))
+      : 0;
+
+    let newFinalStatus: EnrollmentStatus;
+    if (failedCount === 0 && newPercentage >= 50) {
+      newFinalStatus =
+        transcript.grade_level >= 12
+          ? EnrollmentStatus.graduated
+          : EnrollmentStatus.passed;
+    } else {
+      newFinalStatus = EnrollmentStatus.failed;
+    }
+
+    const updatedSnapshot = {
+      ...previousSnapshot,
+      second_round_evaluated: true,
+      second_round_mode: mode,
+      cap_passing_score: isCapPassingScore,
+      failed_subjects_count: failedCount,
+      total_score: newTotalScore,
+      percentage: newPercentage,
+      final_status: newFinalStatus,
+      subjects: updatedSubjects,
+      second_round_evaluated_at: new Date().toISOString(),
+    };
+
+    // Update StudentTranscript
+    const updatedTranscript = await this.prisma.studentTranscript.update({
+      where: { id: transcript.id },
+      data: {
+        total_score: newTotalScore,
+        percentage: newPercentage,
+        final_status: newFinalStatus,
+        transcript_data: updatedSnapshot,
+      },
+    });
+
+    // Update Enrollment Status
+    await this.prisma.studentEnrollment.updateMany({
+      where: {
+        student_id: transcript.student_id,
+        academic_year: { name: transcript.academic_year_name },
+        deleted_at: null,
+      },
+      data: {
+        status: newFinalStatus,
+      },
+    });
+
+    // Audit log
+    await this.auditService.log({
+      userId: BigInt(adminUserId),
+      action: 'record_second_round_grades',
+      entityType: 'student_transcripts',
+      entityId: transcript.id,
+      oldValues: {
+        final_status: transcript.final_status,
+        total_score: Number(transcript.total_score),
+      },
+      newValues: {
+        final_status: newFinalStatus,
+        total_score: newTotalScore,
+        second_round_mode: mode,
+        cap_passing_score: isCapPassingScore,
+      },
+      ipAddress,
+      userAgent,
+    });
+
+    return {
+      success: true,
+      message: 'تم رصد وتحديث درجات الدور الثاني وإعادة احتساب النتيجة الأكاديمية بنجاح.',
+      data: {
+        id: Number(updatedTranscript.id),
+        student_id: Number(updatedTranscript.student_id),
+        student_name: transcript.student.full_name,
+        total_score: Number(updatedTranscript.total_score),
+        percentage: Number(updatedTranscript.percentage),
+        final_status: updatedTranscript.final_status,
+        final_status_ar: this.getStatusArabic(updatedTranscript.final_status),
+        failed_subjects_count: failedCount,
+        second_round_mode: mode,
+        cap_passing_score: isCapPassingScore,
+        transcript_data: updatedSnapshot,
       },
     };
   }

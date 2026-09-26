@@ -25,6 +25,7 @@ import {
   SectionRosterQueryDto,
   GenerateAnnualSectionDto,
   GenerateAnnualClassDto,
+  RecordSecondRoundDto,
 } from './dto/section-grade-entry.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
@@ -123,6 +124,32 @@ export class PromotionController {
       ? (req.headers['user-agent'] as string)
       : undefined;
     return this.promotionService.generateAnnualForClass(
+      dto,
+      Number(currentUser.id),
+      ipAddress,
+      userAgent,
+    );
+  }
+
+  /**
+   * 3.4 POST /api/v1/transcripts/record-second-round
+   * Record and recalculate second-round exam grades for a student (Admin only)
+   */
+  @Post('transcripts/record-second-round')
+  @Roles(RoleType.admin)
+  async recordSecondRoundGrades(
+    @Body() dto: RecordSecondRoundDto,
+    @CurrentUser() currentUser: any,
+    @Req() req: Request,
+  ) {
+    if (currentUser?.role_type && currentUser.role_type !== RoleType.admin) {
+      throw new ForbiddenException('ليس لديك الصلاحية الكافية لتنفيذ هذا الإجراء.');
+    }
+    const ipAddress = req?.ip || req?.socket?.remoteAddress;
+    const userAgent = req?.headers
+      ? (req.headers['user-agent'] as string)
+      : undefined;
+    return this.promotionService.recordSecondRoundGrades(
       dto,
       Number(currentUser.id),
       ipAddress,

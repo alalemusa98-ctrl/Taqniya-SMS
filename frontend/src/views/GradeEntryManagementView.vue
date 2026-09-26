@@ -804,7 +804,11 @@ const openAnnualModalForCurrentSection = () => {
   }
 };
 
-const handleConfirmAnnualGeneration = async (enableCompensation?: boolean) => {
+const handleConfirmAnnualGeneration = async (options: {
+  enableCompensation: boolean;
+  secondRoundMode: 'replace_exam' | 'full_score';
+  capPassingScore: boolean;
+}) => {
   isGeneratingAnnual.value = true;
   try {
     let res: any;
@@ -812,14 +816,18 @@ const handleConfirmAnnualGeneration = async (enableCompensation?: boolean) => {
       res = await gradeEntryApi.generateAnnualForClass({
         class_id: targetClassForAnnual.value.class_id,
         academic_year_name: selectedYearName.value,
-        enable_annual_exam_compensation: !!enableCompensation,
+        enable_annual_exam_compensation: options.enableCompensation,
+        second_round_mode: options.secondRoundMode,
+        cap_passing_score: options.capPassingScore,
       });
     } else if (targetSectionForAnnual.value || selectedSection.value) {
       const secId = targetSectionForAnnual.value?.class_section_id || selectedSection.value?.class_section_id;
       res = await gradeEntryApi.generateAnnualForSection({
         class_section_id: secId,
         academic_year_name: selectedYearName.value,
-        enable_annual_exam_compensation: !!enableCompensation,
+        enable_annual_exam_compensation: options.enableCompensation,
+        second_round_mode: options.secondRoundMode,
+        cap_passing_score: options.capPassingScore,
       });
     }
 

@@ -39,6 +39,15 @@ export class GenerateAnnualSectionDto {
   @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
   @IsBoolean()
   enable_annual_exam_compensation?: boolean;
+
+  @IsOptional()
+  @IsString()
+  second_round_mode?: 'replace_exam' | 'full_score';
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
+  @IsBoolean()
+  cap_passing_score?: boolean;
 }
 
 export class GenerateAnnualClassDto {
@@ -55,4 +64,40 @@ export class GenerateAnnualClassDto {
   @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
   @IsBoolean()
   enable_annual_exam_compensation?: boolean;
+
+  @IsOptional()
+  @IsString()
+  second_round_mode?: 'replace_exam' | 'full_score';
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
+  @IsBoolean()
+  cap_passing_score?: boolean;
+}
+
+export class SecondRoundSubjectGradeDto {
+  @IsString({ message: 'اسم المادة يجب أن يكون نصاً.' })
+  subject_name!: string;
+
+  @Type(() => Number)
+  @Min(0, { message: 'درجة امتحان الدور الثاني لا يمكن أن تكون سالبة.' })
+  second_round_exam_score!: number;
+}
+
+export class RecordSecondRoundDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  transcript_id!: number;
+
+  @IsOptional()
+  @IsString()
+  second_round_mode?: 'replace_exam' | 'full_score';
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
+  @IsBoolean()
+  cap_passing_score?: boolean;
+
+  second_round_grades!: SecondRoundSubjectGradeDto[];
 }

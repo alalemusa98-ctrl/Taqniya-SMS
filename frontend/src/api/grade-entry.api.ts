@@ -128,6 +128,8 @@ export const gradeEntryApi = {
     class_section_id: number;
     academic_year_name?: string;
     enable_annual_exam_compensation?: boolean;
+    second_round_mode?: 'replace_exam' | 'full_score';
+    cap_passing_score?: boolean;
   }) {
     const res = await apiClient.post<{
       success: boolean;
@@ -144,12 +146,34 @@ export const gradeEntryApi = {
     class_id: number;
     academic_year_name?: string;
     enable_annual_exam_compensation?: boolean;
+    second_round_mode?: 'replace_exam' | 'full_score';
+    cap_passing_score?: boolean;
   }) {
     const res = await apiClient.post<{
       success: boolean;
       message: string;
       data: { generated_count: number; total_students: number };
     }>('/transcripts/generate-annual-for-class', payload);
+    return res.data;
+  },
+
+  /**
+   * 3.6 Record and recalculate second-round exam grades
+   */
+  async recordSecondRoundGrades(payload: {
+    transcript_id: number;
+    second_round_mode?: 'replace_exam' | 'full_score';
+    cap_passing_score?: boolean;
+    second_round_grades: {
+      subject_name: string;
+      second_round_exam_score: number;
+    }[];
+  }) {
+    const res = await apiClient.post<{
+      success: boolean;
+      message: string;
+      data: any;
+    }>('/transcripts/record-second-round', payload);
     return res.data;
   },
 };

@@ -500,7 +500,70 @@ describe('Phase 09: Promotion & Transcripts Archiving (TDD Verification)', () =>
   });
 
   describe('2. Batch Promotion & Low Enrollment Warning Operations', () => {
+    it('TC-PRM-BLOCK-01: Should block promotion simulation and execution when a student has incomplete grades/transcripts', async () => {
+      // Temporarily create an incomplete student with enrolled status and no transcripts in year 1
+      const incompleteStudent = await prisma.student.create({
+        data: {
+          user_id: BigInt(testTeacherUserId),
+          full_name: 'طالب غير مكتمل الرصد',
+          gender: 'male',
+          birth_date: new Date('2015-01-01'),
+        },
+      });
+
+      const incEnrollment = await prisma.studentEnrollment.create({
+        data: {
+          student_id: incompleteStudent.id,
+          academic_year_id: BigInt(testAcademicYear1Id),
+          class_id: BigInt(testClass5Id),
+          grade_level: 5,
+          class_section_id: BigInt(testClass5SectionAId),
+          status: 'enrolled',
+        },
+      });
+
+      // Preview should show can_execute: false
+      const previewRes = await promotionService.previewPromotion({
+        from_academic_year_id: testAcademicYear1Id,
+        to_academic_year_id: testAcademicYear2Id,
+      });
+
+      expect(previewRes.data.can_execute).toBe(false);
+      expect(previewRes.data.incomplete_students_count).toBeGreaterThanOrEqual(1);
+
+      // Execute should be blocked with UnprocessableEntityException (422)
+      await expect(
+        promotionService.executePromotion(
+          {
+            from_academic_year_id: testAcademicYear1Id,
+            to_academic_year_id: testAcademicYear2Id,
+          },
+          testAdminId,
+        ),
+      ).rejects.toThrow(UnprocessableEntityException);
+
+      // Cleanup temporary enrollment & student
+      await prisma.studentEnrollment.delete({ where: { id: incEnrollment.id } });
+      await prisma.student.delete({ where: { id: incompleteStudent.id } });
+    });
+
     it('TC-PRM-03: Should simulate promotion results & generate low enrollment warnings (200 OK)', async () => {
+      // Ensure student 2 has an annual transcript with failed status
+      await prisma.studentTranscript.create({
+        data: {
+          student_id: BigInt(testStudent2Id),
+          transcript_type: TranscriptType.annual,
+          academic_year_name: `2024/2025-${uniqueSuffix}`,
+          class_name: `الصف الخامس ${uniqueSuffix}`,
+          section_name: `شعبة أ ${uniqueSuffix}`,
+          grade_level: 5,
+          total_score: 180,
+          percentage: 36,
+          final_status: EnrollmentStatus.failed,
+          transcript_data: {},
+        },
+      });
+
       const previewDto = {
         from_academic_year_id: testAcademicYear1Id,
         to_academic_year_id: testAcademicYear2Id,
@@ -509,6 +572,7 @@ describe('Phase 09: Promotion & Transcripts Archiving (TDD Verification)', () =>
       const result = await promotionService.previewPromotion(previewDto);
 
       expect(result.success).toBe(true);
+      expect(result.data.can_execute).toBe(true);
       expect(result.data.summary.total_students).toBe(2);
       expect(result.data.summary.to_be_promoted).toBe(1);
       expect(result.data.summary.retained).toBe(1);
@@ -714,12 +778,131 @@ describe('Phase 09: Promotion & Transcripts Archiving (TDD Verification)', () =>
         {
           class_section_id: testClass5SectionAId,
           academic_year_name: `2024/2025-${uniqueSuffix}`,
+          second_round_mode: 'replace_exam',
+          cap_passing_score: true,
         },
         testAdminId,
       );
 
       expect(res.success).toBe(true);
       expect(res.data).toHaveProperty('generated_count');
+    });
+
+    it('TC-SR-02: Should record second-round grades in replace_exam mode and apply 50% capping', async () => {
+      // Create a test annual transcript for student 1 in second_round
+      const annualTranscript = await prisma.studentTranscript.create({
+        data: {
+          student_id: BigInt(testStudent1Id),
+          transcript_type: 'annual',
+          academic_year_name: `2024/2025-${uniqueSuffix}`,
+          class_name: 'الصف الخامس الابتدائي',
+          section_name: 'أ',
+          grade_level: 5,
+          total_score: 45,
+          percentage: 45,
+          final_status: 'second_round',
+          transcript_data: {
+            subjects: [
+              {
+                subject_name: 'الرياضيات',
+                coursework_score: 15,
+                max_coursework_score: 40,
+                exam_score: 15,
+                max_exam_score: 60,
+                exam_passing_score: 30,
+                total_score: 30,
+                max_score: 100,
+                passing_score: 50,
+                status: 'failed',
+              },
+            ],
+            second_round_mode: 'replace_exam',
+            cap_passing_score: true,
+          },
+        },
+      });
+
+      // Record second round with exam score 50 (total would be 15 + 50 = 65, capped to 50)
+      const res = await promotionService.recordSecondRoundGrades(
+        {
+          transcript_id: Number(annualTranscript.id),
+          second_round_mode: 'replace_exam',
+          cap_passing_score: true,
+          second_round_grades: [
+            {
+              subject_name: 'الرياضيات',
+              second_round_exam_score: 50,
+            },
+          ],
+        },
+        testAdminId,
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.data.final_status).toBe('passed');
+      // Verify subject total is capped at 50
+      const mathSubj = res.data.transcript_data.subjects.find((s: any) => s.subject_name === 'الرياضيات');
+      expect(mathSubj.total_score).toBe(50);
+      expect(mathSubj.is_capped).toBe(true);
+      expect(mathSubj.status).toBe('passed');
+    });
+
+    it('TC-SR-03: Should record second-round grades in full_score mode (100% exam)', async () => {
+      // Create a test annual transcript for student 2 in second_round
+      const annualTranscript = await prisma.studentTranscript.create({
+        data: {
+          student_id: BigInt(testStudent2Id),
+          transcript_type: 'annual',
+          academic_year_name: `2024/2025-${uniqueSuffix}`,
+          class_name: 'الصف الخامس الابتدائي',
+          section_name: 'أ',
+          grade_level: 5,
+          total_score: 35,
+          percentage: 35,
+          final_status: 'second_round',
+          transcript_data: {
+            subjects: [
+              {
+                subject_name: 'العلوم',
+                coursework_score: 10,
+                max_coursework_score: 40,
+                exam_score: 20,
+                max_exam_score: 60,
+                exam_passing_score: 30,
+                total_score: 30,
+                max_score: 100,
+                passing_score: 50,
+                status: 'failed',
+              },
+            ],
+            second_round_mode: 'full_score',
+            cap_passing_score: false,
+          },
+        },
+      });
+
+      // Record second round with full score 75/100 without capping
+      const res = await promotionService.recordSecondRoundGrades(
+        {
+          transcript_id: Number(annualTranscript.id),
+          second_round_mode: 'full_score',
+          cap_passing_score: false,
+          second_round_grades: [
+            {
+              subject_name: 'العلوم',
+              second_round_exam_score: 75,
+            },
+          ],
+        },
+        testAdminId,
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.data.final_status).toBe('passed');
+      const scienceSubj = res.data.transcript_data.subjects.find((s: any) => s.subject_name === 'العلوم');
+      expect(scienceSubj.total_score).toBe(75);
+      expect(scienceSubj.coursework_score).toBe(0);
+      expect(scienceSubj.status).toBe('passed');
     });
   });
 });
