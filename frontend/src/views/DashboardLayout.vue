@@ -20,6 +20,7 @@ import {
   CalendarCheck,
   CalendarDays,
   Sparkles,
+  Database,
   Menu,
   X,
 } from 'lucide-vue-next';
@@ -154,6 +155,12 @@ const systemGroup: NavDropdownItem[] = [
     to: '/users',
     description: 'إدارة الحسابات الموحدة، الصلاحيات وتفعيل الجلسات',
     icon: Users,
+  },
+  {
+    label: 'النسخ الاحتياطي واستعادة البيانات',
+    to: '/backups',
+    description: 'إنشاء وتنزيل واستعادة نسخ قاعدة البيانات وإدارة ملفات الأرشيف',
+    icon: Database,
   },
   {
     label: 'سجلات التدقيق الأمني',

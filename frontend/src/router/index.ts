@@ -20,6 +20,7 @@ const QuizzesManagementView = () => import('../views/QuizzesManagementView.vue')
 const OfficialExamsManagementView = () => import('../views/OfficialExamsManagementView.vue');
 const PromotionManagementView = () => import('../views/PromotionManagementView.vue');
 const GradeEntryManagementView = () => import('../views/GradeEntryManagementView.vue');
+const BackupManagementView = () => import('../views/BackupManagementView.vue');
 
 const routes = [
   {
@@ -125,6 +126,12 @@ const routes = [
         path: 'audit-logs',
         name: 'audit-logs',
         component: AuditLogsView,
+        meta: { roles: ['admin'] },
+      },
+      {
+        path: 'backups',
+        name: 'backups',
+        component: BackupManagementView,
         meta: { roles: ['admin'] },
       },
     ],
