@@ -47,6 +47,7 @@ const columns: TableColumn[] = [
   { key: 'name', label: 'اسم الصف الدراسي', align: 'start' },
   { key: 'stage_name', label: 'المرحلة التعليمية', align: 'start' },
   { key: 'grade_level', label: 'المستوى الأكاديمي', align: 'center' },
+  { key: 'max_second_round_subjects', label: 'حد مواد الدور الثاني', align: 'center' },
   { key: 'actions', label: 'الإجراءات', align: 'center', width: '120px' },
 ];
 
@@ -60,6 +61,7 @@ const form = ref({
   stage_id: 0,
   name: '',
   grade_level: 1,
+  max_second_round_subjects: 3,
 });
 
 // Options for TaqniyaSelect
@@ -140,6 +142,7 @@ const openCreateDrawer = () => {
     stage_id: stages.value.length > 0 ? stages.value[0].id : 0,
     name: '',
     grade_level: 1,
+    max_second_round_subjects: 3,
   };
   showDrawer.value = true;
 };
@@ -151,6 +154,7 @@ const openEditDrawer = (classItem: AcademicClassItem) => {
     stage_id: classItem.stage_id,
     name: classItem.name,
     grade_level: classItem.grade_level,
+    max_second_round_subjects: classItem.max_second_round_subjects ?? 3,
   };
   showDrawer.value = true;
 };
@@ -294,6 +298,13 @@ onMounted(async () => {
         </span>
       </template>
 
+      <template #cell-max_second_round_subjects="{ item }">
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold font-mono border border-amber-500/30 text-amber-700 dark:text-amber-300 bg-amber-500/10 shadow-xs">
+          <AlertCircle class="w-3 h-3 text-amber-500 shrink-0" />
+          <span>{{ item.max_second_round_subjects ?? 3 }} مواد</span>
+        </span>
+      </template>
+
       <template #cell-actions="{ item }">
         <div class="flex items-center justify-center gap-2">
           <button
@@ -383,6 +394,26 @@ onMounted(async () => {
           />
           <p class="text-[11px] text-bx-muted leading-relaxed">
             * المستوى الرقمي يحدد الترتيب التصاعدي للصفوف وترحيل الطلاب بنهاية العام.
+          </p>
+        </div>
+
+        <!-- Max Second Round Subjects (Per-Class Limit) -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-bx-title flex items-center gap-1.5">
+            <AlertCircle class="w-3.5 h-3.5 text-amber-500" />
+            <span>الحد الأقصى لمواد الدور الثاني المسموح بها <span class="text-red-500">*</span></span>
+          </label>
+          <input
+            v-model.number="form.max_second_round_subjects"
+            type="number"
+            min="0"
+            max="15"
+            required
+            placeholder="مثال: 3"
+            class="w-full px-3.5 h-[42px] bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-2xl text-xs text-bx-text focus:outline-hidden focus:border-bx-primary font-bold font-mono"
+          />
+          <p class="text-[11px] text-bx-muted leading-relaxed">
+            * عدد المواد الراسبة المسموح بها لدخول الدور الثاني لهذا الصف (الرسوب في مواد أكثر من هذا الحد يعتبر رسوباً وبقاءً للإعادة مباشرة).
           </p>
         </div>
 

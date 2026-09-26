@@ -24,6 +24,7 @@ export class ClassesService {
       stage_name: c.stage ? c.stage.name : undefined,
       name: c.name,
       grade_level: Number(c.grade_level),
+      max_second_round_subjects: c.max_second_round_subjects !== undefined && c.max_second_round_subjects !== null ? Number(c.max_second_round_subjects) : 3,
       created_at: c.created_at ? c.created_at.toISOString() : null,
       updated_at: c.updated_at ? c.updated_at.toISOString() : null,
       deleted_at: c.deleted_at ? c.deleted_at.toISOString() : null,
@@ -148,6 +149,9 @@ export class ClassesService {
         stage_id: BigInt(dto.stage_id),
         name: dto.name,
         grade_level: dto.grade_level,
+        ...(dto.max_second_round_subjects !== undefined && {
+          max_second_round_subjects: dto.max_second_round_subjects,
+        }),
       },
       include: {
         stage: { select: { name: true } },
@@ -164,6 +168,7 @@ export class ClassesService {
           stage_id: dto.stage_id,
           name: created.name,
           grade_level: created.grade_level,
+          max_second_round_subjects: created.max_second_round_subjects,
         },
         ipAddress,
         userAgent,
@@ -236,6 +241,7 @@ export class ClassesService {
       stage_id: Number(classItem.stage_id),
       name: classItem.name,
       grade_level: classItem.grade_level,
+      max_second_round_subjects: classItem.max_second_round_subjects !== null ? Number(classItem.max_second_round_subjects) : 3,
     };
 
     const updated = await this.prisma.class.update({
@@ -244,6 +250,9 @@ export class ClassesService {
         ...(dto.stage_id && { stage_id: BigInt(dto.stage_id) }),
         ...(dto.name && { name: dto.name }),
         ...(dto.grade_level !== undefined && { grade_level: dto.grade_level }),
+        ...(dto.max_second_round_subjects !== undefined && {
+          max_second_round_subjects: dto.max_second_round_subjects,
+        }),
       },
       include: {
         stage: { select: { name: true } },
@@ -261,6 +270,9 @@ export class ClassesService {
           ...(dto.stage_id && { stage_id: dto.stage_id }),
           ...(dto.name && { name: dto.name }),
           ...(dto.grade_level !== undefined && { grade_level: dto.grade_level }),
+          ...(dto.max_second_round_subjects !== undefined && {
+            max_second_round_subjects: dto.max_second_round_subjects,
+          }),
         },
         ipAddress,
         userAgent,

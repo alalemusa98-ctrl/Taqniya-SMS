@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, MaxLength, IsInt, Min, Max } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateClassDto {
@@ -18,4 +18,10 @@ export class CreateClassDto {
   @Min(1, { message: 'المستوى الأكاديمي يجب أن يكون 1 على الأقل' })
   @Max(12, { message: 'المستوى الأكاديمي يجب ألا يتجاوز 12' })
   grade_level: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'الحد الأقصى لمواد الدور الثاني يجب أن يكون رقماً صحيحاً' })
+  @Min(0, { message: 'الحد الأقصى لمواد الدور الثاني لا يمكن أن يكون سالباً' })
+  max_second_round_subjects?: number;
 }

@@ -702,6 +702,25 @@ describe('Phase 09: Promotion & Transcripts Archiving (TDD Verification)', () =>
       expect(res.data).toHaveProperty('subjects');
       expect(res.data).toHaveProperty('class_section');
     });
+
+    it('TC-SR-01: Should respect per-class max_second_round_subjects limit when generating annual transcripts', async () => {
+      // Update testClass5 max_second_round_subjects to 1
+      await prisma.class.update({
+        where: { id: BigInt(testClass5Id) },
+        data: { max_second_round_subjects: 1 },
+      });
+
+      const res = await promotionService.generateAnnualForSection(
+        {
+          class_section_id: testClass5SectionAId,
+          academic_year_name: `2024/2025-${uniqueSuffix}`,
+        },
+        testAdminId,
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.data).toHaveProperty('generated_count');
+    });
   });
 });
 

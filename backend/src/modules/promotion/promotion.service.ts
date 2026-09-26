@@ -1641,6 +1641,10 @@ export class PromotionService {
           class_id: Number(classSection.class_id),
           class_name: classSection.class.name,
           grade_level: classSection.class.grade_level,
+          max_second_round_subjects:
+            classSection.class.max_second_round_subjects !== null
+              ? Number(classSection.class.max_second_round_subjects)
+              : 3,
           section_id: Number(classSection.section_id),
           section_name: classSection.section.name,
         },
@@ -1851,10 +1855,19 @@ export class PromotionService {
 
         const annualPercentage = totalMaxScore > 0 ? Number(((totalAnnualScore / totalMaxScore) * 100).toFixed(2)) : 0;
 
+        const maxSecondRoundAllowed =
+          classSection.class.max_second_round_subjects !== undefined &&
+          classSection.class.max_second_round_subjects !== null
+            ? Number(classSection.class.max_second_round_subjects)
+            : 3;
+
         let finalStatus: EnrollmentStatus;
         if (failedSubjectsCount === 0 && annualPercentage >= 50) {
-          finalStatus = classSection.class.grade_level >= 12 ? EnrollmentStatus.graduated : EnrollmentStatus.passed;
-        } else if (failedSubjectsCount <= 2) {
+          finalStatus =
+            classSection.class.grade_level >= 12
+              ? EnrollmentStatus.graduated
+              : EnrollmentStatus.passed;
+        } else if (failedSubjectsCount <= maxSecondRoundAllowed) {
           finalStatus = EnrollmentStatus.second_round;
         } else {
           finalStatus = EnrollmentStatus.failed;
@@ -1870,6 +1883,8 @@ export class PromotionService {
           class_name: classSection.class.name,
           section_name: classSection.section.name,
           academic_year_name: yearName,
+          max_second_round_subjects: maxSecondRoundAllowed,
+          failed_subjects_count: failedSubjectsCount,
           subjects: annualSubjects,
           total_score: totalAnnualScore,
           max_possible_score: totalMaxScore,

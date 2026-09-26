@@ -32,6 +32,7 @@ export interface AcademicClassItem {
   stage_name?: string;
   name: string;
   grade_level: number;
+  max_second_round_subjects?: number;
   created_at: string;
   updated_at?: string;
 }
@@ -139,12 +140,14 @@ export interface CreateClassPayload {
   stage_id: number;
   name: string;
   grade_level: number;
+  max_second_round_subjects?: number;
 }
 
 export interface UpdateClassPayload {
   stage_id?: number;
   name?: string;
   grade_level?: number;
+  max_second_round_subjects?: number;
 }
 
 export interface CreateSectionPayload {

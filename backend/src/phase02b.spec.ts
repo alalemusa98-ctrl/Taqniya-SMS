@@ -68,6 +68,7 @@ describe('Phase 02-B: Classes, Sections & Subjects (TDD Verification)', () => {
       expect(result.data.name).toBe(className);
       expect(result.data.stage_id).toBe(testStageId);
       expect(result.data.grade_level).toBe(testGradeLevel);
+      expect(result.data.max_second_round_subjects).toBe(3);
       createdClassId = result.data.id;
     });
 
@@ -140,12 +141,14 @@ describe('Phase 02-B: Classes, Sections & Subjects (TDD Verification)', () => {
         createdClassId,
         {
           name: updatedName,
+          max_second_round_subjects: 4,
         },
         testAdminId,
       );
 
       expect(result.success).toBe(true);
       expect(result.data.name).toBe(updatedName);
+      expect(result.data.max_second_round_subjects).toBe(4);
     });
 
     it('TC-CLS-07: Soft delete an unlinked class', async () => {

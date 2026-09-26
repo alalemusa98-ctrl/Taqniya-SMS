@@ -335,7 +335,10 @@ const decisionStatus = computed<'passed' | 'second_round' | 'failed' | 'graduate
   if (failedSubjectsCount.value === 0 && percentage.value >= 50) {
     return props.sectionInfo?.grade_level >= 12 ? 'graduated' : 'passed';
   }
-  if (failedSubjectsCount.value <= 2) {
+  const maxSecondRound = props.sectionInfo?.max_second_round_subjects !== undefined && props.sectionInfo?.max_second_round_subjects !== null
+    ? Number(props.sectionInfo.max_second_round_subjects)
+    : 3;
+  if (failedSubjectsCount.value <= maxSecondRound) {
     return 'second_round';
   }
   return 'failed';
