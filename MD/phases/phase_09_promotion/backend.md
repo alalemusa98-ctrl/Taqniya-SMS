@@ -180,3 +180,9 @@ stateDiagram-v2
 - [ ] توليد تنبيهات السعة المنخفضة (`low_enrollment_warnings`) للشعب التي تقل عن 10 طلاب.
 - [ ] تنفيذ الترحيل السنوي الجماعي في معاملة ذرية متكاملة وتسجيل السجل بجدول `promotion_batches`.
 - [ ] مطابقة كافة المدخلات والمخرجات بنسبة 100% لعقد الشبكة في [`routes.md`](./routes.md).
+
+
+## 🔄 ملحق تحديث سياسات الدور الثاني (Second Round Policy Specification)
+- يتم قراءة الحد الأقصى لمواد الدور الثاني من حقل `class.max_second_round_subjects` لكل صف.
+- خيارات احتساب الدور الثاني: `replace_exam` أو `full_score`.
+- خيار سقف النجاح 50%: `enable_second_round_capping`.
