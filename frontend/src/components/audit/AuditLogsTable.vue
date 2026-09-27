@@ -275,8 +275,8 @@ const openDiff = (log: any) => {
 
         <template #cell-user_code="{ item }">
           <div class="flex items-center gap-1.5 font-black font-mono text-bx-title">
-            <span class="w-2 h-2 rounded-full bg-bx-primary/60"></span>
-            <span>{{ item.user_code || 'النظام المركزي' }}</span>
+            <span class="w-2 h-2 rounded-full" :class="item.action.includes('failed') || item.action.includes('blocked') ? 'bg-rose-500' : 'bg-bx-primary/60'"></span>
+            <span>{{ item.user_code || item.new_values?.user_code || 'النظام المركزي' }}</span>
           </div>
         </template>
 

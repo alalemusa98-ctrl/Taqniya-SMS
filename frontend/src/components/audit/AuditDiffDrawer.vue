@@ -354,6 +354,88 @@ const changesList = computed(() => {
     };
   });
 });
+
+const isAuthLog = computed(() => {
+  if (!props.log) return false;
+  return ['login_failed', 'login_blocked', 'login', 'logout', 'password_change', 'admin_reset_password'].includes(
+    props.log.action,
+  );
+});
+
+const authEventDetails = computed(() => {
+  if (!props.log || !isAuthLog.value) return null;
+  const newVals = props.log.new_values || {};
+  const userCode = newVals.user_code || props.log.user_code || 'غير محدد';
+  const reason = newVals.reason || '';
+
+  if (props.log.action === 'login_failed') {
+    let reasonTitle = 'كلمة المرور غير صحيحة';
+    let detailedDesc = `تمت محاولة تسجيل الدخول إلى الحساب بالرمز (${userCode})، ولكن تم رفض المحاولة لأن كلمة المرور المدخلة كانت خاطئة.`;
+    let isWrongPassword = true;
+
+    if (reason === 'user_not_found') {
+      reasonTitle = 'الرمز المؤسسي غير مسجل';
+      detailedDesc = `تمت محاولة تسجيل الدخول بالرمز (${userCode})، ولكن هذا الحساب غير موجود أو غير مسجل بالنظام.`;
+      isWrongPassword = false;
+    } else if (reason === 'account_inactive') {
+      reasonTitle = 'الحساب معطل وموقوف';
+      detailedDesc = `تمت محاولة تسجيل الدخول للحساب (${userCode})، ولكن الحساب معطل وموقوف إدارياً.`;
+      isWrongPassword = false;
+    }
+
+    return {
+      actionType: 'login_failed',
+      title: 'محاولة تسجيل دخول فاشلة',
+      badgeText: 'محاولة فاشلة',
+      badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30',
+      reasonTitle,
+      detailedDesc,
+      userCode,
+      isWrongPassword,
+    };
+  }
+
+  if (props.log.action === 'login_blocked') {
+    return {
+      actionType: 'login_blocked',
+      title: 'حظر محاولة تسجيل الدخول',
+      badgeText: 'محاولة محظورة',
+      badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30 font-black',
+      reasonTitle: 'حظر الدخول - الحساب معطل',
+      detailedDesc: `تم حظر محاولة الدخول للحساب (${userCode}) لأن الحساب موقوف إدارياً من قِبل إدارة المدرسة.`,
+      userCode,
+      isWrongPassword: false,
+    };
+  }
+
+  if (props.log.action === 'login') {
+    return {
+      actionType: 'login',
+      title: 'تسجيل دخول ناجح',
+      badgeText: 'دخول ناجح',
+      badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-bold',
+      reasonTitle: 'تمت المصادقة بنجاح',
+      detailedDesc: `تم التحقق من بيانات الدخول بنجاح للمستخدم (${userCode}) وتوليد جلسة عمل معتمدة.`,
+      userCode,
+      isWrongPassword: false,
+    };
+  }
+
+  if (props.log.action === 'logout') {
+    return {
+      actionType: 'logout',
+      title: 'تسجيل خروج',
+      badgeText: 'تسجيل خروج',
+      badgeClass: 'bg-slate-500/15 text-slate-700 dark:text-slate-400 border-slate-500/30 font-bold',
+      reasonTitle: 'إنهاء الجلسة',
+      detailedDesc: `تم تسجيل الخروج وإنهاء جلسة العمل للمستخدم (${userCode}) بنجاح.`,
+      userCode,
+      isWrongPassword: false,
+    };
+  }
+
+  return null;
+});
 </script>
 
 <template>
@@ -447,8 +529,53 @@ const changesList = computed(() => {
                 </div>
               </div>
 
-              <!-- Human Friendly Diff Cards (What Changed?) -->
-              <div v-if="log" class="space-y-4">
+              <!-- Case A: Authentication / Security Event Card (Login, Failed Login, Blocked, etc.) -->
+              <div v-if="authEventDetails" class="space-y-4">
+                <div class="p-5 rounded-2xl bg-rose-500/[0.05] dark:bg-rose-500/[0.08] border border-rose-500/25 space-y-4 shadow-sm">
+                  <div class="flex items-center justify-between gap-2 border-b border-rose-500/15 pb-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold shadow-xs">
+                        <ShieldAlert class="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 class="text-sm font-black text-bx-title font-display">{{ authEventDetails.title }}</h4>
+                        <span class="text-xs font-bold text-rose-600 dark:text-rose-400">{{ authEventDetails.reasonTitle }}</span>
+                      </div>
+                    </div>
+                    <span class="px-3 py-1 rounded-xl text-xs font-black border" :class="authEventDetails.badgeClass">
+                      {{ authEventDetails.badgeText }}
+                    </span>
+                  </div>
+
+                  <!-- Narrative explanation of what happened -->
+                  <div class="p-4 rounded-xl bg-bx-surface border border-rose-500/20 text-xs text-bx-title leading-relaxed space-y-3">
+                    <div class="flex items-start gap-2.5">
+                      <Info class="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                      <div>
+                        <span class="font-bold text-bx-muted block text-[11px] mb-0.5">تفاصيل الواقعة:</span>
+                        <p class="font-bold text-bx-title leading-normal">{{ authEventDetails.detailedDesc }}</p>
+                      </div>
+                    </div>
+
+                    <!-- Target Account & Result Grid -->
+                    <div class="pt-3 border-t border-bx-border/70 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div class="p-2.5 rounded-lg bg-bx-table-header border border-bx-border/60">
+                        <span class="text-bx-muted font-bold block text-[10.5px] mb-1">الحساب المستهدف (الرمز المؤسسي):</span>
+                        <span class="font-mono font-black text-bx-primary text-sm">{{ authEventDetails.userCode }}</span>
+                      </div>
+                      <div class="p-2.5 rounded-lg bg-bx-table-header border border-bx-border/60">
+                        <span class="text-bx-muted font-bold block text-[10.5px] mb-1">النتيجة الأمنية:</span>
+                        <span class="font-bold text-rose-600 dark:text-rose-400 text-xs">
+                          {{ authEventDetails.actionType === 'login_failed' ? 'رفض تسجيل الدخول (كلمة مرور غير مطابقة)' : authEventDetails.actionType === 'login_blocked' ? 'حظر محاولة الدخول' : 'تمت المصادقة بنجاح' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Case B: Standard Data Field Modifications (What Changed?) -->
+              <div v-else-if="log" class="space-y-4">
                 <div class="flex items-center justify-between">
                   <h4 class="text-xs font-black text-bx-title flex items-center gap-2">
                     <span>بيان التعديلات والتغييرات التي تمت</span>
@@ -458,7 +585,7 @@ const changesList = computed(() => {
                   </span>
                 </div>
 
-                <!-- Case 1: Changes exist -->
+                <!-- Case B1: Changes exist -->
                 <div v-if="changesList.length > 0" class="space-y-3">
                   <div
                     v-for="item in changesList"
@@ -529,17 +656,18 @@ const changesList = computed(() => {
                   </div>
                 </div>
 
-                <!-- Case 2: No modified fields (e.g. Login / Logout activity) -->
+                <!-- Case B2: No modified fields (e.g. Activity records) -->
                 <div v-else class="p-5 text-center rounded-2xl bg-bx-table-header border border-bx-border space-y-1 text-xs">
                   <Info class="w-6 h-6 text-bx-muted mx-auto mb-2 opacity-60" />
                   <p class="font-bold text-bx-title">لا توجد قيم محددة تم تعديلها في هذا السجل</p>
                   <p class="text-[11px] text-bx-muted">
-                    هذا السجل يوثق حركة أمنية (مثل تسجيل الدخول أو الخروج أو تدقيق الوصول) بدون تعديل على حقول البيانات.
+                    هذا السجل يوثق حركة أمنية بدون تعديل على حقول البيانات.
                   </p>
                 </div>
+              </div>
 
-                <!-- Collapsible Developer Raw JSON View -->
-                <div class="pt-2">
+              <!-- Collapsible Developer Raw JSON View -->
+              <div v-if="log" class="pt-2">
                   <button
                     type="button"
                     @click="showTechnicalJson = !showTechnicalJson"
@@ -560,7 +688,6 @@ const changesList = computed(() => {
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
 
             <!-- Fixed Footer -->

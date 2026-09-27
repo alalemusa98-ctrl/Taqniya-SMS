@@ -862,6 +862,30 @@ export const formatFieldValue = (
     };
   }
 
+  if (key === 'reason') {
+    const reasonMap: Record<string, { text: string; badgeClass: string }> = {
+      invalid_password: {
+        text: 'كلمة المرور المدخلة غير صحيحة',
+        badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 font-bold',
+      },
+      user_not_found: {
+        text: 'الرمز المؤسسي غير مسجل بالنظام',
+        badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold',
+      },
+      account_inactive: {
+        text: 'الحساب معطل وموقوف إدارياً',
+        badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 font-bold',
+      },
+    };
+    if (reasonMap[val]) {
+      return reasonMap[val];
+    }
+    return {
+      text: String(val),
+      badgeClass: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/30 font-bold',
+    };
+  }
+
   if (key === 'is_active') {
     if (val === 1 || val === true || val === '1') {
       return {
