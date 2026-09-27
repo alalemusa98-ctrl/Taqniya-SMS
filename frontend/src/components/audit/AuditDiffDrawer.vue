@@ -10,6 +10,9 @@ import {
   Code2,
   CheckCircle2,
   Info,
+  PlusCircle,
+  Trash2,
+  Edit3,
 } from 'lucide-vue-next';
 import { formatDateTime } from '../../utils/formatters';
 
@@ -284,16 +287,125 @@ const areValuesEqual = (a: any, b: any): boolean => {
   return String(a ?? '').trim() === String(b ?? '').trim();
 };
 
-const ignoredKeys = new Set(['created_at', 'updated_at', 'deleted_at']);
+const ignoredKeys = new Set(['created_at', 'updated_at', 'deleted_at', 'password']);
 
-const changesList = computed(() => {
+const isCreateAction = computed(() => {
+  if (!props.log) return false;
+  const action = props.log.action || '';
+  const oldVals = props.log.old_values || {};
+  const newVals = props.log.new_values || {};
+  const hasNoOld = Object.keys(oldVals).length === 0 || Object.values(oldVals).every(v => v === null || v === undefined || v === '');
+  const hasNew = Object.keys(newVals).length > 0;
+
+  return (
+    action.includes('_created') ||
+    action.startsWith('create_') ||
+    action.includes('_added') ||
+    action.startsWith('add_') ||
+    action.includes('_uploaded') ||
+    action.startsWith('upload_') ||
+    action === 'user_created' ||
+    (hasNoOld && hasNew)
+  );
+});
+
+const isDeleteAction = computed(() => {
+  if (!props.log) return false;
+  const action = props.log.action || '';
+  const oldVals = props.log.old_values || {};
+  const newVals = props.log.new_values || {};
+  const hasOld = Object.keys(oldVals).length > 0;
+  const hasNoNew = Object.keys(newVals).length === 0 || Object.values(newVals).every(v => v === null || v === undefined || v === '');
+
+  return (
+    action.includes('_deleted') ||
+    action.startsWith('delete_') ||
+    action.includes('_removed') ||
+    action.startsWith('remove_') ||
+    action.includes('_purged') ||
+    (hasOld && hasNoNew)
+  );
+});
+
+interface FormattedValue {
+  text: string;
+  badgeClass?: string;
+  isMuted?: boolean;
+}
+
+interface ChangeListItem {
+  key: string;
+  label: string;
+  desc?: string;
+  icon: any;
+  hasOld: boolean;
+  hasNew: boolean;
+  oldFormatted: FormattedValue;
+  newFormatted: FormattedValue;
+}
+
+const changesList = computed<ChangeListItem[]>(() => {
   if (!props.log) return [];
   const oldVals = props.log.old_values || {};
   const newVals = props.log.new_values || {};
 
-  const allKeys = Array.from(new Set([...Object.keys(oldVals), ...Object.keys(newVals)]));
+  const lookupRefs = {
+    classSections: refClassSections.value,
+    classes: refClasses.value,
+    years: refYears.value,
+    terms: refTerms.value,
+    stages: refStages.value,
+    subjects: refSubjects.value,
+    teachers: refTeachers.value,
+    students: refStudents.value,
+    guardians: refGuardians.value,
+    periodSlots: refPeriodSlots.value,
+  };
 
-  // Only keep keys where values actually changed or were newly set/removed
+  // If this is a CREATE action: only process new_values
+  if (isCreateAction.value) {
+    const keys = Object.keys(newVals).filter(
+      (k) => !ignoredKeys.has(k) && newVals[k] !== null && newVals[k] !== undefined && newVals[k] !== '',
+    );
+    return keys.map((key) => {
+      const meta = getFieldMeta(key);
+      const newFormatted: FormattedValue = formatFieldValue(key, newVals[key], newVals, lookupRefs);
+      return {
+        key,
+        label: meta.label,
+        desc: meta.desc,
+        icon: meta.icon,
+        hasOld: false,
+        hasNew: true,
+        oldFormatted: { text: '', isMuted: true },
+        newFormatted,
+      };
+    });
+  }
+
+  // If this is a DELETE action: only process old_values
+  if (isDeleteAction.value) {
+    const keys = Object.keys(oldVals).filter(
+      (k) => !ignoredKeys.has(k) && oldVals[k] !== null && oldVals[k] !== undefined && oldVals[k] !== '',
+    );
+    return keys.map((key) => {
+      const meta = getFieldMeta(key);
+      const oldFormatted: FormattedValue = formatFieldValue(key, oldVals[key], oldVals, lookupRefs);
+      return {
+        key,
+        label: meta.label,
+        desc: meta.desc,
+        icon: meta.icon,
+        hasOld: true,
+        hasNew: false,
+        oldFormatted,
+        newFormatted: { text: '', isMuted: true },
+      };
+    });
+  }
+
+  // Otherwise: it's an UPDATE action -> compare both old and new
+  const allKeys = Array.from(new Set([...Object.keys(oldVals), ...Object.keys(newVals)]));
   const changedKeys = allKeys.filter((key) => {
     if (ignoredKeys.has(key)) return false;
 
@@ -318,27 +430,14 @@ const changesList = computed(() => {
     return false;
   });
 
-  const lookupRefs = {
-    classSections: refClassSections.value,
-    classes: refClasses.value,
-    years: refYears.value,
-    terms: refTerms.value,
-    stages: refStages.value,
-    subjects: refSubjects.value,
-    teachers: refTeachers.value,
-    students: refStudents.value,
-    guardians: refGuardians.value,
-    periodSlots: refPeriodSlots.value,
-  };
-
   return changedKeys.map((key) => {
     const hasOld = key in oldVals;
     const hasNew = key in newVals;
     const meta = getFieldMeta(key);
-    const oldFormatted = hasOld
+    const oldFormatted: FormattedValue = hasOld
       ? formatFieldValue(key, oldVals[key], oldVals, lookupRefs)
       : { text: 'لم تكن مسجلة مسبقاً', isMuted: true };
-    const newFormatted = hasNew
+    const newFormatted: FormattedValue = hasNew
       ? formatFieldValue(key, newVals[key], newVals, lookupRefs)
       : { text: 'تمت إزالتها', isMuted: true };
 
@@ -574,10 +673,133 @@ const authEventDetails = computed(() => {
                 </div>
               </div>
 
-              <!-- Case B: Standard Data Field Modifications (What Changed?) -->
+              <!-- Case B: Creation Event (Show ONLY the newly created/registered values, no old comparison) -->
+              <div v-else-if="log && isCreateAction" class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xs font-black text-bx-title flex items-center gap-2">
+                    <PlusCircle class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>بيانات السجل الجديد الذي تم إنشاؤه</span>
+                  </h4>
+                  <span class="text-[11px] text-bx-muted font-bold">
+                    {{ changesList.length > 0 ? `${changesList.length} حقول تم تسجيلها` : 'لا توجد حقول مسجلة' }}
+                  </span>
+                </div>
+
+                <div v-if="changesList.length > 0" class="space-y-3">
+                  <div
+                    v-for="item in changesList"
+                    :key="item.key"
+                    class="p-4 rounded-2xl border border-bx-border bg-bx-surface shadow-xs space-y-2.5"
+                  >
+                    <!-- Field Header -->
+                    <div class="flex items-center justify-between border-b border-bx-border/50 pb-2">
+                      <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                          <component :is="item.icon" class="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <span class="font-bold text-xs text-bx-title">{{ item.label }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Single Clean Created Value Display -->
+                    <div class="p-3 rounded-xl bg-emerald-500/[0.08] dark:bg-emerald-500/[0.12] border border-emerald-500/20 space-y-1">
+                      <span class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 block">
+                        القيمة المسجلة:
+                      </span>
+                      <div>
+                        <span
+                          v-if="item.newFormatted.badgeClass"
+                          class="inline-block px-2.5 py-1 rounded-lg text-xs"
+                          :class="item.newFormatted.badgeClass"
+                        >
+                          {{ item.newFormatted.text }}
+                        </span>
+                        <span
+                          v-else
+                          class="text-xs font-black text-bx-title"
+                        >
+                          {{ item.newFormatted.text }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else class="p-5 text-center rounded-2xl bg-bx-table-header border border-bx-border space-y-1 text-xs">
+                  <Info class="w-6 h-6 text-bx-muted mx-auto mb-2 opacity-60" />
+                  <p class="font-bold text-bx-title">تم تسجيل عملية الإنشاء بنجاح</p>
+                  <p class="text-[11px] text-bx-muted">لا تتوفر تفاصيل حقول إضافية في هذا السجل.</p>
+                </div>
+              </div>
+
+              <!-- Case C: Deletion Event (Show ONLY the deleted values) -->
+              <div v-else-if="log && isDeleteAction" class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xs font-black text-bx-title flex items-center gap-2">
+                    <Trash2 class="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                    <span>بيانات السجل الذي تم حذفه</span>
+                  </h4>
+                  <span class="text-[11px] text-bx-muted font-bold">
+                    {{ changesList.length > 0 ? `${changesList.length} حقول محذوفة` : 'لا توجد حقول مسجلة' }}
+                  </span>
+                </div>
+
+                <div v-if="changesList.length > 0" class="space-y-3">
+                  <div
+                    v-for="item in changesList"
+                    :key="item.key"
+                    class="p-4 rounded-2xl border border-bx-border bg-bx-surface shadow-xs space-y-2.5"
+                  >
+                    <!-- Field Header -->
+                    <div class="flex items-center justify-between border-b border-bx-border/50 pb-2">
+                      <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                          <component :is="item.icon" class="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <span class="font-bold text-xs text-bx-title">{{ item.label }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Single Clean Deleted Value Display -->
+                    <div class="p-3 rounded-xl bg-rose-500/[0.08] dark:bg-rose-500/[0.12] border border-rose-500/20 space-y-1">
+                      <span class="text-[10px] font-black text-rose-600 dark:text-rose-400 block">
+                        القيمة التي كانت مسجلة وتم حذفها:
+                      </span>
+                      <div>
+                        <span
+                          v-if="item.oldFormatted.badgeClass"
+                          class="inline-block px-2.5 py-1 rounded-lg text-xs"
+                          :class="item.oldFormatted.badgeClass"
+                        >
+                          {{ item.oldFormatted.text }}
+                        </span>
+                        <span
+                          v-else
+                          class="text-xs font-black text-bx-title line-through opacity-80"
+                        >
+                          {{ item.oldFormatted.text }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else class="p-5 text-center rounded-2xl bg-bx-table-header border border-bx-border space-y-1 text-xs">
+                  <Info class="w-6 h-6 text-bx-muted mx-auto mb-2 opacity-60" />
+                  <p class="font-bold text-bx-title">تم تسجيل عملية الحذف بنجاح</p>
+                  <p class="text-[11px] text-bx-muted">لا تتوفر تفاصيل حقول إضافية في هذا السجل.</p>
+                </div>
+              </div>
+
+              <!-- Case D: Standard Update/Modification (What Changed? Before vs After) -->
               <div v-else-if="log" class="space-y-4">
                 <div class="flex items-center justify-between">
                   <h4 class="text-xs font-black text-bx-title flex items-center gap-2">
+                    <Edit3 class="w-4 h-4 text-bx-primary" />
                     <span>بيان التعديلات والتغييرات التي تمت</span>
                   </h4>
                   <span class="text-[11px] text-bx-muted font-bold">
@@ -585,7 +807,7 @@ const authEventDetails = computed(() => {
                   </span>
                 </div>
 
-                <!-- Case B1: Changes exist -->
+                <!-- Case D1: Changes exist -->
                 <div v-if="changesList.length > 0" class="space-y-3">
                   <div
                     v-for="item in changesList"
@@ -656,7 +878,7 @@ const authEventDetails = computed(() => {
                   </div>
                 </div>
 
-                <!-- Case B2: No modified fields (e.g. Activity records) -->
+                <!-- Case D2: No modified fields (e.g. Activity records) -->
                 <div v-else class="p-5 text-center rounded-2xl bg-bx-table-header border border-bx-border space-y-1 text-xs">
                   <Info class="w-6 h-6 text-bx-muted mx-auto mb-2 opacity-60" />
                   <p class="font-bold text-bx-title">لا توجد قيم محددة تم تعديلها في هذا السجل</p>
