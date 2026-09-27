@@ -347,7 +347,7 @@
 }
 
 :root {
-            /* الوضع الفاتح (Light Mode) */
+            /* الوضع الفاتح التناسقي الناعم (Seamless Harmonious Taqniya Light Mode) */
             --bx-canvas: #EBEBFA;
             --bx-surface-solid: #EBEBFA;
             --bx-primary: #5B3CE6;
@@ -393,50 +393,53 @@
             --anim-spring: cubic-bezier(0.23, 0.65, 0.74, 1.09);
         }
 
-        /* الوضع الداكن المخفف والمريح للعين (Soft Lightened Dark Mode) */
+        /* الوضع الداكن فائق التباين والمريح للعين (High-Contrast Vision-Optimized Dark Mode) */
         .dark {
-            --bx-canvas: #28293D;
-            /* تفتيح وتخفيف نسبة العتامة إلى رمادي نيلي هادئ وفاتح */
-            --bx-surface-solid: #31324B;
-            /* أسطح القوائم والنوافذ المنبثقة المخففة */
-            --bx-primary: #8566FF;
-            /* بنفسجي نقي ومتوهج */
-            --bx-primary-hover: #987DFF;
-            --bx-primary-contrast: #FFFFFF;
+            /* خلفية الصفحة العميقة (Deep Obsidian Slate) لمنع الإجهاد البصري */
+            --bx-canvas: #0B0D18;
+            
+            /* أسطح البطاقات والحاويات والنوافذ المرتفعة بوضوح تام (Elevated Rich Surface) */
+            --bx-surface-solid: #15182B;
+            
+            /* اللون الرئيسي البنفسجي المتوهج عالي السطوع والوضوح (Vibrant Luminous Violet) */
+            --bx-primary: #A78BFA;
+            --bx-primary-hover: #C4B5FD;
+            --bx-primary-contrast: #0F111D;
+            
+            /* أبيض ناصع 100% للعناوين والأسماء والقيم الرئيسية (AAA Contrast Ratio > 16:1) */
             --bx-title: #FFFFFF;
-            /* أبيض ناصع ومقروء للعناوين */
-            --bx-text: #DCD9EF;
-            /* نصوص رمادية لافندرية ناعمة وواضحة */
-            --bx-muted: #A5A0C8;
-            /* نصوص ثانوية مريحة للعين */
-            --bx-border: rgba(255, 255, 255, 0.18);
-            /* إطارات ناعمة متناسقة */
-            --bx-border-strong: rgba(255, 255, 255, 0.30);
-            --bx-divider: #ffffff3b;
-            /* الفاصل الدقيق بين الأسطر */
-            --bx-pill: rgba(133, 102, 255, 0.16);
-            --bx-table-header: rgba(255, 255, 255, 0.04);
-            --bx-row-hover: rgba(133, 102, 255, 0.14);
-            --bx-row-active: rgba(133, 102, 255, 0.24);
+            
+            /* نصوص أساسية ساطعة وفائقة الوضوح (Crisp High-Contrast Off-White) */
+            --bx-text: #F8FAFC;
+            
+            /* نصوص فرعية وتواريخ وعناوين ذات وضوح فائق وفضي ناصع (Bright Silver Muted > 9:1) */
+            --bx-muted: #CBD5E1;
+            
+            /* إطارات وفواصل ناصعة ومحددة المعالم بوضوح تام */
+            --bx-border: rgba(255, 255, 255, 0.22);
+            --bx-border-strong: rgba(167, 139, 250, 0.45);
+            --bx-divider: rgba(255, 255, 255, 0.16);
+            
+            /* خلفيات التمييز والصفوف والجداول */
+            --bx-pill: rgba(167, 139, 250, 0.22);
+            --bx-table-header: rgba(255, 255, 255, 0.06);
+            --bx-row-hover: rgba(167, 139, 250, 0.18);
+            --bx-row-active: rgba(167, 139, 250, 0.30);
 
-            /* ألوان الوظائف والحالات (Functional Action Colors - Dark) */
-            --bx-danger: #F87171;
-            /* الحذف / الخطر الناصع */
-            --bx-danger-bg: rgba(248, 113, 113, 0.15);
+            /* ألوان الوظائف والحالات الساطعة فائقة المقروئية والتوهج (Vibrant Functional Colors) */
+            --bx-danger: #FB7185;
+            --bx-danger-bg: rgba(251, 113, 133, 0.22);
             --bx-success: #34D399;
-            /* النجاح / الاعتماد */
-            --bx-success-bg: rgba(52, 211, 153, 0.15);
+            --bx-success-bg: rgba(52, 211, 153, 0.22);
             --bx-warning: #FBBF24;
-            /* التعديل / التنبيه / الانتظار */
-            --bx-warning-bg: rgba(251, 191, 36, 0.15);
+            --bx-warning-bg: rgba(251, 191, 36, 0.22);
             --bx-info: #60A5FA;
-            /* المعلومات / الإجراء المساعد */
-            --bx-info-bg: rgba(96, 165, 250, 0.15);
+            --bx-info-bg: rgba(96, 165, 250, 0.22);
 
-            --bx-shadow-btn: 0 4px 14px rgba(133, 102, 255, 0.25);
-            --bx-shadow-btn-hover: 0 8px 22px rgba(133, 102, 255, 0.35);
-            --bx-shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
-            --bx-shadow-dropdown: 0 15px 30px -5px rgba(0, 0, 0, 0.35);
+            --bx-shadow-btn: 0 4px 16px rgba(167, 139, 250, 0.35);
+            --bx-shadow-btn-hover: 0 8px 24px rgba(167, 139, 250, 0.50);
+            --bx-shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+            --bx-shadow-dropdown: 0 15px 30px -5px rgba(0, 0, 0, 0.65);
         }
 
         html {
@@ -1197,7 +1200,7 @@
         }
 
         .dark .bx-sticky-bar {
-            background-color: #383A58 !important;
+            background-color: #1F223D !important;
             border-bottom: 2px solid var(--bx-primary) !important;
         }
 

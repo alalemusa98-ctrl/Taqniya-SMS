@@ -205,7 +205,7 @@ const removeOption = (val: string | number) => {
       type="button"
       :disabled="disabled"
       @click="toggleOpen"
-      class="min-h-[44px] py-2 px-4 rounded-2xl w-full text-xs font-bold text-bx-title border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] hover:border-bx-primary transition-all shadow-xs flex items-center justify-between gap-3 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      class="min-h-[44px] py-2 px-4 rounded-2xl w-full text-xs font-bold text-bx-title border border-bx-border bg-bx-surface hover:border-bx-primary transition-all shadow-xs flex items-center justify-between gap-3 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
     >
       <!-- Multi-select chips or single select label -->
       <div class="flex items-center gap-2 truncate flex-1 min-w-0">
@@ -217,7 +217,7 @@ const removeOption = (val: string | number) => {
             <span
               v-for="val in selectedValues"
               :key="val"
-              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-bx-primary/30 bg-purple-50 dark:bg-bx-primary/15 text-bx-primary text-[11px] font-bold shadow-xs"
+              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-bx-primary/30 bg-bx-pill text-bx-primary text-[11px] font-bold shadow-xs"
             >
               <span class="truncate max-w-[120px]">{{ getOption(val)?.label || val }}</span>
               <X
@@ -254,7 +254,7 @@ const removeOption = (val: string | number) => {
     <div
       v-if="isOpen"
       ref="dropdownMenuRef"
-      class="z-[100] p-2.5 max-h-72 overflow-y-auto rounded-2xl shadow-2xl border border-[#B4AED8] dark:border-white/[0.15] bg-[var(--bx-surface-solid)] space-y-2 absolute end-0"
+      class="z-[100] p-2.5 max-h-72 overflow-y-auto rounded-2xl shadow-2xl border border-bx-border bg-bx-surface space-y-2 absolute end-0"
       :class="[
         fullWidth ? 'w-full min-w-full' : 'min-w-[240px] w-max max-w-sm',
         actualPlacement === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
@@ -268,7 +268,7 @@ const removeOption = (val: string | number) => {
             v-model="searchQuery"
             type="text"
             :placeholder="searchPlaceholder"
-            class="w-full pl-8 pr-3.5 py-2 rounded-xl border border-[#B4AED8]/70 dark:border-white/15 bg-purple-500/[0.03] dark:bg-white/[0.04] text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all"
+            class="w-full pl-8 pr-3.5 py-2 rounded-xl border border-bx-border bg-bx-table-header text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all"
             @click.stop
           />
           <Search class="w-3.5 h-3.5 text-bx-muted absolute left-3 pointer-events-none" />
@@ -276,7 +276,7 @@ const removeOption = (val: string | number) => {
       </div>
 
       <!-- Options List with Smooth Dividers -->
-      <div class="divide-y divide-purple-100/60 dark:divide-white/[0.06]">
+      <div class="divide-y divide-bx-divider">
         <div
           v-for="opt in displayOptions"
           :key="opt.value"

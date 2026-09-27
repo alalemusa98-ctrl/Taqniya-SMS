@@ -22,41 +22,41 @@ const variantClasses = computed(() => {
   switch (props.variant) {
     case 'blue':
       return {
-        icon: 'border-2 border-blue-500/30 text-blue-500',
-        badge: 'border-blue-500/30 text-blue-600 dark:text-blue-400',
-        value: 'text-blue-600 dark:text-blue-400',
+        icon: 'border-2 border-blue-500/30 text-blue-500 dark:text-blue-400 bg-blue-500/10',
+        badge: 'border-blue-500/30 text-blue-600 dark:text-blue-300 bg-blue-500/10',
+        value: 'text-blue-600 dark:text-blue-300',
         progressBar: 'bg-blue-500',
         progressBorder: 'border-blue-500/30',
       };
     case 'amber':
       return {
-        icon: 'border-2 border-amber-500/30 text-amber-500',
-        badge: 'border-amber-500/30 text-amber-600 dark:text-amber-400',
-        value: 'text-amber-600 dark:text-amber-400',
+        icon: 'border-2 border-amber-500/30 text-amber-500 dark:text-amber-400 bg-amber-500/10',
+        badge: 'border-amber-500/30 text-amber-600 dark:text-amber-300 bg-amber-500/10',
+        value: 'text-amber-600 dark:text-amber-300',
         progressBar: 'bg-amber-500',
         progressBorder: 'border-amber-500/30',
       };
     case 'emerald':
       return {
-        icon: 'border-2 border-emerald-500/30 text-emerald-500',
-        badge: 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
-        value: 'text-emerald-600 dark:text-emerald-400',
+        icon: 'border-2 border-emerald-500/30 text-emerald-500 dark:text-emerald-400 bg-emerald-500/10',
+        badge: 'border-emerald-500/30 text-emerald-600 dark:text-emerald-300 bg-emerald-500/10',
+        value: 'text-emerald-600 dark:text-emerald-300',
         progressBar: 'bg-emerald-500',
         progressBorder: 'border-emerald-500/30',
       };
     case 'rose':
       return {
-        icon: 'border-2 border-rose-500/30 text-rose-500',
-        badge: 'border-rose-500/30 text-rose-600 dark:text-rose-400',
-        value: 'text-rose-600 dark:text-rose-400',
+        icon: 'border-2 border-rose-500/30 text-rose-500 dark:text-rose-400 bg-rose-500/10',
+        badge: 'border-rose-500/30 text-rose-600 dark:text-rose-300 bg-rose-500/10',
+        value: 'text-rose-600 dark:text-rose-300',
         progressBar: 'bg-rose-500',
         progressBorder: 'border-rose-500/30',
       };
     case 'primary':
     default:
       return {
-        icon: 'border border-bx-border text-bx-primary',
-        badge: 'border-bx-border text-bx-primary',
+        icon: 'border border-bx-border text-bx-primary bg-bx-pill',
+        badge: 'border-bx-border text-bx-primary bg-bx-pill',
         value: 'text-bx-title',
         progressBar: 'bg-bx-primary',
         progressBorder: 'border-bx-border',

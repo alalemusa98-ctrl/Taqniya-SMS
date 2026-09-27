@@ -387,7 +387,7 @@ const authEventDetails = computed(() => {
       actionType: 'login_failed',
       title: 'محاولة تسجيل دخول فاشلة',
       badgeText: 'محاولة فاشلة',
-      badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30',
+      badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold',
       reasonTitle,
       detailedDesc,
       userCode,
@@ -400,7 +400,7 @@ const authEventDetails = computed(() => {
       actionType: 'login_blocked',
       title: 'حظر محاولة تسجيل الدخول',
       badgeText: 'محاولة محظورة',
-      badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30 font-black',
+      badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-black',
       reasonTitle: 'حظر الدخول - الحساب معطل',
       detailedDesc: `تم حظر محاولة الدخول للحساب (${userCode}) لأن الحساب موقوف إدارياً من قِبل إدارة المدرسة.`,
       userCode,
@@ -413,7 +413,7 @@ const authEventDetails = computed(() => {
       actionType: 'login',
       title: 'تسجيل دخول ناجح',
       badgeText: 'دخول ناجح',
-      badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-bold',
+      badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-bold',
       reasonTitle: 'تمت المصادقة بنجاح',
       detailedDesc: `تم التحقق من بيانات الدخول بنجاح للمستخدم (${userCode}) وتوليد جلسة عمل معتمدة.`,
       userCode,
@@ -426,7 +426,7 @@ const authEventDetails = computed(() => {
       actionType: 'logout',
       title: 'تسجيل خروج',
       badgeText: 'تسجيل خروج',
-      badgeClass: 'bg-slate-500/15 text-slate-700 dark:text-slate-400 border-slate-500/30 font-bold',
+      badgeClass: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30 font-bold',
       reasonTitle: 'إنهاء الجلسة',
       detailedDesc: `تم تسجيل الخروج وإنهاء جلسة العمل للمستخدم (${userCode}) بنجاح.`,
       userCode,
@@ -485,7 +485,7 @@ const authEventDetails = computed(() => {
                     <CheckCircle2 class="w-5 h-5" />
                   </div>
                   <div>
-                    <span class="text-[11px] font-bold block opacity-75">الإجراء الذي تم تنفيذه:</span>
+                    <span class="text-[11px] font-bold block opacity-95">الإجراء الذي تم تنفيذه:</span>
                     <h4 class="text-sm font-black font-display">{{ getActionInfo(log.action).text }}</h4>
                   </div>
                 </div>
@@ -531,15 +531,15 @@ const authEventDetails = computed(() => {
 
               <!-- Case A: Authentication / Security Event Card (Login, Failed Login, Blocked, etc.) -->
               <div v-if="authEventDetails" class="space-y-4">
-                <div class="p-5 rounded-2xl bg-rose-500/[0.05] dark:bg-rose-500/[0.08] border border-rose-500/25 space-y-4 shadow-sm">
-                  <div class="flex items-center justify-between gap-2 border-b border-rose-500/15 pb-3">
+                <div class="p-5 rounded-2xl bg-rose-500/[0.05] dark:bg-rose-500/[0.12] border border-rose-500/30 space-y-4 shadow-sm">
+                  <div class="flex items-center justify-between gap-2 border-b border-rose-500/20 pb-3">
                     <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold shadow-xs">
+                      <div class="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-300 flex items-center justify-center font-bold shadow-xs">
                         <ShieldAlert class="w-5 h-5" />
                       </div>
                       <div>
                         <h4 class="text-sm font-black text-bx-title font-display">{{ authEventDetails.title }}</h4>
-                        <span class="text-xs font-bold text-rose-600 dark:text-rose-400">{{ authEventDetails.reasonTitle }}</span>
+                        <span class="text-xs font-bold text-rose-600 dark:text-rose-300">{{ authEventDetails.reasonTitle }}</span>
                       </div>
                     </div>
                     <span class="px-3 py-1 rounded-xl text-xs font-black border" :class="authEventDetails.badgeClass">
@@ -548,9 +548,9 @@ const authEventDetails = computed(() => {
                   </div>
 
                   <!-- Narrative explanation of what happened -->
-                  <div class="p-4 rounded-xl bg-bx-surface border border-rose-500/20 text-xs text-bx-title leading-relaxed space-y-3">
+                  <div class="p-4 rounded-xl bg-bx-surface border border-rose-500/30 text-xs text-bx-title leading-relaxed space-y-3">
                     <div class="flex items-start gap-2.5">
-                      <Info class="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                      <Info class="w-4 h-4 text-rose-500 dark:text-rose-300 shrink-0 mt-0.5" />
                       <div>
                         <span class="font-bold text-bx-muted block text-[11px] mb-0.5">تفاصيل الواقعة:</span>
                         <p class="font-bold text-bx-title leading-normal">{{ authEventDetails.detailedDesc }}</p>
@@ -559,13 +559,13 @@ const authEventDetails = computed(() => {
 
                     <!-- Target Account & Result Grid -->
                     <div class="pt-3 border-t border-bx-border/70 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      <div class="p-2.5 rounded-lg bg-bx-table-header border border-bx-border/60">
+                      <div class="p-2.5 rounded-lg bg-bx-table-header border border-bx-border">
                         <span class="text-bx-muted font-bold block text-[10.5px] mb-1">الحساب المستهدف (الرمز المؤسسي):</span>
                         <span class="font-mono font-black text-bx-primary text-sm">{{ authEventDetails.userCode }}</span>
                       </div>
-                      <div class="p-2.5 rounded-lg bg-bx-table-header border border-bx-border/60">
+                      <div class="p-2.5 rounded-lg bg-bx-table-header border border-bx-border">
                         <span class="text-bx-muted font-bold block text-[10.5px] mb-1">النتيجة الأمنية:</span>
-                        <span class="font-bold text-rose-600 dark:text-rose-400 text-xs">
+                        <span class="font-bold text-rose-600 dark:text-rose-300 text-xs">
                           {{ authEventDetails.actionType === 'login_failed' ? 'رفض تسجيل الدخول (كلمة مرور غير مطابقة)' : authEventDetails.actionType === 'login_blocked' ? 'حظر محاولة الدخول' : 'تمت المصادقة بنجاح' }}
                         </span>
                       </div>
