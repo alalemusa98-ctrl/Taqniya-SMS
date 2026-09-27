@@ -21,7 +21,7 @@ export class CreateClassSubjectDto {
   @IsNotEmpty({ message: 'الدرجة العظمى للامتحان النهائي مطلوبة.' })
   @Type(() => Number)
   @IsNumber({}, { message: 'الدرجة العظمى للامتحان النهائي يجب أن تكون رقماً.' })
-  @Min(1, { message: 'الدرجة العظمى للامتحان النهائي يجب أن تكون أكبر من الصفر.' })
+  @Min(0, { message: 'الدرجة العظمى للامتحان النهائي لا يمكن أن تكون سالبة.' })
   max_exam_score: number;
 
   @IsNotEmpty({ message: 'درجة النجاح الصغرى للامتحان النهائي مطلوبة.' })

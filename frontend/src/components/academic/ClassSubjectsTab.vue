@@ -375,14 +375,17 @@ const subjectFormOptions = computed(() =>
 );
 
 function onClassChange() {
+  const selectedClass = classes.value.find((c) => c.id === multiTermForm.value.class_id);
+  const isEarlyPrimary = selectedClass && (selectedClass.grade_level <= 3);
+
   const terms = getTermsForClass(multiTermForm.value.class_id);
   multiTermForm.value.terms = terms.map((t) => ({
     class_academic_term_id: t.id,
     term_name: t.term_name,
     enabled: true,
-    max_coursework_score: 40.0,
-    max_exam_score: 60.0,
-    exam_passing_score: 30.0,
+    max_coursework_score: isEarlyPrimary ? 100.0 : 40.0,
+    max_exam_score: isEarlyPrimary ? 0.0 : 60.0,
+    exam_passing_score: isEarlyPrimary ? 0.0 : 30.0,
     passing_score: 50.0,
     max_score: 100.0,
     is_closed: t.is_closed,
@@ -405,6 +408,9 @@ function openEditDrawer(row: UnifiedSubjectMatrixRow) {
   multiTermForm.value.class_id = row.class_id;
   multiTermForm.value.subject_id = row.subject_id;
 
+  const selectedClass = classes.value.find((c) => c.id === row.class_id);
+  const isEarlyPrimary = selectedClass && (selectedClass.grade_level <= 3);
+
   const terms = getTermsForClass(row.class_id);
   multiTermForm.value.terms = terms.map((t) => {
     const existing = row.assignments[t.term_name];
@@ -413,9 +419,9 @@ function openEditDrawer(row: UnifiedSubjectMatrixRow) {
       term_name: t.term_name,
       class_subject_id: existing?.class_subject_id,
       enabled: !!existing,
-      max_coursework_score: existing ? existing.max_coursework_score : 40.0,
-      max_exam_score: existing ? existing.max_exam_score : 60.0,
-      exam_passing_score: existing ? existing.exam_passing_score : 30.0,
+      max_coursework_score: existing ? existing.max_coursework_score : (isEarlyPrimary ? 100.0 : 40.0),
+      max_exam_score: existing ? existing.max_exam_score : (isEarlyPrimary ? 0.0 : 60.0),
+      exam_passing_score: existing ? existing.exam_passing_score : (isEarlyPrimary ? 0.0 : 30.0),
       passing_score: existing ? existing.passing_score : 50.0,
       max_score: existing ? existing.max_score : 100.0,
       is_closed: t.is_closed,
@@ -456,7 +462,7 @@ async function handleSaveMultiTerm() {
     const totalMax = coursework + exam;
     t.max_score = totalMax;
 
-    if (coursework < 0 || exam <= 0) {
+    if (coursework < 0 || exam < 0 || totalMax <= 0) {
       toast.error(`الدرجات العظمى غير صحيحة في ${t.term_name}.`);
       return;
     }
@@ -973,8 +979,8 @@ onMounted(async () => {
                     v-model.number="term.max_exam_score"
                     type="number"
                     step="0.5"
-                    min="1"
-                    placeholder="60"
+                    min="0"
+                    placeholder="0"
                     class="w-full px-3.5 py-2 rounded-full text-xs bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] text-bx-title focus:outline-none focus:border-bx-primary transition-all font-bold"
                   />
                 </div>
