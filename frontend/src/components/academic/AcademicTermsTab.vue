@@ -57,13 +57,15 @@ const showDeleteModal = ref(false);
 const termToDelete = ref<AcademicTermItem | null>(null);
 const isDeleting = ref(false);
 
-const fetchTerms = async (page = 1) => {
+const fetchTerms = async (page = 1, silent = false) => {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
-  loading.value = true;
+  if (!silent) {
+    loading.value = true;
+  }
   currentPage.value = page;
 
   try {
@@ -86,7 +88,7 @@ const fetchTerms = async (page = 1) => {
     if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     toast.error('خطأ في الشبكة', err.response?.data?.message || 'تعذر جلب الفصول الدراسية.');
   } finally {
-    if (!activeAbortController?.signal.aborted) {
+    if (!silent && !activeAbortController?.signal.aborted) {
       loading.value = false;
     }
   }
@@ -125,14 +127,14 @@ const handleSubmit = async () => {
       if (res.data.success) {
         toast.success('تمت الإضافة بنجاح', res.data.message || `تمت إضافة الفترة (${form.value.name}) إلى الكتالوج`);
         showDrawer.value = false;
-        fetchTerms(1);
+        fetchTerms(1, true);
       }
     } else if (activeTermToEdit.value) {
       const res = await academicApi.updateTerm(activeTermToEdit.value.id, form.value);
       if (res.data.success) {
         toast.success('تم التحديث بنجاح', res.data.message || 'تم تحديث بيانات الفترة بنجاح');
         showDrawer.value = false;
-        fetchTerms(currentPage.value);
+        fetchTerms(currentPage.value, true);
       }
     }
   } catch (err: any) {
@@ -149,18 +151,22 @@ const confirmDelete = (term: AcademicTermItem) => {
 
 const handleDelete = async () => {
   if (!termToDelete.value) return;
+  const deletedTerm = termToDelete.value;
   isDeleting.value = true;
   try {
-    const res = await academicApi.deleteTerm(termToDelete.value.id);
+    const res = await academicApi.deleteTerm(deletedTerm.id);
     if (res.data.success) {
-      toast.success('تم الحذف بنجاح', res.data.message || `تم حذف الفترة (${termToDelete.value.name})`);
+      terms.value = terms.value.filter((t) => t.id !== deletedTerm.id);
       showDeleteModal.value = false;
-      fetchTerms(currentPage.value);
+      toast.success('تم الحذف بنجاح', `تم حذف الفترة (${deletedTerm.name})`);
+      fetchTerms(currentPage.value, true);
     }
   } catch (err: any) {
+    showDeleteModal.value = false;
     toast.error('تعذر الحذف', err.response?.data?.message || 'لا يمكن حذف الفترة المرجعية لارتباطها بتخصيصات صفوف (RESTRICT).');
   } finally {
     isDeleting.value = false;
+    termToDelete.value = null;
   }
 };
 

@@ -519,36 +519,32 @@ function confirmDelete(row: UnifiedSubjectMatrixRow) {
 async function handleDelete() {
   if (!itemToDelete.value) return;
   const deletedItem = itemToDelete.value;
-  const originalGroups = JSON.parse(JSON.stringify(groups.value));
-
-  // Optimistic UI: remove immediately from reactive state
-  const targetGroup = groups.value.find((g) => g.class_id === deletedItem.class_id);
-  if (targetGroup && targetGroup.terms) {
-    for (const term of targetGroup.terms) {
-      if (term.subjects) {
-        term.subjects = term.subjects.filter(
-          (s) => s.subject_id !== deletedItem.subject_id,
-        );
-      }
-    }
-  }
-
-  showDeleteModal.value = false;
-  if (activeRowDetails.value?.subject_id === deletedItem.subject_id) {
-    showDrawer.value = false;
-  }
-  toast.success('تمت إزالة المادة من منهج هذا الصف بنجاح.');
-
   isDeleting.value = true;
   try {
     const ids = Object.values(deletedItem.assignments).map(
       (a) => a.class_subject_id,
     );
     await Promise.all(ids.map((id) => academicApi.deleteClassSubject(id)));
+
+    const targetGroup = groups.value.find((g) => g.class_id === deletedItem.class_id);
+    if (targetGroup && targetGroup.terms) {
+      for (const term of targetGroup.terms) {
+        if (term.subjects) {
+          term.subjects = term.subjects.filter(
+            (s) => s.subject_id !== deletedItem.subject_id,
+          );
+        }
+      }
+    }
+
+    showDeleteModal.value = false;
+    if (activeRowDetails.value?.subject_id === deletedItem.subject_id) {
+      showDrawer.value = false;
+    }
+    toast.success('تمت إزالة المادة من منهج هذا الصف بنجاح.');
     await fetchClassSubjects(true);
   } catch (err: any) {
-    // Rollback on error
-    groups.value = originalGroups;
+    showDeleteModal.value = false;
     const msg = err.response?.data?.message || 'تعذر إزالة المادة.';
     toast.error(msg);
   } finally {

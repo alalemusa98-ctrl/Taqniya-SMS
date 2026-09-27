@@ -57,13 +57,15 @@ const showDeleteModal = ref(false);
 const stageToDelete = ref<AcademicStageItem | null>(null);
 const isDeleting = ref(false);
 
-const fetchStages = async (page = 1) => {
+const fetchStages = async (page = 1, silent = false) => {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
-  loading.value = true;
+  if (!silent) {
+    loading.value = true;
+  }
   currentPage.value = page;
 
   try {
@@ -86,7 +88,7 @@ const fetchStages = async (page = 1) => {
     if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     toast.error('خطأ في الشبكة', err.response?.data?.message || 'تعذر جلب المراحل الدراسية.');
   } finally {
-    if (!activeAbortController?.signal.aborted) {
+    if (!silent && !activeAbortController?.signal.aborted) {
       loading.value = false;
     }
   }
@@ -125,14 +127,14 @@ const handleSubmit = async () => {
       if (res.data.success) {
         toast.success('تمت الإضافة بنجاح', res.data.message || `تمت إضافة المرحلة (${form.value.name}) بنجاح`);
         showDrawer.value = false;
-        fetchStages(1);
+        fetchStages(1, true);
       }
     } else if (activeStageToEdit.value) {
       const res = await academicApi.updateStage(activeStageToEdit.value.id, form.value);
       if (res.data.success) {
         toast.success('تم التحديث بنجاح', res.data.message || 'تم تحديث بيانات المرحلة بنجاح');
         showDrawer.value = false;
-        fetchStages(currentPage.value);
+        fetchStages(currentPage.value, true);
       }
     }
   } catch (err: any) {
@@ -149,18 +151,22 @@ const confirmDelete = (stage: AcademicStageItem) => {
 
 const handleDelete = async () => {
   if (!stageToDelete.value) return;
+  const deletedStage = stageToDelete.value;
   isDeleting.value = true;
   try {
-    const res = await academicApi.deleteStage(stageToDelete.value.id);
+    const res = await academicApi.deleteStage(deletedStage.id);
     if (res.data.success) {
-      toast.success('تم الحذف بنجاح', res.data.message || `تم حذف المرحلة الدراسية (${stageToDelete.value.name})`);
+      stages.value = stages.value.filter((s) => s.id !== deletedStage.id);
       showDeleteModal.value = false;
-      fetchStages(currentPage.value);
+      toast.success('تم الحذف بنجاح', `تم حذف المرحلة الدراسية (${deletedStage.name})`);
+      fetchStages(currentPage.value, true);
     }
   } catch (err: any) {
+    showDeleteModal.value = false;
     toast.error('تعذر الحذف', err.response?.data?.message || 'لا يمكن حذف المرحلة لوجود صفوف دراسية تابعة لها (RESTRICT).');
   } finally {
     isDeleting.value = false;
+    stageToDelete.value = null;
   }
 };
 

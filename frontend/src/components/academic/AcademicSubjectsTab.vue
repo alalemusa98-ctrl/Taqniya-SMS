@@ -170,22 +170,17 @@ const confirmDelete = (subject: AcademicSubjectItem) => {
 const handleDelete = async () => {
   if (!subjectToDelete.value) return;
   const deletedSubject = subjectToDelete.value;
-  const originalSubjects = [...subjects.value];
-
-  // Optimistic UI removal
-  subjects.value = subjects.value.filter((s) => s.id !== deletedSubject.id);
-  showDeleteModal.value = false;
-  toast.success('تم الحذف بنجاح', `تم حذف المادة (${deletedSubject.name}) من بنك المواد`);
-
   isDeleting.value = true;
   try {
     const res = await academicApi.deleteSubject(deletedSubject.id);
     if (res.data.success) {
+      subjects.value = subjects.value.filter((s) => s.id !== deletedSubject.id);
+      showDeleteModal.value = false;
+      toast.success('تم الحذف بنجاح', `تم حذف المادة (${deletedSubject.name}) من بنك المواد`);
       fetchSubjects(currentPage.value, true);
     }
   } catch (err: any) {
-    // Rollback
-    subjects.value = originalSubjects;
+    showDeleteModal.value = false;
     toast.error('تعذر الحذف', err.response?.data?.message || 'لا يمكن حذف المادة لإسنادها في مناهج ومقررات صفوف.');
   } finally {
     isDeleting.value = false;

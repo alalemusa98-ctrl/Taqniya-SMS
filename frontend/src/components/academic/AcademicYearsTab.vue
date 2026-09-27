@@ -73,13 +73,15 @@ const showActivateModal = ref(false);
 const yearToActivate = ref<AcademicYearItem | null>(null);
 const isActivating = ref(false);
 
-const fetchYears = async (page = 1) => {
+const fetchYears = async (page = 1, silent = false) => {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
-  loading.value = true;
+  if (!silent) {
+    loading.value = true;
+  }
   currentPage.value = page;
 
   try {
@@ -103,7 +105,7 @@ const fetchYears = async (page = 1) => {
     if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     toast.error('خطأ في الشبكة', err.response?.data?.message || 'تعذر جلب قائمة السنوات الدراسية.');
   } finally {
-    if (!activeAbortController?.signal.aborted) {
+    if (!silent && !activeAbortController?.signal.aborted) {
       loading.value = false;
     }
   }
@@ -149,14 +151,14 @@ const handleSubmit = async () => {
       if (res.data.success) {
         toast.success('تمت الإضافة بنجاح', res.data.message || `تم إنشاء السنة الدراسية (${form.value.name})`);
         showDrawer.value = false;
-        fetchYears(1);
+        fetchYears(1, true);
       }
     } else if (activeYearToEdit.value) {
       const res = await academicApi.updateYear(activeYearToEdit.value.id, form.value);
       if (res.data.success) {
         toast.success('تم التحديث بنجاح', res.data.message || 'تم تحديث بيانات السنة الدراسية بنجاح');
         showDrawer.value = false;
-        fetchYears(currentPage.value);
+        fetchYears(currentPage.value, true);
       }
     }
   } catch (err: any) {
@@ -173,18 +175,25 @@ const confirmActivate = (year: AcademicYearItem) => {
 
 const handleActivate = async () => {
   if (!yearToActivate.value) return;
+  const activatedYear = yearToActivate.value;
   isActivating.value = true;
   try {
-    const res = await academicApi.activateYear(yearToActivate.value.id);
+    const res = await academicApi.activateYear(activatedYear.id);
     if (res.data.success) {
-      toast.success('تم التفعيل بنجاح', res.data.message || `أصبحت السنة (${yearToActivate.value.name}) هي السنة النشطة الوحيدة.`);
+      years.value = years.value.map((y) => ({
+        ...y,
+        is_active: y.id === activatedYear.id ? 1 : 0,
+      }));
       showActivateModal.value = false;
-      fetchYears(currentPage.value);
+      toast.success('تم التفعيل بنجاح', `أصبحت السنة (${activatedYear.name}) هي السنة النشطة الوحيدة.`);
+      fetchYears(currentPage.value, true);
     }
   } catch (err: any) {
+    showActivateModal.value = false;
     toast.error('فشل التفعيل', err.response?.data?.message || 'حدث خطأ أثناء تفعيل السنة الدراسية');
   } finally {
     isActivating.value = false;
+    yearToActivate.value = null;
   }
 };
 
@@ -195,18 +204,22 @@ const confirmDelete = (year: AcademicYearItem) => {
 
 const handleDelete = async () => {
   if (!yearToDelete.value) return;
+  const deletedYear = yearToDelete.value;
   isDeleting.value = true;
   try {
-    const res = await academicApi.deleteYear(yearToDelete.value.id);
+    const res = await academicApi.deleteYear(deletedYear.id);
     if (res.data.success) {
-      toast.success('تم الحذف بنجاح', res.data.message || `تم حذف السنة الدراسية (${yearToDelete.value.name})`);
+      years.value = years.value.filter((y) => y.id !== deletedYear.id);
       showDeleteModal.value = false;
-      fetchYears(currentPage.value);
+      toast.success('تم الحذف بنجاح', `تم حذف السنة الدراسية (${deletedYear.name})`);
+      fetchYears(currentPage.value, true);
     }
   } catch (err: any) {
+    showDeleteModal.value = false;
     toast.error('تعذر الحذف', err.response?.data?.message || 'لا يمكن حذف السنة لارتباطها ببيانات دراسية (RESTRICT).');
   } finally {
     isDeleting.value = false;
+    yearToDelete.value = null;
   }
 };
 

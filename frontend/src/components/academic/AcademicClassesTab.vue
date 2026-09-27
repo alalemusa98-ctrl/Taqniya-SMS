@@ -86,13 +86,15 @@ const fetchStages = async () => {
   }
 };
 
-const fetchClasses = async (page = 1) => {
+const fetchClasses = async (page = 1, silent = false) => {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
-  loading.value = true;
+  if (!silent) {
+    loading.value = true;
+  }
   currentPage.value = page;
 
   try {
@@ -120,7 +122,7 @@ const fetchClasses = async (page = 1) => {
     if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     toast.error('تعذر جلب قائمة الصفوف الدراسية', err.response?.data?.message);
   } finally {
-    if (!activeAbortController?.signal.aborted) {
+    if (!silent && !activeAbortController?.signal.aborted) {
       loading.value = false;
     }
   }
@@ -172,14 +174,14 @@ const handleSubmit = async () => {
       if (res.data.success) {
         toast.success('تمت الإضافة بنجاح', `تم إنشاء الصف الدراسي (${form.value.name})`);
         showDrawer.value = false;
-        fetchClasses(currentPage.value);
+        fetchClasses(currentPage.value, true);
       }
     } else if (activeClassToEdit.value) {
       const res = await academicApi.updateClass(activeClassToEdit.value.id, form.value);
       if (res.data.success) {
         toast.success('تم التحديث بنجاح', `تم تحديث بيانات الصف الدراسي بنجاح`);
         showDrawer.value = false;
-        fetchClasses(currentPage.value);
+        fetchClasses(currentPage.value, true);
       }
     }
   } catch (err: any) {
@@ -196,18 +198,22 @@ const confirmDelete = (classItem: AcademicClassItem) => {
 
 const handleDelete = async () => {
   if (!classToDelete.value) return;
+  const deletedClass = classToDelete.value;
   isDeleting.value = true;
   try {
-    const res = await academicApi.deleteClass(classToDelete.value.id);
+    const res = await academicApi.deleteClass(deletedClass.id);
     if (res.data.success) {
-      toast.success('تم الحذف بنجاح', `تم حذف الصف الدراسي (${classToDelete.value.name})`);
+      classes.value = classes.value.filter((c) => c.id !== deletedClass.id);
       showDeleteModal.value = false;
-      fetchClasses(currentPage.value);
+      toast.success('تم الحذف بنجاح', `تم حذف الصف الدراسي (${deletedClass.name})`);
+      fetchClasses(currentPage.value, true);
     }
   } catch (err: any) {
+    showDeleteModal.value = false;
     toast.error('تعذر الحذف', err.response?.data?.message || 'لا يمكن حذف الصف لارتباطه ببيانات دراسية نشطة.');
   } finally {
     isDeleting.value = false;
+    classToDelete.value = null;
   }
 };
 

@@ -56,13 +56,15 @@ const showDeleteModal = ref(false);
 const sectionToDelete = ref<AcademicSectionItem | null>(null);
 const isDeleting = ref(false);
 
-const fetchSections = async (page = 1) => {
+const fetchSections = async (page = 1, silent = false) => {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
-  loading.value = true;
+  if (!silent) {
+    loading.value = true;
+  }
   currentPage.value = page;
 
   try {
@@ -87,7 +89,7 @@ const fetchSections = async (page = 1) => {
     if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     toast.error('تعذر جلب كتالوج الشعب العامة', err.response?.data?.message);
   } finally {
-    if (!activeAbortController?.signal.aborted) {
+    if (!silent && !activeAbortController?.signal.aborted) {
       loading.value = false;
     }
   }
@@ -133,14 +135,14 @@ const handleSubmit = async () => {
       if (res.data.success) {
         toast.success('تمت الإضافة بنجاح', `تم إنشاء الشعبة العامة (${form.value.name})`);
         showDrawer.value = false;
-        fetchSections(currentPage.value);
+        fetchSections(currentPage.value, true);
       }
     } else if (activeSectionToEdit.value) {
       const res = await academicApi.updateSection(activeSectionToEdit.value.id, form.value);
       if (res.data.success) {
         toast.success('تم التحديث بنجاح', `تم تحديث مسمى الشعبة العامة بنجاح`);
         showDrawer.value = false;
-        fetchSections(currentPage.value);
+        fetchSections(currentPage.value, true);
       }
     }
   } catch (err: any) {
@@ -157,18 +159,22 @@ const confirmDelete = (section: AcademicSectionItem) => {
 
 const handleDelete = async () => {
   if (!sectionToDelete.value) return;
+  const deletedSection = sectionToDelete.value;
   isDeleting.value = true;
   try {
-    const res = await academicApi.deleteSection(sectionToDelete.value.id);
+    const res = await academicApi.deleteSection(deletedSection.id);
     if (res.data.success) {
-      toast.success('تم الحذف بنجاح', `تم حذف الشعبة (${sectionToDelete.value.name}) من الكتالوج العام`);
+      sections.value = sections.value.filter((s) => s.id !== deletedSection.id);
       showDeleteModal.value = false;
-      fetchSections(currentPage.value);
+      toast.success('تم الحذف بنجاح', `تم حذف الشعبة (${deletedSection.name}) من الكتالوج العام`);
+      fetchSections(currentPage.value, true);
     }
   } catch (err: any) {
+    showDeleteModal.value = false;
     toast.error('تعذر الحذف', err.response?.data?.message || 'لا يمكن حذف الشعبة لاستخدامها في صفوف دراسية.');
   } finally {
     isDeleting.value = false;
+    sectionToDelete.value = null;
   }
 };
 

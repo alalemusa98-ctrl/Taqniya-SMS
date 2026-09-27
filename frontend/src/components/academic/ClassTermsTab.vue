@@ -81,13 +81,15 @@ async function fetchPredecessors() {
   }
 }
 
-async function fetchClassTerms() {
+async function fetchClassTerms(silent = false) {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
-  loading.value = true;
+  if (!silent) {
+    loading.value = true;
+  }
   try {
     const res = await academicApi.getClassAcademicTerms({ per_page: 100 }, activeAbortController.signal);
     rawGroups.value = res.data?.data?.classes || [];
@@ -96,7 +98,7 @@ async function fetchClassTerms() {
     const msg = err.response?.data?.message || 'تعذر تحميل فترات وحالات الصفوف.';
     toast.error(msg);
   } finally {
-    if (!activeAbortController?.signal.aborted) {
+    if (!silent && !activeAbortController?.signal.aborted) {
       loading.value = false;
     }
   }
@@ -391,19 +393,26 @@ function confirmDelete(row: UnifiedTermRow | ClassTermItem) {
 
 async function handleDelete() {
   if (!itemToDelete.value) return;
+  const deletedId = itemToDelete.value.id;
   isDeleting.value = true;
   try {
-    await academicApi.deleteClassAcademicTerm(itemToDelete.value.id);
-    toast.success('تم فك ارتباط الفترة بالصف الدراسي بنجاح.');
+    await academicApi.deleteClassAcademicTerm(deletedId);
+    for (const grp of rawGroups.value) {
+      if (grp.terms) {
+        grp.terms = grp.terms.filter((t: any) => t.id !== deletedId);
+      }
+    }
     showDeleteModal.value = false;
-    itemToDelete.value = null;
     showDrawer.value = false;
-    await fetchClassTerms();
+    toast.success('تم فك ارتباط الفترة بالصف الدراسي بنجاح.');
+    await fetchClassTerms(true);
   } catch (err: any) {
+    showDeleteModal.value = false;
     const msg = err.response?.data?.message || 'تعذر فك ارتباط الفترة لوجود مواد مسندة بها.';
     toast.error(msg);
   } finally {
     isDeleting.value = false;
+    itemToDelete.value = null;
   }
 }
 
@@ -431,7 +440,7 @@ async function handleSave() {
       }
       toast.success(count > 1 ? `تم تخصيص ${count} فترات دراسية للصف بنجاح.` : 'تم تخصيص الفترة للصف بنجاح.');
       showDrawer.value = false;
-      await fetchClassTerms();
+      await fetchClassTerms(true);
     } catch (err: any) {
       const msg = err.response?.data?.message || 'حدث خطأ أثناء تخصيص الفترات للصف.';
       toast.error(msg);
@@ -453,7 +462,7 @@ async function handleSave() {
       });
       toast.success(res.data?.message || 'تم تحديث فترة الصف بنجاح.');
       showDrawer.value = false;
-      await fetchClassTerms();
+      await fetchClassTerms(true);
     } catch (err: any) {
       const msg = err.response?.data?.message || 'حدث خطأ أثناء حفظ فترة الصف.';
       toast.error(msg);
@@ -496,17 +505,18 @@ async function requestActivate(termId: number, termName?: string, className?: st
 
 async function confirmActivation(force = false) {
   if (!targetTermToActivate.value) return;
+  const activatedId = targetTermToActivate.value.id;
   isActivating.value = true;
   try {
-    const res = await academicApi.activateClassAcademicTerm(targetTermToActivate.value.id, force);
+    const res = await academicApi.activateClassAcademicTerm(activatedId, force);
     toast.success(res.data?.message || 'تم تفعيل الفصل الدراسي للصف بنجاح.');
-    if (activeRowDetails.value && activeRowDetails.value.id === targetTermToActivate.value.id) {
+    if (activeRowDetails.value && activeRowDetails.value.id === activatedId) {
       activeRowDetails.value.is_active = 1;
     }
     showActivationConfirmModal.value = false;
     showActivationWarningModal.value = false;
     showDrawer.value = false;
-    await fetchClassTerms();
+    await fetchClassTerms(true);
   } catch (err: any) {
     const msg = err.response?.data?.message || 'تعذر تفعيل الفصل الدراسي.';
     toast.error(msg);

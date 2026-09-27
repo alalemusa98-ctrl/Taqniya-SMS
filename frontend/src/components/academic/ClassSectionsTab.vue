@@ -68,13 +68,15 @@ async function fetchPredecessors() {
   }
 }
 
-async function fetchClassSections() {
+async function fetchClassSections(silent = false) {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
-  loading.value = true;
+  if (!silent) {
+    loading.value = true;
+  }
   try {
     const res = await academicApi.getClassSections({ per_page: 100 }, activeAbortController.signal);
     rawGroups.value = res.data?.data?.classes || [];
@@ -83,7 +85,7 @@ async function fetchClassSections() {
     const msg = err.response?.data?.message || 'تعذر تحميل شعب الصفوف الدراسية.';
     toast.error(msg);
   } finally {
-    if (!activeAbortController?.signal.aborted) {
+    if (!silent && !activeAbortController?.signal.aborted) {
       loading.value = false;
     }
   }
@@ -282,19 +284,26 @@ function confirmDelete(sec: { id: number; name: string }) {
 
 async function handleDelete() {
   if (!itemToDelete.value) return;
+  const deletedId = itemToDelete.value.id;
   isDeleting.value = true;
   try {
-    const res = await academicApi.deleteClassSection(itemToDelete.value.id);
-    toast.success(res.data?.message || 'تم فك ربط الشعبة من الصف بنجاح.');
+    await academicApi.deleteClassSection(deletedId);
+    for (const grp of rawGroups.value) {
+      if (grp.sections) {
+        grp.sections = grp.sections.filter((s: any) => s.id !== deletedId);
+      }
+    }
     showDeleteModal.value = false;
-    itemToDelete.value = null;
     showDrawer.value = false;
-    await fetchClassSections();
+    toast.success('تم فك ربط الشعبة من الصف بنجاح.');
+    await fetchClassSections(true);
   } catch (err: any) {
+    showDeleteModal.value = false;
     const msg = err.response?.data?.message || 'تعذر فك ربط الشعبة.';
     toast.error(msg);
   } finally {
     isDeleting.value = false;
+    itemToDelete.value = null;
   }
 }
 
@@ -312,7 +321,7 @@ async function handleSave() {
     });
     toast.success(res.data?.message || 'تم فتح وتسكين الشعبة للصف بنجاح.');
     showDrawer.value = false;
-    fetchClassSections();
+    await fetchClassSections(true);
   } catch (err: any) {
     const msg = err.response?.data?.message || 'حدث خطأ أثناء تسكين الشعبة.';
     toast.error(msg);
