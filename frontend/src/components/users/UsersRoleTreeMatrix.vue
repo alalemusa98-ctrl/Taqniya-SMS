@@ -18,6 +18,7 @@ import {
   Calendar,
   Phone,
   User as UserIcon,
+  ShieldPlus,
 } from 'lucide-vue-next';
 import TaqniyaErrorBoundary from '../ui/TaqniyaErrorBoundary.vue';
 import TaqniyaKpiCard from '../ui/TaqniyaKpiCard.vue';
@@ -26,6 +27,7 @@ import TaqniyaTable, { type TableColumn } from '../ui/TaqniyaTable.vue';
 import TaqniyaPagination from '../ui/TaqniyaPagination.vue';
 import UserStatusModal from './UserStatusModal.vue';
 import ResetPasswordModal from '../modals/ResetPasswordModal.vue';
+import CreateAdminUserDrawer from './CreateAdminUserDrawer.vue';
 import { formatDateTime } from '../../utils/formatters';
 
 
@@ -106,6 +108,11 @@ const isDrawerOpen = ref(false);
 const isDetailsLoading = ref(false);
 const isStatusModalOpen = ref(false);
 const isResetPasswordModalOpen = ref(false);
+const isCreateAdminDrawerOpen = ref(false);
+
+const handleAdminCreated = () => {
+  loadUsers(1);
+};
 
 const loadUsers = async (page = 1) => {
   isLoading.value = true;
@@ -300,6 +307,16 @@ const flattenedUsers = computed(() => {
                 <span>معطلة</span>
               </button>
             </div>
+
+            <!-- Add Admin User Button -->
+            <button
+              type="button"
+              @click="isCreateAdminDrawerOpen = true"
+              class="bx-btn bx-btn-primary px-4 py-2 text-xs font-bold shrink-0 shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+            >
+              <ShieldPlus class="w-4 h-4" />
+              <span>إضافة مدير جديد</span>
+            </button>
           </div>
         </div>
 
@@ -604,6 +621,13 @@ const flattenedUsers = computed(() => {
         :user="selectedUser"
         @close="isResetPasswordModalOpen = false"
         @updated="handleUserUpdated"
+      />
+
+      <!-- Create Admin User Drawer -->
+      <CreateAdminUserDrawer
+        :is-open="isCreateAdminDrawerOpen"
+        @close="isCreateAdminDrawerOpen = false"
+        @created="handleAdminCreated"
       />
     </div>
   </TaqniyaErrorBoundary>

@@ -37,6 +37,11 @@ export const usersApi = {
     invalidateSwrCache('/users');
     return res;
   },
+  createAdminUser: async (payload: { user_code?: string; password: string; is_active?: number }) => {
+    const res = await apiClient.post('/users', payload);
+    invalidateSwrCache('/users');
+    return res;
+  },
 };
 
 export const auditApi = {

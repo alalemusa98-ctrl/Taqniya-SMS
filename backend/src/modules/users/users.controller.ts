@@ -13,6 +13,7 @@ import {
 import { UsersService } from './users.service.js';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto.js';
 import { AdminResetPasswordDto } from './dto/admin-reset-password.dto.js';
+import { CreateAdminUserDto } from './dto/create-admin-user.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
@@ -62,6 +63,17 @@ export class UsersController {
     const ip = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
     return this.usersService.updateStatus(id, dto, adminUser.id, ip, userAgent);
+  }
+
+  @Post()
+  async createAdmin(
+    @Body() dto: CreateAdminUserDto,
+    @CurrentUser() adminUser: any,
+    @Req() req: Request,
+  ) {
+    const ip = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.usersService.createAdmin(dto, adminUser.id, ip, userAgent);
   }
 
   @Post(':id/reset-password')

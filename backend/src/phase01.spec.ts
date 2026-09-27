@@ -297,6 +297,33 @@ describe('Phase 01: Authentication, Identity & Audit (TDD Verification)', () => 
 
       expect(resetResult.success).toBe(true);
     });
+
+    it('TC-USR-06: Create new admin user with user_code and audit trail', async () => {
+      const adminUser = await prisma.user.findUnique({ where: { user_code: 'ADM-1001' } });
+      const testCode = `ADM-TEST-${Date.now().toString().slice(-4)}`;
+
+      const createResult = await usersService.createAdmin(
+        {
+          user_code: testCode,
+          password: 'AdminPassword@123',
+          is_active: 1,
+        },
+        Number(adminUser!.id),
+        '127.0.0.1',
+        'Vitest Test Agent',
+      );
+
+      expect(createResult.success).toBe(true);
+      expect(createResult.data.user_code).toBe(testCode);
+      expect(createResult.data.role_type).toBe(RoleType.admin);
+      expect(createResult.data.is_active).toBe(1);
+
+      // Verify audit log
+      const auditEntry = await prisma.auditLog.findFirst({
+        where: { action: 'user_created', entity_id: BigInt(createResult.data.id) },
+      });
+      expect(auditEntry).not.toBeNull();
+    });
   });
 
   describe('Group 3: Audit Logs (audit_logs)', () => {

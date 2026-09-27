@@ -7,6 +7,7 @@ import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto.js';
 import { AdminResetPasswordDto } from './dto/admin-reset-password.dto.js';
+import { CreateAdminUserDto } from './dto/create-admin-user.dto.js';
 import { RoleType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -325,6 +326,89 @@ export class UsersService {
     return {
       success: true,
       message: 'تم إعادة تعيين كلمة المرور بنجاح وإلغاء جلسات المستخدم السابقة.',
+    };
+  }
+
+  async createAdmin(
+    dto: CreateAdminUserDto,
+    adminId: number,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    let userCode = dto.user_code?.trim();
+
+    // If no user code supplied, generate next sequential ADM-XXXX code
+    if (!userCode) {
+      const lastAdmin = await this.prisma.user.findFirst({
+        where: {
+          role_type: RoleType.admin,
+          user_code: { startsWith: 'ADM-' },
+        },
+        orderBy: { id: 'desc' },
+      });
+
+      let nextNum = 1002;
+      if (lastAdmin && lastAdmin.user_code) {
+        const match = lastAdmin.user_code.match(/^ADM-(\d+)$/);
+        if (match) {
+          nextNum = parseInt(match[1], 10) + 1;
+        }
+      }
+      userCode = `ADM-${nextNum}`;
+
+      let exists = await this.prisma.user.findUnique({ where: { user_code: userCode } });
+      while (exists) {
+        nextNum++;
+        userCode = `ADM-${nextNum}`;
+        exists = await this.prisma.user.findUnique({ where: { user_code: userCode } });
+      }
+    } else {
+      const exists = await this.prisma.user.findUnique({ where: { user_code: userCode } });
+      if (exists) {
+        throw new BadRequestException({
+          success: false,
+          message: `الرمز المؤسسي (${userCode}) مستخدم بالفعل مسبقاً.`,
+        });
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const isActive = dto.is_active !== undefined ? dto.is_active : 1;
+
+    const newUser = await this.prisma.user.create({
+      data: {
+        user_code: userCode,
+        password: hashedPassword,
+        role_type: RoleType.admin,
+        is_active: isActive,
+      },
+    });
+
+    await this.auditService.log({
+      userId: BigInt(adminId),
+      action: 'user_created',
+      entityType: 'User',
+      entityId: newUser.id,
+      newValues: {
+        user_code: newUser.user_code,
+        role_type: 'admin',
+        is_active: newUser.is_active,
+      },
+      ipAddress,
+      userAgent,
+    });
+
+    return {
+      success: true,
+      message: `تم إنشاء حساب مدير النظام بالرمز (${newUser.user_code}) بنجاح.`,
+      data: {
+        id: Number(newUser.id),
+        user_code: newUser.user_code,
+        role_type: newUser.role_type,
+        role_type_ar: 'مدير نظام',
+        is_active: newUser.is_active,
+        created_at: newUser.created_at.toISOString(),
+      },
     };
   }
 }
