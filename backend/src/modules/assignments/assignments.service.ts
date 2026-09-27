@@ -10,12 +10,14 @@ import { CreateAssignmentDto } from './dto/create-assignment.dto.js';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto.js';
 import { QueryAssignmentDto } from './dto/query-assignment.dto.js';
 import { RoleType } from '@prisma/client';
+import { StorageService } from '../storage/storage.service.js';
 
 @Injectable()
 export class AssignmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -587,7 +589,7 @@ export class AssignmentsService {
           created_by_user_id: BigInt(currentUser.id),
           title: dto.title,
           description: dto.description || null,
-          attachments: safeAttachments,
+          attachments: [],
           assigned_date: assignedDate,
           due_date: dueDate,
         },
@@ -607,6 +609,20 @@ export class AssignmentsService {
           creator: true,
         },
       });
+
+      let finalAttachments: any[] = [];
+      if (dto.attachments && Array.isArray(dto.attachments) && dto.attachments.length > 0) {
+        finalAttachments = await this.storageService.saveAttachments(
+          'assignments',
+          Number(created.id),
+          dto.attachments,
+        );
+        await this.prisma.assignment.update({
+          where: { id: created.id },
+          data: { attachments: finalAttachments },
+        });
+        created.attachments = finalAttachments;
+      }
 
       await this.auditService.log({
         userId: BigInt(currentUser.id),
@@ -730,9 +746,12 @@ export class AssignmentsService {
     if (dto.title !== undefined) updateData.title = dto.title;
     if (dto.description !== undefined) updateData.description = dto.description;
     if (dto.attachments !== undefined) {
-      updateData.attachments = Array.isArray(dto.attachments)
-        ? JSON.parse(JSON.stringify(dto.attachments))
-        : [];
+      const finalAttachments = await this.storageService.saveAttachments(
+        'assignments',
+        Number(id),
+        Array.isArray(dto.attachments) ? dto.attachments : [],
+      );
+      updateData.attachments = finalAttachments;
     }
     if (dto.assigned_date !== undefined) updateData.assigned_date = assignedDate;
     if (dto.due_date !== undefined) updateData.due_date = dueDate;
@@ -907,6 +926,8 @@ export class AssignmentsService {
       where: { id: BigInt(id) },
       data: { deleted_at: new Date() },
     });
+
+    await this.storageService.deleteEntityFolder('assignments', Number(id));
 
     await this.auditService.log({
       userId: BigInt(currentUser.id),

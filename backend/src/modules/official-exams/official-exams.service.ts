@@ -9,11 +9,15 @@ import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { CreateOfficialExamDto } from './dto/create-official-exam.dto.js';
 import { UpdateOfficialExamDto } from './dto/update-official-exam.dto.js';
 import { QueryOfficialExamsDto } from './dto/query-official-exams.dto.js';
-import { ExamType, RoleType } from '@prisma/client';
+import { ExamType, RoleType, Prisma } from '@prisma/client';
+import { StorageService } from '../storage/storage.service.js';
 
 @Injectable()
 export class OfficialExamsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
+  ) {}
 
   private getExamTypeArabic(type: ExamType): string {
     switch (type) {
@@ -606,7 +610,7 @@ export class OfficialExamsService {
     }
 
     // 3. Create exam
-    const exam = await this.prisma.officialExam.create({
+    let exam = await this.prisma.officialExam.create({
       data: {
         academic_year_id: BigInt(dto.academic_year_id),
         academic_term_id: BigInt(dto.academic_term_id),
@@ -615,7 +619,7 @@ export class OfficialExamsService {
         exam_type: dto.exam_type,
         exam_date: new Date(dto.exam_date),
         notes: dto.notes || null,
-        attachments: dto.attachments ? (dto.attachments as any) : null,
+        attachments: Prisma.JsonNull,
       },
       include: {
         academic_year: true,
@@ -624,6 +628,27 @@ export class OfficialExamsService {
         subject: true,
       },
     });
+
+    let finalAttachments: any[] = [];
+    if (dto.attachments && Array.isArray(dto.attachments) && dto.attachments.length > 0) {
+      finalAttachments = await this.storageService.saveAttachments(
+        'official_exams',
+        Number(exam.id),
+        dto.attachments,
+      );
+      exam = await this.prisma.officialExam.update({
+        where: { id: exam.id },
+        data: {
+          attachments: finalAttachments.length > 0 ? (finalAttachments as any) : Prisma.JsonNull,
+        },
+        include: {
+          academic_year: true,
+          academic_term: true,
+          class: true,
+          subject: true,
+        },
+      });
+    }
 
     // 4. Audit Log
     await this.prisma.auditLog.create({
@@ -735,6 +760,16 @@ export class OfficialExamsService {
       }
     }
 
+    let attachmentsData: any = undefined;
+    if (dto.attachments !== undefined) {
+      const finalAttachments = await this.storageService.saveAttachments(
+        'official_exams',
+        Number(id),
+        Array.isArray(dto.attachments) ? dto.attachments : [],
+      );
+      attachmentsData = finalAttachments.length > 0 ? (finalAttachments as any) : null;
+    }
+
     const updated = await this.prisma.officialExam.update({
       where: { id: BigInt(id) },
       data: {
@@ -745,10 +780,7 @@ export class OfficialExamsService {
         exam_type: examType,
         exam_date: dto.exam_date ? new Date(dto.exam_date) : undefined,
         notes: dto.notes !== undefined ? dto.notes : undefined,
-        attachments:
-          dto.attachments !== undefined
-            ? (dto.attachments as any)
-            : undefined,
+        attachments: attachmentsData,
       },
       include: {
         academic_year: true,
@@ -833,6 +865,8 @@ export class OfficialExamsService {
       where: { id: BigInt(id) },
       data: { deleted_at: new Date() },
     });
+
+    await this.storageService.deleteEntityFolder('official_exams', Number(id));
 
     await this.prisma.auditLog.create({
       data: {

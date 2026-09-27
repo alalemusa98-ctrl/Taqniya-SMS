@@ -10,12 +10,14 @@ import { CreateQuizDto } from './dto/create-quiz.dto.js';
 import { UpdateQuizDto } from './dto/update-quiz.dto.js';
 import { QueryQuizzesDto, QuizStatusFilter } from './dto/query-quizzes.dto.js';
 import { RoleType, Prisma } from '@prisma/client';
+import { StorageService } from '../storage/storage.service.js';
 
 @Injectable()
 export class QuizzesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -583,10 +585,26 @@ export class QuizzesService {
         created_by_user_id: BigInt(currentUser.id),
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
-        attachments: dto.attachments && dto.attachments.length > 0 ? (dto.attachments as any) : undefined,
+        attachments: Prisma.JsonNull,
         quiz_date: quizDate,
       },
     });
+
+    let finalAttachments: any[] = [];
+    if (dto.attachments && Array.isArray(dto.attachments) && dto.attachments.length > 0) {
+      finalAttachments = await this.storageService.saveAttachments(
+        'quizzes',
+        Number(created.id),
+        dto.attachments,
+      );
+      await this.prisma.quiz.update({
+        where: { id: created.id },
+        data: {
+          attachments: finalAttachments.length > 0 ? (finalAttachments as any) : Prisma.JsonNull,
+        },
+      });
+      created.attachments = finalAttachments as any;
+    }
 
     // Audit Log
     await this.auditService.log({
@@ -697,7 +715,15 @@ export class QuizzesService {
       dataToUpdate.description = dto.description ? dto.description.trim() : null;
     }
     if (dto.attachments !== undefined) {
-      dataToUpdate.attachments = dto.attachments && dto.attachments.length > 0 ? (dto.attachments as any) : Prisma.JsonNull;
+      const finalAttachments = await this.storageService.saveAttachments(
+        'quizzes',
+        Number(id),
+        Array.isArray(dto.attachments) ? dto.attachments : [],
+      );
+      dataToUpdate.attachments =
+        finalAttachments && finalAttachments.length > 0
+          ? (finalAttachments as any)
+          : Prisma.JsonNull;
     }
     if (dto.quiz_date !== undefined) {
       const d = new Date(dto.quiz_date);
@@ -840,6 +866,8 @@ export class QuizzesService {
       where: { id: BigInt(id) },
       data: { deleted_at: new Date() },
     });
+
+    await this.storageService.deleteEntityFolder('quizzes', Number(id));
 
     // Audit Log
     await this.auditService.log({
