@@ -99,13 +99,15 @@ async function fetchPredecessors() {
   }
 }
 
-async function fetchClassSubjects() {
+async function fetchClassSubjects(silent = false) {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
-  loading.value = true;
+  if (!silent) {
+    loading.value = true;
+  }
   try {
     const res = await academicApi.getClassSubjects({ per_page: 100 }, activeAbortController.signal);
     groups.value = res.data?.data?.classes || [];
@@ -114,7 +116,7 @@ async function fetchClassSubjects() {
     const msg = err.response?.data?.message || 'تعذر تحميل مناهج ومقررات الصفوف.';
     toast.error(msg);
   } finally {
-    if (!activeAbortController?.signal.aborted) {
+    if (!silent && !activeAbortController?.signal.aborted) {
       loading.value = false;
     }
   }
@@ -500,7 +502,7 @@ async function handleSaveMultiTerm() {
     await Promise.all(promises);
     toast.success('تم حفظ وتحديث مقرر المادة لكافة الفصول الدراسية بنجاح.');
     showDrawer.value = false;
-    await fetchClassSubjects();
+    await fetchClassSubjects(true);
   } catch (err: any) {
     const msg = err.response?.data?.message || 'حدث خطأ أثناء حفظ التعديلات.';
     toast.error(msg);
@@ -516,23 +518,42 @@ function confirmDelete(row: UnifiedSubjectMatrixRow) {
 
 async function handleDelete() {
   if (!itemToDelete.value) return;
+  const deletedItem = itemToDelete.value;
+  const originalGroups = JSON.parse(JSON.stringify(groups.value));
+
+  // Optimistic UI: remove immediately from reactive state
+  const targetGroup = groups.value.find((g) => g.class_id === deletedItem.class_id);
+  if (targetGroup && targetGroup.terms) {
+    for (const term of targetGroup.terms) {
+      if (term.subjects) {
+        term.subjects = term.subjects.filter(
+          (s) => s.subject_id !== deletedItem.subject_id,
+        );
+      }
+    }
+  }
+
+  showDeleteModal.value = false;
+  if (activeRowDetails.value?.subject_id === deletedItem.subject_id) {
+    showDrawer.value = false;
+  }
+  toast.success('تمت إزالة المادة من منهج هذا الصف بنجاح.');
+
   isDeleting.value = true;
   try {
-    const ids = Object.values(itemToDelete.value.assignments).map(
+    const ids = Object.values(deletedItem.assignments).map(
       (a) => a.class_subject_id,
     );
     await Promise.all(ids.map((id) => academicApi.deleteClassSubject(id)));
-    toast.success('تمت إزالة المادة من منهج هذا الصف بالكامل.');
-    showDeleteModal.value = false;
-    if (activeRowDetails.value?.subject_id === itemToDelete.value.subject_id) {
-      showDrawer.value = false;
-    }
-    await fetchClassSubjects();
+    await fetchClassSubjects(true);
   } catch (err: any) {
+    // Rollback on error
+    groups.value = originalGroups;
     const msg = err.response?.data?.message || 'تعذر إزالة المادة.';
     toast.error(msg);
   } finally {
     isDeleting.value = false;
+    itemToDelete.value = null;
   }
 }
 

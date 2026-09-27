@@ -59,13 +59,15 @@ const showDeleteModal = ref(false);
 const subjectToDelete = ref<AcademicSubjectItem | null>(null);
 const isDeleting = ref(false);
 
-const fetchSubjects = async (page = 1) => {
+const fetchSubjects = async (page = 1, silent = false) => {
   if (activeAbortController) {
     activeAbortController.abort();
   }
   activeAbortController = new AbortController();
 
-  loading.value = true;
+  if (!silent) {
+    loading.value = true;
+  }
   currentPage.value = page;
 
   try {
@@ -90,7 +92,7 @@ const fetchSubjects = async (page = 1) => {
     if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
     toast.error('تعذر جلب بنك المواد العامة', err.response?.data?.message);
   } finally {
-    if (!activeAbortController?.signal.aborted) {
+    if (!silent && !activeAbortController?.signal.aborted) {
       loading.value = false;
     }
   }
@@ -143,14 +145,14 @@ const handleSubmit = async () => {
       if (res.data.success) {
         toast.success('تمت الإضافة بنجاح', `تم إضافة المادة (${form.value.name}) إلى بنك المواد`);
         showDrawer.value = false;
-        fetchSubjects(currentPage.value);
+        fetchSubjects(currentPage.value, true);
       }
     } else if (activeSubjectToEdit.value) {
       const res = await academicApi.updateSubject(activeSubjectToEdit.value.id, payload);
       if (res.data.success) {
         toast.success('تم التحديث بنجاح', `تم تحديث بيانات المادة التعليمية بنجاح`);
         showDrawer.value = false;
-        fetchSubjects(currentPage.value);
+        fetchSubjects(currentPage.value, true);
       }
     }
   } catch (err: any) {
@@ -167,18 +169,27 @@ const confirmDelete = (subject: AcademicSubjectItem) => {
 
 const handleDelete = async () => {
   if (!subjectToDelete.value) return;
+  const deletedSubject = subjectToDelete.value;
+  const originalSubjects = [...subjects.value];
+
+  // Optimistic UI removal
+  subjects.value = subjects.value.filter((s) => s.id !== deletedSubject.id);
+  showDeleteModal.value = false;
+  toast.success('تم الحذف بنجاح', `تم حذف المادة (${deletedSubject.name}) من بنك المواد`);
+
   isDeleting.value = true;
   try {
-    const res = await academicApi.deleteSubject(subjectToDelete.value.id);
+    const res = await academicApi.deleteSubject(deletedSubject.id);
     if (res.data.success) {
-      toast.success('تم الحذف بنجاح', `تم حذف المادة (${subjectToDelete.value.name}) من بنك المواد`);
-      showDeleteModal.value = false;
-      fetchSubjects(currentPage.value);
+      fetchSubjects(currentPage.value, true);
     }
   } catch (err: any) {
+    // Rollback
+    subjects.value = originalSubjects;
     toast.error('تعذر الحذف', err.response?.data?.message || 'لا يمكن حذف المادة لإسنادها في مناهج ومقررات صفوف.');
   } finally {
     isDeleting.value = false;
+    subjectToDelete.value = null;
   }
 };
 
