@@ -199,9 +199,9 @@ async function main() {
   console.log(`✅ Master Classes created (${classesList.length} صفاً من التمهيدي حتى الثالث الثانوي).`);
 
   // ===========================================================================
-  // 8. Master Subjects Catalog (المواد الدراسية الثمانية المحددة)
+  // 8. Master Subjects Catalog (المواد الدراسية المعتمدة)
   // ===========================================================================
-  console.log('📖 Seeding Master Subjects Catalog (8 subjects)...');
+  console.log('📖 Seeding Master Subjects Catalog (12 subjects)...');
   const subjectsData = [
     { name: 'اللغة العربية', code: 'ARAB' },
     { name: 'اللغة الإنجليزية', code: 'ENG' },
@@ -211,6 +211,10 @@ async function main() {
     { name: 'الجغرافيا', code: 'GEO' },
     { name: 'التربية الإسلامية', code: 'ISLAM' },
     { name: 'التاريخ', code: 'HIST' },
+    { name: 'تقنية المعلومات', code: 'INFOTECH' },
+    { name: 'الكيمياء', code: 'CHEM' },
+    { name: 'الفيزياء', code: 'PHYS' },
+    { name: 'الأحياء', code: 'BIO' },
   ];
 
   const subjectsList: { id: bigint; name: string; code: string }[] = [];
@@ -218,7 +222,7 @@ async function main() {
     const created = await prisma.subject.create({ data: sub });
     subjectsList.push(created);
   }
-  console.log('✅ Master Subjects created: اللغة العربية، اللغة الإنجليزية، العلوم، الرياضيات، الحاسوب، الجغرافيا، التربية الإسلامية، التاريخ.');
+  console.log('✅ Master Subjects created: اللغة العربية، اللغة الإنجليزية، العلوم، الرياضيات، الحاسوب، الجغرافيا، التربية الإسلامية، التاريخ، تقنية المعلومات، الكيمياء، الفيزياء، الأحياء.');
 
   // ===========================================================================
   // 9. Assigning Terms, Sections & Core Subjects to Classes (Phase 02-C)
@@ -226,7 +230,7 @@ async function main() {
   console.log('🔗 Linking Classes to Terms, Sections, and Subjects...');
 
   for (const cls of classesList) {
-    // 9.1 Link all 3 terms to each class (Term 1 is Active)
+    // 9.1 Link Terms (Term 1 & Term 2 for all; Term 3 only for 3rd Prep and 3rd Secondary)
     const term1Link = await prisma.classAcademicTerm.create({
       data: {
         class_id: cls.id,
@@ -245,14 +249,16 @@ async function main() {
       },
     });
 
-    await prisma.classAcademicTerm.create({
-      data: {
-        class_id: cls.id,
-        academic_term_id: termsList[2].id,
-        is_active: 0,
-        is_closed: 0,
-      },
-    });
+    if (['الصف الثالث الإعدادي', 'الصف الثالث الثانوي'].includes(cls.name)) {
+      await prisma.classAcademicTerm.create({
+        data: {
+          class_id: cls.id,
+          academic_term_id: termsList[2].id,
+          is_active: 0,
+          is_closed: 0,
+        },
+      });
+    }
 
     // 9.2 Link standard sections (شعبة أ وشعبة ب) to each class
     await prisma.classSection.create({
