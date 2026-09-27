@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useToast } from '../composables/useToast';
-import { backupApi, type BackupItem, type BackupSummary } from '../api/backup.api';
+import { backupApi, type BackupItem, type BackupSummary, type BackupType } from '../api/backup.api';
 import CreateBackupModal from '../components/backup/CreateBackupModal.vue';
 import RestoreBackupModal from '../components/backup/RestoreBackupModal.vue';
 import UploadBackupModal from '../components/backup/UploadBackupModal.vue';
@@ -23,6 +23,8 @@ import {
   RefreshCw,
   FileText,
   FolderArchive,
+  Package,
+  Layers,
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -31,10 +33,14 @@ const backups = ref<BackupItem[]>([]);
 const summary = ref<BackupSummary>({
   total_backups: 0,
   total_size: '0 B',
+  full_count: 0,
+  database_count: 0,
+  files_count: 0,
   storage_directory: '',
 });
 const loading = ref(false);
 const searchQuery = ref('');
+const activeTab = ref<'all' | BackupType>('all');
 
 // Modal states
 const showCreateModal = ref(false);
@@ -45,10 +51,11 @@ const deleting = ref(false);
 
 const tableColumns: TableColumn[] = [
   { key: 'filename', label: 'ملف النسخة الاحتياطية' },
+  { key: 'type', label: 'نوع النسخة والتصنيف' },
   { key: 'created_at', label: 'تاريخ وتوقيت الإنشاء' },
   { key: 'size', label: 'حجم الملف' },
   { key: 'note', label: 'الملاحظة والوصف' },
-  { key: 'actions', label: 'الإجراءات والعمليات', align: 'end' },
+  { key: 'actions', label: 'الإجراءات والعمليات', align: 'center' },
 ];
 
 const fetchBackups = async () => {
@@ -65,9 +72,18 @@ const fetchBackups = async () => {
 };
 
 const filteredBackups = computed(() => {
+  let list = backups.value;
+
+  // Filter by active tab
+  if (activeTab.value !== 'all') {
+    list = list.filter(b => b.type === activeTab.value);
+  }
+
+  // Filter by search query
   const q = searchQuery.value.trim().toLowerCase();
-  if (!q) return backups.value;
-  return backups.value.filter(
+  if (!q) return list;
+
+  return list.filter(
     b =>
       b.filename.toLowerCase().includes(q) ||
       (b.note && b.note.toLowerCase().includes(q)) ||
@@ -79,9 +95,18 @@ const latestBackup = computed(() => {
   return backups.value.length > 0 ? backups.value[0] : null;
 });
 
-const handleDownload = (backup: BackupItem) => {
-  const url = backupApi.getDownloadUrl(backup.filename);
-  window.open(url, '_blank');
+const downloadingFilename = ref<string | null>(null);
+
+const handleDownload = async (backup: BackupItem) => {
+  downloadingFilename.value = backup.filename;
+  try {
+    await backupApi.downloadBackup(backup.filename);
+    toast.success(`بدأ تنزيل ملف النسخة الاحتياطية (${backup.filename}) بنجاح.`);
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'تعذر تنزيل ملف النسخة الاحتياطية.');
+  } finally {
+    downloadingFilename.value = null;
+  }
 };
 
 const confirmDelete = async () => {
@@ -97,6 +122,28 @@ const confirmDelete = async () => {
   } finally {
     deleting.value = false;
   }
+};
+
+const getTypeMeta = (type: BackupType) => {
+  if (type === 'database') {
+    return {
+      label: 'قاعدة بيانات',
+      badgeClass: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+      icon: Database,
+    };
+  }
+  if (type === 'files') {
+    return {
+      label: 'ملفات ومرفقات',
+      badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+      icon: FolderArchive,
+    };
+  }
+  return {
+    label: 'نسخة شاملة',
+    badgeClass: 'bg-purple-500/10 text-bx-primary border-purple-500/20',
+    icon: Package,
+  };
 };
 
 onMounted(() => {
@@ -116,10 +163,10 @@ onMounted(() => {
           </div>
           <div>
             <h1 class="text-2xl sm:text-3xl font-black text-bx-title font-display tracking-tight">
-              إدارة النسخ الاحتياطي واستعادة البيانات
+              إدارة النسخ الاحتياطي واستعادة البيانات والملفات
             </h1>
             <p class="text-xs sm:text-sm text-bx-muted mt-1 font-medium">
-              تفريغ وحفظ قواعد البيانات، الاستعادة الآمنة، والأرشفة المضغوطة للتعافي من الكوارث (Disaster Recovery)
+              محرك النسخ المنفصل: تفريغ خفيف لقواعد البيانات، أرشفة شجرية للمرفقات، والتعافي من الكوارث (Disaster Recovery)
             </p>
           </div>
         </div>
@@ -129,7 +176,7 @@ onMounted(() => {
             type="button"
             @click="fetchBackups"
             :disabled="loading"
-            class="h-11 px-4 rounded-2xl border border-bx-border bg-bx-surface hover:bg-bx-bg text-bx-text font-bold text-xs flex items-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
+            class="h-10 px-4 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] hover:bg-bx-surface-2 text-bx-title font-bold text-xs flex items-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
             title="تحديث البيانات"
           >
             <RefreshCw :class="['w-4 h-4', { 'animate-spin': loading }]" />
@@ -139,7 +186,7 @@ onMounted(() => {
           <button
             type="button"
             @click="showUploadModal = true"
-            class="h-11 px-5 rounded-2xl border border-bx-border bg-bx-surface hover:bg-bx-bg text-bx-text font-bold text-xs flex items-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
+            class="h-10 px-4 rounded-xl border border-[#B4AED8] dark:border-white/[0.12] bg-[var(--bx-surface-solid)] hover:bg-bx-surface-2 text-bx-title font-bold text-xs flex items-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer"
           >
             <Upload class="w-4 h-4 text-bx-primary" />
             <span>رفع واستيراد نسخة</span>
@@ -148,7 +195,7 @@ onMounted(() => {
           <button
             type="button"
             @click="showCreateModal = true"
-            class="px-5 py-2.5 rounded-2xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+            class="h-10 px-5 rounded-xl bg-bx-primary hover:bg-bx-primary/90 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
           >
             <Plus class="w-4 h-4" />
             <span>إنشاء نسخة احتياطية</span>
@@ -159,16 +206,16 @@ onMounted(() => {
       <!-- KPI Overview Cards using TaqniyaKpiCard -->
       <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <TaqniyaKpiCard
-          :icon="FolderArchive"
-          title="إجمالي النسخ المتاحة"
+          :icon="Database"
+          title="إجمالي النسخ الاحتياطية"
           :value="summary.total_backups"
-          badgeText="ملفات ZIP مؤمنة"
+          :badgeText="`${summary.database_count} قاعدة | ${summary.files_count} ملفات | ${summary.full_count} شاملة`"
           variant="primary"
         />
 
         <TaqniyaKpiCard
           :icon="HardDrive"
-          title="المساحة التخزينية"
+          title="المساحة التخزينية الكلية"
           :value="summary.total_size"
           badgeText="storage/backups"
           variant="emerald"
@@ -186,26 +233,93 @@ onMounted(() => {
           :icon="ShieldCheck"
           title="حالة محرك الاستعادة"
           value="جاهز ونشط"
-          badgeText="MySQL 8.0 Chunked"
+          badgeText="MySQL + Files Atomic"
           :pulseBadge="true"
           variant="amber"
         />
       </section>
 
-      <!-- Search and Controls Bar -->
-      <section class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-bx-surface border border-bx-border shadow-xs">
-        <div class="relative w-full sm:w-80">
+      <!-- Type Filter Tabs Navigation -->
+      <section class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-2 rounded-2xl bg-bx-surface border border-bx-border shadow-xs">
+        <div class="flex items-center gap-1.5 overflow-x-auto p-1">
+          <button
+            type="button"
+            @click="activeTab = 'all'"
+            :class="[
+              'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0',
+              activeTab === 'all'
+                ? 'bg-bx-primary text-white shadow-xs'
+                : 'text-bx-muted hover:text-bx-title hover:bg-bx-surface-2'
+            ]"
+          >
+            <Layers class="w-3.5 h-3.5" />
+            <span>كافة النسخ</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full" :class="activeTab === 'all' ? 'bg-white/20' : 'bg-bx-surface-3'">
+              {{ backups.length }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeTab = 'database'"
+            :class="[
+              'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0',
+              activeTab === 'database'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-bx-muted hover:text-bx-title hover:bg-bx-surface-2'
+            ]"
+          >
+            <Database class="w-3.5 h-3.5" />
+            <span>قاعدة البيانات</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full" :class="activeTab === 'database' ? 'bg-white/20' : 'bg-bx-surface-3'">
+              {{ summary.database_count }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeTab = 'files'"
+            :class="[
+              'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0',
+              activeTab === 'files'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-bx-muted hover:text-bx-title hover:bg-bx-surface-2'
+            ]"
+          >
+            <FolderArchive class="w-3.5 h-3.5" />
+            <span>الملفات والمرفقات</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full" :class="activeTab === 'files' ? 'bg-white/20' : 'bg-bx-surface-3'">
+              {{ summary.files_count }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeTab = 'full'"
+            :class="[
+              'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0',
+              activeTab === 'full'
+                ? 'bg-purple-600 text-white shadow-xs'
+                : 'text-bx-muted hover:text-bx-title hover:bg-bx-surface-2'
+            ]"
+          >
+            <Package class="w-3.5 h-3.5" />
+            <span>نسخ شاملة</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full" :class="activeTab === 'full' ? 'bg-white/20' : 'bg-bx-surface-3'">
+              {{ summary.full_count }}
+            </span>
+          </button>
+        </div>
+
+        <!-- Search input -->
+        <div class="relative w-full sm:w-72 px-1">
           <input
             type="text"
             v-model="searchQuery"
-            placeholder="ابحث باسم الملف أو الملاحظة..."
-            class="w-full h-11 pr-10 pl-4 rounded-xl border border-bx-border bg-bx-bg text-xs font-bold text-bx-text focus:outline-none focus:border-bx-primary transition-all"
+            placeholder="ابحث بالاسم أو الملاحظة..."
+            class="w-full h-9 pr-9 pl-4 rounded-xl border border-bx-border bg-bx-bg text-xs font-bold text-bx-text focus:outline-none focus:border-bx-primary transition-all"
           />
-          <Search class="w-4 h-4 text-bx-muted absolute right-3.5 top-3.5" />
-        </div>
-
-        <div class="text-xs font-bold text-bx-muted">
-          عرض <span class="text-bx-primary font-extrabold">{{ filteredBackups.length }}</span> من إجمالي <span class="text-bx-title font-extrabold">{{ backups.length }}</span> نسخة
+          <Search class="w-3.5 h-3.5 text-bx-muted absolute right-3.5 top-2.5" />
         </div>
       </section>
 
@@ -216,8 +330,8 @@ onMounted(() => {
           :items="filteredBackups"
           :isLoading="loading"
           rowKey="filename"
-          emptyTitle="لا توجد نسخ احتياطية متاحة حالياً"
-          emptySubtitle="يمكنك إنشاء نسخة احتياطية جديدة لقاعدة البيانات بنقرة زر أو استيراد ملف خارجي."
+          emptyTitle="لا توجد نسخ احتياطية مطابقة للتصفية"
+          emptySubtitle="يمكنك إنشاء نسخة احتياطية جديدة أو استيراد ملف خارجي في أي وقت."
           :emptyIcon="Database"
           loadingText="جاري قراءة وفحص ملفات النسخ الاحتياطية..."
         >
@@ -225,14 +339,26 @@ onMounted(() => {
           <template #cell-filename="{ item }">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-xl bg-bx-primary/10 border border-bx-primary/20 text-bx-primary flex items-center justify-center shrink-0">
-                <Database class="w-4 h-4" />
+                <Database v-if="item.type === 'database'" class="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <FolderArchive v-else-if="item.type === 'files'" class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <Package v-else class="w-4 h-4 text-bx-primary" />
               </div>
               <div class="min-w-0">
                 <span class="font-mono text-xs font-bold text-bx-title block dir-ltr text-right truncate">
                   {{ item.filename }}
                 </span>
-                <span class="text-[10px] font-semibold text-bx-muted">أرشيف SQL مضغوط</span>
+                <span class="text-[10px] font-semibold text-bx-muted">أرشيف مضغوط (.zip)</span>
               </div>
+            </div>
+          </template>
+
+          <!-- Type Cell -->
+          <template #cell-type="{ item }">
+            <div class="flex items-center gap-1.5">
+              <component :is="getTypeMeta(item.type).icon" class="w-3.5 h-3.5 text-bx-muted" />
+              <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold border" :class="getTypeMeta(item.type).badgeClass">
+                {{ getTypeMeta(item.type).label }}
+              </span>
             </div>
           </template>
 
@@ -260,47 +386,46 @@ onMounted(() => {
             <span v-else class="text-bx-muted italic text-[11px]">بدون ملاحظة</span>
           </template>
 
-          <!-- Actions Cell -->
+          <!-- Standard Actions Cell with Design System Circular Buttons -->
           <template #cell-actions="{ item }">
-            <div class="flex items-center justify-end gap-2">
-              <!-- Download -->
+            <div class="flex items-center justify-center gap-1.5">
+              <!-- Download Button -->
               <button
                 type="button"
                 @click="handleDownload(item)"
-                class="h-8 px-3 rounded-xl border border-bx-primary/30 bg-bx-primary/10 hover:bg-bx-primary hover:text-white text-bx-primary font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-                title="تنزيل إلى جهازك"
+                :disabled="downloadingFilename === item.filename"
+                class="w-7 h-7 rounded-full border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95 disabled:opacity-50"
+                title="تنزيل ملف النسخة الاحتياطية"
               >
-                <Download class="w-3.5 h-3.5" />
-                <span>تنزيل</span>
+                <RefreshCw v-if="downloadingFilename === item.filename" class="w-3.5 h-3.5 animate-spin" />
+                <Download v-else class="w-3.5 h-3.5" />
               </button>
 
-              <!-- Restore -->
+              <!-- Restore Button -->
               <button
                 type="button"
                 @click="restoreTarget = item"
-                class="h-8 px-3 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-                title="استعادة قاعدة البيانات"
+                class="w-7 h-7 rounded-full border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-300 hover:bg-amber-600 hover:text-white dark:hover:bg-amber-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                title="استعادة البيانات من هذه النسخة"
               >
                 <RotateCcw class="w-3.5 h-3.5" />
-                <span>استعادة</span>
               </button>
 
-              <!-- Delete -->
+              <!-- Delete Button -->
               <button
                 type="button"
                 @click="deleteTarget = item"
-                class="h-8 px-2.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-                title="حذف من السيرفر"
+                class="w-7 h-7 rounded-full border border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all duration-150 cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                title="حذف ملف النسخة الاحتياطية"
               >
                 <Trash2 class="w-3.5 h-3.5" />
-                <span>حذف</span>
               </button>
             </div>
           </template>
         </TaqniyaTable>
       </section>
 
-      <!-- Modals -->
+      <!-- Modals Integration -->
       <CreateBackupModal
         v-if="showCreateModal"
         @close="showCreateModal = false"
@@ -336,7 +461,7 @@ onMounted(() => {
 
         <div v-if="deleteTarget" class="space-y-4" dir="rtl">
           <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-900 dark:text-rose-200 text-xs leading-relaxed">
-            هل أنت متأكد من رغبتك في حذف ملف النسخة الاحتياطية <strong class="font-mono text-rose-700 dark:text-rose-300 font-bold">{{ deleteTarget.filename }}</strong>؟ لن تتمكن من استعادة البيانات من هذا الملف بعد حذفه.
+            هل أنت متأكد من رغبتك في حذف ملف النسخة الاحتياطية <strong class="font-mono text-rose-700 dark:text-rose-300 font-bold">{{ deleteTarget.filename }}</strong>؟ لن تتمكن من استعادة البيانات أو الملفات من هذا الأرشيف بعد حذفه.
           </div>
         </div>
 

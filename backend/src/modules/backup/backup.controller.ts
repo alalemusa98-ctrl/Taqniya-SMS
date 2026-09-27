@@ -5,6 +5,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   UploadedFile,
   UseInterceptors,
@@ -15,7 +16,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { BackupService, type UploadedMulterFile } from './backup.service.js';
-import { CreateBackupDto } from './dto/create-backup.dto.js';
+import { CreateBackupDto, type BackupType } from './dto/create-backup.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
@@ -27,8 +28,8 @@ export class BackupController {
   constructor(private readonly backupService: BackupService) {}
 
   @Get()
-  async listBackups() {
-    const data = await this.backupService.listBackups();
+  async listBackups(@Query('type') type?: BackupType) {
+    const data = await this.backupService.listBackups(type);
     return {
       success: true,
       data,
@@ -38,7 +39,7 @@ export class BackupController {
   @Post('create')
   @HttpCode(HttpStatus.CREATED)
   async createBackup(@Body() dto: CreateBackupDto) {
-    const data = await this.backupService.createBackup(dto?.note);
+    const data = await this.backupService.createBackup(dto);
     return {
       success: true,
       message: 'تم إنشاء النسخة الاحتياطية بنجاح.',
@@ -64,7 +65,7 @@ export class BackupController {
     const data = await this.backupService.restoreBackup(filename);
     return {
       success: true,
-      message: 'تمت استعادة قاعدة البيانات من النسخة الاحتياطية بنجاح.',
+      message: 'تمت استعادة النسخة الاحتياطية بنجاح.',
       data,
     };
   }

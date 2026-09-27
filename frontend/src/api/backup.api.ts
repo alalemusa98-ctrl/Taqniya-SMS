@@ -1,7 +1,10 @@
 import { apiClient } from './client';
 
+export type BackupType = 'full' | 'database' | 'files';
+
 export interface BackupItem {
   filename: string;
+  type: BackupType;
   size: string;
   size_bytes: number;
   created_at: string;
@@ -11,6 +14,9 @@ export interface BackupItem {
 export interface BackupSummary {
   total_backups: number;
   total_size: string;
+  full_count: number;
+  database_count: number;
+  files_count: number;
   storage_directory: string;
 }
 
@@ -20,16 +26,18 @@ export interface BackupListResponse {
 }
 
 export interface CreateBackupDto {
+  type?: BackupType;
   note?: string;
 }
 
 export const backupApi = {
-  async listBackups(): Promise<BackupListResponse> {
-    const res = await apiClient.get<{ success: boolean; data: BackupListResponse }>('/backups');
+  async listBackups(type?: BackupType): Promise<BackupListResponse> {
+    const params = type ? { type } : undefined;
+    const res = await apiClient.get<{ success: boolean; data: BackupListResponse }>('/backups', { params });
     return res.data.data;
   },
 
-  async createBackup(dto: CreateBackupDto): Promise<BackupItem> {
+  async createBackup(dto: CreateBackupDto = {}): Promise<BackupItem> {
     const res = await apiClient.post<{ success: boolean; message: string; data: BackupItem }>('/backups/create', dto);
     return res.data.data;
   },
@@ -57,6 +65,21 @@ export const backupApi = {
       `/backups/${encodeURIComponent(filename)}`,
     );
     return res.data.data;
+  },
+
+  async downloadBackup(filename: string): Promise<void> {
+    const res = await apiClient.get(`/backups/download/${encodeURIComponent(filename)}`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([res.data], { type: 'application/zip' });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
   },
 
   getDownloadUrl(filename: string): string {

@@ -1,9 +1,9 @@
 <template>
   <TaqniyaModal
     :is-open="isOpen"
-    title="إنشاء نسخة احتياطية جديدة (Database Backup)"
-    subtitle="توليد وتفريغ كامل لقاعدة البيانات وضغطها في حزمة ZIP مؤمنة"
-    max-width="xl"
+    title="إنشاء نسخة احتياطية جديدة (Create Backup)"
+    subtitle="اختر نوع النسخ الاحتياطي المناسب، وتوليد حزمة مضغوطة مؤمنة"
+    max-width="2xl"
     @close="emit('close')"
   >
     <template #icon>
@@ -13,15 +13,97 @@
     </template>
 
     <div class="space-y-4" dir="rtl">
-      <!-- Info Alert Card -->
-      <div class="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-900 dark:text-purple-200 flex items-start gap-3">
-        <div class="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0 mt-0.5">
-          <Database class="w-4 h-4" />
+      <!-- Backup Type Selection Cards -->
+      <div class="space-y-2">
+        <label class="block text-xs font-bold text-bx-title flex items-center gap-1.5">
+          <Layers class="w-4 h-4 text-bx-primary" />
+          <span>نوع النسخة الاحتياطية المطلوبة:</span>
+        </label>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <!-- Database Only Card -->
+          <button
+            type="button"
+            @click="selectedType = 'database'"
+            :class="[
+              'p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between gap-2 cursor-pointer',
+              selectedType === 'database'
+                ? 'border-bx-primary bg-purple-500/10 shadow-sm ring-1 ring-bx-primary'
+                : 'border-bx-border bg-bx-surface-2 hover:bg-bx-surface-3'
+            ]"
+          >
+            <div class="flex items-center justify-between w-full">
+              <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+                <Database class="w-4 h-4" />
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">موصى بها</span>
+            </div>
+            <div>
+              <span class="text-xs font-black text-bx-title block">قاعدة البيانات فقط</span>
+              <span class="text-[10px] text-bx-muted mt-0.5 block leading-tight">تفريغ فوري وسريع للجداول والبيانات (خفيف جداً)</span>
+            </div>
+          </button>
+
+          <!-- Files Only Card -->
+          <button
+            type="button"
+            @click="selectedType = 'files'"
+            :class="[
+              'p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between gap-2 cursor-pointer',
+              selectedType === 'files'
+                ? 'border-bx-primary bg-purple-500/10 shadow-sm ring-1 ring-bx-primary'
+                : 'border-bx-border bg-bx-surface-2 hover:bg-bx-surface-3'
+            ]"
+          >
+            <div class="flex items-center justify-between w-full">
+              <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                <FolderArchive class="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <span class="text-xs font-black text-bx-title block">الملفات فقط</span>
+              <span class="text-[10px] text-bx-muted mt-0.5 block leading-tight">أرشفة مجلد المرفقات والواجبات المرفوعة على القرص</span>
+            </div>
+          </button>
+
+          <!-- Full Backup Card -->
+          <button
+            type="button"
+            @click="selectedType = 'full'"
+            :class="[
+              'p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between gap-2 cursor-pointer',
+              selectedType === 'full'
+                ? 'border-bx-primary bg-purple-500/10 shadow-sm ring-1 ring-bx-primary'
+                : 'border-bx-border bg-bx-surface-2 hover:bg-bx-surface-3'
+            ]"
+          >
+            <div class="flex items-center justify-between w-full">
+              <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-bx-primary flex items-center justify-center border border-purple-500/20">
+                <Package class="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <span class="text-xs font-black text-bx-title block">نسخة كاملة شاملة</span>
+              <span class="text-[10px] text-bx-muted mt-0.5 block leading-tight">قاعدة البيانات + كافة ملفات ومرفقات النظام</span>
+            </div>
+          </button>
         </div>
-        <div class="text-xs leading-relaxed space-y-1">
-          <span class="font-bold block text-purple-700 dark:text-purple-300">تفريغ فوري وتجزئة دفعية:</span>
-          <span>
-            سيقوم المحرك بتصدير الجداول والبيانات بنظام الـ Chunking (دفعات 500 سجل) لضمان استقرار الذاكرة، ثم ضغط ملف الـ SQL مع الملاحظة المرفقة داخل ملف ZIP في مسار التخزين.
+      </div>
+
+      <!-- Info Alert Card -->
+      <div class="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-900 dark:text-purple-200 flex items-start gap-3">
+        <div class="w-7 h-7 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0 mt-0.5">
+          <Info class="w-4 h-4" />
+        </div>
+        <div class="text-xs leading-relaxed">
+          <span v-if="selectedType === 'database'">
+            <strong>قاعدة البيانات:</strong> سيتم تفريغ جداول MySQL بنظام الـ Chunking (دفعات 500 سجل) لضمان الخفة والسرعة القصوى، وضغطها في ملف SQL وحفظها في <code class="font-mono text-[11px] bg-purple-500/20 px-1 rounded">storage/backups/database/</code>.
+          </span>
+          <span v-else-if="selectedType === 'files'">
+            <strong>أرشفة الملفات:</strong> سيتم حزم مجلد المرفقات والواجبات <code class="font-mono text-[11px] bg-purple-500/20 px-1 rounded">storage/uploads/</code> بشجرته الكاملة وحفظه في <code class="font-mono text-[11px] bg-purple-500/20 px-1 rounded">storage/backups/files/</code>.
+          </span>
+          <span v-else>
+            <strong>النسخة الشاملة:</strong> سيتم دمج تفريغ قاعدة البيانات الكامل مع مجلد المرفقات داخل حزمة ZIP موحدة وحفظها في <code class="font-mono text-[11px] bg-purple-500/20 px-1 rounded">storage/backups/full/</code>.
           </span>
         </div>
       </div>
@@ -34,7 +116,7 @@
         </label>
         <textarea
           v-model="note"
-          rows="3"
+          rows="2"
           maxlength="500"
           placeholder="مثال: نسخة احتياطية قبل تعديل الهيكل الأكاديمي، أو قبل اعتماد الترحيل السنوي..."
           class="w-full bg-[var(--bx-surface-solid)] border border-[#B4AED8] dark:border-white/[0.12] rounded-xl p-3 text-xs text-bx-title placeholder:text-bx-muted outline-none focus:border-bx-primary transition-all resize-none"
@@ -46,8 +128,8 @@
       </div>
 
       <!-- Preset Quick Suggestions -->
-      <div class="p-3.5 bg-bx-surface-2 rounded-2xl border border-bx-border space-y-2">
-        <div class="text-xs font-bold text-bx-muted flex items-center gap-1.5">
+      <div class="p-3 bg-bx-surface-2 rounded-2xl border border-bx-border space-y-1.5">
+        <div class="text-[11px] font-bold text-bx-muted flex items-center gap-1.5">
           <Sparkles class="w-3.5 h-3.5 text-amber-500" />
           <span>نماذج مقترحة للملاحظات:</span>
         </div>
@@ -57,7 +139,7 @@
             :key="idx"
             type="button"
             @click="note = preset"
-            class="text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-bx-surface hover:bg-purple-500/10 hover:text-bx-primary text-bx-text border border-bx-border transition-all cursor-pointer"
+            class="text-[10px] font-semibold px-2.5 py-1 rounded-xl bg-bx-surface hover:bg-purple-500/10 hover:text-bx-primary text-bx-text border border-bx-border transition-all cursor-pointer"
           >
             {{ preset }}
           </button>
@@ -65,7 +147,7 @@
       </div>
 
       <!-- Error Message -->
-      <div v-if="errorMessage" class="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-2">
+      <div v-if="errorMessage" class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-2">
         <AlertCircle class="w-4 h-4 shrink-0" />
         <span>{{ errorMessage }}</span>
       </div>
@@ -101,8 +183,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import TaqniyaModal from '../ui/TaqniyaModal.vue';
-import { backupApi } from '../../api/backup.api';
-import { Database, FileText, Sparkles, Loader2, AlertCircle } from 'lucide-vue-next';
+import { backupApi, type BackupType } from '../../api/backup.api';
+import { Database, FileText, Sparkles, Loader2, AlertCircle, Layers, FolderArchive, Package, Info } from 'lucide-vue-next';
 
 interface Props {
   isOpen?: boolean;
@@ -117,12 +199,13 @@ const emit = defineEmits<{
   (e: 'success', message: string): void;
 }>();
 
+const selectedType = ref<BackupType>('database');
 const note = ref('');
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
 const presetNotes = [
-  'نسخة احتياطية دورية للنظام',
+  'نسخة دورية لقاعدة البيانات',
   'نسخة احتياطية قبل تعديل الهيكل الأكاديمي',
   'نسخة احتياطية قبل رصد الدرجات وإصدار الصحائف',
   'نسخة احتياطية قبل اعتماد الترحيل السنوي وتسكين الطلاب',
@@ -133,7 +216,10 @@ const handleSubmit = async () => {
   errorMessage.value = null;
 
   try {
-    const result = await backupApi.createBackup({ note: note.value.trim() || undefined });
+    const result = await backupApi.createBackup({
+      type: selectedType.value,
+      note: note.value.trim() || undefined,
+    });
     emit('success', `تم إنشاء النسخة الاحتياطية (${result.filename}) بنجاح.`);
     emit('close');
   } catch (err: any) {

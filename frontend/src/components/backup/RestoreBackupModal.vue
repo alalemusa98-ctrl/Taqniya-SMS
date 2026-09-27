@@ -1,8 +1,8 @@
 <template>
   <TaqniyaModal
     :is-open="isOpen"
-    title="تأكيد استعادة قاعدة البيانات (Database Restore)"
-    subtitle="استرجاع البيانات من نسخة احتياطية سابقة"
+    title="تأكيد استعادة النسخة الاحتياطية (Restore Backup)"
+    :subtitle="getModalSubtitle()"
     max-width="xl"
     @close="emit('close')"
   >
@@ -19,9 +19,15 @@
           <AlertTriangle class="w-4 h-4" />
         </div>
         <div class="text-xs leading-relaxed space-y-1">
-          <div class="font-extrabold text-sm text-amber-700 dark:text-amber-300">تحذير أمني واستعادة شاملة:</div>
-          <div>
-            عملية الاستعادة ستقوم <strong class="text-rose-600 dark:text-rose-400">بمسح واستبدال كافة الجداول والبيانات الحالية</strong> ببيانات النسخة المحددة. يُنصح دائماً بإنشاء نسخة احتياطية من الحالة الراهنة أولاً قبل المتابعة.
+          <div class="font-extrabold text-sm text-amber-700 dark:text-amber-300">تحذير أمني واستعادة البيانات:</div>
+          <div v-if="backup.type === 'database'">
+            عملية الاستعادة ستقوم <strong class="text-rose-600 dark:text-rose-400">بمسح واستبدال كافة جداول وبيانات MySQL الحالية</strong> ببيانات ملف SQL المرفق. لن تتأثر ملفات المرفقات على القرص.
+          </div>
+          <div v-else-if="backup.type === 'files'">
+            عملية الاستعادة ستقوم <strong class="text-rose-600 dark:text-rose-400">باستبدال وتحديث مجلد المرفقات والواجبات</strong> على القرص بملفات النسخة المحددة. لن تتأثر جداول قاعدة البيانات.
+          </div>
+          <div v-else>
+            عملية الاستعادة ستقوم <strong class="text-rose-600 dark:text-rose-400">باستبدال كامل لقاعدة البيانات ومجلد المرفقات معاً</strong> ببيانات النسخة المحددة.
           </div>
         </div>
       </div>
@@ -30,7 +36,9 @@
       <div class="p-4 rounded-2xl bg-bx-surface-2 border border-bx-border space-y-3">
         <div class="flex items-center gap-3 border-b border-bx-border/60 pb-2.5">
           <div class="w-9 h-9 rounded-xl bg-bx-primary/10 text-bx-primary flex items-center justify-center shrink-0">
-            <Database class="w-4 h-4" />
+            <Database v-if="backup.type === 'database'" class="w-4 h-4" />
+            <FolderArchive v-else-if="backup.type === 'files'" class="w-4 h-4" />
+            <Package v-else class="w-4 h-4" />
           </div>
           <div class="min-w-0 flex-1">
             <div class="font-mono text-xs font-bold text-bx-title truncate dir-ltr text-right">
@@ -39,6 +47,9 @@
             <div class="text-[11px] text-bx-muted flex items-center gap-3 mt-0.5 font-medium">
               <span class="flex items-center gap-1"><Clock class="w-3.5 h-3.5 text-bx-primary" /> {{ backup.created_at }}</span>
               <span class="flex items-center gap-1"><HardDrive class="w-3.5 h-3.5 text-bx-primary" /> {{ backup.size }}</span>
+              <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold" :class="getTypeBadgeClass(backup.type)">
+                {{ getTypeLabel(backup.type) }}
+              </span>
             </div>
           </div>
         </div>
@@ -57,7 +68,7 @@
           class="mt-0.5 w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
         />
         <span class="text-xs font-bold text-rose-800 dark:text-rose-200 leading-relaxed">
-          أقر بأنني على دراية تامة بأن هذه العملية ستستبدل البيانات الحالية ببيانات النسخة المحددة في معاملة ذرية ولا يمكن التراجع عنها بعد البدء.
+          أقر بأنني على دراية تامة بأن هذه العملية ستستبدل البيانات/الملفات الحالية بمحتويات النسخة المحددة في معاملة ذرية ولا يمكن التراجع عنها بعد البدء.
         </span>
       </label>
 
@@ -88,7 +99,7 @@
         >
           <Loader2 v-if="loading" class="w-4 h-4 animate-spin" />
           <RotateCcw v-else class="w-4 h-4" />
-          <span>{{ loading ? 'جاري فك الضغط واستعادة البيانات...' : 'تأكيد وبدء استعادة البيانات الآن' }}</span>
+          <span>{{ loading ? 'جاري فك الضغط واستعادة المحتويات...' : 'تأكيد وبدء الاستعادة الآن' }}</span>
         </button>
       </div>
     </template>
@@ -98,8 +109,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import TaqniyaModal from '../ui/TaqniyaModal.vue';
-import { backupApi, type BackupItem } from '../../api/backup.api';
-import { AlertTriangle, RotateCcw, Database, HardDrive, Clock, FileText, Loader2, AlertCircle } from 'lucide-vue-next';
+import { backupApi, type BackupItem, type BackupType } from '../../api/backup.api';
+import { AlertTriangle, RotateCcw, Database, FolderArchive, Package, HardDrive, Clock, FileText, Loader2, AlertCircle } from 'lucide-vue-next';
 
 interface Props {
   backup: BackupItem;
@@ -119,6 +130,24 @@ const acknowledged = ref(false);
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
+const getModalSubtitle = () => {
+  if (props.backup.type === 'database') return 'استرجاع وتطبيق جداول وبيانات قاعدة البيانات';
+  if (props.backup.type === 'files') return 'استرجاع وفك ضغط شجرة مجلد المرفقات والملفات';
+  return 'استرجاع شامل لقاعدة البيانات والمرفقات';
+};
+
+const getTypeLabel = (type: BackupType) => {
+  if (type === 'database') return 'قاعدة بيانات';
+  if (type === 'files') return 'ملفات ومرفقات';
+  return 'نسخة كاملة';
+};
+
+const getTypeBadgeClass = (type: BackupType) => {
+  if (type === 'database') return 'bg-blue-500/10 text-blue-600 border border-blue-500/20';
+  if (type === 'files') return 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
+  return 'bg-purple-500/10 text-bx-primary border border-purple-500/20';
+};
+
 const handleRestore = async () => {
   if (!acknowledged.value) return;
 
@@ -127,10 +156,10 @@ const handleRestore = async () => {
 
   try {
     const res = await backupApi.restoreBackup(props.backup.filename);
-    emit('success', `تمت استعادة قاعدة البيانات من النسخة (${res.filename}) بنجاح.`);
+    emit('success', `تمت استعادة النسخة الاحتياطية (${res.filename}) بنجاح.`);
     emit('close');
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.message || 'فشلت استعادة قاعدة البيانات، يرجى التحقق من سلامة النسخة.';
+    errorMessage.value = err.response?.data?.message || 'فشلت استعادة النسخة الاحتياطية، يرجى التحقق من سلامة الأرشيف.';
   } finally {
     loading.value = false;
   }
