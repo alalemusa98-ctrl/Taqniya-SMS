@@ -1,4 +1,13 @@
-import { IsOptional, IsString, IsInt, Min, IsBoolean } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  IsBoolean,
+  IsArray,
+  IsNumber,
+  ValidateNested,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export class SectionAuditProgressQueryDto {
@@ -80,6 +89,7 @@ export class SecondRoundSubjectGradeDto {
   subject_name!: string;
 
   @Type(() => Number)
+  @IsNumber({}, { message: 'درجة امتحان الدور الثاني يجب أن تكون رقماً.' })
   @Min(0, { message: 'درجة امتحان الدور الثاني لا يمكن أن تكون سالبة.' })
   second_round_exam_score!: number;
 }
@@ -99,5 +109,8 @@ export class RecordSecondRoundDto {
   @IsBoolean()
   cap_passing_score?: boolean;
 
+  @IsArray({ message: 'درجات الدور الثاني يجب أن تكون مصفوفة.' })
+  @ValidateNested({ each: true })
+  @Type(() => SecondRoundSubjectGradeDto)
   second_round_grades!: SecondRoundSubjectGradeDto[];
 }

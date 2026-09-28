@@ -16,6 +16,45 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
 
   const testAdminId = 1;
 
+  async function cleanupTestData() {
+    try {
+      await prisma.academicTerm.deleteMany({
+        where: {
+          OR: [
+            { name: { startsWith: 'Term-' } },
+            { name: { startsWith: 'DelTerm-' } },
+            { name: { startsWith: 'UpdatedTerm-' } },
+            { name: { startsWith: 'OtherName-' } },
+            { term_number: { gt: 3 } },
+          ],
+        },
+      });
+      await prisma.academicStage.deleteMany({
+        where: {
+          OR: [
+            { name: { startsWith: 'Stage-' } },
+            { name: { startsWith: 'UpdatedStage-' } },
+            { name: { startsWith: 'ToDeleteStage-' } },
+            { name: { startsWith: 'DupStage-' } },
+          ],
+        },
+      });
+      await prisma.academicYear.deleteMany({
+        where: {
+          OR: [
+            { name: { startsWith: 'TestYear-' } },
+            { name: { startsWith: 'SecondYear-' } },
+            { name: { startsWith: 'ToDelete-' } },
+            { name: { startsWith: 'Updated-' } },
+            { name: { startsWith: 'InvalidDates-' } },
+          ],
+        },
+      });
+    } catch {
+      // ignore
+    }
+  }
+
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -25,9 +64,12 @@ describe('Phase 02-A: Academic Years, Terms & Stages (TDD Verification)', () => 
     termsService = moduleRef.get<TermsService>(TermsService);
     stagesService = moduleRef.get<StagesService>(StagesService);
     prisma = moduleRef.get<PrismaService>(PrismaService);
+
+    await cleanupTestData();
   });
 
   afterAll(async () => {
+    await cleanupTestData();
     await prisma.$disconnect();
     await moduleRef.close();
   });
