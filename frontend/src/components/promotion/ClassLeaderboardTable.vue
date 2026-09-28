@@ -48,12 +48,12 @@
         <div v-if="isStudentSearch" class="inline-flex items-center justify-center min-w-[32px] px-2 py-0.5 rounded-lg text-xs font-mono font-bold text-bx-muted bg-black/5 dark:bg-white/5 border border-bx-border/50">
           <span>#{{ index + 1 }}</span>
         </div>
-        <!-- In Leaderboard mode: competitive ranking with medals -->
-        <div v-else class="inline-flex items-center justify-center min-w-[36px] px-2 py-1 rounded-lg text-xs font-black" :class="getRankBadgeClass(item.calculated_rank || item.rank || (index + 1))">
-          <span v-if="(item.calculated_rank || item.rank || (index + 1)) === 1">🥇 1</span>
-          <span v-else-if="(item.calculated_rank || item.rank || (index + 1)) === 2">🥈 2</span>
-          <span v-else-if="(item.calculated_rank || item.rank || (index + 1)) === 3">🥉 3</span>
-          <span v-else>{{ item.calculated_rank || item.rank || (index + 1) }}</span>
+        <!-- In Leaderboard mode: competitive ranking with medals (tied percentages share the exact same rank) -->
+        <div v-else class="inline-flex items-center justify-center min-w-[36px] px-2 py-1 rounded-lg text-xs font-black" :class="getRankBadgeClass(item.calculated_rank || (index + 1))">
+          <span v-if="(item.calculated_rank || (index + 1)) === 1">🥇 1</span>
+          <span v-else-if="(item.calculated_rank || (index + 1)) === 2">🥈 2</span>
+          <span v-else-if="(item.calculated_rank || (index + 1)) === 3">🥉 3</span>
+          <span v-else>{{ item.calculated_rank || (index + 1) }}</span>
         </div>
       </template>
 
@@ -189,8 +189,50 @@ const columns = computed<TableColumn[]>(() => [
   { key: 'actions', label: 'الإجراءات', align: 'center', width: '80px' },
 ]);
 
+interface RankedTranscript extends StudentTranscript {
+  calculated_rank: number;
+}
+
+const rankedTranscripts = computed<RankedTranscript[]>(() => {
+  const list = Array.isArray(props.transcripts) ? [...props.transcripts] : [];
+  if (list.length === 0) return [];
+
+  // Sort list by percentage descending, then total_score descending
+  const sorted = [...list].sort((a, b) => {
+    const diffPct = Number(b.percentage) - Number(a.percentage);
+    if (Math.abs(diffPct) > 0.001) return diffPct;
+    return Number(b.total_score) - Number(a.total_score);
+  });
+
+  let currentRank = 1;
+  const result: RankedTranscript[] = [];
+
+  for (let i = 0; i < sorted.length; i++) {
+    const current = sorted[i];
+    if (i > 0) {
+      const prev = sorted[i - 1];
+      const currentPct = Number(current.percentage);
+      const prevPct = Number(prev.percentage);
+      const currentScore = Number(current.total_score);
+      const prevScore = Number(prev.total_score);
+
+      // If percentage or total score differs from previous, advance the rank
+      if (Math.abs(currentPct - prevPct) > 0.001 || Math.abs(currentScore - prevScore) > 0.001) {
+        currentRank = currentRank + 1;
+      }
+    }
+
+    result.push({
+      ...current,
+      calculated_rank: currentRank,
+    });
+  }
+
+  return result;
+});
+
 const filteredTranscripts = computed(() => {
-  const list = Array.isArray(props.transcripts) ? props.transcripts : [];
+  const list = rankedTranscripts.value;
   if (!searchTerm.value.trim()) {
     return list;
   }

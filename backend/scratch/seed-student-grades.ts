@@ -238,10 +238,25 @@ async function main() {
       }
 
       // Sort by percentage descending for rank within section
-      evaluatedStudents.sort((a, b) => b.percentage - a.percentage);
+      evaluatedStudents.sort((a, b) => {
+        const diff = b.percentage - a.percentage;
+        if (Math.abs(diff) > 0.001) return diff;
+        return b.totalScore - a.totalScore;
+      });
 
-      for (let rank = 1; rank <= evaluatedStudents.length; rank++) {
-        const item = evaluatedStudents[rank - 1];
+      let currentSectionRank = 1;
+      for (let idx = 0; idx < evaluatedStudents.length; idx++) {
+        const item = evaluatedStudents[idx];
+
+        if (idx > 0) {
+          const prev = evaluatedStudents[idx - 1];
+          if (
+            Math.abs(item.percentage - prev.percentage) > 0.001 ||
+            Math.abs(item.totalScore - prev.totalScore) > 0.001
+          ) {
+            currentSectionRank = currentSectionRank + 1;
+          }
+        }
 
         const transcriptData = {
           term_name: activeClassTerm.academic_term.name,
@@ -271,7 +286,7 @@ async function main() {
             total_score: item.totalScore,
             percentage: item.percentage,
             final_status: item.finalStatus,
-            rank: rank,
+            rank: currentSectionRank,
             transcript_data: transcriptData,
           },
         });
