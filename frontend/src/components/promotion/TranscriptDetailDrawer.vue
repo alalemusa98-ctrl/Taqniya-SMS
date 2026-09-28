@@ -128,67 +128,110 @@
             </span>
           </div>
 
-          <div class="overflow-x-auto rounded-2xl border border-[#B4AED8]/50 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] print:border-black">
-            <table class="w-full text-right text-xs border-collapse">
+          <div class="overflow-x-auto rounded-2xl border-2 border-[#8c8275]/40 dark:border-white/10 bg-[var(--bx-surface-solid)] shadow-sm print:border-black print:rounded-none">
+            <table class="w-full text-center text-xs border-collapse border border-[#8c8275]/40 dark:border-white/10 print:border-black print:text-black">
               <thead>
-                <tr class="bg-black/[0.03] dark:bg-white/[0.03] text-bx-muted font-bold border-b border-[#B4AED8]/40 dark:border-white/[0.08] print:bg-gray-100 print:text-black">
-                  <th class="py-3 px-3 text-center w-12 border-l border-[#B4AED8]/30 dark:border-white/[0.06]">#</th>
-                  <th class="py-3 px-4 border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[160px]">المادة الدراسية</th>
-                  <th class="py-3 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[100px]">أعمال السنة</th>
-                  <th class="py-3 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[100px]">الامتحان النهائي</th>
-                  <th class="py-3 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[90px]">مجموع الفصل</th>
-                  <th class="py-3 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[90px]">النهاية الكبرى</th>
-                  <th class="py-3 px-3 text-center min-w-[90px]">النتيجة</th>
+                <tr class="font-bold text-xs border-b-2 border-[#8c8275]/60 dark:border-white/20 print:border-black">
+                  <th class="py-3 px-3 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdebd0] dark:bg-amber-950/40 text-gray-900 dark:text-amber-100 font-black min-w-[150px] align-middle print:bg-[#fdebd0] print:text-black">
+                    المواد الدراسية المقررة
+                  </th>
+                  <th class="py-3 px-3 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdf2e9] dark:bg-amber-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[120px] align-middle print:bg-[#fdf2e9] print:text-black">
+                    التفاصيل
+                  </th>
+                  <th class="py-3 px-3 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdf2e9] dark:bg-amber-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[90px] align-middle print:bg-[#fdf2e9] print:text-black">
+                    الدرجة المقررة
+                  </th>
+                  <th class="py-3 px-3 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdf2e9] dark:bg-amber-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[90px] align-middle print:bg-[#fdf2e9] print:text-black">
+                    درجة التلميذ
+                  </th>
+                  <th class="py-3 px-3 border border-[#8c8275]/40 dark:border-white/10 bg-[#ebf5fb] dark:bg-sky-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[80px] align-middle print:bg-[#ebf5fb] print:text-black">
+                    النهاية الكبرى
+                  </th>
+                  <th class="py-3 px-3 border border-[#8c8275]/40 dark:border-white/10 bg-[#eafaf1] dark:bg-emerald-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[80px] align-middle print:bg-[#eafaf1] print:text-black">
+                    النهاية الصغرى
+                  </th>
+                  <th class="py-3 px-3 border border-[#8c8275]/40 dark:border-white/10 bg-[#eafaf1] dark:bg-emerald-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[80px] align-middle print:bg-[#eafaf1] print:text-black">
+                    النتيجة
+                  </th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-[#B4AED8]/30 dark:divide-white/[0.04]">
-                <tr
-                  v-for="(subj, sIdx) in termSubjectsList"
-                  :key="sIdx"
-                  class="hover:bg-bx-primary/5 transition-colors print:hover:bg-transparent"
-                >
-                  <td class="py-2.5 px-3 text-center font-mono text-bx-muted border-l border-[#B4AED8]/20 dark:border-white/[0.04]">{{ sIdx + 1 }}</td>
-                  <td class="py-2.5 px-4 font-bold text-bx-title border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-black">
-                    {{ subj.subject_name }}
-                  </td>
-                  <td class="py-2.5 px-3 text-center font-mono border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-title print:text-black">
-                    <span class="font-bold">{{ subj.coursework_score !== undefined ? subj.coursework_score : '—' }}</span>
-                    <span v-if="subj.max_coursework_score" class="text-[10px] text-bx-muted"> / {{ subj.max_coursework_score }}</span>
-                  </td>
-                  <td class="py-2.5 px-3 text-center font-mono border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-title print:text-black">
-                    <span class="font-bold">{{ subj.exam_score !== undefined ? subj.exam_score : '—' }}</span>
-                    <span v-if="subj.max_exam_score" class="text-[10px] text-bx-muted"> / {{ subj.max_exam_score }}</span>
-                  </td>
-                  <td class="py-2.5 px-3 text-center font-black font-mono text-bx-title border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-black">
-                    {{ subj.total_score }}
-                  </td>
-                  <td class="py-2.5 px-3 text-center font-mono text-bx-muted border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-gray-600">
-                    {{ subj.max_score }}
-                  </td>
-                  <td class="py-2.5 px-3 text-center">
-                    <span
-                      class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
-                      :class="subj.is_passed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'"
-                    >
-                      {{ subj.is_passed ? 'ناجح' : 'راسب' }}
-                    </span>
-                  </td>
-                </tr>
+              <tbody>
+                <template v-for="subj in termSubjectsList" :key="subj.subject_name">
+                  <!-- Row 1: الأعمال -->
+                  <tr class="border-t border-[#8c8275]/40 dark:border-white/10 print:border-black">
+                    <td rowspan="3" class="py-2.5 px-3 font-bold text-gray-900 dark:text-white border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle text-sm print:text-black print:bg-white">
+                      {{ subj.subject_name }}
+                    </td>
+                    <td class="py-2 px-2.5 font-medium text-gray-800 dark:text-gray-200 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      الأعمال
+                    </td>
+                    <td class="py-2 px-2 font-bold font-mono text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      {{ subj.max_coursework_score }}
+                    </td>
+                    <td class="py-2 px-2 font-bold font-mono text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      {{ subj.coursework_score !== undefined ? subj.coursework_score : '—' }}
+                    </td>
+                    <td rowspan="3" class="py-2 px-2 font-black font-mono text-gray-900 dark:text-white border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle text-sm print:text-black print:bg-white">
+                      {{ subj.max_score }}
+                    </td>
+                    <td rowspan="3" class="py-2 px-2 font-black font-mono text-gray-900 dark:text-white border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle text-sm print:text-black print:bg-white">
+                      {{ subj.passing_score }}
+                    </td>
+                    <td rowspan="3" class="py-2 px-2 font-bold border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      <span
+                        class="px-2 py-0.5 rounded text-[10px] font-bold"
+                        :class="subj.is_passed ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-700 border border-rose-500/30'"
+                      >
+                        {{ subj.is_passed ? 'ناجح' : 'راسب' }}
+                      </span>
+                    </td>
+                  </tr>
+                  <!-- Row 2: امتحان نهاية الفصل -->
+                  <tr class="border-t border-[#8c8275]/30 dark:border-white/5 print:border-black">
+                    <td class="py-2 px-2.5 font-medium text-gray-800 dark:text-gray-200 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      امتحان نهاية الفصل
+                    </td>
+                    <td class="py-2 px-2 font-bold font-mono text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      {{ subj.max_exam_score }}
+                    </td>
+                    <td class="py-2 px-2 font-bold font-mono text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      {{ subj.exam_score !== undefined ? subj.exam_score : '—' }}
+                    </td>
+                  </tr>
+                  <!-- Row 3: المجموع -->
+                  <tr class="border-t border-[#8c8275]/30 dark:border-white/5 print:border-black bg-[#fef5e7] dark:bg-amber-950/20 print:bg-[#fef5e7]">
+                    <td class="py-2 px-2.5 font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 align-middle print:text-black">
+                      المجموع
+                    </td>
+                    <td class="py-2 px-2 font-black font-mono text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 align-middle print:text-black">
+                      {{ subj.max_score }}
+                    </td>
+                    <td class="py-2 px-2 font-black font-mono text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 align-middle print:text-black">
+                      {{ subj.total_score }}
+                    </td>
+                  </tr>
+                </template>
               </tbody>
-              <!-- Term Table Footer -->
               <tfoot>
-                <tr class="bg-black/[0.03] dark:bg-white/[0.03] font-bold text-xs border-t-2 border-[#B4AED8] dark:border-white/[0.12] print:bg-gray-100 print:text-black">
-                  <td colspan="4" class="py-3 px-4 text-left font-black text-bx-title print:text-black">
+                <!-- Footer Summary -->
+                <tr class="font-bold text-xs border-t-2 border-[#8c8275]/80 dark:border-white/30 bg-[#fdebd0]/50 dark:bg-amber-950/30 print:bg-[#fdebd0] print:text-black">
+                  <td colspan="2" class="py-3 px-3 text-right font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 text-sm print:text-black">
                     مجموع درجات الفصل والنسبة المئوية:
                   </td>
-                  <td class="py-3 px-3 text-center font-mono font-black text-bx-title text-sm print:text-black">
+                  <td class="py-3 px-2 font-mono font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    {{ termCalculatedMax }}
+                  </td>
+                  <td class="py-3 px-2 font-mono font-black text-purple-700 dark:text-purple-300 border border-[#8c8275]/40 dark:border-white/10 text-base print:text-black">
                     {{ activeTranscript.total_score }}
                   </td>
-                  <td class="py-3 px-3 text-center font-mono text-bx-muted print:text-gray-600">
+                  <td class="py-3 px-2 font-mono font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 text-sm print:text-black">
                     {{ activeTranscript.max_possible_score || termCalculatedMax }}
                   </td>
-                  <td class="py-3 px-3 text-center">
-                    <span class="font-black font-mono text-sky-600 dark:text-sky-400 text-sm print:text-black">
+                  <td class="py-3 px-2 font-mono font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 text-sm print:text-black">
+                    {{ Number((termCalculatedMax * 0.5).toFixed(0)) }}
+                  </td>
+                  <td class="py-3 px-2 text-center border border-[#8c8275]/40 dark:border-white/10">
+                    <span class="font-mono font-black text-sky-700 dark:text-sky-300 text-base print:text-black">
                       {{ activeTranscript.percentage }}%
                     </span>
                   </td>
@@ -203,112 +246,281 @@
           <div class="flex items-center justify-between">
             <h4 class="text-xs font-black text-bx-title flex items-center gap-1.5 print:text-black">
               <BookOpen class="w-4 h-4 text-purple-600" />
-              <span>جدول رصد درجات المواد عبر الفصول الدراسية للسنة كاملة:</span>
+              <span>جدول رصد درجات المواد عبر الفصول الدراسية للسنة كاملة (الصحيفة السنوية الرسمية):</span>
             </h4>
             <span class="text-[11px] font-bold text-bx-muted">
-              {{ renderedAnnualTerms.length }} فصول دراسية
+              عدد المواد: {{ annualProcessedSubjects.length }} مادة
             </span>
           </div>
 
-          <div class="overflow-x-auto rounded-2xl border border-[#B4AED8]/50 dark:border-white/[0.08] bg-[var(--bx-surface-solid)] print:border-black">
-            <table class="w-full text-right text-xs border-collapse">
+          <div class="overflow-x-auto rounded-2xl border-2 border-[#8c8275]/40 dark:border-white/10 bg-[var(--bx-surface-solid)] shadow-sm print:border-black print:rounded-none">
+            <table class="w-full text-center text-xs border-collapse border border-[#8c8275]/40 dark:border-white/10 print:border-black print:text-black">
               <thead>
-                <!-- Top Header Row -->
-                <tr class="bg-black/[0.03] dark:bg-white/[0.03] text-bx-muted font-bold border-b border-[#B4AED8]/40 dark:border-white/[0.08] print:bg-gray-100 print:text-black">
-                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center w-10">#</th>
-                  <th rowspan="2" class="py-3 px-4 border-l border-[#B4AED8]/30 dark:border-white/[0.06] min-w-[150px]">المادة الدراسية</th>
-
-                  <!-- Dynamic Term Headers (3 columns each: Coursework, Exam, Total) -->
+                <!-- Row 1: Master Headers -->
+                <tr class="font-bold text-xs border-b border-[#8c8275]/40 dark:border-white/10 print:border-black">
                   <th
-                    v-for="term in renderedAnnualTerms"
-                    :key="term.id"
-                    colspan="3"
-                    class="py-2.5 px-3 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] font-black text-bx-title bg-purple-500/5 print:bg-gray-100 print:text-black"
+                    rowspan="3"
+                    class="py-3 px-3 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdebd0] dark:bg-amber-950/40 text-gray-900 dark:text-amber-100 font-black min-w-[140px] align-middle print:bg-[#fdebd0] print:text-black"
                   >
-                    {{ term.name }}
+                    المواد الدراسية المقررة
                   </th>
-
-                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center min-w-[90px]">المجموع النهائي</th>
-                  <th rowspan="2" class="py-3 px-3 border-l border-[#B4AED8]/30 dark:border-white/[0.06] text-center min-w-[90px]">النهاية الكبرى</th>
-                  <th rowspan="2" class="py-3 px-3 text-center min-w-[80px]">النتيجة</th>
+                  <th
+                    colspan="6"
+                    class="py-2.5 px-3 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdebd0] dark:bg-amber-950/40 text-gray-900 dark:text-amber-100 font-black text-sm align-middle print:bg-[#fdebd0] print:text-black"
+                  >
+                    درجات الفصلين
+                  </th>
+                  <th
+                    colspan="3"
+                    class="py-2.5 px-3 border border-[#8c8275]/40 dark:border-white/10 bg-[#eafaf1] dark:bg-emerald-950/40 text-gray-900 dark:text-emerald-100 font-black text-sm align-middle print:bg-[#eafaf1] print:text-black"
+                  >
+                    النتيجة النهائية للتلميذ
+                  </th>
                 </tr>
 
-                <!-- Sub-Headers for each Term (Coursework, Exam, Term Total) -->
-                <tr class="bg-black/[0.02] dark:bg-white/[0.02] text-bx-muted font-semibold text-[11px] border-b border-[#B4AED8]/40 dark:border-white/[0.08] print:bg-gray-50 print:text-black">
-                  <template v-for="term in renderedAnnualTerms" :key="`sub-${term.id}`">
-                    <th class="py-2 px-2 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06]">أعمال السنة</th>
-                    <th class="py-2 px-2 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06]">الامتحان</th>
-                    <th class="py-2 px-2 text-center border-l border-[#B4AED8]/30 dark:border-white/[0.06] font-bold text-bx-title">المجموع</th>
-                  </template>
+                <!-- Row 2: Sub-Headers -->
+                <tr class="font-bold text-[11px] border-b border-[#8c8275]/40 dark:border-white/10 print:border-black">
+                  <th
+                    rowspan="2"
+                    class="py-2 px-2.5 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdf2e9] dark:bg-amber-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[110px] align-middle print:bg-[#fdf2e9] print:text-black"
+                  >
+                    التفاصيل
+                  </th>
+                  <th
+                    rowspan="2"
+                    class="py-2 px-2 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdf2e9] dark:bg-amber-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[70px] align-middle print:bg-[#fdf2e9] print:text-black"
+                  >
+                    الدرجة المقررة لكل فصل
+                  </th>
+                  <th
+                    colspan="2"
+                    class="py-1.5 px-2 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdf2e9] dark:bg-amber-950/30 text-gray-900 dark:text-gray-100 font-bold align-middle print:bg-[#fdf2e9] print:text-black"
+                  >
+                    درجة التلميذ
+                  </th>
+                  <th
+                    colspan="2"
+                    class="py-1.5 px-2 border border-[#8c8275]/40 dark:border-white/10 bg-[#ebf5fb] dark:bg-sky-950/30 text-gray-900 dark:text-gray-100 font-bold align-middle print:bg-[#ebf5fb] print:text-black"
+                  >
+                    النهايات
+                  </th>
+                  <th
+                    rowspan="2"
+                    class="py-2 px-2 border border-[#8c8275]/40 dark:border-white/10 bg-[#eafaf1] dark:bg-emerald-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[65px] align-middle print:bg-[#eafaf1] print:text-black"
+                  >
+                    مجموع الفصلين
+                  </th>
+                  <th
+                    rowspan="2"
+                    class="py-2 px-2 border border-[#8c8275]/40 dark:border-white/10 bg-[#eafaf1] dark:bg-emerald-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[65px] align-middle print:bg-[#eafaf1] print:text-black"
+                  >
+                    امتحان الدور الثاني 60 %
+                  </th>
+                  <th
+                    rowspan="2"
+                    class="py-2 px-2 border border-[#8c8275]/40 dark:border-white/10 bg-[#eafaf1] dark:bg-emerald-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[65px] align-middle print:bg-[#eafaf1] print:text-black"
+                  >
+                    نتيجة الدور الثاني
+                  </th>
+                </tr>
+
+                <!-- Row 3: Column Labels -->
+                <tr class="font-bold text-[11px] border-b-2 border-[#8c8275]/60 dark:border-white/20 print:border-black">
+                  <th class="py-1.5 px-2 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdf2e9] dark:bg-amber-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[55px] align-middle print:bg-[#fdf2e9] print:text-black">
+                    الفصل الأول
+                  </th>
+                  <th class="py-1.5 px-2 border border-[#8c8275]/40 dark:border-white/10 bg-[#fdf2e9] dark:bg-amber-950/30 text-gray-900 dark:text-gray-100 font-bold min-w-[55px] align-middle print:bg-[#fdf2e9] print:text-black">
+                    الفصل الثاني
+                  </th>
+                  <th class="py-1.5 px-2 border border-[#8c8275]/40 dark:border-white/10 bg-[#ebf5fb] dark:bg-sky-950/40 text-gray-900 dark:text-sky-100 font-bold min-w-[50px] align-middle print:bg-[#ebf5fb] print:text-black">
+                    الكبرى
+                  </th>
+                  <th class="py-1.5 px-2 border border-[#8c8275]/40 dark:border-white/10 bg-[#eafaf1] dark:bg-emerald-950/40 text-gray-900 dark:text-emerald-100 font-bold min-w-[50px] align-middle print:bg-[#eafaf1] print:text-black">
+                    الصغرى
+                  </th>
                 </tr>
               </thead>
 
-              <tbody class="divide-y divide-[#B4AED8]/30 dark:divide-white/[0.04]">
-                <tr
-                  v-for="(subj, sIdx) in annualProcessedSubjects"
-                  :key="subj.subject_name"
-                  class="hover:bg-purple-500/5 transition-colors print:hover:bg-transparent"
-                >
-                  <td class="py-2.5 px-3 text-center font-mono text-bx-muted border-l border-[#B4AED8]/20 dark:border-white/[0.04]">{{ sIdx + 1 }}</td>
-                  <td class="py-2.5 px-4 font-bold text-bx-title border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-black">
-                    {{ subj.subject_name }}
-                  </td>
-
-                  <!-- Term Scores (Coursework, Exam, Total) -->
-                  <template v-for="term in renderedAnnualTerms" :key="`val-${term.id}`">
-                    <td class="py-2 px-2 text-center font-mono border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-title print:text-black">
-                      <span v-if="subj.terms[term.id] && subj.terms[term.id].coursework_score !== undefined">
-                        {{ subj.terms[term.id].coursework_score }}
-                      </span>
-                      <span v-else class="text-amber-500 text-[10px]">—</span>
-                    </td>
-                    <td class="py-2 px-2 text-center font-mono border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-title print:text-black">
-                      <span v-if="subj.terms[term.id] && subj.terms[term.id].exam_score !== undefined">
-                        {{ subj.terms[term.id].exam_score }}
-                      </span>
-                      <span v-else class="text-amber-500 text-[10px]">—</span>
-                    </td>
-                    <td class="py-2 px-2 text-center font-mono font-bold border-l border-[#B4AED8]/20 dark:border-white/[0.04] text-bx-primary print:text-black">
-                      <span v-if="subj.terms[term.id] && subj.terms[term.id].total_score !== undefined">
-                        {{ subj.terms[term.id].total_score }}
-                      </span>
-                      <span v-else class="text-amber-500 text-[10px]">—</span>
-                    </td>
-                  </template>
-
-                  <!-- Final Totals for Subject (Summed across terms) -->
-                  <td class="py-2.5 px-3 text-center font-black font-mono text-bx-title border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-black">
-                    {{ subj.total_score }}
-                  </td>
-                  <td class="py-2.5 px-3 text-center font-mono text-bx-muted border-l border-[#B4AED8]/20 dark:border-white/[0.04] print:text-gray-600">
-                    {{ subj.max_score }}
-                  </td>
-                  <td class="py-2.5 px-3 text-center">
-                    <span
-                      class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
-                      :class="subj.is_passed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'"
+              <tbody>
+                <template v-for="subj in annualProcessedSubjects" :key="subj.subject_name">
+                  <!-- Row 1: الأعمال -->
+                  <tr class="border-t border-[#8c8275]/40 dark:border-white/10 print:border-black">
+                    <!-- Col 1: المادة الدراسية (rowspan 3) -->
+                    <td
+                      rowspan="3"
+                      class="py-2.5 px-3 font-bold text-gray-900 dark:text-white border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle text-sm print:text-black print:bg-white"
                     >
-                      {{ subj.is_passed ? 'ناجح' : 'راسب' }}
-                    </span>
-                  </td>
-                </tr>
+                      {{ subj.subject_name }}
+                    </td>
+
+                    <!-- Col 2: التفاصيل -->
+                    <td class="py-2 px-2.5 font-medium text-gray-800 dark:text-gray-200 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      الأعمال
+                    </td>
+
+                    <!-- Col 3: الدرجة المقررة لكل فصل -->
+                    <td class="py-2 px-2 font-bold font-mono text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      {{ subj.max_coursework_per_term }}
+                    </td>
+
+                    <!-- Col 4: الفصل الأول (الأعمال) -->
+                    <td class="py-2 px-2 font-bold font-mono text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      {{ subj.term1_coursework !== undefined ? subj.term1_coursework : '—' }}
+                    </td>
+
+                    <!-- Col 5: الفصل الثاني (الأعمال) -->
+                    <td class="py-2 px-2 font-bold font-mono text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      {{ subj.term2_coursework !== undefined ? subj.term2_coursework : '—' }}
+                    </td>
+
+                    <!-- Col 6: الكبرى (rowspan 3) -->
+                    <td
+                      rowspan="3"
+                      class="py-2 px-2 font-black font-mono text-gray-900 dark:text-white border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle text-sm print:text-black print:bg-white"
+                    >
+                      {{ subj.max_score }}
+                    </td>
+
+                    <!-- Col 7: الصغرى (rowspan 3) -->
+                    <td
+                      rowspan="3"
+                      class="py-2 px-2 font-black font-mono text-gray-900 dark:text-white border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle text-sm print:text-black print:bg-white"
+                    >
+                      {{ subj.passing_score }}
+                    </td>
+
+                    <!-- Col 8: مجموع الفصلين (rowspan 3) -->
+                    <td
+                      rowspan="3"
+                      class="py-2 px-2 font-black font-mono text-gray-900 dark:text-white border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle text-sm print:text-black print:bg-white"
+                    >
+                      {{ subj.total_score }}
+                    </td>
+
+                    <!-- Col 9: امتحان الدور الثاني 60% (rowspan 3) -->
+                    <td
+                      rowspan="3"
+                      class="py-2 px-2 font-bold font-mono border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white"
+                      :class="subj.second_round_exam_score !== undefined ? 'text-amber-700 dark:text-amber-300' : 'text-gray-400'"
+                    >
+                      {{ subj.second_round_exam_score !== undefined ? subj.second_round_exam_score : '' }}
+                    </td>
+
+                    <!-- Col 10: نتيجة الدور الثاني (rowspan 3) -->
+                    <td
+                      rowspan="3"
+                      class="py-2 px-2 font-bold border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white"
+                    >
+                      <span
+                        v-if="subj.second_round_result_text"
+                        class="px-2 py-0.5 rounded text-[10px] font-bold"
+                        :class="subj.is_passed ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-700 border border-rose-500/30'"
+                      >
+                        {{ subj.second_round_result_text }}
+                      </span>
+                    </td>
+                  </tr>
+
+                  <!-- Row 2: امتحان نهاية الفصل -->
+                  <tr class="border-t border-[#8c8275]/30 dark:border-white/5 print:border-black">
+                    <td class="py-2 px-2.5 font-medium text-gray-800 dark:text-gray-200 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      امتحان نهاية الفصل
+                    </td>
+                    <td class="py-2 px-2 font-bold font-mono text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      {{ subj.max_exam_per_term }}
+                    </td>
+                    <td class="py-2 px-2 font-bold font-mono text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      {{ subj.term1_exam !== undefined ? subj.term1_exam : '—' }}
+                    </td>
+                    <td class="py-2 px-2 font-bold font-mono text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 bg-white dark:bg-gray-900/50 align-middle print:text-black print:bg-white">
+                      {{ subj.term2_exam !== undefined ? subj.term2_exam : '—' }}
+                    </td>
+                  </tr>
+
+                  <!-- Row 3: المجموع -->
+                  <tr class="border-t border-[#8c8275]/30 dark:border-white/5 print:border-black bg-[#fef5e7] dark:bg-amber-950/20 print:bg-[#fef5e7]">
+                    <td class="py-2 px-2.5 font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 align-middle print:text-black">
+                      المجموع
+                    </td>
+                    <td class="py-2 px-2 font-black font-mono text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 align-middle print:text-black">
+                      {{ subj.max_total_per_term }}
+                    </td>
+                    <td class="py-2 px-2 font-black font-mono text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 align-middle print:text-black">
+                      {{ subj.term1_total !== undefined ? subj.term1_total : '—' }}
+                    </td>
+                    <td class="py-2 px-2 font-black font-mono text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 align-middle print:text-black">
+                      {{ subj.term2_total !== undefined ? subj.term2_total : '—' }}
+                    </td>
+                  </tr>
+                </template>
               </tbody>
 
-              <!-- Annual Footer -->
+              <!-- Footer Summary -->
               <tfoot>
-                <tr class="bg-black/[0.03] dark:bg-white/[0.03] font-bold text-xs border-t-2 border-[#B4AED8] dark:border-white/[0.12] print:bg-gray-100 print:text-black">
-                  <td :colspan="2 + (renderedAnnualTerms.length * 3)" class="py-3 px-4 text-left font-black text-bx-title print:text-black">
-                    المجموع السنوي العام والنسبة المئوية:
+                <!-- Footer Row 1: مجموع أعمال السنة -->
+                <tr class="font-bold text-xs border-t-2 border-[#8c8275]/60 dark:border-white/20 bg-black/[0.02] dark:bg-white/[0.02] print:bg-gray-100 print:text-black">
+                  <td colspan="2" class="py-2 px-3 text-right font-black text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    المجموع الكلي لأعمال السنة:
                   </td>
-                  <td class="py-3 px-3 text-center font-mono font-black text-bx-title text-sm print:text-black">
-                    {{ annualCalculatedTotal || activeTranscript.total_score }}
+                  <td class="py-2 px-2 font-mono font-black text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    {{ annualTotals.totalMaxCourseworkPerTerm }}
                   </td>
-                  <td class="py-3 px-3 text-center font-mono text-bx-muted print:text-gray-600">
-                    {{ annualCalculatedMax || activeTranscript.max_possible_score }}
+                  <td class="py-2 px-2 font-mono font-black text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    {{ annualTotals.totalTerm1Coursework }}
                   </td>
-                  <td class="py-3 px-3 text-center">
-                    <span class="font-black font-mono text-purple-600 dark:text-purple-400 text-sm print:text-black">
-                      {{ annualCalculatedPercentage }}%
+                  <td class="py-2 px-2 font-mono font-black text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    {{ annualTotals.totalTerm2Coursework }}
+                  </td>
+                  <td colspan="5" class="py-2 px-2 font-mono font-black text-center text-gray-700 dark:text-gray-300 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    مجموع الأعمال السنوي: {{ annualTotals.totalAnnualCoursework }}
+                  </td>
+                </tr>
+
+                <!-- Footer Row 2: مجموع الامتحانات -->
+                <tr class="font-bold text-xs border-t border-[#8c8275]/40 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] print:bg-gray-100 print:text-black">
+                  <td colspan="2" class="py-2 px-3 text-right font-black text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    المجموع الكلي لامتحانات نهاية الفصل:
+                  </td>
+                  <td class="py-2 px-2 font-mono font-black text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    {{ annualTotals.totalMaxExamPerTerm }}
+                  </td>
+                  <td class="py-2 px-2 font-mono font-black text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    {{ annualTotals.totalTerm1Exam }}
+                  </td>
+                  <td class="py-2 px-2 font-mono font-black text-gray-900 dark:text-gray-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    {{ annualTotals.totalTerm2Exam }}
+                  </td>
+                  <td colspan="5" class="py-2 px-2 font-mono font-black text-center text-gray-700 dark:text-gray-300 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    مجموع الامتحانات السنوي: {{ annualTotals.totalAnnualExam }}
+                  </td>
+                </tr>
+
+                <!-- Footer Row 3: المجموع السنوي العام والنسبة المئوية -->
+                <tr class="font-bold text-xs border-t-2 border-[#8c8275]/80 dark:border-white/30 bg-[#fdebd0]/50 dark:bg-amber-950/30 print:bg-[#fdebd0] print:text-black">
+                  <td colspan="2" class="py-3 px-3 text-right font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 text-sm print:text-black">
+                    المجموع العام والنسبة المئوية:
+                  </td>
+                  <td class="py-3 px-2 font-mono font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    {{ annualTotals.totalMaxPerTerm }}
+                  </td>
+                  <td class="py-3 px-2 font-mono font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    {{ annualTotals.totalTerm1 }}
+                  </td>
+                  <td class="py-3 px-2 font-mono font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 print:text-black">
+                    {{ annualTotals.totalTerm2 }}
+                  </td>
+                  <td class="py-3 px-2 font-mono font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 text-sm print:text-black">
+                    {{ annualTotals.grandMaxScore }}
+                  </td>
+                  <td class="py-3 px-2 font-mono font-black text-gray-900 dark:text-amber-100 border border-[#8c8275]/40 dark:border-white/10 text-sm print:text-black">
+                    {{ annualTotals.grandPassingScore }}
+                  </td>
+                  <td class="py-3 px-2 font-mono font-black text-purple-700 dark:text-purple-300 border border-[#8c8275]/40 dark:border-white/10 text-base print:text-black">
+                    {{ annualTotals.grandTotalScore }}
+                  </td>
+                  <td colspan="2" class="py-3 px-2 text-center border border-[#8c8275]/40 dark:border-white/10">
+                    <span class="font-mono font-black text-purple-700 dark:text-purple-300 text-base print:text-black">
+                      {{ annualTotals.percentage }}%
                     </span>
                   </td>
                 </tr>
@@ -638,6 +850,26 @@ watch(
       } else {
         detailedTranscript.value = props.transcript;
       }
+
+      // Initialize second round settings dynamically from transcript
+      const tData = detailedTranscript.value?.transcript_data as any;
+      if (tData) {
+        if (tData.second_round_mode) {
+          srMode.value = tData.second_round_mode;
+        }
+        if (tData.cap_passing_score !== undefined) {
+          srCapScore.value = !!tData.cap_passing_score;
+        }
+        // Pre-fill existing second-round grades if present
+        const subjectsList = tData.subjects || [];
+        const initialGrades: Record<string, number> = {};
+        for (const s of subjectsList) {
+          if (s.second_round_score !== undefined && s.second_round_score !== null) {
+            initialGrades[s.subject_name] = Number(s.second_round_score);
+          }
+        }
+        srGrades.value = initialGrades;
+      }
     } catch (err) {
       console.error('Failed to load full transcript details:', err);
       detailedTranscript.value = props.transcript;
@@ -652,11 +884,12 @@ watch(
 interface ProcessedTermSubject {
   subject_name: string;
   coursework_score?: number;
-  max_coursework_score?: number;
+  max_coursework_score: number;
   exam_score?: number;
-  max_exam_score?: number;
+  max_exam_score: number;
   total_score: number;
   max_score: number;
+  passing_score: number;
   is_passed: boolean;
 }
 
@@ -685,6 +918,7 @@ const termSubjectsList = computed<ProcessedTermSubject[]>(() => {
         : Number((maxScore * 0.6).toFixed(0)),
       total_score: tScore,
       max_score: maxScore,
+      passing_score: passingScore,
       is_passed: s.status ? s.status === 'passed' : tScore >= passingScore,
     };
   });
@@ -694,156 +928,203 @@ const termCalculatedMax = computed(() => {
   return termSubjectsList.value.reduce((sum, s) => sum + s.max_score, 0);
 });
 
-// Annual Terms & Subjects (for Annual Multi-term View)
-interface AnnualTermColumn {
-  id: string | number;
-  name: string;
-}
-
-interface ProcessedAnnualSubjectItem {
+// Annual Multi-term Detailed Subject Row
+interface ProcessedAnnualSubjectRow {
   subject_name: string;
-  terms: Record<
-    string | number,
-    {
-      coursework_score?: number;
-      exam_score?: number;
-      total_score?: number;
-      max_score?: number;
-    }
-  >;
-  total_score: number;
-  max_score: number;
+  max_coursework_per_term: number;
+  max_exam_per_term: number;
+  max_total_per_term: number;
+
+  term1_coursework?: number;
+  term1_exam?: number;
+  term1_total?: number;
+
+  term2_coursework?: number;
+  term2_exam?: number;
+  term2_total?: number;
+
+  max_score: number; // الكبرى
+  passing_score: number; // الصغرى
+  total_score: number; // مجموع الفصلين
+
+  second_round_exam_score?: number; // امتحان الدور الثاني 60%
+  second_round_result_text?: string; // نتيجة الدور الثاني
   is_passed: boolean;
 }
 
-const renderedAnnualTerms = computed<AnnualTermColumn[]>(() => {
-  if (termCompletionInfo.value?.required_terms && termCompletionInfo.value.required_terms.length > 0) {
-    return termCompletionInfo.value.required_terms.map((t) => ({
-      id: t.id,
-      name: t.name,
-    }));
-  }
-
-  const studentTerms = activeTranscript.value?.student_term_transcripts;
-  if (studentTerms && studentTerms.length > 0) {
-    return studentTerms.map((st, idx) => ({
-      id: st.class_academic_term_id || st.id || `term_${idx + 1}`,
-      name: st.term_name || `الفصل ${idx + 1}`,
-    }));
-  }
-
-  return [
-    { id: 1, name: 'الفصل الدراسي الأول' },
-    { id: 2, name: 'الفصل الدراسي الثاني' },
-  ];
-});
-
-const annualProcessedSubjects = computed<ProcessedAnnualSubjectItem[]>(() => {
+const annualProcessedSubjects = computed<ProcessedAnnualSubjectRow[]>(() => {
   if (!activeTranscript.value) return [];
 
-  const studentTerms = activeTranscript.value.student_term_transcripts || [];
+  const rawData = activeTranscript.value.transcript_data;
+  const annualDirectSubjects: any[] = rawData?.subjects || rawData?.subject_scores || [];
+  const studentTerms: any[] = activeTranscript.value.student_term_transcripts || [];
 
-  // If student has multiple term transcripts, merge across them
-  if (studentTerms.length > 0) {
-    const subjectMap = new Map<string, ProcessedAnnualSubjectItem>();
+  // Sort terms if possible: term 1 first, term 2 second
+  const sortedTerms = [...studentTerms].sort((a, b) => {
+    const aId = Number(a.class_academic_term_id || a.id || 0);
+    const bId = Number(b.class_academic_term_id || b.id || 0);
+    return aId - bId;
+  });
 
-    for (const st of studentTerms) {
-      const termId = st.class_academic_term_id || st.id;
-      const subjects: any[] = st.transcript_data?.subjects || st.transcript_data?.subject_scores || [];
+  const term1 = sortedTerms[0];
+  const term2 = sortedTerms[1];
 
-      for (const s of subjects) {
-        const name = s.subject_name || 'مادة';
-        if (!subjectMap.has(name)) {
-          subjectMap.set(name, {
-            subject_name: name,
-            terms: {},
-            total_score: 0,
-            max_score: 0,
-            is_passed: true,
-          });
-        }
+  const term1Subjects: any[] = term1?.transcript_data?.subjects || term1?.transcript_data?.subject_scores || [];
+  const term2Subjects: any[] = term2?.transcript_data?.subjects || term2?.transcript_data?.subject_scores || [];
 
-        const item = subjectMap.get(name)!;
-        const cScore = s.coursework_score !== undefined ? Number(s.coursework_score) : undefined;
-        const eScore = s.exam_score !== undefined ? Number(s.exam_score) : undefined;
-        const tScore = Number(s.total_score) || ((cScore || 0) + (eScore || 0));
-        const mScore = Number(s.max_score) || 100;
+  // Build ordered subject list
+  const subjectNamesSet = new Set<string>();
+  const subjectList: string[] = [];
 
-        item.terms[termId] = {
-          coursework_score: cScore,
-          exam_score: eScore,
-          total_score: tScore,
-          max_score: mScore,
-        };
-      }
+  for (const s of annualDirectSubjects) {
+    const name = s.subject_name;
+    if (name && !subjectNamesSet.has(name)) {
+      subjectNamesSet.add(name);
+      subjectList.push(name);
     }
-
-    return Array.from(subjectMap.values()).map((item) => {
-      let sum = 0;
-      let maxSum = 0;
-      for (const tVal of Object.values(item.terms)) {
-        if (tVal.total_score !== undefined) {
-          sum += tVal.total_score;
-          maxSum += tVal.max_score || 100;
-        }
-      }
-      const finalScore = Number(sum.toFixed(1));
-      const totalMax = maxSum > 0 ? maxSum : 100;
-      const passingScore = totalMax * 0.5;
-
-      return {
-        ...item,
-        total_score: finalScore,
-        max_score: totalMax,
-        is_passed: finalScore >= passingScore,
-      };
-    });
   }
 
-  // Fallback: direct subjects from transcript_data
-  const rawData = activeTranscript.value.transcript_data;
-  const directSubjects: any[] = rawData?.subjects || rawData?.subject_scores || [];
+  for (const s of term1Subjects) {
+    const name = s.subject_name;
+    if (name && !subjectNamesSet.has(name)) {
+      subjectNamesSet.add(name);
+      subjectList.push(name);
+    }
+  }
 
-  return directSubjects.map((s, idx) => {
-    const name = s.subject_name || `المادة ${idx + 1}`;
-    const maxScore = Number(s.max_score) || 100;
-    const cScore = s.coursework_score !== undefined ? Number(s.coursework_score) : undefined;
-    const eScore = s.exam_score !== undefined ? Number(s.exam_score) : undefined;
-    const tScore = Number(s.total_score) || ((cScore || 0) + (eScore || 0));
-    const passingScore = Number(s.passing_score) || maxScore * 0.5;
+  for (const s of term2Subjects) {
+    const name = s.subject_name;
+    if (name && !subjectNamesSet.has(name)) {
+      subjectNamesSet.add(name);
+      subjectList.push(name);
+    }
+  }
 
-    const firstTermId = renderedAnnualTerms.value[0]?.id || 1;
+  return subjectList.map((name) => {
+    const annSubj = annualDirectSubjects.find((s) => s.subject_name === name);
+    const t1Subj = term1Subjects.find((s) => s.subject_name === name);
+    const t2Subj = term2Subjects.find((s) => s.subject_name === name);
+
+    // Max score for year (الكبرى)
+    const maxScore = annSubj?.max_score !== undefined
+      ? Number(annSubj.max_score)
+      : (t1Subj?.max_score ? Number(t1Subj.max_score) * 2 : (t2Subj?.max_score ? Number(t2Subj.max_score) * 2 : 100));
+
+    // Passing score for year (الصغرى)
+    const passingScore = annSubj?.passing_score !== undefined
+      ? Number(annSubj.passing_score)
+      : Number((maxScore * 0.5).toFixed(1));
+
+    // Max scores per term
+    const maxTotalPerTerm = t1Subj?.max_score !== undefined
+      ? Number(t1Subj.max_score)
+      : (t2Subj?.max_score !== undefined ? Number(t2Subj.max_score) : Number((maxScore / 2).toFixed(1)));
+
+    const maxCourseworkPerTerm = t1Subj?.max_coursework_score !== undefined
+      ? Number(t1Subj.max_coursework_score)
+      : (t2Subj?.max_coursework_score !== undefined ? Number(t2Subj.max_coursework_score) : Number((maxTotalPerTerm * 0.4).toFixed(1)));
+
+    const maxExamPerTerm = t1Subj?.max_exam_score !== undefined
+      ? Number(t1Subj.max_exam_score)
+      : (t2Subj?.max_exam_score !== undefined ? Number(t2Subj.max_exam_score) : Number((maxTotalPerTerm * 0.6).toFixed(1)));
+
+    // Term 1 student scores
+    const term1Coursework = t1Subj?.coursework_score !== undefined ? Number(t1Subj.coursework_score) : undefined;
+    const term1Exam = t1Subj?.exam_score !== undefined ? Number(t1Subj.exam_score) : undefined;
+    const term1Total = t1Subj?.total_score !== undefined
+      ? Number(t1Subj.total_score)
+      : (term1Coursework !== undefined || term1Exam !== undefined ? (term1Coursework || 0) + (term1Exam || 0) : undefined);
+
+    // Term 2 student scores
+    const term2Coursework = t2Subj?.coursework_score !== undefined ? Number(t2Subj.coursework_score) : undefined;
+    const term2Exam = t2Subj?.exam_score !== undefined ? Number(t2Subj.exam_score) : undefined;
+    const term2Total = t2Subj?.total_score !== undefined
+      ? Number(t2Subj.total_score)
+      : (term2Coursework !== undefined || term2Exam !== undefined ? (term2Coursework || 0) + (term2Exam || 0) : undefined);
+
+    // Sum of terms (مجموع الفصلين)
+    const totalScore = annSubj?.total_score !== undefined
+      ? Number(annSubj.total_score)
+      : ((term1Total || 0) + (term2Total || 0));
+
+    // Second round scores
+    let srExamScore: number | undefined = undefined;
+    if (annSubj?.second_round_exam_score !== undefined && annSubj?.second_round_exam_score !== null) {
+      srExamScore = Number(annSubj.second_round_exam_score);
+    } else if (srGrades.value[name] !== undefined) {
+      srExamScore = Number(srGrades.value[name]);
+    }
+
+    let srResultText: string | undefined = undefined;
+    if (annSubj?.second_round_status) {
+      srResultText = annSubj.second_round_status === 'passed' ? 'ناجح' : 'راسب';
+    } else if (srExamScore !== undefined) {
+      srResultText = annSubj?.status === 'passed' ? 'ناجح' : undefined;
+    }
+
+    const isPassed = annSubj?.status ? annSubj.status === 'passed' : totalScore >= passingScore;
 
     return {
       subject_name: name,
-      terms: {
-        [firstTermId]: {
-          coursework_score: cScore,
-          exam_score: eScore,
-          total_score: tScore,
-          max_score: maxScore,
-        },
-      },
-      total_score: tScore,
+      max_coursework_per_term: maxCourseworkPerTerm,
+      max_exam_per_term: maxExamPerTerm,
+      max_total_per_term: maxTotalPerTerm,
+      term1_coursework: term1Coursework,
+      term1_exam: term1Exam,
+      term1_total: term1Total,
+      term2_coursework: term2Coursework,
+      term2_exam: term2Exam,
+      term2_total: term2Total,
       max_score: maxScore,
-      is_passed: tScore >= passingScore,
+      passing_score: passingScore,
+      total_score: totalScore,
+      second_round_exam_score: srExamScore,
+      second_round_result_text: srResultText,
+      is_passed: isPassed,
     };
   });
 });
 
-const annualCalculatedTotal = computed(() => {
-  return annualProcessedSubjects.value.reduce((sum, s) => sum + s.total_score, 0);
-});
+const annualTotals = computed(() => {
+  const subjects = annualProcessedSubjects.value;
+  
+  const totalMaxCourseworkPerTerm = subjects.reduce((sum, s) => sum + (s.max_coursework_per_term || 0), 0);
+  const totalTerm1Coursework = subjects.reduce((sum, s) => sum + (s.term1_coursework || 0), 0);
+  const totalTerm2Coursework = subjects.reduce((sum, s) => sum + (s.term2_coursework || 0), 0);
+  const totalAnnualCoursework = totalTerm1Coursework + totalTerm2Coursework;
 
-const annualCalculatedMax = computed(() => {
-  return annualProcessedSubjects.value.reduce((sum, s) => sum + s.max_score, 0);
-});
+  const totalMaxExamPerTerm = subjects.reduce((sum, s) => sum + (s.max_exam_per_term || 0), 0);
+  const totalTerm1Exam = subjects.reduce((sum, s) => sum + (s.term1_exam || 0), 0);
+  const totalTerm2Exam = subjects.reduce((sum, s) => sum + (s.term2_exam || 0), 0);
+  const totalAnnualExam = totalTerm1Exam + totalTerm2Exam;
 
-const annualCalculatedPercentage = computed(() => {
-  if (annualCalculatedMax.value > 0) {
-    return Number(((annualCalculatedTotal.value / annualCalculatedMax.value) * 100).toFixed(2));
-  }
-  return activeTranscript.value?.percentage || 0;
+  const totalMaxPerTerm = subjects.reduce((sum, s) => sum + (s.max_total_per_term || 0), 0);
+  const totalTerm1 = subjects.reduce((sum, s) => sum + (s.term1_total || 0), 0);
+  const totalTerm2 = subjects.reduce((sum, s) => sum + (s.term2_total || 0), 0);
+  
+  const grandMaxScore = subjects.reduce((sum, s) => sum + (s.max_score || 0), 0);
+  const grandPassingScore = subjects.reduce((sum, s) => sum + (s.passing_score || 0), 0);
+  const grandTotalScore = subjects.reduce((sum, s) => sum + (s.total_score || 0), 0);
+
+  const percentage = grandMaxScore > 0 ? Number(((grandTotalScore / grandMaxScore) * 100).toFixed(2)) : (activeTranscript.value?.percentage || 0);
+
+  return {
+    totalMaxCourseworkPerTerm,
+    totalTerm1Coursework,
+    totalTerm2Coursework,
+    totalAnnualCoursework,
+    totalMaxExamPerTerm,
+    totalTerm1Exam,
+    totalTerm2Exam,
+    totalAnnualExam,
+    totalMaxPerTerm,
+    totalTerm1,
+    totalTerm2,
+    grandMaxScore,
+    grandPassingScore,
+    grandTotalScore,
+    percentage,
+  };
 });
 
 const decisionArabicText = computed(() => {
