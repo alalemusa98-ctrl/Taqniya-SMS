@@ -30,3 +30,15 @@ coverage
 .env
 .env.*
 !.env.example
+
+# Runtime Storage & Backups
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/backups/*
+!storage/backups/.gitkeep
+storage/backups/**/*
+!storage/backups/**/.gitkeep
+storage/*.sql
+storage/*.zip
+storage/*.tmp
+

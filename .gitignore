@@ -61,3 +61,18 @@ Thumbs.db
 .tmp/
 .cache/
 .eslintcache
+
+# Application Runtime Storage, Uploads & Backups
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/backups/*
+!storage/backups/.gitkeep
+backend/storage/uploads/*
+!backend/storage/uploads/.gitkeep
+backend/storage/backups/*
+!backend/storage/backups/.gitkeep
+backend/storage/backups/**/*
+!backend/storage/backups/**/.gitkeep
+backend/storage/*.sql
+backend/storage/*.zip
+backend/storage/*.tmp

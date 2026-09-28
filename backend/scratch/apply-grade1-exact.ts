@@ -33,7 +33,7 @@ async function main() {
         data: {
           class_id: grade1.id,
           academic_term_id: t.id,
-          is_active: 1,
+          is_active: t.term_number === 1 ? 1 : 0,
           is_closed: 0,
         },
       });
@@ -41,7 +41,7 @@ async function main() {
     } else if (ct.deleted_at) {
       await prisma.classAcademicTerm.update({
         where: { id: ct.id },
-        data: { deleted_at: null, is_active: 1 },
+        data: { deleted_at: null, is_active: t.term_number === 1 ? 1 : 0 },
       });
       console.log(`✓ Restored ClassTerm: Class "${grade1.name}" -> Term "${t.name}" (ID: ${ct.id})`);
     } else {
