@@ -203,6 +203,11 @@ defineEmits<{
                 </td>
               </tr>
             </tbody>
+
+            <!-- Table Footer for Column Totals & Grand Totals -->
+            <tfoot v-if="$slots['group-footer']" class="bg-purple-500/[0.04] dark:bg-white/[0.03] border-t-2 border-[#B4AED8]/70 dark:border-white/15">
+              <slot name="group-footer" :group="grp" :columns="grp.columns || defaultColumns || []"></slot>
+            </tfoot>
           </table>
         </div>
       </div>

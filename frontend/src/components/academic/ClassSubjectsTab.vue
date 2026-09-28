@@ -26,6 +26,7 @@ import {
   Award,
   Info,
   CheckCircle2,
+  Calculator,
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -316,6 +317,45 @@ const totalSubjectsCount = computed(() => {
 function getTermAssignment(row: any, columnKey: string, terms: any[]) {
   const term = (terms || []).find((t: any) => `term_${t.id}` === columnKey);
   return term && row.assignments ? row.assignments[term.term_name] : null;
+}
+
+// Helpers for footer column totals and class grand total
+function getTermTotalMax(grp: TableGroup, columnKey: string): number {
+  const items = grp.items || [];
+  return items.reduce((sum: number, item: any) => {
+    const assign = getTermAssignment(item, columnKey, grp.terms);
+    return sum + (assign ? Number(assign.max_score || 0) : 0);
+  }, 0);
+}
+
+function getTermTotalCoursework(grp: TableGroup, columnKey: string): number {
+  const items = grp.items || [];
+  return items.reduce((sum: number, item: any) => {
+    const assign = getTermAssignment(item, columnKey, grp.terms);
+    return sum + (assign ? Number(assign.max_coursework_score || 0) : 0);
+  }, 0);
+}
+
+function getTermTotalExam(grp: TableGroup, columnKey: string): number {
+  const items = grp.items || [];
+  return items.reduce((sum: number, item: any) => {
+    const assign = getTermAssignment(item, columnKey, grp.terms);
+    return sum + (assign ? Number(assign.max_exam_score || 0) : 0);
+  }, 0);
+}
+
+function getClassGrandTotal(grp: TableGroup): number {
+  const items = grp.items || [];
+  let total = 0;
+  for (const item of items) {
+    for (const term of grp.terms || []) {
+      const assign = item.assignments ? item.assignments[term.term_name] : null;
+      if (assign) {
+        total += Number(assign.max_score || 0);
+      }
+    }
+  }
+  return total;
 }
 
 // Adapter computed for TaqniyaGroupedTable
@@ -715,6 +755,54 @@ onMounted(async () => {
               <Trash2 class="w-3.5 h-3.5" />
             </button>
           </div>
+        </template>
+
+        <!-- Group Footer: Term Column Totals & Class Grand Total -->
+        <template #group-footer="{ group }">
+          <tr class="font-black text-xs">
+            <!-- Code Column -->
+            <td class="py-2.5 px-3.5 border-e border-[#B4AED8]/50 dark:border-white/10 text-center font-bold text-bx-muted">
+              —
+            </td>
+
+            <!-- Subject Name Column: Label -->
+            <td class="py-2.5 px-3.5 border-e border-[#B4AED8]/50 dark:border-white/10 font-black text-xs text-bx-title">
+              <div class="flex items-center gap-1.5 text-bx-primary">
+                <Calculator class="w-4 h-4 shrink-0" />
+                <span>مجموع درجات الفصل:</span>
+              </div>
+            </td>
+
+            <!-- Each Term Column Total -->
+            <td
+              v-for="termCol in (group.columns || []).filter((c: any) => c.key.startsWith('term_'))"
+              :key="termCol.key"
+              class="py-2.5 px-3 text-center border-e border-[#B4AED8]/50 dark:border-white/10"
+            >
+              <div class="inline-flex flex-col items-center px-2.5 py-1 rounded-xl bg-purple-500/10 dark:bg-purple-950/40 border border-purple-500/30 text-bx-primary shadow-2xs">
+                <div class="flex items-center gap-1 text-[11px] font-black">
+                  <span>{{ getTermTotalMax(group, termCol.key) }}</span>
+                  <span class="text-[9px] font-normal text-bx-muted">درجة</span>
+                </div>
+                <div class="text-[9px] font-bold text-bx-muted flex items-center gap-1 mt-0.5">
+                  <span>أعمال: {{ getTermTotalCoursework(group, termCol.key) }}</span>
+                  <span>|</span>
+                  <span>امتحان: {{ getTermTotalExam(group, termCol.key) }}</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Actions Column: Grand Total for the Whole Year -->
+            <td class="py-2.5 px-2 text-center">
+              <div class="inline-flex flex-col items-center px-2.5 py-1 rounded-xl bg-emerald-500/15 dark:bg-emerald-950/50 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shadow-xs">
+                <span class="text-[9px] font-bold text-emerald-800 dark:text-emerald-300">المجموع الكلي</span>
+                <div class="flex items-center gap-1 text-xs font-black">
+                  <span>{{ getClassGrandTotal(group) }}</span>
+                  <span class="text-[9px] font-normal opacity-80">درجة</span>
+                </div>
+              </div>
+            </td>
+          </tr>
         </template>
       </TaqniyaGroupedTable>
 
