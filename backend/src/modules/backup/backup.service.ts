@@ -300,6 +300,18 @@ export class BackupService {
                     if (typeof val === 'number' || typeof val === 'bigint') return val.toString();
                     if (typeof val === 'boolean') return val ? '1' : '0';
                     if (val instanceof Date) return `'${val.toISOString().slice(0, 19).replace('T', ' ')}'`;
+                    if (
+                      typeof val === 'object' &&
+                      val !== null &&
+                      (val.constructor?.name === 'Decimal' ||
+                        typeof (val as any).toFixed === 'function' ||
+                        typeof (val as any).toNumber === 'function')
+                    ) {
+                      return val.toString();
+                    }
+                    if (Buffer.isBuffer(val)) {
+                      return `X'${val.toString('hex')}'`;
+                    }
                     if (typeof val === 'object') {
                       const jsonStr = JSON.stringify(val).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                       return `'${jsonStr}'`;
@@ -472,19 +484,22 @@ export class BackupService {
   private async executeLargeSql(sqlContent: string): Promise<void> {
     await this.prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=0;');
 
+    // Auto-sanitize legacy double-quoted decimal numbers from older backup versions: '"50"' -> '50'
+    const sanitizedSql = sqlContent.replace(/'"(-?\d+(?:\.\d+)?)"'/g, "'$1'");
+
     const statements: string[] = [];
     let current = '';
     let inString = false;
     let strChar = '';
-    const len = sqlContent.length;
+    const len = sanitizedSql.length;
 
     for (let i = 0; i < len; i++) {
-      const char = sqlContent[i];
+      const char = sanitizedSql[i];
 
       if (inString) {
         current += char;
         if (char === '\\') {
-          current += sqlContent[++i] || '';
+          current += sanitizedSql[++i] || '';
         } else if (char === strChar) {
           inString = false;
         }

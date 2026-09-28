@@ -676,9 +676,13 @@ const termSubjectsList = computed<ProcessedTermSubject[]>(() => {
     return {
       subject_name: name,
       coursework_score: cScore,
-      max_coursework_score: s.max_coursework_score || Number((maxScore * 0.4).toFixed(0)),
+      max_coursework_score: s.max_coursework_score !== undefined && s.max_coursework_score !== null 
+        ? Number(s.max_coursework_score) 
+        : Number((maxScore * 0.4).toFixed(0)),
       exam_score: eScore,
-      max_exam_score: s.max_exam_score || Number((maxScore * 0.6).toFixed(0)),
+      max_exam_score: s.max_exam_score !== undefined && s.max_exam_score !== null 
+        ? Number(s.max_exam_score) 
+        : Number((maxScore * 0.6).toFixed(0)),
       total_score: tScore,
       max_score: maxScore,
       is_passed: s.status ? s.status === 'passed' : tScore >= passingScore,

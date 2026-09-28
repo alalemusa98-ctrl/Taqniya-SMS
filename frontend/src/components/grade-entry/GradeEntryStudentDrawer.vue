@@ -81,7 +81,12 @@
 
                 <!-- Coursework input -->
                 <td class="py-2 px-3 text-center">
-                  <div class="flex flex-col items-center gap-1">
+                  <div v-if="subj.max_coursework_score === 0" class="flex flex-col items-center justify-center">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-black/[0.03] dark:bg-white/[0.04] text-[10px] font-bold text-bx-muted">
+                      لا يوجد (0)
+                    </span>
+                  </div>
+                  <div v-else class="flex flex-col items-center gap-1">
                     <div class="inline-flex items-center gap-1">
                       <input
                         v-model.number="subj.coursework_score"
@@ -106,7 +111,12 @@
 
                 <!-- Exam input -->
                 <td class="py-2 px-3 text-center">
-                  <div class="flex flex-col items-center gap-1">
+                  <div v-if="subj.max_exam_score === 0" class="flex flex-col items-center justify-center">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] text-[10px] font-bold text-bx-muted border border-[#B4AED8]/20 dark:border-white/[0.04]">
+                      تقويم مستمر (لا يوجد امتحان)
+                    </span>
+                  </div>
+                  <div v-else class="flex flex-col items-center gap-1">
                     <div class="inline-flex items-center gap-1">
                       <input
                         v-model.number="subj.exam_score"
@@ -126,7 +136,7 @@
                     <span v-if="isExamInvalid(subj)" class="text-[9px] text-rose-600 font-bold">
                       تجاوزت {{ subj.max_exam_score }}!
                     </span>
-                    <span class="text-[10px] text-bx-muted font-normal">
+                    <span v-if="subj.exam_passing_score > 0" class="text-[10px] text-bx-muted font-normal">
                       (صغرى: {{ subj.exam_passing_score }})
                     </span>
                   </div>
@@ -253,11 +263,19 @@ watch(
         (es) => es.subject_name === s.subject_name || Number(es.subject_id) === s.subject_id,
       );
 
-      const maxScore = Number(s.max_score) || 100;
-      const maxCoursework = Number(s.max_coursework_score) || Number((maxScore * 0.4).toFixed(0));
-      const maxExam = Number(s.max_exam_score) || Number((maxScore * 0.6).toFixed(0));
-      const examPass = Number(s.exam_passing_score) || Number((maxExam * 0.5).toFixed(0));
-      const pass = Number(s.passing_score) || Number((maxScore * 0.5).toFixed(0));
+      const maxScore = s.max_score !== undefined && s.max_score !== null ? Number(s.max_score) : 100;
+      const maxCoursework = s.max_coursework_score !== undefined && s.max_coursework_score !== null 
+        ? Number(s.max_coursework_score) 
+        : Number((maxScore * 0.4).toFixed(0));
+      const maxExam = s.max_exam_score !== undefined && s.max_exam_score !== null 
+        ? Number(s.max_exam_score) 
+        : Number((maxScore * 0.6).toFixed(0));
+      const examPass = s.exam_passing_score !== undefined && s.exam_passing_score !== null 
+        ? Number(s.exam_passing_score) 
+        : (maxExam > 0 ? Number((maxExam * 0.5).toFixed(0)) : 0);
+      const pass = s.passing_score !== undefined && s.passing_score !== null 
+        ? Number(s.passing_score) 
+        : Number((maxScore * 0.5).toFixed(0));
 
       return {
         subject_id: s.subject_id,
@@ -281,6 +299,7 @@ const isCourseworkInvalid = (subj: GradeRow): boolean => {
 };
 
 const isExamInvalid = (subj: GradeRow): boolean => {
+  if (subj.max_exam_score === 0) return false;
   const score = Number(subj.exam_score);
   return isNaN(score) || score < 0 || score > subj.max_exam_score;
 };
@@ -298,11 +317,12 @@ const isSubjectPassed = (subj: GradeRow) => {
   const exam = Number(subj.exam_score) || 0;
   const total = coursework + exam;
   const isTotalPassed = total >= subj.passing_score;
-  const isExamPassed = exam >= subj.exam_passing_score;
+  const isExamPassed = subj.max_exam_score > 0 && subj.exam_passing_score > 0 ? exam >= subj.exam_passing_score : true;
   return isTotalPassed && isExamPassed;
 };
 
 const isExamConditionFailed = (subj: GradeRow): boolean => {
+  if (subj.max_exam_score <= 0 || subj.exam_passing_score <= 0) return false;
   const coursework = Number(subj.coursework_score) || 0;
   const exam = Number(subj.exam_score) || 0;
   const total = coursework + exam;
