@@ -7,6 +7,8 @@ import {
   Calendar,
   Filter,
   RotateCcw,
+  LayoutGrid,
+  FileSpreadsheet,
 } from 'lucide-vue-next';
 import {
   teachingAssignmentsApi,
@@ -29,8 +31,12 @@ import ClassAssignmentsMatrix, {
   type ClassMatrixGroup,
   type ClassMatrixSubjectRow,
 } from '../components/teaching-assignments/ClassAssignmentsMatrix.vue';
+import TeacherWorkloadScheduleTab from '../components/teaching-assignments/TeacherWorkloadScheduleTab.vue';
 
 const toast = useToast();
+
+// View Mode Tabs
+const activeViewTab = ref<'matrix' | 'teacher-workload'>('matrix');
 
 // State
 const hierarchyData = ref<TeachingAssignmentsHierarchy | null>(null);
@@ -154,7 +160,7 @@ async function fetchAssignments() {
   try {
     const params: any = {
       page: currentPage.value,
-      per_page: 15,
+      per_page: 25,
     };
     if (appliedYearId.value) params.academic_year_id = appliedYearId.value;
     if (appliedClassFilter.value !== 'all') params.class_id = appliedClassFilter.value;
@@ -284,11 +290,11 @@ const teacherFilterOptions = computed<TaqniyaSelectOption[]>(() => [
   })),
 ]);
 
-// Compute Class Assignment Matrix Groups
+// Compute Class Assignment Matrix Groups with Strict Teacher Filtering
 const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
   if (!hierarchyData.value?.classes) return [];
 
-  return hierarchyData.value.classes.map((cls) => {
+  const rawGroups = hierarchyData.value.classes.map((cls) => {
     // 1. Gather all sections for this class
     const sections = (cls.sections || []).map((s) => ({
       class_section_id: s.class_section_id,
@@ -344,7 +350,7 @@ const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
     // Subject rows
     const subjectList = Array.from(subjectsMap.values());
 
-    const subjectRows: ClassMatrixSubjectRow[] = subjectList.map((sub) => {
+    let subjectRows: ClassMatrixSubjectRow[] = subjectList.map((sub) => {
       const sectionAssignments = assignmentLookup[sub.id] || {};
       const assignedCount = Object.keys(sectionAssignments).length;
       return {
@@ -357,6 +363,16 @@ const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
       };
     });
 
+    // STRICT TEACHER FILTERING: If a specific teacher is selected, only keep subjects taught by that teacher!
+    if (appliedTeacherFilter.value !== 'all') {
+      const targetTeacherId = Number(appliedTeacherFilter.value);
+      subjectRows = subjectRows.filter((row) => {
+        return Object.values(row.assignmentsBySection).some(
+          (asgn) => Number(asgn.teacher_id) === targetTeacherId,
+        );
+      });
+    }
+
     return {
       class_id: cls.class_id,
       class_name: cls.class_name,
@@ -365,6 +381,13 @@ const classMatrixGroups = computed<ClassMatrixGroup[]>(() => {
       totalAssignmentsCount,
     };
   });
+
+  // If a teacher filter is active, only include classes that have matching subjects taught by this teacher
+  if (appliedTeacherFilter.value !== 'all') {
+    return rawGroups.filter((g) => g.subjects.length > 0);
+  }
+
+  return rawGroups;
 });
 
 // Handlers for Drawer & Modal
@@ -393,7 +416,7 @@ function handleOpenEdit(assignment: AssignmentItem, classId: number, sectionId: 
   formDrawerMode.value = 'edit';
   activeAssignmentId.value = assignment.id;
   formInitialData.value = {
-    academic_year_id: selectedYearId.value,
+    academic_year_id: selectedYearId.value || appliedYearId.value,
     class_id: classId,
     class_section_id: sectionId,
     subject_id: assignment.subject_id,
@@ -402,40 +425,27 @@ function handleOpenEdit(assignment: AssignmentItem, classId: number, sectionId: 
   showFormDrawer.value = true;
 }
 
-function handleOpenWorkload(teacherId: number) {
-  const teacher = allTeachers.value.find((t) => t.id === teacherId);
-  selectedWorkloadTeacher.value = teacher || null;
-  showWorkloadDrawer.value = true;
-}
-
 function handleConfirmDelete(assignment: AssignmentItem) {
   assignmentToDelete.value = assignment;
   showDeleteModal.value = true;
 }
 
-function onPageChange(page: number) {
-  currentPage.value = page;
+function handleOpenWorkload(teacherId: number) {
+  const t = allTeachers.value.find((item) => Number(item.id) === Number(teacherId));
+  if (t) {
+    selectedWorkloadTeacher.value = t;
+    showWorkloadDrawer.value = true;
+  }
 }
 
-// Seamless Scroll Preservation and Class-Card Anchoring
-async function handleSaved(target?: { class_id?: number; section_id?: number }) {
+function onPageChange(newPage: number) {
+  currentPage.value = newPage;
+}
+
+async function handleSaved(_target?: { class_id?: number; section_id?: number }) {
   const currentScrollY = window.scrollY;
-  const targetClassId = target?.class_id || formInitialData.value.class_id;
-
   await fetchAssignments();
-
   await nextTick();
-  if (targetClassId) {
-    const el = document.getElementById(`class-group-${targetClassId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      el.classList.add('ring-2', 'ring-emerald-500/50');
-      setTimeout(() => {
-        el.classList.remove('ring-2', 'ring-emerald-500/50');
-      }, 2000);
-      return;
-    }
-  }
   window.scrollTo({ top: currentScrollY, behavior: 'instant' });
 }
 
@@ -458,7 +468,7 @@ onMounted(async () => {
       <!-- Top Container Card -->
       <div class="rounded-3xl border border-[#B4AED8] dark:border-white/[0.08] bg-[var(--bx-surface-solid)] p-6 sm:p-7 shadow-sm">
         <!-- Card Header: Title on Right, Controls & Search on Left -->
-        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-[#B4AED8]/40 dark:border-white/[0.06]">
           <!-- Title -->
           <div>
             <div class="flex items-center gap-2.5 flex-wrap">
@@ -470,11 +480,11 @@ onMounted(async () => {
                 class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-bx-primary border border-purple-500/20 shadow-xs"
               >
                 <Calendar class="w-3.5 h-3.5" />
-                <span>العام الدراسي النشط: {{ activeAcademicYear.name }}</span>
+                <span>العام الدراسي: {{ activeAcademicYear.name }}</span>
               </span>
             </div>
             <p class="text-xs text-bx-muted font-medium mt-1">
-              إدارة توزيع وتكليف المعلمين بالمواد المقررة لكل شعبة، وفحص النصاب والقيود الأكاديمية
+              إدارة توزيع وتكليف المعلمين بالمواد المقررة لكل شعبة، وفحص النصاب والطباعة الأكاديمية
             </p>
           </div>
 
@@ -498,7 +508,7 @@ onMounted(async () => {
                   v-model="search"
                   @keydown.enter="applyFilters"
                   type="text"
-                  placeholder="بحث باسم المعلم أو المادة أو الشعبة..."
+                  placeholder="بحث باسم المعلم أو المادة..."
                   class="w-full pr-10 pl-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] bg-transparent text-xs font-medium text-bx-title placeholder:text-bx-muted focus:outline-none focus:border-bx-primary transition-all text-start"
                 />
               </div>
@@ -515,134 +525,190 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Full Comprehensive Filter Bar: Year, Class, Section, Subject, Teacher -->
-        <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] mb-6 space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <!-- 1. Academic Year Filter -->
-            <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">العام الدراسي</label>
-              <TaqniyaSelect
-                v-model="selectedYearId"
-                :options="yearOptions"
-                placeholder="اختر العام..."
-                full-width
-              />
-            </div>
+        <!-- VIEW MODE NAVIGATION TABS -->
+        <div class="pt-5 pb-2">
+          <div class="inline-flex items-center p-1.5 rounded-2xl bg-purple-500/[0.06] dark:bg-white/[0.04] border border-[#B4AED8]/50 dark:border-white/[0.08] gap-1.5 flex-wrap">
+            <!-- Tab 1: Matrix View -->
+            <button
+              type="button"
+              @click="activeViewTab = 'matrix'"
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              :class="[
+                activeViewTab === 'matrix'
+                  ? 'bg-bx-primary text-white shadow-md shadow-purple-500/20 font-black'
+                  : 'text-bx-muted hover:text-bx-title hover:bg-white/50 dark:hover:bg-white/5'
+              ]"
+            >
+              <LayoutGrid class="w-4 h-4" />
+              <span>مصفوفة إسناد الصفوف والشُعب</span>
+            </button>
 
-            <!-- 2. Class Filter -->
-            <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">الصف الدراسي</label>
-              <TaqniyaSelect
-                v-model="selectedClassFilter"
-                :options="classFilterOptions"
-                placeholder="كافة الصفوف..."
-                full-width
-              />
-            </div>
-
-            <!-- 3. Section Filter -->
-            <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">الشعبة الدراسية</label>
-              <TaqniyaSelect
-                v-model="selectedSectionFilter"
-                :options="sectionFilterOptions"
-                placeholder="كافة الشعب..."
-                full-width
-              />
-            </div>
-
-            <!-- 4. Subject Filter -->
-            <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">المادة التعليمية</label>
-              <TaqniyaSelect
-                v-model="selectedSubjectFilter"
-                :options="subjectFilterOptions"
-                placeholder="كافة المواد..."
-                full-width
-              />
-            </div>
-
-            <!-- 5. Teacher Filter -->
-            <div>
-              <label class="block text-[11px] font-bold text-bx-muted mb-1">المعلم المكلف</label>
-              <TaqniyaSelect
-                v-model="selectedTeacherFilter"
-                :options="teacherFilterOptions"
-                placeholder="كافة المعلمين..."
-                full-width
-              />
-            </div>
-          </div>
-
-          <!-- Filter Action Toolbar: Apply, Reset, Active Indicator -->
-          <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                @click="applyFilters"
-                :disabled="loading"
-                class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-xs"
-              >
-                <Filter class="w-3.5 h-3.5" />
-                <span>تطبيق التصفية</span>
-              </button>
-
-              <button
-                type="button"
-                @click="resetFilters"
-                :disabled="loading"
-                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] disabled:opacity-50 transition-all cursor-pointer"
-              >
-                <RotateCcw class="w-3.5 h-3.5" />
-                <span>إعادة تعيين الفلاتر</span>
-              </button>
-            </div>
-
-            <!-- Active Filter Indicator Badge -->
-            <div v-if="hasActiveFilters" class="flex items-center gap-2 text-[11px] text-bx-primary font-bold">
-              <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
-              <span>يتم تطبيق فلاتر مخصصة (انقر تطبيق التصفية لتحديث النتائج)</span>
-            </div>
+            <!-- Tab 2: Dedicated Teacher Workload & Print View -->
+            <button
+              type="button"
+              @click="activeViewTab = 'teacher-workload'"
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              :class="[
+                activeViewTab === 'teacher-workload'
+                  ? 'bg-bx-primary text-white shadow-md shadow-purple-500/20 font-black'
+                  : 'text-bx-muted hover:text-bx-title hover:bg-white/50 dark:hover:bg-white/5'
+              ]"
+            >
+              <FileSpreadsheet class="w-4 h-4" />
+              <span>كشف إسناد وجدول المعلم (طباعة)</span>
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            </button>
           </div>
         </div>
 
-        <!-- Loading State for Initial Load -->
-        <div v-if="loading && (!hierarchyData || !hierarchyData.classes || hierarchyData.classes.length === 0)" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
-          <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
-          <span class="text-xs font-bold">جاري تحميل كشوفات إسناد التدريس...</span>
-        </div>
+        <!-- ============================================================== -->
+        <!-- TAB 1: MATRIX VIEW (With Filter & Class Cards)                 -->
+        <!-- ============================================================== -->
+        <div v-show="activeViewTab === 'matrix'" class="space-y-6 pt-4">
+          <!-- Filter Bar: Year, Class, Section, Subject, Teacher -->
+          <div class="p-4 rounded-2xl bg-purple-500/[0.03] dark:bg-white/[0.02] border border-[#B4AED8]/50 dark:border-white/[0.06] space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <!-- 1. Academic Year Filter -->
+              <div>
+                <label class="block text-[11px] font-bold text-bx-muted mb-1">العام الدراسي</label>
+                <TaqniyaSelect
+                  v-model="selectedYearId"
+                  :options="yearOptions"
+                  placeholder="اختر العام..."
+                  full-width
+                />
+              </div>
 
-        <!-- Class Assignments Matrix Component with Non-Destructive Refresh Overlay -->
-        <div v-else class="relative">
-          <div
-            v-if="loading"
-            class="absolute inset-0 bg-[var(--bx-surface-solid)]/60 backdrop-blur-[0.5px] z-20 flex items-start justify-center pt-24 transition-all duration-200 pointer-events-none rounded-2xl"
-          >
-            <div class="px-4 py-2 rounded-full bg-white dark:bg-zinc-900 border border-bx-border shadow-md flex items-center gap-2 text-xs font-bold text-bx-primary">
-              <Loader2 class="w-4 h-4 animate-spin" />
-              <span>جاري تحديث البيانات...</span>
+              <!-- 2. Class Filter -->
+              <div>
+                <label class="block text-[11px] font-bold text-bx-muted mb-1">الصف الدراسي</label>
+                <TaqniyaSelect
+                  v-model="selectedClassFilter"
+                  :options="classFilterOptions"
+                  placeholder="كافة الصفوف..."
+                  full-width
+                />
+              </div>
+
+              <!-- 3. Section Filter -->
+              <div>
+                <label class="block text-[11px] font-bold text-bx-muted mb-1">الشعبة الدراسية</label>
+                <TaqniyaSelect
+                  v-model="selectedSectionFilter"
+                  :options="sectionFilterOptions"
+                  placeholder="كافة الشعب..."
+                  full-width
+                />
+              </div>
+
+              <!-- 4. Subject Filter -->
+              <div>
+                <label class="block text-[11px] font-bold text-bx-muted mb-1">المادة التعليمية</label>
+                <TaqniyaSelect
+                  v-model="selectedSubjectFilter"
+                  :options="subjectFilterOptions"
+                  placeholder="كافة المواد..."
+                  full-width
+                />
+              </div>
+
+              <!-- 5. Teacher Filter -->
+              <div>
+                <label class="block text-[11px] font-bold text-bx-muted mb-1">المعلم المكلف</label>
+                <TaqniyaSelect
+                  v-model="selectedTeacherFilter"
+                  :options="teacherFilterOptions"
+                  placeholder="كافة المعلمين..."
+                  full-width
+                />
+              </div>
+            </div>
+
+            <!-- Filter Action Toolbar: Apply, Reset, Active Indicator -->
+            <div class="pt-3 border-t border-[#B4AED8]/40 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  @click="applyFilters"
+                  :disabled="loading"
+                  class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-bx-primary text-white text-xs font-bold hover:bg-bx-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+                >
+                  <Filter class="w-3.5 h-3.5" />
+                  <span>تطبيق التصفية</span>
+                </button>
+
+                <button
+                  type="button"
+                  @click="resetFilters"
+                  :disabled="loading"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#B4AED8] dark:border-white/[0.12] text-xs font-bold text-bx-muted hover:text-bx-title hover:bg-[var(--bx-row-hover)] disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  <RotateCcw class="w-3.5 h-3.5" />
+                  <span>إعادة تعيين الفلاتر</span>
+                </button>
+              </div>
+
+              <!-- Active Filter Indicator Badge -->
+              <div v-if="hasActiveFilters" class="flex items-center gap-2 text-[11px] text-bx-primary font-bold">
+                <span class="w-2 h-2 rounded-full bg-bx-primary animate-pulse"></span>
+                <span>
+                  {{ appliedTeacherFilter !== 'all' ? 'يتم عرض الصفوف والمواد المسندة للمعلم المختار فقط' : 'يتم تطبيق فلاتر مخصصة' }}
+                </span>
+              </div>
             </div>
           </div>
 
-          <ClassAssignmentsMatrix
-            :groups="classMatrixGroups"
-            :applied-teacher-filter="appliedTeacherFilter"
-            @create="handleOpenCreate"
+          <!-- Loading State for Initial Load -->
+          <div v-if="loading && (!hierarchyData || !hierarchyData.classes || hierarchyData.classes.length === 0)" class="p-12 flex flex-col items-center justify-center gap-3 text-bx-muted">
+            <Loader2 class="w-8 h-8 animate-spin text-bx-primary" />
+            <span class="text-xs font-bold">جاري تحميل كشوفات إسناد التدريس...</span>
+          </div>
+
+          <!-- Class Assignments Matrix Component with Non-Destructive Refresh Overlay -->
+          <div v-else class="relative">
+            <div
+              v-if="loading"
+              class="absolute inset-0 bg-[var(--bx-surface-solid)]/60 backdrop-blur-[0.5px] z-20 flex items-start justify-center pt-24 transition-all duration-200 pointer-events-none rounded-2xl"
+            >
+              <div class="px-4 py-2 rounded-full bg-white dark:bg-zinc-900 border border-bx-border shadow-md flex items-center gap-2 text-xs font-bold text-bx-primary">
+                <Loader2 class="w-4 h-4 animate-spin" />
+                <span>جاري تحديث البيانات...</span>
+              </div>
+            </div>
+
+            <ClassAssignmentsMatrix
+              :groups="classMatrixGroups"
+              :applied-teacher-filter="appliedTeacherFilter"
+              @create="handleOpenCreate"
+              @edit="handleOpenEdit"
+              @delete="handleConfirmDelete"
+              @view-workload="handleOpenWorkload"
+            />
+          </div>
+
+          <!-- Shared TaqniyaPagination Component -->
+          <div v-if="meta.last_page > 1" class="mt-6">
+            <TaqniyaPagination
+              :current-page="meta.current_page"
+              :total-pages="meta.last_page"
+              :total="meta.total"
+              item-name="صف دراسي"
+              :is-loading="loading"
+              @page-change="onPageChange"
+            />
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 2: DEDICATED TEACHER WORKLOAD SCHEDULE & PRINT VIEW       -->
+        <!-- ============================================================== -->
+        <div v-show="activeViewTab === 'teacher-workload'" class="pt-4">
+          <TeacherWorkloadScheduleTab
+            :teachers="allTeachers"
+            :academic-year-id="appliedYearId || selectedYearId"
+            :academic-year-name="activeAcademicYear?.name || 'العام الحالي'"
             @edit="handleOpenEdit"
             @delete="handleConfirmDelete"
-            @view-workload="handleOpenWorkload"
-          />
-        </div>
-
-        <!-- Shared TaqniyaPagination Component -->
-        <div v-if="meta.last_page > 1" class="mt-6">
-          <TaqniyaPagination
-            :current-page="meta.current_page"
-            :total-pages="meta.last_page"
-            :total="meta.total"
-            item-name="صف دراسي"
-            :is-loading="loading"
-            @page-change="onPageChange"
           />
         </div>
       </div>
